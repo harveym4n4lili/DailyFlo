@@ -15,9 +15,9 @@
 ### Today's Goals
 - [x] Complete model conceptual design doc
 - [x] Complete endpoint design doc
-- [x] Complete authentication flow design doc
-- [ ] Initialise Backend
-- [ ] Initialise Frontend with Expo and React
+- [x] Complete authentication flow design
+- [ ] Initialise Django backend, in seperate branch
+- [ ] Initialise React Native, Expo frontend, in seperate branch
 ### What I Accomplished
 
 ### What I Learned
