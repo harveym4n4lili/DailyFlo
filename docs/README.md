@@ -6,7 +6,7 @@ This project is currently in early development.
 - **Daily Task View** - See today's tasks at a glance upon login
 - **Task Management** - Add, edit, and complete daily tasks
 - **Weekly Recurring Tasks** - Set tasks to repeat weekly
-- **Monthly Calender** - Can navigate through days and view monthly overview
+- **Monthly Calendar** - Can navigate through days and view monthly overview
 - **Clean UI/UX** - Intuitive interface designed for mobile-first experience
 ## Tech Stack
 ### Frontend
@@ -25,7 +25,7 @@ This project is currently in early development.
 [To be complete]
 ## Project Structure
 ```plaintext
-sunflo/
+DailyFlo/
 ├── frontend/          # React Native app (Expo)
 ├── backend/           # Django REST API
 └── docs/              # Documentation with README file
