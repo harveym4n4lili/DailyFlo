@@ -13,7 +13,9 @@
 ## [19/06/2025] - [Thursday]
 
 ### Today's Goals
-- [ ] Complete Planning Documentation
+- [x] Complete model conceptual design doc
+- [x] Complete endpoint design doc
+- [x] Complete authentication flow design doc
 - [ ] Initialise Backend
 - [ ] Initialise Frontend with Expo and React
 ### What I Accomplished
