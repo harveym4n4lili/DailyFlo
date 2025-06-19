@@ -16,18 +16,19 @@
 - [x] Complete model conceptual design doc
 - [x] Complete endpoint design doc
 - [x] Complete authentication flow design
-- [ ] Initialise Django backend, in seperate branch
-- [ ] Initialise React Native, Expo frontend, in seperate branch
+- [x] Initialise Django backend, in seperate branch
+- [x] Initialise React Native, Expo frontend, in seperate branch
+- [x] Merged both setup branches to main branch
 ### What I Accomplished
-
+- Practice in planning and design practices
 ### What I Learned
-- 
+- After research, gained further understanding on authentication workflows with JWT
 ### Challenges & Solutions
-- 
+- Came across merge conflict from both branches containing their own .gitignore files, solved by using git web editor to edit and append both files together.
 ### Tomorrow's Plan
-- [ ] Priority task 1
+- Implement Models
 ### Notes
-- Any additional thoughts, ideas, or reminders
+- No Notes
 ---
 
 
