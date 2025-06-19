@@ -6,8 +6,6 @@
 - [ ] Complete Architectural and Technical Planning
 ### What I Learned
 - Learned how to start documentation professionally.
-### Tomorrow's Plan
-- Initialise Codebase
 ### Notes
 - No Notes
 
@@ -15,7 +13,7 @@
 ## [19/06/2025] - [Thursday]
 
 ### Today's Goals
-- [ ] Complete Architectural and Technical Planning
+- [ ] Complete Planning Documentation
 - [ ] Initialise Backend
 - [ ] Initialise Frontend with Expo and React
 ### What I Accomplished

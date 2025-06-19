@@ -1,3 +1,4 @@
+# DEV LOG BOOK TEMPLATE
 ## [Date] - [DayofWeek]
 
 ### Today's Goals
@@ -16,3 +17,16 @@
 - Any additional thoughts, ideas, or reminders
 ---
 
+# DECISIONS LOG BOOK TEMPLATE
+## [Date] - [DayofWeek]
+
+### Decision 1
+
+#### Decision Goal
+> 
+#### Decision Context
+* 
+
+### Notes
+- Any additional thoughts, ideas, or reminders
+---
