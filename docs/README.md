@@ -28,4 +28,4 @@ This project is currently in early development.
 sunflo/
 ├── frontend/          # React Native app (Expo)
 ├── backend/           # Django REST API
-└── README.md          # Project overview and setup guide
+└── docs/              # Documentation with README file
