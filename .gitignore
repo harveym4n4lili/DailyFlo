@@ -31,3 +31,9 @@ Thumbs.db
 .env.local
 .env.production
 .env.*.local
+
+# IDEs & Editors ===
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
