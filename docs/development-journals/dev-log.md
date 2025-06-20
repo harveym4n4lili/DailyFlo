@@ -30,6 +30,23 @@
 ### Notes
 - No Notes
 ---
+## [12/06/2025] - [Friday]
+
+### Today's Goals
+- [] Implement some django models
+- [] Prepare endpoints for authentication
+
+### What I Accomplished
+- 
+### What I Learned
+- 
+### Challenges & Solutions
+- 
+### Tomorrow's Plan
+- 
+### Notes
+- No Notes
+---
 
 
 
