@@ -5,7 +5,7 @@ class RecurringTask(models.Model):
     user_id = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="tasks"
+        related_name="recurring_tasks"
     )
     
     title = models.CharField(max_length=255)
@@ -22,7 +22,6 @@ class RecurringTask(models.Model):
     priority_level = models.IntegerField(
         choices=[(i, str(i)) for i in range (1, 6)],
         default=3
-
     )
     
     created_at = models.DateTimeField(auto_now_add=True)
