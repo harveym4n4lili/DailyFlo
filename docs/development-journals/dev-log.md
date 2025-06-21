@@ -49,15 +49,19 @@
 ## [21/06/2025] - [Saturday]
 
 ### Today's Goals
-- [ ] Implement some django models
+- [X] Implement some django models
 - [ ] Prepare endpoints for authentication
 
-### What I Learned
-- 
 ### Challenges & Solutions
-- 
+- Had problems with references within backend which includes:
+    - installed app references had to be changed as I had created a new apps folder and moved all apps into that folder
+    - manage.py referring to wrong dailyfo folder for main settings which was renamed to config
+- Problems appeared when trying to make migrations, kept saying modules couldn't be found.
+- Solved by ensuring manage.py refers to correct settings.py parent folder, and ensuring installed apps dict contains correct reference to apps dependent on structure, ensuring settings variables contain correct reference to settings parent folders where necessary. 
 ### Tomorrow's Plan
-- 
+- Complete frontend setup
+- Merge both branches again and delete to prepare for feature branching
+
 ### Notes
 - No Notes
 ---
