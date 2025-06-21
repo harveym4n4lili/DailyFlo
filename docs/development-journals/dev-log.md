@@ -30,14 +30,28 @@
 ### Notes
 - No Notes
 ---
-## [12/06/2025] - [Friday]
+## [20/06/2025] - [Friday]
 
 ### Today's Goals
 - [] Implement some django models
 - [] Prepare endpoints for authentication
 
-### What I Accomplished
-- 
+### What I Learned
+- Came across a new library and backend archirecture in PyDantic, which is commonly used in modern 2025 practice for django.
+### Challenges & Solutions
+- Wasn't able to meet todays goals
+- More time was spent on researching more about PyDantic, and deciding between archirectures.
+### Tomorrow's Plan
+- Complete today's goals tommorow.
+### Notes
+- No Notes
+---
+## [21/06/2025] - [Saturday]
+
+### Today's Goals
+- [] Implement some django models
+- [] Prepare endpoints for authentication
+
 ### What I Learned
 - 
 ### Challenges & Solutions
@@ -47,6 +61,5 @@
 ### Notes
 - No Notes
 ---
-
 
 
