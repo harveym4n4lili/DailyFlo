@@ -69,22 +69,37 @@
 ### Notes
 - No Notes
 ---
-# DEV LOG BOOK TEMPLATE
 ## [22/06/2025] - [Sunday]
 
-### Today's Goals
-- [ ] Begin writing API endpoints 
-- [ ] Prepare URLs
-
-### What I Accomplished
+### Today's Goals/Accomplishments
+- [X] Written basic CRUD API views and endpoints for tasks
+- [X] Implement JWT login endpoints
+- [X] Prepare general URL endpoints 
 
 ### What I Learned
--
+- Somewhat learned view writing, learned different types of view writing e.g FBV, CBV, generics, viewsets
+- Research on JWT was conducted, learned about what it is, pros and cons, how to implement it to project and use built in methods for token obtaining.
+- Learned how to use curl for API endpoint behaviour testing 
 ### Challenges & Solutions
-
+- CURL formatting caused problems, I just had to open a gitbash terminal in the correct dir to bypass format problems.
 ### Tomorrow's Plan
--
+- Implement CRUD for recurring tasks.
+- Implement soft delete for task and recurring task
 ### Notes
-- No Notes
+- No notes
 ---
+## [23/06/2025] - [Monday]
 
+### Today's Goals/Accomplishments
+- [X] Write CRUD API views for reucrring tasks model
+- [X] Implement soft delete views for task and recurring task
+
+### What I Learned
+- 
+### Challenges & Solutions
+- 
+### Tomorrow's Plan
+- 
+### Notes
+- No notes
+---
