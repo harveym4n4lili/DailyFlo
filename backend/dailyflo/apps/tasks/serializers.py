@@ -25,11 +25,12 @@ class TaskSerializer(serializers.ModelSerializer):
         ]
 
         #  Validators and extended methods to be written here.
+
         
         
 class RecurringTaskSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Task
+        model = RecurringTask
         fields = [
             'id',
             'user_id',
