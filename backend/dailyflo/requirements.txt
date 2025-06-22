@@ -3,6 +3,8 @@ Django==5.2.3
 django-stubs==5.2.1
 django-stubs-ext==5.2.1
 djangorestframework==3.16.0
+djangorestframework_simplejwt==5.5.0
+PyJWT==2.9.0
 sqlparse==0.5.3
 types-PyYAML==6.0.12.20250516
 typing_extensions==4.14.0
