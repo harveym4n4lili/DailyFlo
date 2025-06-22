@@ -50,7 +50,11 @@
 
 ### Today's Goals
 - [X] Implement some django models
-- [ ] Prepare endpoints for authentication
+- [X] Write basic model serializers 
+- [ ] Begin writing API endpoints 
+
+### What I Learned
+- Relearned serializer method writing, from learning about serializer vs modelSerializers and its meta class, to extensions and data validation methods.
 
 ### Challenges & Solutions
 - Had problems with references within backend which includes:
@@ -65,5 +69,22 @@
 ### Notes
 - No Notes
 ---
+# DEV LOG BOOK TEMPLATE
+## [22/06/2025] - [Sunday]
 
+### Today's Goals
+- [ ] Begin writing API endpoints 
+- [ ] Prepare URLs
+
+### What I Accomplished
+
+### What I Learned
+-
+### Challenges & Solutions
+
+### Tomorrow's Plan
+-
+### Notes
+- No Notes
+---
 
