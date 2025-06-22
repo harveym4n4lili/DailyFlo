@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import UserRegistrationSerializer
+from .serializers import RegisterCustomUserSerializer
 
 def get_tokens_for_user(user):
     refreshToken = RefreshToken.for_user(user)
@@ -13,7 +13,7 @@ def get_tokens_for_user(user):
 
 class UserRegistrationView(APIView):
     def post(self, request):
-        serializer = UserRegistrationSerializer(data=request.data)
+        serializer = RegisterCustomUserSerializer(data=request.data)
         if serializer.is_valid(): #is_valid() calls vlaidation methods in serializer
             user = serializer.save() # calls create methods in serializer
             tokens = get_tokens_for_user(user)     
