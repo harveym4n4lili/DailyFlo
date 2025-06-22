@@ -2,7 +2,7 @@ from django.db import models
 from django.conf import settings
 
 class RecurringTask(models.Model):
-    user_id = models.ForeignKey(
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="recurring_tasks"
@@ -32,13 +32,13 @@ class RecurringTask(models.Model):
     soft_deleted = models.BooleanField(default=False)
     
 class Task(models.Model):
-    user_id = models.ForeignKey(
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="tasks"
     )
     
-    recurring_task_id = models.ForeignKey(
+    recurring_task = models.ForeignKey(
         RecurringTask,
         on_delete=models.CASCADE,
         null=True,

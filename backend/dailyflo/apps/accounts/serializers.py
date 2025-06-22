@@ -35,8 +35,8 @@ class RegisterCustomUserSerializer(serializers.ModelSerializer):
                   'display_name', 'bio']
         
     def create(self, validated_data):
-        password = validated_data.pop('password')
-        user = user(**validated_data)
+        password = validated_data.pop('password') # password is hashed in memory using pop for security
+        user = CustomUser(**validated_data)
         user.set_password(password)
-        user.save()
+        user.save() # actual database query
         return user
