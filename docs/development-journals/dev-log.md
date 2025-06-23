@@ -90,13 +90,32 @@
 ---
 ## [23/06/2025] - [Monday]
 
-### Today's Goals/Accomplishments
+### Today's Goals
 - [X] Write CRUD API views for reucrring tasks model
 - [X] Implement soft delete views for task and recurring task
+- [X] Conduct basic curl testing for user login, registration
 
+### What I Accomplished
+- gained significant practice in basic curl testing for endpoint behaviours.
+### Tomorrow's Plan
+- Design wireframes for phone display
+- Completely design userflow throughout app
+- Research on possible frontend stacks/refresh on react native
+### Notes
+- No notes
+---
+## [24/06/2025] - [Tuesday]
+
+### Today's Goals
+- [ ] Design wireframes for client-side dailyflo app
+- [ ] Plan out user flow throughout app
+- [ ] Refresh on react-native/research on expo (Notion notes)
+
+### What I Accomplished
+- 
 ### What I Learned
 - 
-### Challenges & Solutions
+### Challenges and Solutions
 - 
 ### Tomorrow's Plan
 - 
