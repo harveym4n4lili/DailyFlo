@@ -41,20 +41,15 @@ class TaskDetailAPIView(APIView):
 
 class ToggleDeleteTaskAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    def get_object(self, pk):
-        from django.shortcuts import get_object_or_404
-        return get_object_or_404(Task, pk=pk)
     
     def patch(self, request, pk):
-        task = self.get_object(pk)
-        task.soft_deleted = not task.soft_deleted
-        task.save()
-        
-        serializer = TaskSerializer(task, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            task = Task.objects.get(pk=pk)
+            task.soft_deleted = not task.soft_deleted
+            task.save()
+            return Response({'soft_deleted': task.soft_deleted}, status=status.HTTP_200_OK)
+        except Task.DoesNotExist:
+            return Response({'error': 'Task not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 class RecurringTaskDetailAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -92,17 +87,12 @@ class RecurringTaskListAPIView(APIView):
     
 class ToggleDeleteRecurringTaskAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    def get_object(self, pk):
-        from django.shortcuts import get_object_or_404
-        return get_object_or_404(RecurringTask, pk=pk)
-    
+
     def patch(self, request, pk):
-        task = self.get_object(pk)
-        task.soft_deleted = not task.soft_deleted
-        task.save()
-        
-        serializer = RecurringTaskSerializer(task, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            task = RecurringTask.objects.get(pk=pk)
+            task.soft_deleted = not task.soft_deleted
+            task.save()
+            return Response({'soft_deleted': task.soft_deleted}, status=status.HTTP_200_OK)
+        except Task.DoesNotExist:
+            return Response({'error': 'Task not found.'}, status=status.HTTP_404_NOT_FOUND)
