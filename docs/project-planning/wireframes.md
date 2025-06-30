@@ -56,73 +56,69 @@ Key content types, messaging priorities, and content requirements for each scree
 ## User Flows
 ### Primary User Journey
 #### New User Journey
-**Onboarding:**
+##### Onboarding:
 > Welcome Screen -> Permission Requests (Notifications) -> Today View (Empty State)
-**First Task Creation:**
+##### First Task Creation:
 > Today View -> Add Task Button -> Add Task Modal -> Save Task -> Today View (With Tasks)
-**Feature Discovery:**
+##### Feature Discovery:
 > Today View -> Calendar Toggle -> Monthly Calendar View -> Select Date -> Day View
 #### Existing User Journey
-**Daily Task Management:**
+##### Daily Task Management:
 > App Launch -> Today View -> Complete Tasks -> View Progress Ring -> Navigate Between Days
-**Task Organization:**
+##### Task Organization:
 > Today View -> Lists Tab -> View Lists -> Select List -> List Detail View -> Manage Tasks
-**Calendar Planning:**
+##### Calendar Planning:
 > Today View -> Calendar Toggle -> Monthly Calendar -> Select Date -> View/Add Tasks for Date
 #### Alternative Flows
-**No Tasks Flow:**
+##### No Tasks Flow:
 > Today View (Empty) -> Add Task Prompt -> Add Task Modal -> First Task Created
-**Offline Usage:**
+##### Offline Usage:
 > App Launch -> Local Data Load -> Task Management -> Background Sync When Online
-**Error States:**
+##### Error States:
 > Failed Task Save -> Error Message -> Retry Option -> Manual Sync
-**Quick Actions:** (future feature)
+##### Quick Actions: (future feature)
 > Long Press App Icon -> Quick Add Task -> Add Task Modal -> Save and Return to Previous App
 
 ## Individual Wireframes
 ### 1. **Today View**
-**Purpose:**  
+#### **Purpose:**  
 Primary landing screen showing today's tasks with immediate action capabilities.
-**Sections:**  
+#### **Sections:**  
 - Task list for that day, clickable task to view details
 - Progress ring element
 - Day slider to select day to view tasks
 - Monthly/day toggle element to switch between day slider or month calendar
-
-**Sketch/Link/Image Placeholder:**  
+#### **Sketch/Link/Image Placeholder:**  
 (TBC)
 ### 2. **Add Task Modal**
 - Required field inputs: title, due date
 - Optional details such as description, time, recurring, 
 - Weekly Recurring option with expansion ui element to select day
 - Action Buttons
-
-**Sketch/Link/Image Placeholder:**  
+#### **Sketch/Link/Image Placeholder:**  
 (TBC)
 ### 3. **Monthly Calendar View**
-**Purpose:**  Calendar screen showing all days of the month, with 
-**Layout Ideas:**  
+#### **Purpose:**  
+Calendar screen showing all days of the month
+#### **Layout Ideas:**  
 - Standard calendar layout with minimal elements, symbols or shapes used to represent busier days
 - tapping on day in calendar displays all tasks due on the selected day
-
-**Sketch/Link/Image Placeholder:**  
+#### **Sketch/Link/Image Placeholder:**  
 (TBC)
 ### 4. **Lists View**
-**Purpose:**  View and manage lists of tasks. For now these can act as categories for tasks.
-**Layout Ideas:**  
+#### **Purpose:**  View and manage lists of tasks. For now these can act as categories for tasks.
+#### *Layout Ideas:**  
 - Grid style dashboard layout for each list
 - will have a list detail view containing list of tasks and routines.
-
-**Sketch/Link/Image Placeholder:**  
+#### **Sketch/Link/Image Placeholder:**  
 (TBC)
 ### 5. **Settings/Profile**
-**Purpose:**  
+#### **Purpose:**  
 Uer account management, app preferences
-**Includes:**  
+#### **Includes:**  
 * Profile Section: Name, email account details
 * Account Actions
-
-**Sketch/Link/Image Placeholder:**  
+#### **Sketch/Link/Image Placeholder:**  
 (TBC)
 
 ## Visual Design Direction
@@ -139,7 +135,7 @@ Links to existing design systems, style guides, or component libraries being use
 3. **Contextual Awareness:** Surface the right info based on user context
 4. **Consistent Rhythm:** Maintain visual and interaction consistency across all screens
 5. **Purposeful Animation:** Motion can be used to guide attention and create seamless transistions.
-### Accessibility Requirements-
+### Accessibility Requirements
 WCAG compliance level and specific accessibility considerations.
 * **Screen Reader Support:** Full VoiceOver/TalkBack compatibility with semantic labels (future feature)
 * **Motion Sensitivity:** Respect user preferences for reduced motion
