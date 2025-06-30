@@ -11,7 +11,6 @@ Decided to make seperate model entities for a non-recurring and recurring task
 ### Notes
 - None
 ---
-# DECISIONS LOG BOOK TEMPLATE
 ## [20/06/2025] - [Friday]
 
 ### Decision 1
@@ -25,3 +24,23 @@ Decided to continue original DRF structure instead of implementing Pydantic libr
 ### Notes
 - No notes
 ---
+## [27/06/2025] - [Friday]
+
+### Decision 1
+Decided to add new model: Lists, where tasks and routines can be grouped/categorised together.
+#### Decision Goal
+> Allow for more potential extension/options
+#### Decision Context
+* Upon wireframe design I noticed that the current content was too minimal for full navigation.
+* I realised it made sense for users to have more control over their tasks, being able to group them so they can categorise their tasks.
+
+### Decision 2
+Renaming RecurringTasks to Routines.
+#### Decision Goal
+> To improve clarity, intuitiveness using a more relatable term.
+#### Decision Context
+* Upon wireframe design I noticed rewriting "RecurringTasks" felt too technical.
+* New term "Routines" better conveys the the concept of repeating tasks.
+
+### Notes
+- No notes

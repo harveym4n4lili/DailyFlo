@@ -104,21 +104,33 @@
 ### Notes
 - No notes
 ---
-## [24/06/2025] - [Tuesday]
+## [26/06/2025] - [Thursday]
 
 ### Today's Goals
-- [ ] Design wireframes for client-side dailyflo app
-- [ ] Plan out user flow throughout app
-- [ ] Refresh on react-native/research on expo (Notion notes)
+- [X] Start Wireframe planning
+
+### What I Learned
+- Gained insight in modern practice wireframe planning
+- More extensive, complete wireframe planning on could help increase workflow and development, especially on frontend. 
+### Tomorrow's Plan
+- Complete wireframe plan
+### Notes
+- Considering extending, including task categories
+- renaming recurring tasks to routines
+- bottom nav bar: 3/5 buttons complete, considering a page with grouped tasks view, e.g project/task-list, and controlled categories
+- 
+---
+## [30/06/2025] - [Monday]
+
+### Today's Goals
+- [X] Write a wireframe design doc for client-side dailyflo app
+- [X] Plan out user flow throughout app
 
 ### What I Accomplished
-- 
-### What I Learned
-- 
-### Challenges and Solutions
-- 
+- Gained more extensive practice on planning various user flows, helped expanded my view on UX planning as a whole, from responsive planning to state planning.
 ### Tomorrow's Plan
-- 
+- Continue Refresh on react native and research on expo
+- Continue research on styling stacks
 ### Notes
 - No notes
 ---
