@@ -134,3 +134,18 @@
 ### Notes
 - No notes
 ---
+## [01/07/2025] - [Tuesday]
+
+### Today's Goals
+- [ ] Continue refresh on react native and expo (notion notes)
+- [ ] Research styling stacks, inspiration for global elements
+
+### What I Accomplished
+- 
+### What I Learned
+- 
+### Tomorrow's Plan
+- 
+### Notes
+- No notes
+---
