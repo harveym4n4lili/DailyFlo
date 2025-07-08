@@ -134,18 +134,17 @@
 ### Notes
 - No notes
 ---
-## [01/07/2025] - [Tuesday]
+## [08/07/2025] - [Tuesday]
 
 ### Today's Goals
-- [ ] Continue refresh on react native and expo (notion notes)
-- [ ] Research styling stacks, inspiration for global elements
+- [X] Continue refresh on react native and expo (notion notes)
 
-### What I Accomplished
-- 
-### What I Learned
-- 
-### Tomorrow's Plan
-- 
+### What I learned
+- Gained refreshing insight on react's hook, prop state management system and other fundamentals
+- Gained refreshing insight on implementing navigation, and project structure react native expo
+### Future Plan
+- Go over data forms and responsive, enhanced UI in react native expo
+- Research styling stacks, inspiration for global elements
 ### Notes
 - No notes
 ---
