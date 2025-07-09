@@ -148,3 +148,19 @@
 ### Notes
 - No notes
 ---
+## [09/07/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Went over data forms, responsive UI, device features and deployment for react native expo
+- [ ] Research more on potential frontend frameworks, styling and animation
+- [ ] Begin to plan frontend development such as file structure
+
+### What I learned
+- Gained insight on how to deploy an app on the app store
+- Learned more ways on how to make a responsive UI design
+- Gained refreshing insight on more APIs used to access device features through app
+### Future Plan
+- Continue finishing full frontend structure designing
+### Notes
+- No notes
+---
