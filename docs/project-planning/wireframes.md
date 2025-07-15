@@ -12,12 +12,6 @@
 - [X] Simple daily/weekly/monthly planning  
 - [X] Intuitive mobile-first design  
 
-## Global Design Elements
-**Color Palette:**  
-(TBD)
-**Typography:**  
-(TBD)
-
 ## Information Architecture
 ### Site Map / App Structure
 High-level navigation structure and content hierarchy:
@@ -167,3 +161,4 @@ Error message patterns and recovery flows
 * **Empty States:** Engaging illustrations and helpful onboarding prompts
 
 *Last updated: 01/07/2025*
+*Last updated: 16/07/2025*
