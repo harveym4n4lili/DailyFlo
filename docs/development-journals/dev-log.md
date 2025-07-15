@@ -164,3 +164,16 @@
 ### Notes
 - No notes
 ---
+## [15/07/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Begin to plan frontend development such as file structure
+- [X] Prepare technical design docs
+### Challenges & Solutions
+- I haven't actually created my own wireframes for the project, making design docs where deciding global design elements and other UX parts was difficult without designs.
+### Future Plan
+- Learn how to use figma, start and complete wireframe designs
+- Continue finishing full frontend structure designing
+### Notes
+- No notes
+---
