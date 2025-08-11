@@ -177,3 +177,14 @@
 ### Notes
 - No notes
 ---
+## [11/08/2025] - [Monday]
+
+### Today's Goals
+- [X] Fill in/write in design system doc
+- [X] Continue Figma designs
+### Future Plan
+- Learn how to structure typography in a modular way on figma
+- Continue finishing full frontend structure designing
+### Notes
+- No notes
+---
