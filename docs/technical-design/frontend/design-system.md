@@ -5,28 +5,12 @@
 ```
     // Token naming follows modern conventions: semantic-scale
     primary: {
-        50: '#[HEX]',   // lightest
-        100: '#[HEX]',
-        200: '#[HEX]',
-        300: '#[HEX]',
-        400: '#[HEX]',
-        500: '#[HEX]',  // base brand color
-        600: '#[HEX]',
-        700: '#[HEX]',
-        800: '#[HEX]',
-        900: '#[HEX]'   // darkest
-    }
-```
-#### Secondary palette (neutral grays, backgrounds)
-```
-    // Token naming follows modern conventions: semantic-scale
-    neutral: {
-        50: '#[HEX]',   // lightest
-        100: '#[HEX]',
-        200: '#[HEX]',
-        300: '#[HEX]',
-        400: '#[HEX]',
-        500: '#[HEX]',  // base brand color
+        50: '#FFFFFF',   // lightest
+        100: '#959BA5',
+        200: '#[HEX],
+        300: '#[HEX],
+        400: '#374151',
+        500: '#111827',  // base brand color
         600: '#[HEX]',
         700: '#[HEX]',
         800: '#[HEX]',
@@ -73,19 +57,21 @@
 #### Font families and weights
 ```
     fontFamily: {
-        primary: ['Inter', 'system-ui', 'sans-serif'],
-        system: {
-            ios: ['SF Pro Display', '-apple-system'],
-            android: ['Roboto', 'sans-serif']
+        primary: ['Satoshi', 'system-ui', 'sans-serif'], // Satoshi as main font
+        fallback: {
+            ios: ['SF Pro Display', '-apple-system'],      // iOS fallback
+            android: ['Roboto', 'sans-serif']              // Android fallback
         }
     }
 
     fontWeight: {
-        light: '300',
-        regular: '400', 
-        medium: '500',
-        semibold: '600',
-        bold: '700'
+        // Using Satoshi's actual font weights
+        light: '300',      // Satoshi Light
+        regular: '400',    // Satoshi Regular  
+        medium: '500',     // Satoshi Medium
+        semibold: '600',   // Satoshi SemiBold
+        bold: '700'        // Satoshi Bold
+        // black: '900'    // Satoshi Black (if available)
     }
 ```
 #### Type scales (headings, body, captions)
