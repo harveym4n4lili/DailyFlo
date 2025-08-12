@@ -188,3 +188,15 @@
 ### Notes
 - No notes
 ---
+## [12/08/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Filled in some token design for design system doc
+- [X] Continue Figma designs
+### Future Plan
+- Structure color palettes in modular way
+- Begin to design task creation and core screens for figma design
+- Continue finishing full frontend structure designing
+### Notes
+- No notes
+---
