@@ -6,12 +6,12 @@
     // Token naming follows modern conventions: semantic-scale
     primary: {
         50: '#FFFFFF',   // lightest
-        100: '#959BA5',
-        200: '#[HEX],
-        300: '#[HEX],
+        100: '#F5F7FA',
+        200: '#959BA5',
+        300: '#959BA5',
         400: '#374151',
         500: '#111827',  // base brand color
-        600: '#[HEX]',
+        600: '#0B111C',
         700: '#[HEX]',
         800: '#[HEX]',
         900: '#[HEX]'   // darkest
