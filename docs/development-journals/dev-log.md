@@ -200,3 +200,15 @@
 ### Notes
 - No notes
 ---
+## [13/08/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Added some colors to primary palette
+- [X] Continue Figma designs, saved colors and typography as variables on figma
+- [X] Begun core screen design
+### Future Plan
+- Begin to design task creation and finish core screens for figma design
+- Continue finishing full frontend structure designing
+### Notes
+- No notes
+---
