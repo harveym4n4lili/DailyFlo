@@ -212,3 +212,16 @@
 ### Notes
 - No notes
 ---
+## [14/08/2025] - [Thursday]
+
+### Today's Goals
+- [X] Completed Primary Palette
+- [X] Finish daily home view core screen design
+### What I learned
+- The first draft will not always be perfect, its better to work on it a small amount everyday.
+### Future Plan
+- Begin to design task creation modal/screen
+- Design the bottom navbar
+### Notes
+- No notes
+---
