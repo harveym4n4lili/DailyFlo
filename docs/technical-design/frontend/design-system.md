@@ -5,16 +5,16 @@
 ```
     // Token naming follows modern conventions: semantic-scale
     primary: {
-        50: '#FFFFFF',   // lightest
-        100: '#F5F7FA',
-        200: '#959BA5',
-        300: '#959BA5',
-        400: '#374151',
-        500: '#111827',  // base brand color
-        600: '#0B111C',
-        700: '#[HEX]',
-        800: '#[HEX]',
-        900: '#[HEX]'   // darkest
+    50: '#FFFFFF',   // pure white - light backgrounds, flow card backgrounds, modal surfaces
+    100: '#F5F7FA',  // subtle off-white - page backgrounds, flow list backgrounds, settings panels
+    200: '#959BA5',  // light neutral - secondary buttons, disabled flow buttons, inactive tab icons
+    300: '#6B7280',  // medium neutral - flow descriptions, timestamp text, secondary nav labels
+    400: '#374151',  // dark neutral - flow titles, streak counters, active tab labels
+    500: '#111827',  // base brand color - main headings, primary text, app title, active flow text
+    600: '#0F172A',  // slightly darker brand - primary buttons in dark mode, pressed states
+    700: '#0C1320',  // deep neutral - bottom tab bar (dark mode), navigation headers (dark mode)
+    800: '#111827',  // strong base for text in dark mode - flow cards text, main content (dark mode)
+    900: '#0B111C'   // near-black - dark mode backgrounds, modal overlays, splash screen
     }
 ```
 #### Status colors (success, error, warning, info)
