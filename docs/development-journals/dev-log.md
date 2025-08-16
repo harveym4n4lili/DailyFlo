@@ -225,3 +225,12 @@
 ### Notes
 - No notes
 ---
+## [16/08/2025] - [Saturday]
+
+### Today's Goals
+- [X] Finished main navbar design
+### Future Plan
+- Begin to design task creation modal/screen
+### Notes
+- No notes
+---
