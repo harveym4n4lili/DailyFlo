@@ -96,7 +96,7 @@ As a user, I want to edit task details so that I can update information as plans
 As a user, I want to delete tasks that are no longer relevant so that my list stays clean.
 ### Recurring Tasks
 As a user, I want to create recurring weekly tasks so that I don't forget routine activities.
-As a user, I want to modify recurring tasks so that I can adjust my routines as needed.
+As a user, I wan                                                                                                                                                                                 t to modify recurring tasks so that I can adjust my routines as needed.
 As a user, I want recurring tasks to appear automatically so that I don't have to recreate them weekly.
 As a user, I want to complete recurring tasks independently so that missing one week doesn't affect future weeks.
 ### Calendar & Planning
