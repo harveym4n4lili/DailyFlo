@@ -44,3 +44,16 @@ Renaming RecurringTasks to Routines.
 
 ### Notes
 - No notes
+---
+## [18/08/2025] - [Monday]
+
+### Decision 1
+Decided to simplify nav where monthly planner screen and today's task screen are combined into one.
+#### Decision Goal
+> Simplify app usage.
+#### Decision Context
+* Upon wireframe design I noticed that the monthly planner view and today's tasks view could be combined with the usage if various UI techniques.
+* It also made more sense for a user standpoint for all task related planning to be in one view, rather than having it seperated dependant on month/week.
+
+### Notes
+- No notes
