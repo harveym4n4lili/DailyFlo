@@ -234,3 +234,12 @@
 ### Notes
 - No notes
 ---
+## [18/08/2025] - [Monday]
+
+### Today's Goals
+- [X] Reworked Today's task screen to a Main Day Planner Screen
+### Future Plan
+- Begin to design task creation modal/screen
+### Notes
+- No notes
+---
