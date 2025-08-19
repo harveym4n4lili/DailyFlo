@@ -243,3 +243,13 @@
 ### Notes
 - No notes
 ---
+## [19/08/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Begun design on task creation modal screen
+### Future Plan
+- Finish modal task creation screen, keep note of any model changes needed
+- Begin to plan folder creation modal
+### Notes
+- No notes
+---
