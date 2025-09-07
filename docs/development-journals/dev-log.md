@@ -263,3 +263,12 @@
 ### Notes
 - No notes
 ---
+## [05/09/2025] - [Friday]
+
+### Today's Goals
+- [X] Fully Finished task modal creation screen
+### Future Plan
+- make clear note of any model changes needed
+### Notes
+- No notes
+---
