@@ -272,3 +272,37 @@
 ### Notes
 - No notes
 ---
+## [06/09/2025] - [Saturday]
+
+### Today's Goals
+- [X] Finished task detailed view modal
+### Future Plan
+- make clear note of any model changes needed
+### Notes
+- No notes
+---
+## [07/09/2025] - [Sunday]
+
+### Today's Goals
+- [X] Begun work on list view screen
+### Future Plan
+- make clear note of any model changes needed
+### Notes
+- No notes
+---
+## [08/09/2025] - [Monday]
+
+### Today's Goals
+- [X] Continued work on list view screen
+### Challenges
+- Found difficulty designing the list screen, with UI desicions based on ease of use, and usefulness.
+### Future Plan
+- make clear note of any model changes needed
+### Notes
+- Need to solve: 
+    - color indicator on each list card
+    - content to put on each list card
+    - styling of text in each list card
+    - how to handle tasks view in browse
+    - finalise layout of filter button and potential view style button
+---
