@@ -306,3 +306,14 @@
     - how to handle tasks view in browse
     - finalise layout of filter button and potential view style button
 ---
+## [09/09/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Finished list view screen
+- [X] Finished list detail view screen
+### Future Plan
+- make clear note of any model changes needed
+### Notes
+- Need to solve: 
+    - debate between today button on navbar or inbox button
+---
