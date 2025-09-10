@@ -57,3 +57,15 @@ Decided to simplify nav where monthly planner screen and today's task screen are
 
 ### Notes
 - No notes
+---
+## [10/09/2025] - [Wednesday]
+
+### Decision 1
+Reverted decision of combining today's view and planner.
+#### Decision Goal
+> Provide a more clearer view for the user
+#### Decision Context
+* Whilst developing the figma wireframes, I noticed more screens could be included whilst reducing difficulty with usage.
+
+### Notes
+- No notes
