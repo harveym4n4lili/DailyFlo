@@ -243,3 +243,94 @@
 ### Notes
 - No notes
 ---
+## [19/08/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Begun design on task creation modal screen
+### Future Plan
+- Finish modal task creation screen, keep note of any model changes needed
+- Begin to plan folder creation modal
+### Notes
+- No notes
+---
+## [21/08/2025] - [Thursday]
+
+### Today's Goals
+- [X] Finished task modal creation screen
+### Future Plan
+- make clear note of any model changes needed
+- Begin to plan folder creation modal
+### Notes
+- No notes
+---
+## [05/09/2025] - [Friday]
+
+### Today's Goals
+- [X] Fully Finished task modal creation screen
+### Future Plan
+- make clear note of any model changes needed
+### Notes
+- No notes
+---
+## [06/09/2025] - [Saturday]
+
+### Today's Goals
+- [X] Finished task detailed view modal
+### Future Plan
+- make clear note of any model changes needed
+### Notes
+- No notes
+---
+## [07/09/2025] - [Sunday]
+
+### Today's Goals
+- [X] Begun work on list view screen
+### Future Plan
+- make clear note of any model changes needed
+### Notes
+- No notes
+---
+## [08/09/2025] - [Monday]
+
+### Today's Goals
+- [X] Continued work on list view screen
+### Challenges
+- Found difficulty designing the list screen, with UI desicions based on ease of use, and usefulness.
+### Future Plan
+- make clear note of any model changes needed
+### Notes
+- Need to solve: 
+    - color indicator on each list card
+    - content to put on each list card
+    - styling of text in each list card
+    - how to handle tasks view in browse
+    - finalise layout of filter button and potential view style button
+---
+## [09/09/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Finished list view screen
+- [X] Finished list detail view screen
+- [X] Finished inbox, and today's task screens
+### Future Plan
+- make clear note of any model changes needed
+- begin to design settings screen
+- begin to design rescedule/date modal
+- begin to design completed screen
+### Notes
+- almost done with full wireframe designing, consider dark mode
+- begin to refresh on react native concepts, plan on components and pages to be built
+- this leads to documentation update, referring to file-architecture and design-system
+---
+## [10/09/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Finished Day select modal
+- [X] Finished task completion screen
+- [X] Finished Settings screen
+### Future Plan
+- begin to plan frontend components and integration with backend
+- finish documentation with frontend related docs
+### Notes
+- no notes
+---
