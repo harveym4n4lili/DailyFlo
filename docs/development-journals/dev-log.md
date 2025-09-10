@@ -311,9 +311,26 @@
 ### Today's Goals
 - [X] Finished list view screen
 - [X] Finished list detail view screen
+- [X] Finished inbox, and today's task screens
 ### Future Plan
 - make clear note of any model changes needed
+- begin to design settings screen
+- begin to design rescedule/date modal
+- begin to design completed screen
 ### Notes
-- Need to solve: 
-    - debate between today button on navbar or inbox button
+- almost done with full wireframe designing, consider dark mode
+- begin to refresh on react native concepts, plan on components and pages to be built
+- this leads to documentation update, referring to file-architecture and design-system
+---
+## [10/09/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Finished Day select modal
+- [X] Finished task completion screen
+- [X] Finished Settings screen
+### Future Plan
+- begin to plan frontend components and integration with backend
+- finish documentation with frontend related docs
+### Notes
+- no notes
 ---
