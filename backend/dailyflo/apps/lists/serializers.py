@@ -73,3 +73,15 @@ class ListUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A list with this name already exists.")
         
         return value
+
+class ListDeleteSerializer(serializers.Serializer):
+    """
+    Serializer for confirming list deletion
+    """
+    confirm_delete = serializers.BooleanField(required=True)
+    move_tasks_to_inbox = serializers.BooleanField(default=True)
+    
+    def validate_confirm_delete(self, value):
+        if not value:
+            raise serializers.ValidationError("You must confirm the deletion.")
+        return value
