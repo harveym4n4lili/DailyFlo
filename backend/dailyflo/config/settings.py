@@ -42,8 +42,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'apps.accounts',
     'apps.tasks',
+    'apps.calendars',
+    'apps.lists',
+    'apps.reminders',
+    'apps.routines',
+    'apps.subtasks',
     'rest_framework',
-    'rest_framework.authtoken'
+    'rest_framework.authtoken',
+    'rest_framework_simplejwt'
 ]
 
 MIDDLEWARE = [

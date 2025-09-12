@@ -4,8 +4,7 @@ from . import views
 
 # create router for ViewSets
 router = DefaultRouter()
-router.register(r'tasks', views.TaskViewSet, basename='task')
-router.register(r'lists', views.ListViewSet, basename='list')
+router.register(r'', views.ListViewSet, basename='list')
 
 urlpatterns = [
     # include router URLs
