@@ -48,15 +48,15 @@ class Task(models.Model):
         help_text="List this task belongs to (null for inbox)"
     )
     
-    # routine relationship (for recurring tasks)
-    recurring_task = models.ForeignKey(
-        'routines.Routine',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='generated_tasks',
-        help_text="Routine that generated this task"
-    )
+    # routine relationship (for recurring tasks) - TODO: implement when routines app is ready
+    # recurring_task = models.ForeignKey(
+    #     'routines.Routine',
+    #     on_delete=models.SET_NULL,
+    #     null=True,
+    #     blank=True,
+    #     related_name='generated_tasks',
+    #     help_text="Routine that generated this task"
+    # )
     
     # task information
     title = models.CharField(
