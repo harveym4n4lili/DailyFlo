@@ -1,98 +1,151 @@
-from rest_framework.views import APIView
+from rest_framework import viewsets, status, permissions, filters
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework import status, permissions
-from django.shortcuts import get_object_or_404
-from .models import Task, RecurringTask
-from .serializers import TaskSerializer, RecurringTaskSerializer
+from rest_framework.generics import ListAPIView, RetrieveAPIView, CreateAPIView, UpdateAPIView, DestroyAPIView
+from django_filters.rest_framework import DjangoFilterBackend
+from django.utils import timezone
+from django.db.models import Q
+from .models import Task
+from .serializers import (
+    TaskListSerializer, TaskDetailSerializer, TaskCreateSerializer,
+    TaskUpdateSerializer, TaskCompleteSerializer, ListSerializer, ListCreateSerializer
+)
+from apps.lists.models import List
 
-class TaskListAPIView(APIView):
+
+class TaskViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for task management
+    """
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['is_completed', 'color', 'priority_level', 'routine_type', 'list']
+    search_fields = ['title', 'description']
+    ordering_fields = ['created_at', 'updated_at', 'due_date', 'priority_level', 'title']
+    ordering = ['-created_at']
     
-    def get(self, request, *args, **kwargs):
-        tasks = Task.objects.all()
-        serializer = TaskSerializer(tasks, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def post(self, request):
-        serializer = TaskSerializer(data=request.data) # send input data to serializer
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def get_queryset(self):
+        """filter tasks by current user"""
+        return Task.objects.filter(
+            user=self.request.user,
+            soft_deleted=False
+        ).select_related('list')
     
-class TaskDetailAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def get_object(self, pk):
-        from django.shortcuts import get_object_or_404
-        return get_object_or_404(Task, pk=pk)
-
-    def get(self, request, pk):
-        task = self.get_object(pk)
-        serializer = TaskSerializer(task)
-        return Response(serializer.data)
-
-    def put(self, request, pk):
-        task = self.get_object(pk)
-        serializer = TaskSerializer(task, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class ToggleDeleteTaskAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    def get_serializer_class(self):
+        """return appropriate serializer based on action"""
+        if self.action == 'list':
+            return TaskListSerializer
+        elif self.action == 'create':
+            return TaskCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return TaskUpdateSerializer
+        else:
+            return TaskDetailSerializer
     
-    def patch(self, request, pk):
-        try:
-            task = Task.objects.get(pk=pk)
-            task.soft_deleted = not task.soft_deleted
-            task.save()
-            return Response({'soft_deleted': task.soft_deleted}, status=status.HTTP_200_OK)
-        except Task.DoesNotExist:
-            return Response({'error': 'Task not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-class RecurringTaskDetailAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def get_object(self, pk):
-        from django.shortcuts import get_object_or_404
-        return get_object_or_404(RecurringTask, pk=pk)
-
-    def get(self, request, pk):
-        task = self.get_object(pk)
-        serializer = RecurringTaskSerializer(task)
-        return Response(serializer.data)
-
-    def put(self, request, pk):
-        task = self.get_object(pk)
-        serializer = RecurringTaskSerializer(task, data=request.data)
+    def perform_create(self, serializer):
+        """create task with current user"""
+        serializer.save(user=self.request.user)
+    
+    @action(detail=True, methods=['patch'])
+    def complete(self, request, pk=None):
+        """mark task as completed"""
+        task = self.get_object()
+        serializer = TaskCompleteSerializer(task, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-class RecurringTaskListAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    @action(detail=False, methods=['get'])
+    def today(self, request):
+        """get today's tasks"""
+        today = timezone.now().date()
+        tasks = self.get_queryset().filter(
+            Q(due_date__date=today) | Q(due_date__isnull=True)
+        ).exclude(is_completed=True)
+        
+        serializer = TaskListSerializer(tasks, many=True)
+        return Response(serializer.data)
     
-    def get(self):
-        tasks = RecurringTask.objects.all()
-        serializer = RecurringTaskSerializer(tasks, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def post(self, request):
-        serializer = RecurringTaskSerializer(data=request.data) # send input data to serializer
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=False, methods=['get'])
+    def overdue(self, request):
+        """get overdue tasks"""
+        now = timezone.now()
+        tasks = self.get_queryset().filter(
+            due_date__lt=now,
+            is_completed=False
+        )
+        
+        serializer = TaskListSerializer(tasks, many=True)
+        return Response(serializer.data)
     
-class ToggleDeleteRecurringTaskAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    @action(detail=False, methods=['get'])
+    def completed(self, request):
+        """get completed tasks"""
+        tasks = self.get_queryset().filter(is_completed=True)
+        
+        serializer = TaskListSerializer(tasks, many=True)
+        return Response(serializer.data)
 
-    def patch(self, request, pk):
+
+class ListViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for list management
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    ordering_fields = ['sort_order', 'name', 'created_at']
+    ordering = ['sort_order', 'name']
+    
+    def get_queryset(self):
+        """filter lists by current user"""
+        return List.objects.filter(
+            user=self.request.user,
+            soft_deleted=False
+        )
+    
+    def get_serializer_class(self):
+        """return appropriate serializer based on action"""
+        if self.action == 'create':
+            return ListCreateSerializer
+        else:
+            return ListSerializer
+    
+    def perform_create(self, serializer):
+        """create list with current user"""
+        serializer.save(user=self.request.user)
+    
+    @action(detail=True, methods=['get'])
+    def tasks(self, request, pk=None):
+        """get tasks for a specific list"""
+        list_obj = self.get_object()
+        tasks = Task.objects.filter(
+            list=list_obj,
+            user=request.user,
+            soft_deleted=False
+        ).select_related('list')
+        
+        # apply filters
+        is_completed = request.query_params.get('completed')
+        if is_completed is not None:
+            tasks = tasks.filter(is_completed=is_completed.lower() == 'true')
+        
+        serializer = TaskListSerializer(tasks, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def inbox(self, request):
+        """get inbox (default) list"""
         try:
-            task = RecurringTask.objects.get(pk=pk)
-            task.soft_deleted = not task.soft_deleted
-            task.save()
-            return Response({'soft_deleted': task.soft_deleted}, status=status.HTTP_200_OK)
-        except Task.DoesNotExist:
-            return Response({'error': 'Task not found.'}, status=status.HTTP_404_NOT_FOUND)
+            inbox_list = List.objects.get(
+                user=request.user,
+                is_default=True,
+                soft_deleted=False
+            )
+            serializer = ListSerializer(inbox_list)
+            return Response(serializer.data)
+        except List.DoesNotExist:
+            return Response(
+                {'error': 'Inbox list not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
