@@ -27,6 +27,12 @@ export default function TabLayout() {
         }),
       }}>
       <Tabs.Screen
+        name="index"
+        options={{
+          href: null, // Hide this route from the tab bar
+        }}
+      />
+      <Tabs.Screen
         name="today"
         options={{
           title: 'Today',
