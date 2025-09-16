@@ -51,9 +51,9 @@ export interface Task {
   description: string;              // Optional description of the task
   
   // Task scheduling and status
-  dueDate: Date | null;             // When the task is due (optional)
+  dueDate: string | null;           // When the task is due (optional) - stored as ISO string for Redux serialization
   isCompleted: boolean;             // Whether the task is completed
-  completedAt: Date | null;         // When the task was completed (if completed)
+  completedAt: string | null;       // When the task was completed (if completed) - stored as ISO string for Redux serialization
   
   // Task organization and properties
   priorityLevel: PriorityLevel;     // Priority from 1 (lowest) to 5 (highest)
@@ -73,15 +73,15 @@ export interface Task {
   softDeleted: boolean;             // Whether the task has been soft deleted
   
   // Timestamps
-  createdAt: Date;                  // When the task was created
-  updatedAt: Date;                  // When the task was last updated
+  createdAt: string;                // When the task was created - stored as ISO string for Redux serialization
+  updatedAt: string;                // When the task was last updated - stored as ISO string for Redux serialization
 }
 
 // Type for creating a new task (without auto-generated fields)
 export interface CreateTaskInput {
   title: string;                    // Required: Task title
   description?: string;             // Optional: Task description
-  dueDate?: Date;                   // Optional: Due date
+  dueDate?: string;                 // Optional: Due date - stored as ISO string for Redux serialization
   priorityLevel?: PriorityLevel;    // Optional: Priority (defaults to 3)
   color?: TaskColor;                // Optional: Color (defaults to 'blue')
   routineType?: RoutineType;        // Optional: Routine type (defaults to 'once')
@@ -95,7 +95,7 @@ export interface UpdateTaskInput {
   id: string;                       // Required: Task ID to update
   title?: string;                   // Optional: New title
   description?: string;             // Optional: New description
-  dueDate?: Date | null;            // Optional: New due date (null to remove)
+  dueDate?: string | null;          // Optional: New due date (null to remove) - stored as ISO string for Redux serialization
   isCompleted?: boolean;            // Optional: Completion status
   priorityLevel?: PriorityLevel;    // Optional: New priority
   color?: TaskColor;                // Optional: New color
@@ -112,8 +112,8 @@ export interface TaskFilters {
   priorityLevel?: PriorityLevel;    // Filter by priority level
   color?: TaskColor;                // Filter by color
   routineType?: RoutineType;        // Filter by routine type
-  dueDateFrom?: Date;               // Filter tasks due after this date
-  dueDateTo?: Date;                 // Filter tasks due before this date
+  dueDateFrom?: string;             // Filter tasks due after this date - stored as ISO string for Redux serialization
+  dueDateTo?: string;               // Filter tasks due before this date - stored as ISO string for Redux serialization
   searchQuery?: string;             // Search in title and description
 }
 
