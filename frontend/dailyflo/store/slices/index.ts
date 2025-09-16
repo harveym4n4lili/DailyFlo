@@ -2,18 +2,17 @@
  * Slices Index
  * 
  * This file exports all Redux slices for easy importing.
+ * It serves as the main entry point for all Redux state management.
  */
 
 // Export all slice reducers
-export { default as authReducer } from './auth';
-export { default as tasksReducer } from './tasks';
-export { default as listsReducer } from './lists';
-export { default as uiReducer } from './ui/uiSlice';
-export { default as themeReducer } from './ui/themeSlice';
+export { authReducer } from './auth';
+export { tasksReducer } from './tasks';
+export { listsReducer } from './lists';
+export { uiReducer, themeReducer } from './ui';
 
-// Export all slice actions
-export * from './auth';
-export * from './tasks';
-export * from './lists';
-export * from './ui/uiSlice';
-export * from './ui/themeSlice';
+// Export all slice actions with namespace to avoid conflicts
+export * as authActions from './auth';
+export * as taskActions from './tasks';
+export * as listActions from './lists';
+export * as uiActions from './ui';
