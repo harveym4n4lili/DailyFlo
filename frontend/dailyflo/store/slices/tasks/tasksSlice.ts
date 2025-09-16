@@ -140,7 +140,7 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Complete project proposal',
           description: 'Write and submit the project proposal by Friday',
-          dueDate: today, // Due today
+          dueDate: today.toISOString(), // Due today - convert to string for Redux serialization
           isCompleted: false,
           completedAt: null,
           priorityLevel: 4,
@@ -152,8 +152,8 @@ export const fetchTasks = createAsyncThunk(
             reminders: [],
           },
           softDeleted: false,
-          createdAt: new Date('2024-01-10'),
-          updatedAt: new Date('2024-01-10'),
+          createdAt: new Date('2024-01-10').toISOString(),
+          updatedAt: new Date('2024-01-10').toISOString(),
         },
         {
           id: '2',
@@ -161,7 +161,7 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Buy groceries',
           description: 'Get milk, bread, and eggs from the store',
-          dueDate: today, // Due today
+          dueDate: today.toISOString(), // Due today - convert to string for Redux serialization
           isCompleted: false,
           completedAt: null,
           priorityLevel: 3,
@@ -173,8 +173,8 @@ export const fetchTasks = createAsyncThunk(
             reminders: [],
           },
           softDeleted: false,
-          createdAt: new Date('2024-01-11'),
-          updatedAt: new Date('2024-01-11'),
+          createdAt: new Date('2024-01-11').toISOString(),
+          updatedAt: new Date('2024-01-11').toISOString(),
         },
         {
           id: '3',
@@ -182,7 +182,7 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Call dentist',
           description: 'Schedule annual checkup appointment',
-          dueDate: yesterday, // Overdue task
+          dueDate: yesterday.toISOString(), // Overdue task - convert to string for Redux serialization
           isCompleted: false,
           completedAt: null,
           priorityLevel: 2,
@@ -194,8 +194,8 @@ export const fetchTasks = createAsyncThunk(
             reminders: [],
           },
           softDeleted: false,
-          createdAt: new Date('2024-01-09'),
-          updatedAt: new Date('2024-01-09'),
+          createdAt: new Date('2024-01-09').toISOString(),
+          updatedAt: new Date('2024-01-09').toISOString(),
         },
         {
           id: '4',
@@ -203,7 +203,7 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Plan weekend trip',
           description: 'Research destinations and book accommodation',
-          dueDate: tomorrow, // Due tomorrow (won't show in today's view)
+          dueDate: tomorrow.toISOString(), // Due tomorrow (won't show in today's view) - convert to string for Redux serialization
           isCompleted: false,
           completedAt: null,
           priorityLevel: 3,
@@ -215,8 +215,8 @@ export const fetchTasks = createAsyncThunk(
             reminders: [],
           },
           softDeleted: false,
-          createdAt: new Date('2024-01-12'),
-          updatedAt: new Date('2024-01-12'),
+          createdAt: new Date('2024-01-12').toISOString(),
+          updatedAt: new Date('2024-01-12').toISOString(),
         },
       ];
       
@@ -259,8 +259,8 @@ export const createTask = createAsyncThunk(
           tags: taskData.metadata?.tags,
         },
         softDeleted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
       
       return newTask;
@@ -546,20 +546,20 @@ function applySorting(tasks: Task[], sortOptions: TaskSortOptions): Task[] {
         bValue = b.title.toLowerCase();
         break;
       case 'dueDate':
-        aValue = a.dueDate?.getTime() || 0;
-        bValue = b.dueDate?.getTime() || 0;
+        aValue = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+        bValue = b.dueDate ? new Date(b.dueDate).getTime() : 0;
         break;
       case 'priorityLevel':
         aValue = a.priorityLevel;
         bValue = b.priorityLevel;
         break;
       case 'createdAt':
-        aValue = a.createdAt.getTime();
-        bValue = b.createdAt.getTime();
+        aValue = new Date(a.createdAt).getTime();
+        bValue = new Date(b.createdAt).getTime();
         break;
       case 'updatedAt':
-        aValue = a.updatedAt.getTime();
-        bValue = b.updatedAt.getTime();
+        aValue = new Date(a.updatedAt).getTime();
+        bValue = new Date(b.updatedAt).getTime();
         break;
       case 'sortOrder':
         aValue = a.sortOrder;
