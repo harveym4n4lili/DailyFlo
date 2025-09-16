@@ -358,7 +358,15 @@ const tasksSlice = createSlice({
         const taskIndex = state.tasks.findIndex(task => task.id === id);
         
         if (taskIndex !== -1) {
-          state.tasks[taskIndex] = { ...state.tasks[taskIndex], ...updates };
+          state.tasks[taskIndex] = { 
+            ...state.tasks[taskIndex], 
+            ...updates,
+            metadata: {
+              ...state.tasks[taskIndex].metadata,
+              ...updates.metadata,
+              subtasks: updates.metadata?.subtasks || state.tasks[taskIndex].metadata.subtasks || []
+            }
+          };
           state.filteredTasks = applyFilters(state.tasks, state.filters);
         }
       })
