@@ -8,7 +8,14 @@
  */
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+// TYPES FOLDER IMPORTS - TypeScript type definitions
+// The types folder contains all TypeScript interfaces and type definitions
 import { Task, CreateTaskInput, UpdateTaskInput, TaskFilters, TaskSortOptions } from '../../../types';
+// Task: Main interface for task objects (from types/common/Task.ts)
+// CreateTaskInput: Interface for creating new tasks (from types/common/Task.ts)
+// UpdateTaskInput: Interface for updating existing tasks (from types/common/Task.ts)
+// TaskFilters: Interface for filtering tasks (from types/common/Task.ts)
+// TaskSortOptions: Interface for sorting tasks (from types/common/Task.ts)
 
 /**
  * Define the shape of the tasks state
@@ -110,11 +117,22 @@ export const fetchTasks = createAsyncThunk(
   'tasks/fetchTasks',
   async (_, { rejectWithValue }) => {
     try {
+      console.log('🔄 fetchTasks thunk started');
+      
       // TODO: Replace with actual API call
       // const response = await api.getTasks();
       // return response.data;
       
       // For now, return mock data
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      // TYPES USAGE - Creating mock data that conforms to Task interface
+      // mockTasks: Task[] - Array of Task objects that match the Task interface from types/common/Task.ts
+      // This ensures our mock data has the same structure as real API data
       const mockTasks: Task[] = [
         {
           id: '1',
@@ -122,7 +140,7 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Complete project proposal',
           description: 'Write and submit the project proposal by Friday',
-          dueDate: new Date('2024-01-15'),
+          dueDate: today, // Due today
           isCompleted: false,
           completedAt: null,
           priorityLevel: 4,
@@ -137,8 +155,72 @@ export const fetchTasks = createAsyncThunk(
           createdAt: new Date('2024-01-10'),
           updatedAt: new Date('2024-01-10'),
         },
+        {
+          id: '2',
+          userId: 'user1',
+          listId: null,
+          title: 'Buy groceries',
+          description: 'Get milk, bread, and eggs from the store',
+          dueDate: today, // Due today
+          isCompleted: false,
+          completedAt: null,
+          priorityLevel: 3,
+          color: 'green',
+          routineType: 'once',
+          sortOrder: 1,
+          metadata: {
+            subtasks: [],
+            reminders: [],
+          },
+          softDeleted: false,
+          createdAt: new Date('2024-01-11'),
+          updatedAt: new Date('2024-01-11'),
+        },
+        {
+          id: '3',
+          userId: 'user1',
+          listId: null,
+          title: 'Call dentist',
+          description: 'Schedule annual checkup appointment',
+          dueDate: yesterday, // Overdue task
+          isCompleted: false,
+          completedAt: null,
+          priorityLevel: 2,
+          color: 'red',
+          routineType: 'once',
+          sortOrder: 2,
+          metadata: {
+            subtasks: [],
+            reminders: [],
+          },
+          softDeleted: false,
+          createdAt: new Date('2024-01-09'),
+          updatedAt: new Date('2024-01-09'),
+        },
+        {
+          id: '4',
+          userId: 'user1',
+          listId: null,
+          title: 'Plan weekend trip',
+          description: 'Research destinations and book accommodation',
+          dueDate: tomorrow, // Due tomorrow (won't show in today's view)
+          isCompleted: false,
+          completedAt: null,
+          priorityLevel: 3,
+          color: 'purple',
+          routineType: 'once',
+          sortOrder: 3,
+          metadata: {
+            subtasks: [],
+            reminders: [],
+          },
+          softDeleted: false,
+          createdAt: new Date('2024-01-12'),
+          updatedAt: new Date('2024-01-12'),
+        },
       ];
       
+      console.log('📦 Returning mock tasks:', mockTasks.length, 'tasks');
       return mockTasks;
     } catch (error) {
       // If the API call fails, return the error
