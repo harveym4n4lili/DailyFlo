@@ -1,9 +1,9 @@
 
 import React, { useEffect, useMemo } from 'react';
-import { StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { StyleSheet, RefreshControl, View } from 'react-native';
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+// import our custom layout components
+import { ScreenContainer, SafeAreaWrapper, ThemedText } from '@/components';
 
 // STORE FOLDER IMPORTS - Redux state management
 // The store folder contains all Redux-related code for managing app state
@@ -85,193 +85,170 @@ export default function TodayScreen() {
     dispatch(fetchTasks());
   };
 
-  // Render loading state
+  // render loading state when no tasks are loaded yet
   if (isLoading && tasks.length === 0) {
     return (
-      <ThemedView style={styles.container}>
-        <ThemedView style={styles.header}>
-          <ThemedText type="title">Today</ThemedText>
-          <ThemedText style={styles.subtitle}>Loading your tasks...</ThemedText>
-        </ThemedView>
+      <ScreenContainer scrollable={false}>
+        {/* safe area wrapper for header to ensure proper spacing on devices with notches */}
+        <ThemedText type="title">Today</ThemedText>
+        <ThemedText style={styles.subtitle}>Loading your tasks...</ThemedText>
         
-        <ThemedView style={styles.content}>
-          <ThemedText>Loading tasks...</ThemedText>
-        </ThemedView>
-      </ThemedView>
+        {/* loading content with centered text */}
+        <ThemedText style={styles.loadingText}>Loading tasks...</ThemedText>
+      </ScreenContainer>
     );
   }
 
-  // Render error state
+  // render error state when task loading fails
   if (error && tasks.length === 0) {
     return (
-      <ThemedView style={styles.container}>
-        <ThemedView style={styles.header}>
-          <ThemedText type="title">Today</ThemedText>
-          <ThemedText style={styles.subtitle}>Error loading tasks</ThemedText>
-        </ThemedView>
+      <ScreenContainer scrollable={false}>
+        {/* header section with title and error message */}
+        <ThemedText type="title">Today</ThemedText>
+        <ThemedText style={styles.subtitle}>Error loading tasks</ThemedText>
         
-        <ThemedView style={styles.content}>
-          <ThemedText style={styles.errorText}>Failed to load tasks</ThemedText>
-          <ThemedText style={styles.hint}>Pull down to try again</ThemedText>
-        </ThemedView>
-      </ThemedView>
+        {/* error content with retry instructions */}
+        <ThemedText style={styles.errorText}>Failed to load tasks</ThemedText>
+        <ThemedText style={styles.hint}>Pull down to try again</ThemedText>
+      </ScreenContainer>
     );
   }
 
+  // render main content with today's tasks
   return (
-    <ThemedView style={styles.container}>
-      {/* Header section with title and task count */}
-      <ThemedView style={styles.header}>
-        <ThemedText type="title">Today</ThemedText>
+    <ScreenContainer 
+      scrollable={true}
+      scrollViewProps={{
+        refreshControl: (
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={handleRefresh}
+            tintColor="#007AFF" // iOS blue color for pull-to-refresh indicator
+          />
+        )
+      }}
+    >
+       {/* header section with title and dynamic task count */}
+       <ThemedText type="title">Today</ThemedText>
         <ThemedText style={styles.subtitle}>
           {todaysTasks.length === 0 
             ? "No tasks for today" 
             : `${todaysTasks.length} task${todaysTasks.length === 1 ? '' : 's'} for today`
           }
         </ThemedText>
-      </ThemedView>
       
-      {/* Scrollable content area */}
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={handleRefresh}
-            tintColor="#007AFF" // iOS blue color
-          />
-        }
-      >
-        {todaysTasks.length === 0 ? (
-          // Empty state - no tasks for today
-          <ThemedView style={styles.emptyState}>
-            <ThemedText style={styles.emptyText}>No tasks for today yet.</ThemedText>
-            <ThemedText style={styles.hint}>Tap the + button to add your first task!</ThemedText>
-          </ThemedView>
-        ) : (
-          // Task list - we'll implement task components here later
-          <ThemedView style={styles.taskList}>
-            <ThemedText style={styles.sectionTitle}>Today's Tasks</ThemedText>
-            
-            {/* TODO: Implement TaskItem components here */}
-            {/* For now, we'll show a placeholder */}
-            {todaysTasks.map((task: Task) => (
-              // TYPES USAGE - Using Task interface for type safety
-              // task: Task - Each task object conforms to the Task interface from types/common/Task.ts
-              // This ensures we have access to all the properties defined in the Task type
-              <ThemedView key={task.id} style={styles.taskPlaceholder}>
-                <ThemedText style={styles.taskTitle}>{task.title}</ThemedText>
-                <ThemedText style={styles.taskDescription}>
-                  {task.description || 'No description'}
-                </ThemedText>
-                <ThemedText style={styles.taskMeta}>
-                  Priority: {task.priorityLevel} | Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
-                </ThemedText>
-              </ThemedView>
-            ))}
-          </ThemedView>
-        )}
-      </ScrollView>
-    </ThemedView>
+      {todaysTasks.length === 0 ? (
+        // empty state when no tasks are scheduled for today
+        <>
+          <ThemedText style={styles.emptyText}>No tasks for today yet.</ThemedText>
+          <ThemedText style={styles.hint}>Tap the + button to add your first task!</ThemedText>
+        </>
+      ) : (
+        // task list section with today's scheduled tasks
+        <>
+          <ThemedText style={styles.sectionTitle}>Today's Tasks</ThemedText>
+          
+          {/* TODO: Implement proper TaskItem components here */}
+          {/* temporary placeholder cards until we build the actual task components */}
+          {todaysTasks.map((task: Task) => (
+            // TYPES USAGE - Using Task interface for type safety
+            // task: Task - Each task object conforms to the Task interface from types/common/Task.ts
+            // This ensures we have access to all the properties defined in the Task type
+            <View key={task.id} style={styles.taskPlaceholder}>
+              {/* task title with bold styling */}
+              <ThemedText style={styles.taskTitle}>{task.title}</ThemedText>
+              {/* task description or placeholder if none exists */}
+              <ThemedText style={styles.taskDescription}>
+                {task.description || 'No description'}
+              </ThemedText>
+              {/* task metadata showing priority and due date */}
+              <ThemedText style={styles.taskMeta}>
+                Priority: {task.priorityLevel} | Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
+              </ThemedText>
+            </View>
+          ))}
+        </>
+      )}
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  // Main container that takes up the full screen
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  
-  // Header section with title and subtitle
-  header: {
-    marginBottom: 20,
-    paddingTop: 10, // Add some top padding for better spacing
-  },
+  // subtitle text styling for the main header section
   subtitle: {
     marginTop: 8,
-    opacity: 0.7,
+    opacity: 0.7, // subtle transparency for secondary text
     fontSize: 16,
   },
   
-  // Content area for loading and error states
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  // loading text styling for initial load state
+  loadingText: {
+    marginTop: 20,
+    textAlign: 'center',
+    opacity: 0.7, // subtle transparency for loading state
   },
   
-  // Error text styling
+  // error text styling with iOS red color for failed operations
   errorText: {
-    color: '#FF3B30', // iOS red color
+    color: '#FF3B30', // iOS system red color for error states
     textAlign: 'center',
+    marginTop: 20,
     marginBottom: 8,
   },
   
-  // Hint text styling
+  // hint text styling for helpful user instructions
   hint: {
     marginTop: 8,
-    opacity: 0.6,
+    opacity: 0.6, // more subtle transparency for hints
     textAlign: 'center',
     fontSize: 14,
   },
   
-  // Scroll view styling
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 20, // Add bottom padding for better scrolling
-  },
-  
-  // Empty state styling
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
+  // empty state text styling when no tasks exist
   emptyText: {
     fontSize: 18,
     textAlign: 'center',
+    marginTop: 40, // extra top margin for visual separation
     marginBottom: 8,
   },
   
-  // Task list styling
-  taskList: {
-    flex: 1,
-  },
+  // section title styling for task list header
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '600', // semi-bold weight for section headers
+    marginTop: 30, // spacing from header section
     marginBottom: 16,
-    opacity: 0.9,
+    opacity: 0.9, // slight transparency for visual hierarchy
   },
   
-  // Task placeholder styling (temporary until we implement proper task components)
+  // temporary task placeholder card styling until we implement proper task components
   taskPlaceholder: {
-    backgroundColor: 'rgba(32, 32, 32, 0.37)', // Light gray background
-    borderRadius: 12,
+    backgroundColor: 'rgba(32, 32, 32, 0.37)', // subtle dark background with transparency
+    borderRadius: 12, // rounded corners for modern card appearance
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 16, // spacing between task cards
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
+    borderColor: 'rgba(0, 0, 0, 0.1)', // subtle border for card definition
   },
+  
+  // task title text styling within placeholder cards
   taskTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '600', // semi-bold for task titles
     marginBottom: 4,
   },
+  
+  // task description text styling within placeholder cards
   taskDescription: {
     fontSize: 14,
-    opacity: 0.7,
+    opacity: 0.7, // subtle transparency for secondary text
     marginBottom: 8,
   },
+  
+  // task metadata text styling (priority, due date, etc.)
   taskMeta: {
     fontSize: 12,
-    opacity: 0.6,
-    fontStyle: 'italic',
+    opacity: 0.6, // more subtle transparency for metadata
+    fontStyle: 'italic', // italic style for metadata information
   },
 });
