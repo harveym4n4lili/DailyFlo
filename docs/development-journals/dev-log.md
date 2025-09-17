@@ -387,7 +387,20 @@ Updated User app, models, serializers, views and urls
 ### Today's Goals
 - [X] Implemented most of the API service layer
 - [X] Implemented most relevant slices to be used
+- [X] Create Mockup data to test UI before connecting components to backend
 
 ### Notes
 - no notes
+---
+## [17/09/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Implemented Screen Layout Components
+- [X] Refactored Today Screen to include the new components
+- [X] Designed a new color palette for dark mode
+
+### Notes
+- Begin to plan how to implement constant color palettes to be used with components and UI
+- Plan and research how typography can be implemented
+- Consider components that dynamically choose which color to use dependant on light/dark mode
 ---
