@@ -351,3 +351,43 @@ Update authentication.md - Add social auth flows
 ### Notes
 - no notes
 ---
+## [12/09/2025] - [Friday]
+
+### Today's Goals
+- [X] Updated whole backend with new models for new wireframe designs
+Updated Task app, models, serializers, views and urls
+Updated List app, models, serializers, views and urls
+Updated User app, models, serializers, views and urls
+### Future Plan
+- Begin to plan first prototype, what frontend components need to be implemented first.
+### Notes
+- no notes
+---
+## [14/09/2025] - [Sunday]
+
+### Today's Goals
+- [X] Attempted to refactor frontend into javascript.
+### Challenges & Solutions
+- Proved to be very difficult, alot of files had to be changed and it was hard to get frontend running, so decided to stick with typescript.
+### Notes
+- no notes
+---
+## [15/09/2025] - [Monday]
+
+### Today's Goals
+- [X] Prepared Main Navbar for App
+- [X] Added frontend type definitions fro Task, List, User
+- [X] Implemented Redux state management
+
+### Notes
+- Plan and prepare service layer
+---
+## [16/09/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Implemented most of the API service layer
+- [X] Implemented most relevant slices to be used
+
+### Notes
+- no notes
+---
