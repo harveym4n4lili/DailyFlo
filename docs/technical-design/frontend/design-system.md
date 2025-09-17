@@ -1,7 +1,7 @@
 # Frontend Full System Design - UX Design Document
 ## Design Tokens
 ### Colors
-#### Primary palette (based on Figma variables)
+#### Light Mode palette (based on Figma variables)
 ```
     // Token naming follows Figma variable structure
     primary: {
@@ -10,13 +10,30 @@
     200: '#ECF0F5',  // light neutral - secondary backgrounds
     300: '#959BA5',  // medium neutral - secondary buttons, inactive elements
     400: '#374151',  // dark neutral - secondary text, labels
-    500: '#111827',  // base brand color - primary text, headings
-    600: '#0F172A',  // darker brand - primary buttons, active states
-    700: '#0C1320',  // deep neutral - navigation headers
-    800: '#111827',  // strong base for text in dark mode
-    900: '#0B111C'   // near-black - dark mode backgrounds, overlays
+    500: '#262E3B',  // base brand color - primary text, headings
+    600: '#111827',  // darker brand - primary buttons, active states
+    700: '#0F172A',  // deep neutral - navigation headers
+    800: '#0C1320',  // strong base for text in dark mode
+    900: '#111827'   // near-black - dark mode backgrounds, overlays
     }
 ```
+#### Dark Mode palette (based on Figma variables)
+```
+    // Token naming follows Figma variable structure
+    primary: {
+    50: '#111111',   // pure white - light backgrounds, modal surfaces
+    100: '#141414',  // subtle off-white - page backgrounds, settings panels
+    200: '#1C1C1C',  // light neutral - secondary backgrounds
+    300: '#555555',  // medium neutral - secondary buttons, inactive elements
+    400: '#9BA2B1',  // dark neutral - secondary text, labels
+    500: '#ADBBD5',  // base brand color - primary text, headings
+    600: '#BFCBE3',  // darker brand - primary buttons, active states
+    700: '#E1E9F9',  // deep neutral - navigation headers
+    800: '#ECF1FB',  // strong base for text in dark mode
+    900: '#F5F8FF'   // near-black - dark mode backgrounds, overlays
+    }
+```
+#### Statu
 #### Status colors (success, error, warning, info)
 ```
     semantic: {
