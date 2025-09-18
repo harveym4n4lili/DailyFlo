@@ -407,8 +407,9 @@ Updated User app, models, serializers, views and urls
 ## [18/09/2025] - [Thursday]
 
 ### Today's Goals
-- [X] 
+- [X] Wrote a color palette constant to be used
 
 ### Notes
-- 
+- Begin to plan color system and hook usage for color palette
+- Consider What needs to be refactored to use new color system
 ---
