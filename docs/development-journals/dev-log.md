@@ -404,3 +404,11 @@ Updated User app, models, serializers, views and urls
 - Plan and research how typography can be implemented
 - Consider components that dynamically choose which color to use dependant on light/dark mode
 ---
+## [18/09/2025] - [Thursday]
+
+### Today's Goals
+- [X] 
+
+### Notes
+- 
+---
