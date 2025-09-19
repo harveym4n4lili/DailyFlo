@@ -26,8 +26,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // import theme colors for consistent styling
-import { Colors } from '@/constants/Colors';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeColors } from '@/hooks/useColorPalette';
 
 /**
  * Props for the ScreenContainer component
@@ -89,7 +88,8 @@ export function ScreenContainer({
   
   // get theme-aware background color
   // this ensures the container adapts to light/dark mode automatically
-  const themeBackgroundColor = useThemeColor({}, 'background');
+  const themeColors = useThemeColors();
+  const themeBackgroundColor = themeColors.background.primary();
   
   // determine the actual background color to use
   // custom backgroundColor prop takes precedence over theme color
@@ -113,7 +113,7 @@ export function ScreenContainer({
     // determine if background is light or dark for automatic status bar styling
     const isLightBackground = finalBackgroundColor === '#fff' || 
                              finalBackgroundColor === '#ffffff' ||
-                             finalBackgroundColor === Colors.light.background;
+                             finalBackgroundColor === themeColors.background.primary();
     
     return isLightBackground ? 'dark-content' : 'light-content';
   };
