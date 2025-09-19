@@ -3,16 +3,15 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useThemeColors } from '@/hooks/useColorPalette';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const themeColors = useThemeColors();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: themeColors.interactive.primary(),
         headerShown: false,
       
         tabBarStyle: Platform.select({

@@ -1,9 +1,12 @@
 
 import React, { useEffect, useMemo } from 'react';
-import { StyleSheet, RefreshControl, View } from 'react-native';
+import { StyleSheet, RefreshControl, View, Text } from 'react-native';
 
 // import our custom layout components
-import { ScreenContainer, SafeAreaWrapper, ThemedText } from '@/components';
+import { ScreenContainer, SafeAreaWrapper } from '@/components';
+
+// import color palette system for consistent theming
+import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 
 // STORE FOLDER IMPORTS - Redux state management
 // The store folder contains all Redux-related code for managing app state
@@ -25,6 +28,15 @@ import { fetchTasks } from '@/store/slices/tasks/tasksSlice';
 import { Task } from '@/types';
 
 export default function TodayScreen() {
+  // COLOR PALETTE USAGE - Getting theme-aware colors
+  // useThemeColors: Hook that provides theme-aware colors (background, text, borders, etc.)
+  // useSemanticColors: Hook that provides semantic colors (success, error, warning, info)
+  const themeColors = useThemeColors();
+  const semanticColors = useSemanticColors();
+  
+  // create dynamic styles using the color palette system
+  const styles = useMemo(() => createStyles(themeColors, semanticColors), [themeColors, semanticColors]);
+  
   // STORE USAGE - Getting Redux dispatch function
   // Get dispatch function to send actions to Redux store
   const dispatch = useAppDispatch();
@@ -90,11 +102,11 @@ export default function TodayScreen() {
     return (
       <ScreenContainer scrollable={false}>
         {/* safe area wrapper for header to ensure proper spacing on devices with notches */}
-        <ThemedText type="title">Today</ThemedText>
-        <ThemedText style={styles.subtitle}>Loading your tasks...</ThemedText>
+        <Text style={styles.title}>Today</Text>
+        <Text style={styles.subtitle}>Loading your tasks...</Text>
         
         {/* loading content with centered text */}
-        <ThemedText style={styles.loadingText}>Loading tasks...</ThemedText>
+        <Text style={styles.loadingText}>Loading tasks...</Text>
       </ScreenContainer>
     );
   }
@@ -104,12 +116,12 @@ export default function TodayScreen() {
     return (
       <ScreenContainer scrollable={false}>
         {/* header section with title and error message */}
-        <ThemedText type="title">Today</ThemedText>
-        <ThemedText style={styles.subtitle}>Error loading tasks</ThemedText>
+        <Text style={styles.title}>Today</Text>
+        <Text style={styles.subtitle}>Error loading tasks</Text>
         
         {/* error content with retry instructions */}
-        <ThemedText style={styles.errorText}>Failed to load tasks</ThemedText>
-        <ThemedText style={styles.hint}>Pull down to try again</ThemedText>
+        <Text style={styles.errorText}>Failed to load tasks</Text>
+        <Text style={styles.hint}>Pull down to try again</Text>
       </ScreenContainer>
     );
   }
@@ -129,24 +141,24 @@ export default function TodayScreen() {
       }}
     >
        {/* header section with title and dynamic task count */}
-       <ThemedText type="title">Today</ThemedText>
-        <ThemedText style={styles.subtitle}>
+       <Text style={styles.title}>Today</Text>
+        <Text style={styles.subtitle}>
           {todaysTasks.length === 0 
             ? "No tasks for today" 
             : `${todaysTasks.length} task${todaysTasks.length === 1 ? '' : 's'} for today`
           }
-        </ThemedText>
+        </Text>
       
       {todaysTasks.length === 0 ? (
         // empty state when no tasks are scheduled for today
         <>
-          <ThemedText style={styles.emptyText}>No tasks for today yet.</ThemedText>
-          <ThemedText style={styles.hint}>Tap the + button to add your first task!</ThemedText>
+          <Text style={styles.emptyText}>No tasks for today yet.</Text>
+          <Text style={styles.hint}>Tap the + button to add your first task!</Text>
         </>
       ) : (
         // task list section with today's scheduled tasks
         <>
-          <ThemedText style={styles.sectionTitle}>Today's Tasks</ThemedText>
+          <Text style={styles.sectionTitle}>Today's Tasks</Text>
           
           {/* TODO: Implement proper TaskItem components here */}
           {/* temporary placeholder cards until we build the actual task components */}
@@ -156,15 +168,15 @@ export default function TodayScreen() {
             // This ensures we have access to all the properties defined in the Task type
             <View key={task.id} style={styles.taskPlaceholder}>
               {/* task title with bold styling */}
-              <ThemedText style={styles.taskTitle}>{task.title}</ThemedText>
+              <Text style={styles.taskTitle}>{task.title}</Text>
               {/* task description or placeholder if none exists */}
-              <ThemedText style={styles.taskDescription}>
+              <Text style={styles.taskDescription}>
                 {task.description || 'No description'}
-              </ThemedText>
+              </Text>
               {/* task metadata showing priority and due date */}
-              <ThemedText style={styles.taskMeta}>
+              <Text style={styles.taskMeta}>
                 Priority: {task.priorityLevel} | Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
-              </ThemedText>
+              </Text>
             </View>
           ))}
         </>
@@ -173,11 +185,20 @@ export default function TodayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+// create dynamic styles using the color palette system
+const createStyles = (themeColors: ReturnType<typeof useThemeColors>, semanticColors: ReturnType<typeof useSemanticColors>) => StyleSheet.create({
+  // title text styling for the main header
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    lineHeight: 32,
+    color: themeColors.text.primary(), // use theme-aware primary text color
+  },
+  
   // subtitle text styling for the main header section
   subtitle: {
     marginTop: 8,
-    opacity: 0.7, // subtle transparency for secondary text
+    color: themeColors.text.secondary(), // use theme-aware secondary text color
     fontSize: 16,
   },
   
@@ -185,12 +206,12 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 20,
     textAlign: 'center',
-    opacity: 0.7, // subtle transparency for loading state
+    color: themeColors.text.tertiary(), // use theme-aware tertiary text color
   },
   
-  // error text styling with iOS red color for failed operations
+  // error text styling with semantic error color
   errorText: {
-    color: '#FF3B30', // iOS system red color for error states
+    color: semanticColors.error(), // use semantic error color from palette
     textAlign: 'center',
     marginTop: 20,
     marginBottom: 8,
@@ -199,7 +220,7 @@ const styles = StyleSheet.create({
   // hint text styling for helpful user instructions
   hint: {
     marginTop: 8,
-    opacity: 0.6, // more subtle transparency for hints
+    color: themeColors.text.tertiary(), // use theme-aware tertiary text color
     textAlign: 'center',
     fontSize: 14,
   },
@@ -210,6 +231,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 40, // extra top margin for visual separation
     marginBottom: 8,
+    color: themeColors.text.primary(), // use theme-aware primary text color
   },
   
   // section title styling for task list header
@@ -218,17 +240,15 @@ const styles = StyleSheet.create({
     fontWeight: '600', // semi-bold weight for section headers
     marginTop: 30, // spacing from header section
     marginBottom: 16,
-    opacity: 0.9, // slight transparency for visual hierarchy
+    color: themeColors.text.primary(), // use theme-aware primary text color
   },
   
   // temporary task placeholder card styling until we implement proper task components
   taskPlaceholder: {
-    backgroundColor: 'rgba(32, 32, 32, 0.37)', // subtle dark background with transparency
+    backgroundColor: themeColors.background.elevated(), // use theme-aware elevated background
     borderRadius: 12, // rounded corners for modern card appearance
     padding: 16,
     marginBottom: 16, // spacing between task cards
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)', // subtle border for card definition
   },
   
   // task title text styling within placeholder cards
@@ -236,19 +256,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600', // semi-bold for task titles
     marginBottom: 4,
+    color: themeColors.text.primary(), // use theme-aware primary text color
   },
   
   // task description text styling within placeholder cards
   taskDescription: {
     fontSize: 14,
-    opacity: 0.7, // subtle transparency for secondary text
     marginBottom: 8,
+    color: themeColors.text.secondary(), // use theme-aware secondary text color
   },
   
   // task metadata text styling (priority, due date, etc.)
   taskMeta: {
     fontSize: 12,
-    opacity: 0.6, // more subtle transparency for metadata
     fontStyle: 'italic', // italic style for metadata information
+    color: themeColors.text.tertiary(), // use theme-aware tertiary text color
   },
 });

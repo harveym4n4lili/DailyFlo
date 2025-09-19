@@ -18,7 +18,7 @@ import { View, StyleSheet, ViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // import theme colors for consistent styling
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeColors } from '@/hooks/useColorPalette';
 
 /**
  * Props for the SafeAreaWrapper component
@@ -62,7 +62,8 @@ export function SafeAreaWrapper({
   const insets = useSafeAreaInsets();
   
   // get theme-aware background color
-  const themeBackgroundColor = useThemeColor({}, 'background');
+  const themeColors = useThemeColors();
+  const themeBackgroundColor = themeColors.background.primary();
   
   // determine the actual background color to use
   const finalBackgroundColor = backgroundColor || themeBackgroundColor;
