@@ -20,7 +20,6 @@ import {
   ScrollView, 
   ViewProps, 
   ScrollViewProps,
-  StatusBar,
   Platform 
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -50,9 +49,6 @@ export interface ScreenContainerProps extends ViewProps {
   // scroll view props - passed through when scrollable is true
   scrollViewProps?: ScrollViewProps;
   
-  // status bar props - control status bar appearance
-  statusBarStyle?: 'light-content' | 'dark-content' | 'auto';
-  statusBarBackgroundColor?: string;
   
   // children - the content to display inside the container
   children: React.ReactNode;
@@ -75,8 +71,6 @@ export function ScreenContainer({
   paddingHorizontal,
   paddingVertical,
   scrollViewProps,
-  statusBarStyle = 'auto',
-  statusBarBackgroundColor,
   children,
   style,
   ...otherProps
@@ -105,18 +99,6 @@ export function ScreenContainer({
   const horizontalPadding = paddingHorizontal !== undefined ? paddingHorizontal : padding;
   const verticalPadding = paddingVertical !== undefined ? paddingVertical : padding;
   
-  // set status bar style based on background color
-  // this ensures text is visible against the background
-  const getStatusBarStyle = () => {
-    if (statusBarStyle !== 'auto') return statusBarStyle;
-    
-    // determine if background is light or dark for automatic status bar styling
-    const isLightBackground = finalBackgroundColor === '#fff' || 
-                             finalBackgroundColor === '#ffffff' ||
-                             finalBackgroundColor === themeColors.background.primary();
-    
-    return isLightBackground ? 'dark-content' : 'light-content';
-  };
   
   // create the main container styles
   // this combines all the calculated padding and background color
@@ -131,14 +113,6 @@ export function ScreenContainer({
     style, // allow custom styles to override defaults
   ];
   
-  // render status bar with appropriate styling
-  const renderStatusBar = () => (
-    <StatusBar
-      barStyle={getStatusBarStyle()}
-      backgroundColor={statusBarBackgroundColor || finalBackgroundColor}
-      translucent={Platform.OS === 'ios'}
-    />
-  );
   
   // render the content based on whether it should be scrollable
   const renderContent = () => {
@@ -170,9 +144,6 @@ export function ScreenContainer({
   
   return (
     <View style={containerStyle} {...otherProps}>
-      {/* render status bar at the top */}
-      {renderStatusBar()}
-      
       {/* render the main content */}
       {renderContent()}
     </View>
