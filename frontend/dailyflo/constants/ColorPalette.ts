@@ -44,7 +44,7 @@ export const PrimaryColors = {
     600: '#BFCBE3',  // darker brand - primary buttons, active states
     700: '#E1E9F9',  // deep neutral - navigation headers
     800: '#ECF1FB',  // strong base for text in dark mode
-    900: '#F5F8FF',  // near-black - dark mode backgrounds, overlays
+    900: '#f5f8ff',  // near-black - dark mode backgrounds, overlays
   },
 } as const;
 
@@ -173,7 +173,7 @@ export const ThemeColors = {
   light: {
     // background colors - surfaces and containers
     background: {
-      primary: PrimaryColors.light[50],      // white - main backgrounds
+      primary: PrimaryColors.light[100],      // white - main backgrounds
       secondary: PrimaryColors.light[100],   // light gray - secondary surfaces
       tertiary: PrimaryColors.light[200],    // medium gray - tertiary surfaces
       elevated: PrimaryColors.light[50],     // white - elevated surfaces (modals, cards)
@@ -182,7 +182,7 @@ export const ThemeColors = {
     
     // text colors - typography hierarchy
     text: {
-      primary: PrimaryColors.light[500],     // dark gray - primary text
+      primary: PrimaryColors.light[900],     // dark gray - primary text
       secondary: PrimaryColors.light[400],   // medium gray - secondary text
       tertiary: PrimaryColors.light[300],    // light gray - tertiary text
       inverse: PrimaryColors.light[50],      // white - text on dark backgrounds
@@ -221,7 +221,7 @@ export const ThemeColors = {
     
     // text colors - typography hierarchy
     text: {
-      primary: PrimaryColors.dark[500],      // light gray - primary text
+      primary: PrimaryColors.dark[900],      // light gray - primary text
       secondary: PrimaryColors.dark[400],    // medium gray - secondary text
       tertiary: PrimaryColors.dark[300],     // darker gray - tertiary text
       inverse: PrimaryColors.dark[900],      // very light - text on dark backgrounds
@@ -239,7 +239,7 @@ export const ThemeColors = {
     
     // interactive colors - buttons and controls
     interactive: {
-      primary: PrimaryColors.dark[600],      // light gray - primary buttons
+      primary: PrimaryColors.dark[900],      // light gray - primary buttons
       secondary: PrimaryColors.dark[200],    // medium gray - secondary buttons
       tertiary: 'transparent',               // transparent - tertiary buttons
       hover: PrimaryColors.dark[700],        // lighter gray - hover states
@@ -305,9 +305,9 @@ export function getTaskCategoryColor(
 export function getThemeColor(
   theme: 'light' | 'dark',
   category: keyof typeof ThemeColors.light,
-  variant: keyof typeof ThemeColors.light.background
+  variant: string
 ): string {
-  return ThemeColors[theme][category][variant];
+  return (ThemeColors[theme][category] as Record<string, string>)[variant];
 }
 
 /**
@@ -391,7 +391,7 @@ export type PrimaryColorShade = keyof typeof PrimaryColors.light;
 export type SemanticColorName = keyof typeof SemanticColors;
 export type TaskCategoryColorName = keyof typeof TaskCategoryColors;
 export type ThemeColorCategory = keyof typeof ThemeColors.light;
-export type ThemeColorVariant = keyof typeof ThemeColors.light.background;
+export type ThemeColorVariant = string;
 
 /**
  * Default export for convenience
