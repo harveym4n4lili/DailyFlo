@@ -69,3 +69,16 @@ Reverted decision of combining today's view and planner.
 
 ### Notes
 - No notes
+---
+## [14/09/2025] - [Sunday]
+
+### Decision 1
+Fully decided to continue frontend development in typescript.
+#### Decision Goal
+> For personal growth
+#### Decision Context
+* I attempted to convert the frontend into javascript as it was initialized with a typescript template project, without re-initializing the whole frontend.
+* Decided to go through with typescript-based frontend.
+
+### Notes
+- No notes
