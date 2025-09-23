@@ -77,12 +77,12 @@ export const TextStyles = {
   'heading-3': {
     fontSize: 18,        // small title size
     lineHeight: 22,      // comfortable line height
-    fontWeight: FontWeight.semibold,  // semibold for medium emphasis
+    fontWeight: FontWeight.bold,  // bold for medium emphasis
   },
   'heading-4': {
     fontSize: 16,        // section header size
     lineHeight: 20,      // standard line height
-    fontWeight: FontWeight.semibold,  // semibold for emphasis
+    fontWeight: FontWeight.bold,  // bold for emphasis
   },
   
   // body text styles - for main content
