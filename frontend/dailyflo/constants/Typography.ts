@@ -22,6 +22,7 @@
  */
 export const FontFamily = {
   // primary font family - Satoshi is the main brand font
+  // this is the base name - we'll add specific weights when using fonts
   primary: 'Satoshi',
   
   // fallback fonts for different platforms
@@ -198,7 +199,10 @@ export function getTextStyle(styleName: keyof typeof TextStyles) {
  * @returns The font family string with fallbacks
  */
 export function getFontFamily(platform: 'ios' | 'android' | 'web' = 'ios'): string {
+  // get the fallback fonts for the platform
   const fallbacks = FontFamily.fallback[platform];
+  // return the primary font name followed by fallbacks
+  // this creates a font stack like: "Satoshi, SF Pro Display, -apple-system"
   return `${FontFamily.primary}, ${fallbacks.join(', ')}`;
 }
 

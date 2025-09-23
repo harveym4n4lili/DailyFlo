@@ -4,15 +4,25 @@ import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { useTypography } from '@/hooks/useTypography';
 
 export default function TabLayout() {
   const themeColors = useThemeColors();
+  const typography = useTypography();
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: themeColors.interactive.primary(),
         headerShown: false,
+        
+        // configure tab bar label style using typography system
+        tabBarLabelStyle: {
+          // use the navbar text style from our typography system
+          ...typography.getTextStyle('navbar'),
+          // add the satoshi font family
+          fontFamily: typography.getFontFamily(),
+        },
       
         tabBarStyle: Platform.select({
           ios: {
