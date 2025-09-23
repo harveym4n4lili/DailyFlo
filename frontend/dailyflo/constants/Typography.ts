@@ -45,15 +45,15 @@ export const FontFamily = {
  */
 export const FontWeight = {
   // light weight - used for subtle text, captions
-  light: '300',
+  light: '400',
   // regular weight - used for body text, most content
-  regular: '400',
+  regular: '500',
   // medium weight - used for buttons, emphasized text
-  medium: '500',
+  medium: '600',
   // semibold weight - used for headings, important text
-  semibold: '600',
+  semibold: '700',
   // bold weight - used for main headings, strong emphasis
-  bold: '700',
+  bold: '900',
 } as const;
 
 /**
