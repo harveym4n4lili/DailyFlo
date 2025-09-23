@@ -18,9 +18,9 @@ export default function RootLayout() {
     //SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     
     // satoshi font family - these are the main fonts for our app
-    // the names here must match what we use in our typography constants
+    // for react native, we need to use the exact font family names
+    'Satoshi': require('../assets/fonts/Satoshi-Regular.otf'),
     'Satoshi-Light': require('../assets/fonts/Satoshi-Light.otf'),
-    'Satoshi-Regular': require('../assets/fonts/Satoshi-Regular.otf'),
     'Satoshi-Medium': require('../assets/fonts/Satoshi-Medium.otf'),
     'Satoshi-Bold': require('../assets/fonts/Satoshi-Bold.otf'),
   });

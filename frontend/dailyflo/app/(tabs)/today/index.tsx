@@ -204,10 +204,8 @@ const createStyles = (
   // title text styling for the main header
   // using typography system for consistent text styling
   title: {
-    // use the heading-1 text style from typography system (36px, bold)
+    // use the heading-1 text style from typography system (36px, bold, satoshi font)
     ...typography.getTextStyle('heading-1'),
-    // add the satoshi font family to use our custom fonts
-    fontFamily: typography.getFontFamily(),
     // use theme-aware primary text color from color system
     color: themeColors.text.primary(),
   },
@@ -215,10 +213,8 @@ const createStyles = (
   // subtitle text styling for the main header section
   // using typography system for consistent text styling
   subtitle: {
-    // use the heading-4 text style from typography system (16px, bold)
+    // use the heading-4 text style from typography system (16px, bold, satoshi font)
     ...typography.getTextStyle('heading-4'),
-    // add the satoshi font family to use our custom fonts
-    fontFamily: typography.getFontFamily(),
     // add top margin for spacing from title
     marginTop: 8,
     // use theme-aware secondary text color from color system
@@ -228,10 +224,8 @@ const createStyles = (
   // loading text styling for initial load state
   // using typography system for consistent text styling
   loadingText: {
-    // use the body-large text style from typography system (14px, regular)
+    // use the body-large text style from typography system (14px, regular, satoshi font)
     ...typography.getTextStyle('body-large'),
-    // add the satoshi font family to use our custom fonts
-    fontFamily: typography.getFontFamily(),
     // add top margin for spacing
     marginTop: 20,
     // center the text
@@ -243,10 +237,8 @@ const createStyles = (
   // error text styling with semantic error color
   // using typography system for consistent text styling
   errorText: {
-    // use the body-large text style from typography system (14px, regular)
+    // use the body-large text style from typography system (14px, regular, satoshi font)
     ...typography.getTextStyle('body-large'),
-    // add the satoshi font family to use our custom fonts
-    fontFamily: typography.getFontFamily(),
     // use semantic error color from color palette
     color: semanticColors.error(),
     // center the text
@@ -259,10 +251,8 @@ const createStyles = (
   // hint text styling for helpful user instructions
   // using typography system for consistent text styling
   hint: {
-    // use the body-large text style from typography system (14px, regular)
+    // use the body-large text style from typography system (14px, regular, satoshi font)
     ...typography.getTextStyle('body-large'),
-    // add the satoshi font family to use our custom fonts
-    fontFamily: typography.getFontFamily(),
     // add top margin for spacing
     marginTop: 8,
     // center the text
@@ -274,10 +264,8 @@ const createStyles = (
   // empty state text styling when no tasks exist
   // using typography system for consistent text styling
   emptyText: {
-    // use the heading-3 text style from typography system (18px, bold)
+    // use the heading-3 text style from typography system (18px, bold, satoshi font)
     ...typography.getTextStyle('heading-3'),
-    // add the satoshi font family to use our custom fonts
-    fontFamily: typography.getFontFamily(),
     // center the text
     textAlign: 'center',
     // add extra top margin for visual separation
@@ -291,10 +279,8 @@ const createStyles = (
   // section title styling for task list header
   // using typography system for consistent text styling
   sectionTitle: {
-    // use the heading-2 text style from typography system (24px, bold)
+    // use the heading-2 text style from typography system (24px, bold, satoshi font)
     ...typography.getTextStyle('heading-2'),
-    // add the satoshi font family to use our custom fonts
-    fontFamily: typography.getFontFamily(),
     // add top margin for spacing from header section
     marginTop: 30,
     // add bottom margin for spacing
@@ -314,10 +300,8 @@ const createStyles = (
   // task title text styling within placeholder cards
   // using typography system for consistent text styling
   taskTitle: {
-    // use the heading-4 text style from typography system (16px, bold)
+    // use the heading-4 text style from typography system (16px, bold, satoshi font)
     ...typography.getTextStyle('heading-4'),
-    // add the satoshi font family to use our custom fonts
-    fontFamily: typography.getFontFamily(),
     // add bottom margin for spacing
     marginBottom: 4,
     // use theme-aware primary text color from color system
@@ -327,10 +311,8 @@ const createStyles = (
   // task description text styling within placeholder cards
   // using typography system for consistent text styling
   taskDescription: {
-    // use the body-large text style from typography system (14px, regular)
+    // use the body-large text style from typography system (14px, regular, satoshi font)
     ...typography.getTextStyle('body-large'),
-    // add the satoshi font family to use our custom fonts
-    fontFamily: typography.getFontFamily(),
     // add bottom margin for spacing
     marginBottom: 8,
     // use theme-aware secondary text color from color system
@@ -340,10 +322,8 @@ const createStyles = (
   // task metadata text styling (priority, due date, etc.)
   // using typography system for consistent text styling
   taskMeta: {
-    // use the body-medium text style from typography system (12px, regular)
+    // use the body-medium text style from typography system (12px, regular, satoshi font)
     ...typography.getTextStyle('body-medium'),
-    // add the satoshi font family to use our custom fonts
-    fontFamily: typography.getFontFamily(),
     // add italic style for metadata information
     fontStyle: 'italic',
     // use theme-aware tertiary text color from color system

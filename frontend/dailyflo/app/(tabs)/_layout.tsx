@@ -18,10 +18,8 @@ export default function TabLayout() {
         
         // configure tab bar label style using typography system
         tabBarLabelStyle: {
-          // use the navbar text style from our typography system
+          // use the navbar text style from our typography system (includes satoshi font)
           ...typography.getTextStyle('navbar'),
-          // add the satoshi font family
-          fontFamily: typography.getFontFamily(),
         },
       
         tabBarStyle: Platform.select({
