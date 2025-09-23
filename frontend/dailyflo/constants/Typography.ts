@@ -69,21 +69,25 @@ export const TextStyles = {
     fontSize: 36,        // large title size
     lineHeight: 40,      // tight line height for headings
     fontWeight: FontWeight.bold,  // bold weight for emphasis
+    fontFamily: 'Satoshi-Bold',  // specific font family for react native
   },
   'heading-2': {
     fontSize: 24,        // medium title size
     lineHeight: 28,      // slightly tighter than body text
     fontWeight: FontWeight.bold,  // bold weight for emphasis
+    fontFamily: 'Satoshi-Bold',  // specific font family for react native
   },
   'heading-3': {
     fontSize: 18,        // small title size
     lineHeight: 22,      // comfortable line height
     fontWeight: FontWeight.bold,  // bold for medium emphasis
+    fontFamily: 'Satoshi-Bold',  // specific font family for react native
   },
   'heading-4': {
     fontSize: 16,        // section header size
     lineHeight: 20,      // standard line height
     fontWeight: FontWeight.bold,  // bold for emphasis
+    fontFamily: 'Satoshi-Bold',  // specific font family for react native
   },
   
   // body text styles - for main content
@@ -91,16 +95,19 @@ export const TextStyles = {
     fontSize: 14,        // standard body text size
     lineHeight: 18,      // comfortable reading line height
     fontWeight: FontWeight.regular,  // regular weight for readability
+    fontFamily: 'Satoshi',  // specific font family for react native
   },
   'body-medium': {
     fontSize: 12,        // smaller body text
     lineHeight: 16,      // tighter line height
     fontWeight: FontWeight.regular,  // regular weight
+    fontFamily: 'Satoshi',  // specific font family for react native
   },
   'body-small': {
     fontSize: 10,        // smallest readable text
     lineHeight: 14,      // tight line height
     fontWeight: FontWeight.regular,  // regular weight
+    fontFamily: 'Satoshi',  // specific font family for react native
   },
   
   // button text styles - for interactive elements
@@ -108,16 +115,19 @@ export const TextStyles = {
     fontSize: 14,        // standard button text
     lineHeight: 20,      // comfortable line height for buttons
     fontWeight: FontWeight.medium,  // medium weight for emphasis
+    fontFamily: 'Satoshi-Medium',  // specific font family for react native
   },
   'button-secondary': {
     fontSize: 14,        // same size as primary button
     lineHeight: 18,      // slightly tighter line height
     fontWeight: FontWeight.medium,  // medium weight
+    fontFamily: 'Satoshi-Medium',  // specific font family for react native
   },
   'button-text': {
     fontSize: 10,        // small button text (like links)
     lineHeight: 14,      // tight line height
     fontWeight: FontWeight.medium,  // medium weight for emphasis
+    fontFamily: 'Satoshi-Medium',  // specific font family for react native
   },
   
   // navigation text styles - for navigation elements
@@ -125,6 +135,7 @@ export const TextStyles = {
     fontSize: 10,        // small text for tab labels
     lineHeight: 12,      // very tight line height
     fontWeight: FontWeight.medium,  // medium weight for readability
+    fontFamily: 'Satoshi-Medium',  // specific font family for react native
   },
 } as const;
 
@@ -199,11 +210,39 @@ export function getTextStyle(styleName: keyof typeof TextStyles) {
  * @returns The font family string with fallbacks
  */
 export function getFontFamily(platform: 'ios' | 'android' | 'web' = 'ios'): string {
-  // get the fallback fonts for the platform
-  const fallbacks = FontFamily.fallback[platform];
-  // return the primary font name followed by fallbacks
-  // this creates a font stack like: "Satoshi, SF Pro Display, -apple-system"
-  return `${FontFamily.primary}, ${fallbacks.join(', ')}`;
+  // for web, we can use the full font stack with fallbacks
+  if (platform === 'web') {
+    const fallbacks = FontFamily.fallback[platform];
+    return `${FontFamily.primary}, ${fallbacks.join(', ')}`;
+  }
+  
+  // for react native (ios/android), we need to use the base font name
+  // react native will automatically use the correct weight variant
+  return FontFamily.primary;
+}
+
+/**
+ * Get font family with specific weight for React Native
+ * @param weight - The font weight ('light', 'regular', 'medium', 'bold')
+ * @param platform - The platform ('ios', 'android', 'web')
+ * @returns The font family string with specific weight
+ */
+export function getFontFamilyWithWeight(weight: 'light' | 'regular' | 'medium' | 'bold', platform: 'ios' | 'android' | 'web' = 'ios'): string {
+  // for web, use the base font name with fallbacks
+  if (platform === 'web') {
+    const fallbacks = FontFamily.fallback[platform];
+    return `${FontFamily.primary}, ${fallbacks.join(', ')}`;
+  }
+  
+  // for react native, use the specific weight variant
+  const weightMap = {
+    light: 'Satoshi-Light',
+    regular: 'Satoshi',
+    medium: 'Satoshi-Medium',
+    bold: 'Satoshi-Bold',
+  };
+  
+  return weightMap[weight] || FontFamily.primary;
 }
 
 /**
