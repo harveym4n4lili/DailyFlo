@@ -8,6 +8,9 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 // import color palette system for consistent theming
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 
+// import typography system for consistent text styling
+import { useTypography } from '@/hooks/useTypography';
+
 // STORE FOLDER IMPORTS - Redux state management
 // The store folder contains all Redux-related code for managing app state
 import { useTasks } from '@/store/hooks';
@@ -34,8 +37,14 @@ export default function TodayScreen() {
   const themeColors = useThemeColors();
   const semanticColors = useSemanticColors();
   
-  // create dynamic styles using the color palette system
-  const styles = useMemo(() => createStyles(themeColors, semanticColors), [themeColors, semanticColors]);
+  // TYPOGRAPHY USAGE - Getting typography system for consistent text styling
+  // useTypography: Hook that provides typography styles, font families, and text utilities
+  // This gives us access to predefined text styles and satoshi font family
+  const typography = useTypography();
+  
+  // create dynamic styles using the color palette system and typography system
+  // we pass typography to the createStyles function so it can use typography styles
+  const styles = useMemo(() => createStyles(themeColors, semanticColors, typography), [themeColors, semanticColors, typography]);
   
   // STORE USAGE - Getting Redux dispatch function
   // Get dispatch function to send actions to Redux store
@@ -185,62 +194,113 @@ export default function TodayScreen() {
   );
 }
 
-// create dynamic styles using the color palette system
-const createStyles = (themeColors: ReturnType<typeof useThemeColors>, semanticColors: ReturnType<typeof useSemanticColors>) => StyleSheet.create({
+// create dynamic styles using the color palette system and typography system
+// this function combines colors and typography to create consistent styling
+const createStyles = (
+  themeColors: ReturnType<typeof useThemeColors>, 
+  semanticColors: ReturnType<typeof useSemanticColors>,
+  typography: ReturnType<typeof useTypography>
+) => StyleSheet.create({
   // title text styling for the main header
+  // using typography system for consistent text styling
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
-    color: themeColors.text.primary(), // use theme-aware primary text color
+    // use the heading-1 text style from typography system (36px, bold)
+    ...typography.getTextStyle('heading-1'),
+    // add the satoshi font family to use our custom fonts
+    fontFamily: typography.getFontFamily(),
+    // use theme-aware primary text color from color system
+    color: themeColors.text.primary(),
   },
   
   // subtitle text styling for the main header section
+  // using typography system for consistent text styling
   subtitle: {
+    // use the heading-4 text style from typography system (16px, bold)
+    ...typography.getTextStyle('heading-4'),
+    // add the satoshi font family to use our custom fonts
+    fontFamily: typography.getFontFamily(),
+    // add top margin for spacing from title
     marginTop: 8,
-    color: themeColors.text.secondary(), // use theme-aware secondary text color
-    fontSize: 16,
+    // use theme-aware secondary text color from color system
+    color: themeColors.text.secondary(),
   },
   
   // loading text styling for initial load state
+  // using typography system for consistent text styling
   loadingText: {
+    // use the body-large text style from typography system (14px, regular)
+    ...typography.getTextStyle('body-large'),
+    // add the satoshi font family to use our custom fonts
+    fontFamily: typography.getFontFamily(),
+    // add top margin for spacing
     marginTop: 20,
+    // center the text
     textAlign: 'center',
-    color: themeColors.text.tertiary(), // use theme-aware tertiary text color
+    // use theme-aware tertiary text color from color system
+    color: themeColors.text.tertiary(),
   },
   
   // error text styling with semantic error color
+  // using typography system for consistent text styling
   errorText: {
-    color: semanticColors.error(), // use semantic error color from palette
+    // use the body-large text style from typography system (14px, regular)
+    ...typography.getTextStyle('body-large'),
+    // add the satoshi font family to use our custom fonts
+    fontFamily: typography.getFontFamily(),
+    // use semantic error color from color palette
+    color: semanticColors.error(),
+    // center the text
     textAlign: 'center',
+    // add margins for spacing
     marginTop: 20,
     marginBottom: 8,
   },
   
   // hint text styling for helpful user instructions
+  // using typography system for consistent text styling
   hint: {
+    // use the body-large text style from typography system (14px, regular)
+    ...typography.getTextStyle('body-large'),
+    // add the satoshi font family to use our custom fonts
+    fontFamily: typography.getFontFamily(),
+    // add top margin for spacing
     marginTop: 8,
-    color: themeColors.text.tertiary(), // use theme-aware tertiary text color
+    // center the text
     textAlign: 'center',
-    fontSize: 14,
+    // use theme-aware tertiary text color from color system
+    color: themeColors.text.tertiary(),
   },
   
   // empty state text styling when no tasks exist
+  // using typography system for consistent text styling
   emptyText: {
-    fontSize: 18,
+    // use the heading-3 text style from typography system (18px, bold)
+    ...typography.getTextStyle('heading-3'),
+    // add the satoshi font family to use our custom fonts
+    fontFamily: typography.getFontFamily(),
+    // center the text
     textAlign: 'center',
-    marginTop: 40, // extra top margin for visual separation
+    // add extra top margin for visual separation
+    marginTop: 40,
+    // add bottom margin for spacing
     marginBottom: 8,
-    color: themeColors.text.primary(), // use theme-aware primary text color
+    // use theme-aware primary text color from color system
+    color: themeColors.text.primary(),
   },
   
   // section title styling for task list header
+  // using typography system for consistent text styling
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600', // semi-bold weight for section headers
-    marginTop: 30, // spacing from header section
+    // use the heading-2 text style from typography system (24px, bold)
+    ...typography.getTextStyle('heading-2'),
+    // add the satoshi font family to use our custom fonts
+    fontFamily: typography.getFontFamily(),
+    // add top margin for spacing from header section
+    marginTop: 30,
+    // add bottom margin for spacing
     marginBottom: 16,
-    color: themeColors.text.primary(), // use theme-aware primary text color
+    // use theme-aware primary text color from color system
+    color: themeColors.text.primary(),
   },
   
   // temporary task placeholder card styling until we implement proper task components
@@ -252,24 +312,41 @@ const createStyles = (themeColors: ReturnType<typeof useThemeColors>, semanticCo
   },
   
   // task title text styling within placeholder cards
+  // using typography system for consistent text styling
   taskTitle: {
-    fontSize: 16,
-    fontWeight: '600', // semi-bold for task titles
+    // use the heading-4 text style from typography system (16px, bold)
+    ...typography.getTextStyle('heading-4'),
+    // add the satoshi font family to use our custom fonts
+    fontFamily: typography.getFontFamily(),
+    // add bottom margin for spacing
     marginBottom: 4,
-    color: themeColors.text.primary(), // use theme-aware primary text color
+    // use theme-aware primary text color from color system
+    color: themeColors.text.primary(),
   },
   
   // task description text styling within placeholder cards
+  // using typography system for consistent text styling
   taskDescription: {
-    fontSize: 14,
+    // use the body-large text style from typography system (14px, regular)
+    ...typography.getTextStyle('body-large'),
+    // add the satoshi font family to use our custom fonts
+    fontFamily: typography.getFontFamily(),
+    // add bottom margin for spacing
     marginBottom: 8,
-    color: themeColors.text.secondary(), // use theme-aware secondary text color
+    // use theme-aware secondary text color from color system
+    color: themeColors.text.secondary(),
   },
   
   // task metadata text styling (priority, due date, etc.)
+  // using typography system for consistent text styling
   taskMeta: {
-    fontSize: 12,
-    fontStyle: 'italic', // italic style for metadata information
-    color: themeColors.text.tertiary(), // use theme-aware tertiary text color
+    // use the body-medium text style from typography system (12px, regular)
+    ...typography.getTextStyle('body-medium'),
+    // add the satoshi font family to use our custom fonts
+    fontFamily: typography.getFontFamily(),
+    // add italic style for metadata information
+    fontStyle: 'italic',
+    // use theme-aware tertiary text color from color system
+    color: themeColors.text.tertiary(),
   },
 });
