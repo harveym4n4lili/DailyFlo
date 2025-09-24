@@ -42,6 +42,10 @@ export interface ListCardProps {
   onTaskEdit?: (task: Task) => void;         // called when user wants to edit a task
   onTaskDelete?: (task: Task) => void;       // called when user wants to delete a task
   
+  // swipe gesture callback functions (passed down to TaskCard components)
+  onTaskSwipeLeft?: (task: Task) => void;    // called when user swipes left on a task card
+  onTaskSwipeRight?: (task: Task) => void;   // called when user swipes right on a task card
+  
   // optional display options
   showCategory?: boolean;                    // whether to show category names in task cards
   compact?: boolean;                         // whether to use compact layout for task cards
@@ -68,6 +72,8 @@ export default function ListCard({
   onTaskComplete,
   onTaskEdit,
   onTaskDelete,
+  onTaskSwipeLeft,
+  onTaskSwipeRight,
   showCategory = false,
   compact = false,
   emptyMessage = 'No tasks available',
@@ -216,6 +222,8 @@ export default function ListCard({
       onComplete={onTaskComplete}
       onEdit={onTaskEdit}
       onDelete={onTaskDelete}
+      onSwipeLeft={onTaskSwipeLeft}
+      onSwipeRight={onTaskSwipeRight}
       showCategory={showCategory}
       compact={compact}
     />
