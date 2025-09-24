@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, RefreshControl, View, Text, Alert } from 'react-native';
 
 // import our custom layout components
@@ -32,8 +32,12 @@ import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSl
 // TYPES FOLDER IMPORTS - TypeScript type definitions
 // The types folder contains all TypeScript interfaces and type definitions
 import { Task } from '@/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TodayScreen() {
+  // REFRESH STATE - Controls the pull-to-refresh indicator
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
   // COLOR PALETTE USAGE - Getting theme-aware colors
   // useThemeColors: Hook that provides theme-aware colors (background, text, borders, etc.)
   // useSemanticColors: Hook that provides semantic colors (success, error, warning, info)
@@ -45,9 +49,12 @@ export default function TodayScreen() {
   // This gives us access to predefined text styles and satoshi font family
   const typography = useTypography();
   
+  // SAFE AREA INSETS - Get safe area insets for proper positioning
+  const insets = useSafeAreaInsets();
+  
   // create dynamic styles using the color palette system and typography system
-  // we pass typography to the createStyles function so it can use typography styles
-  const styles = useMemo(() => createStyles(themeColors, semanticColors, typography), [themeColors, semanticColors, typography]);
+  // we pass typography and insets to the createStyles function so it can use typography styles and safe area
+  const styles = useMemo(() => createStyles(themeColors, semanticColors, typography, insets), [themeColors, semanticColors, typography, insets]);
   
   // STORE USAGE - Getting Redux dispatch function
   // Get dispatch function to send actions to Redux store
@@ -115,10 +122,12 @@ export default function TodayScreen() {
 
   // STORE USAGE - Dispatching actions for user interactions
   // Handle pull-to-refresh
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
     // dispatch(fetchTasks()): Triggers a fresh fetch of tasks from the API
     // This is called when the user pulls down to refresh the screen
-    dispatch(fetchTasks());
+    await dispatch(fetchTasks());
+    setIsRefreshing(false);
   };
 
   // TASK INTERACTION HANDLERS - Functions that handle user interactions with tasks
@@ -164,6 +173,7 @@ export default function TodayScreen() {
     // TODO: Add confirmation modal before deletion
     dispatch(deleteTask(task.id));
   };
+
 
   // SWIPE GESTURE HANDLERS - Functions that handle swipe gestures on task cards
   // these demonstrate how to use the new swipe functionality in TaskCard
@@ -269,8 +279,8 @@ export default function TodayScreen() {
           />
         )
       }}
-    >
-       {/* header section with title and dynamic task count */}
+     >
+        {/* header section with title and dynamic task count */}
        <View style={styles.headerContainer}>
          <Text style={styles.title}>Today</Text>
          <Text style={styles.subtitle}>
@@ -304,16 +314,18 @@ export default function TodayScreen() {
 }
 
 // create dynamic styles using the color palette system and typography system
-// this function combines colors and typography to create consistent styling
+// this function combines colors, typography, and safe area insets to create consistent styling
 const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>, 
   semanticColors: ReturnType<typeof useSemanticColors>,
-  typography: ReturnType<typeof useTypography>
+  typography: ReturnType<typeof useTypography>,
+  insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
+
   // header container for proper spacing
   headerContainer: {
     paddingHorizontal: 20, // add horizontal padding back for header text
-    paddingTop: 20, // add top padding for header
+    paddingTop: insets.top+12, // add top padding to account for fixed top section in layout (safe area + button height)
   },
   
   // title text styling for the main header
