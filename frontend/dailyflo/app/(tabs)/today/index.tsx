@@ -277,7 +277,10 @@ export default function TodayScreen() {
             onRefresh={handleRefresh}
             tintColor="#007AFF" // iOS blue color for pull-to-refresh indicator
           />
-        )
+        ),
+        contentInsetAdjustmentBehavior: 'automatic',
+        contentInset: { top: insets.top + 60 }, // account for safe area + fixed top section height
+        contentOffset: { x: 0, y: -(insets.top + 60) }, // offset to show refresh control properly
       }}
      >
         {/* header section with title and dynamic task count */}
@@ -325,7 +328,7 @@ const createStyles = (
   // header container for proper spacing
   headerContainer: {
     paddingHorizontal: 20, // add horizontal padding back for header text
-    paddingTop: insets.top+12, // add top padding to account for fixed top section in layout (safe area + button height)
+    paddingTop: 8, // reduced padding since we're handling spacing in scrollViewProps
   },
   
   // title text styling for the main header
