@@ -1,6 +1,6 @@
 
 import React, { useEffect, useMemo } from 'react';
-import { StyleSheet, RefreshControl, View, Text } from 'react-native';
+import { StyleSheet, RefreshControl, View, Text, Alert } from 'react-native';
 
 // import our custom layout components
 import { ScreenContainer, SafeAreaWrapper } from '@/components';
@@ -67,23 +67,18 @@ export default function TodayScreen() {
   // useTasks: Custom hook that provides typed access to the tasks slice state
   // This is defined in store/hooks.ts and wraps Redux's useSelector
 
-  // filter tasks to show only today's and overdue tasks (excluding completed tasks)
+  // filter tasks to show only today's and overdue tasks (including completed tasks)
   // useMemo ensures this calculation only runs when tasks change
   const todaysTasks = useMemo(() => {
     const today = new Date();
     const todayString = today.toDateString(); // get date in "Mon Jan 15 2024" format
     
     const filtered = tasks.filter(task => {
-      // exclude completed tasks from the today screen
-      if (task.isCompleted) {
-        return false;
-      }
-      
-      // include tasks that are due today or overdue
+      // include tasks that are due today or overdue (including completed tasks)
       if (task.dueDate) {
         const taskDate = new Date(task.dueDate);
         const isToday = taskDate.toDateString() === todayString;
-        // include overdue tasks (due before today and not completed)
+        // include overdue tasks (due before today, including completed ones)
         const isOverdue = taskDate < today;
         return isToday || isOverdue;
       }
@@ -170,6 +165,42 @@ export default function TodayScreen() {
     dispatch(deleteTask(task.id));
   };
 
+  // SWIPE GESTURE HANDLERS - Functions that handle swipe gestures on task cards
+  // these demonstrate how to use the new swipe functionality in TaskCard
+  
+  // handle swipe left gesture - currently does nothing (can be implemented later)
+  const handleTaskSwipeLeft = (task: Task) => {
+    console.log('Swiped left on task:', task.title);
+    // swipe left currently does nothing - can be implemented later for other actions
+  };
+  
+  // handle swipe right gesture - shows confirmation dialog before deleting task
+  const handleTaskSwipeRight = (task: Task) => {
+    console.log('Swiped right on task:', task.title);
+    
+    // show confirmation dialog before deleting task
+    Alert.alert(
+      'Delete Task', // dialog title
+      `Are you sure you want to delete "${task.title}"? This action cannot be undone.`, // dialog message with task title
+      [
+        {
+          text: 'Cancel', // cancel button
+          style: 'cancel', // styled as cancel button (appears on left on iOS)
+        },
+        {
+          text: 'Delete', // confirm button
+          style: 'destructive', // styled as destructive action (red color on iOS)
+          onPress: () => {
+            // actually delete the task when user confirms
+            console.log('🗑️ User confirmed deletion of task:', task.title);
+            handleTaskDelete(task);
+          },
+        },
+      ],
+      { cancelable: true } // allow dismissing dialog by tapping outside
+    );
+  };
+
   // render loading state when no tasks are loaded yet
   if (isLoading && tasks.length === 0) {
     return (
@@ -230,6 +261,8 @@ export default function TodayScreen() {
         onTaskComplete={handleTaskComplete}
         onTaskEdit={handleTaskEdit}
         onTaskDelete={handleTaskDelete}
+        onTaskSwipeLeft={handleTaskSwipeLeft}
+        onTaskSwipeRight={handleTaskSwipeRight}
         showCategory={false}
         compact={false}
         emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
