@@ -16,7 +16,7 @@
  */
 
 import React, { useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 
@@ -91,7 +91,7 @@ export default function TaskCard({
   // translateX: controls horizontal movement of the card during swipe
   // swipeThreshold: minimum distance required to trigger a swipe action
   const translateX = useRef(new Animated.Value(0)).current;
-  const swipeThreshold = 100; // pixels
+  const swipeThreshold = 60; // pixels - reduced for shorter activation
   
   // TOUCH STATE - Controls visual feedback when user touches the card
   // isPressed: tracks whether the user is currently touching the card
@@ -231,6 +231,7 @@ export default function TaskCard({
           useNativeDriver: true,
           tension: 100, // spring tension for smooth animation
           friction: 8,  // spring friction for natural feel
+          overshootClamping: true,
         }),
         // reset touch state to not pressed
         Animated.timing(isPressed, {
@@ -253,6 +254,92 @@ export default function TaskCard({
 
   return (
     <View style={styles.cardContainer}>
+       {/* blue background that appears when swiping left for edit */}
+       <Animated.View
+         style={[
+           styles.swipeBackgroundLeft,
+           {
+             opacity: translateX.interpolate({
+               inputRange: [-100, -5, 0, 100],
+               outputRange: [1, 0.3, 0, 0],
+               extrapolate: 'clamp',
+             }),
+           },
+         ]}
+       >
+        {/* edit icon that stretches across the swipe area */}
+        <Animated.View
+          style={[
+            styles.editIconContainer,
+             {
+               opacity: translateX.interpolate({
+                 inputRange: [-100, -5, 0, 100],
+                 outputRange: [1, 0.3, 0, 0],
+                 extrapolate: 'clamp',
+               }),
+              transform: [
+                {
+                  translateX: translateX.interpolate({
+                    inputRange: [-80, 0],
+                    outputRange: [-20, 0], // stretch across the swipe area
+                    extrapolate: 'clamp',
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Ionicons 
+            name="create-outline" 
+            size={24} 
+            color="white" 
+          />
+        </Animated.View>
+      </Animated.View>
+      
+       {/* red background that appears when swiping right for delete */}
+       <Animated.View
+         style={[
+           styles.swipeBackground,
+           {
+             opacity: translateX.interpolate({
+               inputRange: [-100, 0, 5, 50],
+               outputRange: [0, 0, 0.1, 1],
+               extrapolate: 'clamp',
+             }),
+           },
+         ]}
+       >
+        {/* delete icon that stretches across the swipe area */}
+        <Animated.View
+          style={[
+            styles.deleteIconContainer,
+             {
+               opacity: translateX.interpolate({
+                 inputRange: [-100, 0, 5, 100],
+                 outputRange: [0, 0, 0.3, 1],
+                 extrapolate: 'clamp',
+               }),
+              transform: [
+                {
+                  translateX: translateX.interpolate({
+                    inputRange: [0, 80],
+                    outputRange: [0, 20], // stretch across the swipe area
+                    extrapolate: 'clamp',
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Ionicons 
+            name="trash-outline" 
+            size={24} 
+            color="white" 
+          />
+        </Animated.View>
+      </Animated.View>
+      
       {/* swipe gesture handler - wraps the entire card to detect horizontal swipes */}
       <PanGestureHandler
         onGestureEvent={onGestureEvent} // handles continuous swipe movement
@@ -283,10 +370,16 @@ export default function TaskCard({
               task.isCompleted && styles.completedCard, // conditionally applies transparent background when task is completed
             ]}
             onPress={() => onPress?.(task)} // calls onPress callback with task data when tapped
-            activeOpacity={0.7} // provides visual feedback on press
+            activeOpacity={1} // prevent background opacity change
           >
         {/* row container for main content layout */}
-        <View style={styles.row}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.row,
+            { opacity: pressed ? 0.7 : 1 } // opacity feedback only for content
+          ]}
+          onPress={() => onPress?.(task)}
+        >
           {/* main content area containing all text elements */}
           <View style={styles.content}>
             {/* task title - conditionally applies strikethrough styling when completed */}
@@ -342,7 +435,7 @@ export default function TaskCard({
               </View>
             </View>
           </View>
-        </View>
+        </Pressable>
           </TouchableOpacity>
           
           {/* checkbox positioned absolutely in top-right corner - conditionally styled based on completion state */}
@@ -414,6 +507,47 @@ const createStyles = (
   cardContainer: {
     flexDirection: 'row',
     marginBottom: 12, // spacing between cards
+    position: 'relative', // needed for absolute positioning of background
+  },
+
+  // blue background that appears when swiping left for edit
+  swipeBackgroundLeft: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#007AFF', // iOS blue color
+    borderRadius: 16, // match card border radius
+    justifyContent: 'center',
+    alignItems: 'flex-end', // align to right side
+    zIndex: 0, // behind the card content
+  },
+
+  // red background that appears when swiping right for delete
+  swipeBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FF3B30', // iOS red color
+    borderRadius: 16, // match card border radius
+    justifyContent: 'center',
+    alignItems: 'flex-start', // align to left side
+    zIndex: 0, // behind the card content
+  },
+
+  // container for the edit icon
+  editIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // container for the delete icon
+  deleteIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // swipe container for animated swipe gestures
@@ -421,6 +555,7 @@ const createStyles = (
     flex: 1, // takes up remaining space in the row
     flexDirection: 'row', // horizontal layout for color indicator and card
     position: 'relative', // needed for absolute positioning of checkbox and indicators
+    zIndex: 1, // above the background
   },
 
   // colored rectangle indicator on the left
