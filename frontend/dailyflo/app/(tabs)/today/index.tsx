@@ -67,18 +67,18 @@ export default function TodayScreen() {
   // useTasks: Custom hook that provides typed access to the tasks slice state
   // This is defined in store/hooks.ts and wraps Redux's useSelector
 
-  // Filter tasks to show only today's tasks
+  // filter tasks to show only today's and overdue tasks
   // useMemo ensures this calculation only runs when tasks change
   const todaysTasks = useMemo(() => {
     const today = new Date();
-    const todayString = today.toDateString(); // Get date in "Mon Jan 15 2024" format
+    const todayString = today.toDateString(); // get date in "Mon Jan 15 2024" format
     
     const filtered = tasks.filter(task => {
-      // Include tasks that are due today
+      // include tasks that are due today or overdue
       if (task.dueDate) {
         const taskDate = new Date(task.dueDate);
         const isToday = taskDate.toDateString() === todayString;
-        // Include overdue tasks (due before today and not completed)
+        // include overdue tasks (due before today and not completed)
         const isOverdue = !task.isCompleted && taskDate < today;
         return isToday || isOverdue;
       }
@@ -86,6 +86,17 @@ export default function TodayScreen() {
     });
     return filtered;
   }, [tasks]);
+
+  // calculate total task count for header display
+  const totalTaskCount = todaysTasks.length;
+
+  // grouping explanation:
+  // the listcard component will automatically group tasks by due date when groupBy="dueDate" is set
+  // this creates separate sections for:
+  // - "overdue" tasks (due before today and not completed)
+  // - "today" tasks (due today)
+  // - specific dates if any tasks are due on future dates
+  // the grouping logic is handled internally by the listcard component
 
   // STORE USAGE - Dispatching actions to fetch data
   // Fetch tasks when component mounts
@@ -199,14 +210,14 @@ export default function TodayScreen() {
        {/* header section with title and dynamic task count */}
        <Text style={styles.title}>Today</Text>
         <Text style={styles.subtitle}>
-          {todaysTasks.length === 0 
+          {totalTaskCount === 0 
             ? "No tasks for today" 
-            : `${todaysTasks.length} task${todaysTasks.length === 1 ? '' : 's'} for today`
+            : `${totalTaskCount} task${totalTaskCount === 1 ? '' : 's'} for today`
           }
         </Text>
       
-      {/* COMPONENT USAGE - Using our new TaskList component */}
-      {/* This demonstrates the flow: Redux Store → Today Screen → TaskList → TaskCard → User Interaction */}
+      {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
+      {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
       <ListCard
         tasks={todaysTasks}
         onTaskPress={handleTaskPress}
@@ -217,9 +228,9 @@ export default function TodayScreen() {
         compact={false}
         emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
         loading={isLoading && todaysTasks.length === 0}
-        groupBy="none"
-        sortBy="dueDate"
-        sortDirection="asc"
+        groupBy="dueDate" // group tasks by due date to separate overdue and today's tasks
+        sortBy="dueDate" // sort tasks by due date within each group
+        sortDirection="asc" // show overdue tasks first, then today's tasks (ascending = oldest first)
       />
     </ScreenContainer>
   );

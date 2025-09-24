@@ -8,8 +8,9 @@
  * This component demonstrates the flow from Redux store → TaskList → TaskCard → User interaction.
  */
 
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ListRenderItem } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, ListRenderItem, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 // TYPES FOLDER IMPORTS - TypeScript type definitions
 // The types folder contains all TypeScript interfaces and type definitions
@@ -90,6 +91,30 @@ export default function ListCard({
   // we pass typography to the createStyles function so it can use typography styles
   const styles = useMemo(() => createStyles(themeColors, semanticColors, typography), [themeColors, semanticColors, typography]);
   
+  // state management for collapsed groups
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  
+  // function to toggle group collapse state
+  const toggleGroupCollapse = (groupTitle: string) => {
+    setCollapsedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupTitle)) {
+        newSet.delete(groupTitle); // expand the group
+      } else {
+        newSet.add(groupTitle); // collapse the group
+      }
+      return newSet;
+    });
+  };
+  
+  // helper function to format date as "24 Sep, Wednesday"
+  const formatDateForGroup = (date: Date): string => {
+    const day = date.getDate(); // get day of month (1-31)
+    const month = date.toLocaleDateString('en-US', { month: 'short' }); // get abbreviated month (Jan, Feb, etc.)
+    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }); // get full day name (Monday, Tuesday, etc.)
+    return `${day} ${month}, ${dayOfWeek}`; // format as "24 Sep, Wednesday"
+  };
+
   // process and organize tasks based on grouping and sorting options
   const processedTasks = useMemo(() => {
     let processed = [...tasks]; // create a copy to avoid mutating the original array
@@ -155,14 +180,15 @@ export default function ListCard({
             const tomorrow = new Date(today);
             tomorrow.setDate(tomorrow.getDate() + 1);
             
+            // group tasks by their due date with smart date formatting
             if (dueDate.toDateString() === today.toDateString()) {
-              groupKey = 'Today';
+              groupKey = formatDateForGroup(today); // show today's date as "24 Sep, Wednesday"
             } else if (dueDate.toDateString() === tomorrow.toDateString()) {
               groupKey = 'Tomorrow';
             } else if (dueDate < today) {
               groupKey = 'Overdue';
             } else {
-              groupKey = dueDate.toLocaleDateString();
+              groupKey = formatDateForGroup(dueDate); // show specific date as "24 Sep, Wednesday"
             }
           }
           break;
@@ -195,13 +221,32 @@ export default function ListCard({
     />
   );
   
-  // render group header
-  const renderGroupHeader = (title: string, count: number) => (
-    <View style={styles.groupHeader}>
-      <Text style={styles.groupTitle}>{title}</Text>
-      <Text style={styles.groupCount}>({count})</Text>
-    </View>
-  );
+  // render group header with dropdown arrow for expand/collapse functionality
+  const renderGroupHeader = (title: string, count: number) => {
+    const isCollapsed = collapsedGroups.has(title);
+    
+    return (
+      <TouchableOpacity 
+        style={styles.groupHeader}
+        onPress={() => toggleGroupCollapse(title)}
+        activeOpacity={0.7}
+      >
+        {/* group title and count container */}
+        <View style={styles.groupTitleContainer}>
+          <Text style={styles.groupTitle}>{title}</Text>
+          <Text style={styles.groupCount}>({count})</Text>
+        </View>
+        
+        {/* dropdown arrow icon - positioned on the right */}
+        <Ionicons 
+          name={isCollapsed ? "chevron-forward" : "chevron-down"} 
+          size={16} 
+          color={themeColors.text.tertiary()} 
+          style={styles.groupArrow}
+        />
+      </TouchableOpacity>
+    );
+  };
   
   // render empty state
   const renderEmptyState = () => (
@@ -255,18 +300,25 @@ export default function ListCard({
       <View style={styles.container}>
         <FlatList
           data={Object.entries(groupedTasks)}
-          renderItem={({ item: [groupTitle, groupTasks] }) => (
-            <View style={styles.group}>
-              {renderGroupHeader(groupTitle, groupTasks.length)}
-              <FlatList
-                data={groupTasks}
-                renderItem={renderTaskCard}
-                keyExtractor={(task) => task.id}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false} // disable scrolling for nested lists
-              />
-            </View>
-          )}
+          renderItem={({ item: [groupTitle, groupTasks] }) => {
+            const isCollapsed = collapsedGroups.has(groupTitle);
+            
+            return (
+              <View style={styles.group}>
+                {renderGroupHeader(groupTitle, groupTasks.length)}
+                {/* conditionally render tasks based on collapse state */}
+                {!isCollapsed && (
+                  <FlatList
+                    data={groupTasks}
+                    renderItem={renderTaskCard}
+                    keyExtractor={(task) => task.id}
+                    showsVerticalScrollIndicator={false}
+                    scrollEnabled={false} // disable scrolling for nested lists
+                  />
+                )}
+              </View>
+            );
+          }}
           keyExtractor={([groupTitle]) => groupTitle}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
@@ -303,15 +355,29 @@ const createStyles = (
   groupHeader: {
     flexDirection: 'row', // horizontal layout
     alignItems: 'center', // center align
+    justifyContent: 'space-between', // space between title/count and arrow
     marginBottom: 12, // space between header and tasks
     paddingHorizontal: 4, // slight padding for alignment
+    paddingVertical: 8, // add vertical padding for better touch target
+  },
+  
+  // group arrow styling
+  groupArrow: {
+    marginLeft: 8, // space between count and arrow
+  },
+  
+  // group title and count container styling
+  groupTitleContainer: {
+    flexDirection: 'row', // horizontal layout for title and count
+    alignItems: 'center', // center align
+    flex: 1, // take up available space
   },
   
   // group title text styling
   // using typography system for consistent text styling
   groupTitle: {
     // use the heading-3 text style from typography system (18px, bold, satoshi font)
-    ...typography.getTextStyle('heading-3'),
+    ...typography.getTextStyle('heading-4'),
     // use theme-aware primary text color from color system
     color: themeColors.text.primary(),
     marginRight: 8, // space between title and count
