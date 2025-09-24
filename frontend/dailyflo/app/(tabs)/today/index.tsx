@@ -168,10 +168,31 @@ export default function TodayScreen() {
   // SWIPE GESTURE HANDLERS - Functions that handle swipe gestures on task cards
   // these demonstrate how to use the new swipe functionality in TaskCard
   
-  // handle swipe left gesture - currently does nothing (can be implemented later)
+  // handle swipe left gesture - shows confirmation dialog before editing task
   const handleTaskSwipeLeft = (task: Task) => {
     console.log('Swiped left on task:', task.title);
-    // swipe left currently does nothing - can be implemented later for other actions
+    
+    // show confirmation dialog before editing task
+    Alert.alert(
+      'Edit Task', // dialog title
+      `Do you want to edit "${task.title}"?`, // dialog message with task title
+      [
+        {
+          text: 'Cancel', // cancel button
+          style: 'cancel', // styled as cancel button (appears on left on iOS)
+        },
+        {
+          text: 'Edit', // confirm button
+          style: 'default', // styled as default action
+          onPress: () => {
+            // actually edit the task when user confirms
+            console.log('✏️ User confirmed editing of task:', task.title);
+            handleTaskEdit(task);
+          },
+        },
+      ],
+      { cancelable: true } // allow dismissing dialog by tapping outside
+    );
   };
   
   // handle swipe right gesture - shows confirmation dialog before deleting task
