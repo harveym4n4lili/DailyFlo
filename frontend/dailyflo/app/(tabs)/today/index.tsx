@@ -67,19 +67,24 @@ export default function TodayScreen() {
   // useTasks: Custom hook that provides typed access to the tasks slice state
   // This is defined in store/hooks.ts and wraps Redux's useSelector
 
-  // filter tasks to show only today's and overdue tasks
+  // filter tasks to show only today's and overdue tasks (excluding completed tasks)
   // useMemo ensures this calculation only runs when tasks change
   const todaysTasks = useMemo(() => {
     const today = new Date();
     const todayString = today.toDateString(); // get date in "Mon Jan 15 2024" format
     
     const filtered = tasks.filter(task => {
+      // exclude completed tasks from the today screen
+      if (task.isCompleted) {
+        return false;
+      }
+      
       // include tasks that are due today or overdue
       if (task.dueDate) {
         const taskDate = new Date(task.dueDate);
         const isToday = taskDate.toDateString() === todayString;
         // include overdue tasks (due before today and not completed)
-        const isOverdue = !task.isCompleted && taskDate < today;
+        const isOverdue = taskDate < today;
         return isToday || isOverdue;
       }
       return false;
@@ -94,8 +99,9 @@ export default function TodayScreen() {
   // the listcard component will automatically group tasks by due date when groupBy="dueDate" is set
   // this creates separate sections for:
   // - "overdue" tasks (due before today and not completed)
-  // - "today" tasks (due today)
-  // - specific dates if any tasks are due on future dates
+  // - "today" tasks (due today and not completed)
+  // - specific dates if any tasks are due on future dates (and not completed)
+  // completed tasks are filtered out and will not appear in any group
   // the grouping logic is handled internally by the listcard component
 
   // STORE USAGE - Dispatching actions to fetch data
