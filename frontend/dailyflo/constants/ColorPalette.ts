@@ -35,7 +35,7 @@ export const PrimaryColors = {
   },
   dark: {
     // dark mode primary colors (from design system specs)
-    50: '#111111',   // pure white - light backgrounds, modal surfaces
+    50: '#0e0e0e',   // pure white - light backgrounds, modal surfaces
     100: '#141414',  // subtle off-white - page backgrounds, settings panels
     200: '#1C1C1C',  // light neutral - secondary backgrounds
     300: '#555555',  // medium neutral - secondary buttons, inactive elements
@@ -173,7 +173,7 @@ export const ThemeColors = {
   light: {
     // background colors - surfaces and containers
     background: {
-      primary: PrimaryColors.light[100],      // white - main backgrounds
+      primary: PrimaryColors.light[200],      // white - main backgrounds
       secondary: PrimaryColors.light[100],   // light gray - secondary surfaces
       tertiary: PrimaryColors.light[200],    // medium gray - tertiary surfaces
       elevated: PrimaryColors.light[50],     // white - elevated surfaces (modals, cards)

@@ -82,3 +82,16 @@ Fully decided to continue frontend development in typescript.
 
 ### Notes
 - No notes
+---
+## [24/09/2025] - [Tuesday]
+
+### Decision 1
+Fully decided to remove task icons
+#### Decision Goal
+> Simplify styliong and reduce clutter
+#### Decision Context
+* I attempted to create the task card component with the icon, but after testing I noticed the task card logo style was too cluttered.
+* With this, I just decided it was easier for icons to be removed completely for now.
+
+### Notes
+- No notes
