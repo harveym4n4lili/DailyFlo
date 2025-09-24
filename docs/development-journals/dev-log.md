@@ -413,3 +413,18 @@ Updated User app, models, serializers, views and urls
 - Begin to plan color system and hook usage for color palette
 - Consider What needs to be refactored to use new color system
 ---
+## [19/09/2025] - [Friday]
+
+### Today's Goals
+- [X] Wrote a hook to use the color palette constant
+- [X] Refactored app files and components to use the new color system
+- [X] removed template color components and hooks
+
+### Plans For Future
+- Fix the status bar issue
+- Add Mock Data to test task card placeholders
+
+### Notes
+- consider changing and experimenting ui colors 
+- Plan how to change nacbar color
+---
