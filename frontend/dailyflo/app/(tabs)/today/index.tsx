@@ -204,10 +204,12 @@ export default function TodayScreen() {
   // render loading state when no tasks are loaded yet
   if (isLoading && tasks.length === 0) {
     return (
-      <ScreenContainer scrollable={false}>
+      <ScreenContainer scrollable={false} paddingHorizontal={0}>
         {/* safe area wrapper for header to ensure proper spacing on devices with notches */}
-        <Text style={styles.title}>Today</Text>
-        <Text style={styles.subtitle}>Loading your tasks...</Text>
+        <View style={styles.headerContainer}>
+          <Text style={styles.title}>Today</Text>
+          <Text style={styles.subtitle}>Loading your tasks...</Text>
+        </View>
         
         {/* loading content with centered text */}
         <Text style={styles.loadingText}>Loading tasks...</Text>
@@ -218,10 +220,12 @@ export default function TodayScreen() {
   // render error state when task loading fails
   if (error && tasks.length === 0) {
     return (
-      <ScreenContainer scrollable={false}>
+      <ScreenContainer scrollable={false} paddingHorizontal={0}>
         {/* header section with title and error message */}
-        <Text style={styles.title}>Today</Text>
-        <Text style={styles.subtitle}>Error loading tasks</Text>
+        <View style={styles.headerContainer}>
+          <Text style={styles.title}>Today</Text>
+          <Text style={styles.subtitle}>Error loading tasks</Text>
+        </View>
         
         {/* error content with retry instructions */}
         <Text style={styles.errorText}>Failed to load tasks</Text>
@@ -234,6 +238,7 @@ export default function TodayScreen() {
   return (
     <ScreenContainer 
       scrollable={true}
+      paddingHorizontal={0}
       scrollViewProps={{
         refreshControl: (
           <RefreshControl
@@ -245,13 +250,15 @@ export default function TodayScreen() {
       }}
     >
        {/* header section with title and dynamic task count */}
-       <Text style={styles.title}>Today</Text>
-        <Text style={styles.subtitle}>
-          {totalTaskCount === 0 
-            ? "No tasks for today" 
-            : `${totalTaskCount} task${totalTaskCount === 1 ? '' : 's'} for today`
-          }
-        </Text>
+       <View style={styles.headerContainer}>
+         <Text style={styles.title}>Today</Text>
+         <Text style={styles.subtitle}>
+           {totalTaskCount === 0 
+             ? "No tasks for today" 
+             : `${totalTaskCount} task${totalTaskCount === 1 ? '' : 's'} for today`
+           }
+         </Text>
+       </View>
       
       {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
       {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
@@ -282,6 +289,12 @@ const createStyles = (
   semanticColors: ReturnType<typeof useSemanticColors>,
   typography: ReturnType<typeof useTypography>
 ) => StyleSheet.create({
+  // header container for proper spacing
+  headerContainer: {
+    paddingHorizontal: 20, // add horizontal padding back for header text
+    paddingTop: 20, // add top padding for header
+  },
+  
   // title text styling for the main header
   // using typography system for consistent text styling
   title: {

@@ -351,7 +351,8 @@ const createStyles = (
   // list container for proper spacing
   listContainer: {
     paddingBottom: 20, // bottom padding for better scrolling
-    paddingTop: 20, 
+    paddingTop: 20,
+    paddingHorizontal: 20, // horizontal padding for task cards
   },
   
   // group container for grouped lists
