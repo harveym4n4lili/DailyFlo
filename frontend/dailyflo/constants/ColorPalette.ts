@@ -173,7 +173,7 @@ export const ThemeColors = {
   light: {
     // background colors - surfaces and containers
     background: {
-      primary: PrimaryColors.light[200],      // white - main backgrounds
+      primary: PrimaryColors.light[100],      // white - main backgrounds
       secondary: PrimaryColors.light[100],   // light gray - secondary surfaces
       tertiary: PrimaryColors.light[200],    // medium gray - tertiary surfaces
       elevated: PrimaryColors.light[50],     // white - elevated surfaces (modals, cards)
@@ -191,7 +191,7 @@ export const ThemeColors = {
     
     // border colors - dividers and outlines
     border: {
-      primary: PrimaryColors.light[200],     // light gray - primary borders
+      primary: PrimaryColors.light[50],     // light gray - primary borders
       secondary: PrimaryColors.light[100],   // very light gray - secondary borders
       focus: PrimaryColors.light[600],       // dark gray - focused borders
       error: SemanticColors.error[500],      // red - error borders
