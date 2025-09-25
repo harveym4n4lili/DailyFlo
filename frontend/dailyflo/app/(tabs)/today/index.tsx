@@ -279,8 +279,8 @@ export default function TodayScreen() {
           />
         ),
         contentInsetAdjustmentBehavior: 'automatic',
-        contentInset: { top: insets.top + 60 }, // account for safe area + fixed top section height
-        contentOffset: { x: 0, y: -(insets.top + 60) }, // offset to show refresh control properly
+        contentInset: { top: insets.top  }, // reduced extra top spacing to pull header closer
+        contentOffset: { x: 0, y: -(insets.top) }, // keep offset in sync with inset
       }}
      >
         {/* header section with title and dynamic task count */}
