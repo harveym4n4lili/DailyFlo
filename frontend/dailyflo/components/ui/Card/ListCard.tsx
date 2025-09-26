@@ -8,9 +8,15 @@
  * This component demonstrates the flow from Redux store → TaskList → TaskCard → User interaction.
  */
 
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ListRenderItem, TouchableOpacity } from 'react-native';
+import React, { useMemo, useState, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, ListRenderItem, TouchableOpacity, Animated, LayoutAnimation, UIManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
+// enable layout animations on android for smooth group expansion animations
+// this ensures android can use layout animations like ios does
+if (UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // TYPES FOLDER IMPORTS - TypeScript type definitions
 // The types folder contains all TypeScript interfaces and type definitions
@@ -100,15 +106,61 @@ export default function ListCard({
   // state management for collapsed groups
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   
-  // function to toggle group collapse state
+  // animated values storage - keeps track of animated values for each group
+  const animatedValues = useRef<Map<string, { 
+    rotateValue: Animated.Value; 
+    heightValue: Animated.Value 
+  }>>(new Map());
+  
+  // function to get or create animated values for a specific group
+  const getAnimatedValuesForGroup = (groupTitle: string) => {
+    if (!animatedValues.current.has(groupTitle)) {
+      // check if the group should start collapsed or expanded based on collapsedGroups state
+      const isGroupCollapsed = collapsedGroups.has(groupTitle);
+      
+      animatedValues.current.set(groupTitle, {
+        rotateValue: new Animated.Value(isGroupCollapsed ? 0 : 1), // 0 = collapsed (right pointing), 1 = expanded (down pointing)
+        heightValue: new Animated.Value(isGroupCollapsed ? 0 : 1) // 0 = collapsed content, 1 = expanded content
+      });
+    }
+    return animatedValues.current.get(groupTitle)!;
+  };
+  
+  // function to toggle group collapse state with animations
   const toggleGroupCollapse = (groupTitle: string) => {
+    const animatedValuesForGroup = getAnimatedValuesForGroup(groupTitle);
+    
+    // configure smooth layout animation for height transitions
+    // this creates the smooth expand/collapse animation for the content area
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    
     setCollapsedGroups(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(groupTitle)) {
-        newSet.delete(groupTitle); // expand the group
+      const isCurrentlyCollapsed = newSet.has(groupTitle);
+      
+      if (isCurrentlyCollapsed) {
+        // expanding the group - remove from collapsed set
+        newSet.delete(groupTitle);
+        
+        // animate arrow rotation from pointing right (collapsed) to pointing down (expanded)
+        Animated.timing(animatedValuesForGroup.rotateValue, {
+          toValue: 1, // 1 = expanded state (down), 0 = collapsed state (right)
+          duration: 200, // 200ms animation duration for smooth rotation
+          useNativeDriver: true, // use native driver for better performance
+        }).start();
+        
       } else {
-        newSet.add(groupTitle); // collapse the group
+        // collapsing the group - add to collapsed set  
+        newSet.add(groupTitle);
+        
+        // animate arrow rotation from pointing down (expanded) to pointing right (collapsed)
+        Animated.timing(animatedValuesForGroup.rotateValue, {
+          toValue: 0, // 0 = collapsed state (right), 1 = expanded state (down)
+          duration: 200, // 200ms animation duration for smooth rotation
+          useNativeDriver: true, // use native driver for better performance
+        }).start();
       }
+      
       return newSet;
     });
   };
@@ -232,6 +284,13 @@ export default function ListCard({
   // render group header with dropdown arrow for expand/collapse functionality
   const renderGroupHeader = (title: string, count: number) => {
     const isCollapsed = collapsedGroups.has(title);
+    const animatedValuesForGroup = getAnimatedValuesForGroup(title);
+    
+    // calculate arrow rotation animation - smoothly rotate arrow between down (expanded) and right (collapsed)
+    const arrowRotation = animatedValuesForGroup.rotateValue.interpolate({
+      inputRange: [0, 1], // input range: 0 = collapsed (right pointing), 1 = expanded (down pointing)
+      outputRange: ['90deg', '0deg'], // output range: rotate from 90 degrees (right) to 0 degrees (down) for arrow transition
+    });
     
     return (
       <TouchableOpacity 
@@ -245,13 +304,21 @@ export default function ListCard({
           <Text style={styles.groupCount}>({count})</Text>
         </View>
         
-        {/* dropdown arrow icon - positioned on the right */}
-        <Ionicons 
-          name={isCollapsed ? "chevron-forward" : "chevron-down"} 
-          size={16} 
-          color={themeColors.text.tertiary()} 
-          style={styles.groupArrow}
-        />
+        {/* dropdown arrow icon with smooth rotation animation - positioned on the right */}
+        <Animated.View 
+          style={[
+            styles.animatedArrowContainer,
+            {
+              transform: [{ rotate: arrowRotation }], // apply rotation animation transform
+            }
+          ]}
+        >
+          <Ionicons 
+            name="chevron-down" // always use chevron-down icon since we handle rotation with animation
+            size={16} 
+            color={themeColors.text.tertiary()} 
+          />
+        </Animated.View>
       </TouchableOpacity>
     );
   };
@@ -373,6 +440,13 @@ const createStyles = (
   // group arrow styling
   groupArrow: {
     marginLeft: 8, // space between count and arrow
+  },
+  
+  // animated arrow container for smooth rotation animations
+  animatedArrowContainer: {
+    marginLeft: 8, // space between count and arrow (matches groupArrow)
+    justifyContent: 'center', // center the arrow icon
+    alignItems: 'center', // center the arrow icon
   },
   
   // group title and count container styling
