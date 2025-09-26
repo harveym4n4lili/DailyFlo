@@ -112,6 +112,15 @@ export default function ListCard({
     heightValue: Animated.Value 
   }>>(new Map());
   
+  // animated values for task cards - tracks animating task cards by their id  
+  const taskCardAnimations = useRef<Map<string, { 
+    opacityValue: Animated.Value;
+    scaleValue: Animated.Value;
+  }>>(new Map());
+  
+  // track which group is currently being expanded so only those task cards animate
+  const expandingGroups = useRef<Set<string>>(new Set());
+  
   // function to get or create animated values for a specific group
   const getAnimatedValuesForGroup = (groupTitle: string) => {
     if (!animatedValues.current.has(groupTitle)) {
@@ -124,6 +133,53 @@ export default function ListCard({
       });
     }
     return animatedValues.current.get(groupTitle)!;
+  };
+  
+  // function to get or create animated values for a specific task card
+  // this function is called whenever a task card should animate in but only animates if part of expanding group
+  const getTaskCardAnimation = (taskId: string, index: number = 0, groupTitle?: string) => {
+    // only animate if this task card belongs to a group that is currently expanding
+    const shouldAnimate = groupTitle ? expandingGroups.current.has(groupTitle) : false;
+    
+    // check if animation already exists, reset it for fresh animation if needed
+    let animatedValue = taskCardAnimations.current.get(taskId);
+    
+    if (animatedValue) {
+      // reset values for re-animation when group expands
+      animatedValue.opacityValue.setValue(shouldAnimate ? 0 : 1); // start at invisible only if animating
+      animatedValue.scaleValue.setValue(shouldAnimate ? 0.95 : 1); // start smaller only if animating
+    } else {
+      // create new animated values for task card
+      animatedValue = {
+        opacityValue: new Animated.Value(shouldAnimate ? 0 : 1), // start at invisible only if animating
+        scaleValue: new Animated.Value(shouldAnimate ? 0.95 : 1), // start smaller only if animating
+      };
+      taskCardAnimations.current.set(taskId, animatedValue);
+    }
+    
+    // only trigger animations if this card belongs to an expanding group
+    if (shouldAnimate) {
+      // calculate staggered delay for multiple card animations - adds slight delay for natural appearance order
+      const delay = index * 50; // 50ms delay per card for staggered effect
+      
+      // animate fade-in with slight scale for smooth task card appearance when group expands
+      Animated.parallel([
+        Animated.timing(animatedValue.opacityValue, {
+          toValue: 1, // fade to full opacity
+          duration: 400, // 400ms fade duration for smooth appearance
+          delay: delay, // apply staggered delay based on card index
+          useNativeDriver: true, // use native driver for better performance
+        }),
+        Animated.timing(animatedValue.scaleValue, {
+          toValue: 1, // scale to full size from slightly smaller size
+          duration: 400, // 400ms scale duration for smooth appearance
+          delay: delay, // apply staggered delay based on card index
+          useNativeDriver: true, // use native driver for better performance
+        })
+      ]).start();
+    }
+    
+    return animatedValue;
   };
   
   // function to toggle group collapse state with animations
@@ -141,6 +197,14 @@ export default function ListCard({
       if (isCurrentlyCollapsed) {
         // expanding the group - remove from collapsed set
         newSet.delete(groupTitle);
+        
+        // mark this group as currently expanding so only its task cards animate
+        expandingGroups.current.add(groupTitle);
+        
+        // clear the expanding flag after animations are complete  
+        setTimeout(() => {
+          expandingGroups.current.delete(groupTitle);
+        }, 600); // slightly longer than animation max duration (400ms + 50ms delay)
         
         // animate arrow rotation from pointing right (collapsed) to pointing down (expanded)
         Animated.timing(animatedValuesForGroup.rotateValue, {
@@ -266,20 +330,31 @@ export default function ListCard({
     return groups;
   }, [processedTasks, groupBy]);
   
-  // render individual task card
-  const renderTaskCard: ListRenderItem<Task> = ({ item: task }) => (
-    <TaskCard
-      task={task}
-      onPress={onTaskPress}
-      onComplete={onTaskComplete}
-      onEdit={onTaskEdit}
-      onDelete={onTaskDelete}
-      onSwipeLeft={onTaskSwipeLeft}
-      onSwipeRight={onTaskSwipeRight}
-      showCategory={showCategory}
-      compact={compact}
-    />
-  );
+  // render individual task card with smooth fade-in and scale animation for expansion
+  const renderTaskCard: ListRenderItem<Task> = ({ item: task, index }) => {
+    const { opacityValue, scaleValue } = getTaskCardAnimation(task.id, index || 0);
+    
+    return (
+      <Animated.View 
+        style={{
+          opacity: opacityValue, // apply fade animation based on animated value
+          transform: [{ scale: scaleValue }], // apply scale animation for subtle zoom effect
+        }}
+      >
+        <TaskCard
+          task={task}
+          onPress={onTaskPress}
+          onComplete={onTaskComplete}
+          onEdit={onTaskEdit}
+          onDelete={onTaskDelete}
+          onSwipeLeft={onTaskSwipeLeft}
+          onSwipeRight={onTaskSwipeRight}
+          showCategory={showCategory}
+          compact={compact}
+        />
+      </Animated.View>
+    );
+  };
   
   // render group header with dropdown arrow for expand/collapse functionality
   const renderGroupHeader = (title: string, count: number) => {
@@ -378,6 +453,32 @@ export default function ListCard({
           renderItem={({ item: [groupTitle, groupTasks] }) => {
             const isCollapsed = collapsedGroups.has(groupTitle);
             
+            // create a local render function for tasks that knows which group they belong to
+            const renderTaskCardForGroup: ListRenderItem<Task> = ({ item: task, index }) => {
+              const { opacityValue, scaleValue } = getTaskCardAnimation(task.id, index || 0, groupTitle);
+              
+              return (
+                <Animated.View 
+                  style={{
+                    opacity: opacityValue, // apply fade animation based on animated value
+                    transform: [{ scale: scaleValue }], // apply scale animation for subtle zoom effect
+                  }}
+                >
+                  <TaskCard
+                    task={task}
+                    onPress={onTaskPress}
+                    onComplete={onTaskComplete}
+                    onEdit={onTaskEdit}
+                    onDelete={onTaskDelete}
+                    onSwipeLeft={onTaskSwipeLeft}
+                    onSwipeRight={onTaskSwipeRight}
+                    showCategory={showCategory}
+                    compact={compact}
+                  />
+                </Animated.View>
+              );
+            };
+            
             return (
               <View style={styles.group}>
                 {renderGroupHeader(groupTitle, groupTasks.length)}
@@ -385,7 +486,7 @@ export default function ListCard({
                 {!isCollapsed && (
                   <FlatList
                     data={groupTasks}
-                    renderItem={renderTaskCard}
+                    renderItem={renderTaskCardForGroup}
                     keyExtractor={(task) => task.id}
                     showsVerticalScrollIndicator={false}
                     scrollEnabled={false} // disable scrolling for nested lists
