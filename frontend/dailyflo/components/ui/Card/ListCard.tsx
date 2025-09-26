@@ -471,6 +471,7 @@ export default function ListCard({
       onRefresh={onRefresh}
       tintColor="#007AFF" // iOS blue color for pull-to-refresh indicator
       progressViewOffset={insets.top+20} // Offset from top
+      style={{ padding: 20 }}
     />
   ) : undefined;
 
