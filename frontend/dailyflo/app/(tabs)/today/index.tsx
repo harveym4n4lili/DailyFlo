@@ -281,6 +281,13 @@ export default function TodayScreen() {
         contentInsetAdjustmentBehavior: 'automatic',
         contentInset: { top: insets.top  }, // reduced extra top spacing to pull header closer
         contentOffset: { x: 0, y: -(insets.top) }, // keep offset in sync with inset
+        onScroll: (event) => {
+          // Notify the layout about scroll position changes
+          if ((global as any).trackScrollToTodayLayout) {
+            (global as any).trackScrollToTodayLayout(event.nativeEvent.contentOffset.y);
+          }
+        },
+        scrollEventThrottle: 16, // Optimize scroll performance
       }}
      >
         {/* header section with title and dynamic task count */}
