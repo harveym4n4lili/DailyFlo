@@ -9,8 +9,9 @@
  */
 
 import React, { useMemo, useState, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, ListRenderItem, TouchableOpacity, Animated, LayoutAnimation, UIManager } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ListRenderItem, TouchableOpacity, Animated, LayoutAnimation, UIManager, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // enable layout animations on android for smooth group expansion animations
 // this ensures android can use layout animations like ios does
@@ -62,6 +63,18 @@ export interface ListCardProps {
   groupBy?: 'priority' | 'dueDate' | 'color' | 'none'; // how to group tasks
   sortBy?: 'createdAt' | 'dueDate' | 'priority' | 'title'; // how to sort tasks
   sortDirection?: 'asc' | 'desc';            // sort direction
+  
+  // pull-to-refresh support
+  onRefresh?: () => void;                    // called when user pulls to refresh
+  refreshing?: boolean;                      // whether the list is currently refreshing
+  
+  // scroll event support
+  onScroll?: (event: any) => void;           // called when the list is scrolled
+  scrollEventThrottle?: number;              // throttle for scroll events
+  
+  // header support
+  headerTitle?: string;                      // title to display in header
+  headerSubtitle?: string;                   // subtitle to display in header
 }
 
 /**
@@ -87,6 +100,12 @@ export default function ListCard({
   groupBy = 'none',
   sortBy = 'createdAt',
   sortDirection = 'desc',
+  onRefresh,
+  refreshing = false,
+  onScroll,
+  scrollEventThrottle = 16,
+  headerTitle,
+  headerSubtitle,
 }: ListCardProps) {
   
   // COLOR PALETTE USAGE - Getting theme-aware colors
@@ -99,9 +118,12 @@ export default function ListCard({
   // useTypography: Hook that provides typography styles, font families, and text utilities
   const typography = useTypography();
   
+  // SAFE AREA INSETS - Get safe area insets for proper positioning
+  const insets = useSafeAreaInsets();
+  
   // create dynamic styles using the color palette system and typography system
-  // we pass typography to the createStyles function so it can use typography styles
-  const styles = useMemo(() => createStyles(themeColors, semanticColors, typography), [themeColors, semanticColors, typography]);
+  // we pass typography and insets to the createStyles function so it can use typography styles and safe area
+  const styles = useMemo(() => createStyles(themeColors, semanticColors, typography, insets), [themeColors, semanticColors, typography, insets]);
   
   // state management for collapsed groups
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -412,6 +434,18 @@ export default function ListCard({
     </View>
   );
   
+  // render header component
+  const renderHeader = () => {
+    if (!headerTitle && !headerSubtitle) return null;
+    
+    return (
+      <View style={styles.headerContainer}>
+        {headerTitle && <Text style={styles.headerTitle}>{headerTitle}</Text>}
+        {headerSubtitle && <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>}
+      </View>
+    );
+  };
+  
   // show loading state if loading
   if (loading) {
     return (
@@ -430,6 +464,15 @@ export default function ListCard({
     );
   }
   
+  // create refresh control for pull-to-refresh functionality
+  const refreshControl = onRefresh ? (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      tintColor="#007AFF" // iOS blue color for pull-to-refresh indicator
+    />
+  ) : undefined;
+
   // render grouped or flat list
   if (groupBy === 'none') {
     // render flat list without grouping
@@ -441,6 +484,10 @@ export default function ListCard({
           keyExtractor={(task) => task.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
+          refreshControl={refreshControl}
+          onScroll={onScroll}
+          scrollEventThrottle={scrollEventThrottle}
+          ListHeaderComponent={renderHeader}
         />
       </View>
     );
@@ -498,6 +545,10 @@ export default function ListCard({
           keyExtractor={([groupTitle]) => groupTitle}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
+          refreshControl={refreshControl}
+          onScroll={onScroll}
+          scrollEventThrottle={scrollEventThrottle}
+          ListHeaderComponent={renderHeader}
         />
       </View>
     );
@@ -509,7 +560,8 @@ export default function ListCard({
 const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>, 
   semanticColors: ReturnType<typeof useSemanticColors>,
-  typography: ReturnType<typeof useTypography>
+  typography: ReturnType<typeof useTypography>,
+  insets: { top: number; bottom: number; left: number; right: number }
 ) => StyleSheet.create({
   // main container
   container: {
@@ -614,5 +666,31 @@ const createStyles = (
     // use theme-aware secondary text color from color system
     color: themeColors.text.secondary(),
     textAlign: 'center', // center the text
+  },
+  
+  // header container styling
+  headerContainer: {
+    paddingTop: insets.top, // reduced padding since we're handling spacing in scrollViewProps
+    paddingBottom: 16, // space between header and content
+  },
+  
+  // header title text styling
+  // using typography system for consistent text styling
+  headerTitle: {
+    // use the heading-1 text style from typography system (36px, bold, satoshi font)
+    ...typography.getTextStyle('heading-1'),
+    // use theme-aware primary text color from color system
+    color: themeColors.text.primary(),
+  },
+  
+  // header subtitle text styling
+  // using typography system for consistent text styling
+  headerSubtitle: {
+    // use the heading-4 text style from typography system (16px, bold, satoshi font)
+    ...typography.getTextStyle('heading-4'),
+    // add top margin for spacing from title
+    marginTop: 8,
+    // use theme-aware secondary text color from color system
+    color: themeColors.text.secondary(),
   },
 });

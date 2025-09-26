@@ -236,12 +236,6 @@ export default function TodayScreen() {
   if (isLoading && tasks.length === 0) {
     return (
       <ScreenContainer scrollable={false} paddingHorizontal={0}>
-        {/* safe area wrapper for header to ensure proper spacing on devices with notches */}
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>Today</Text>
-          <Text style={styles.subtitle}>Loading your tasks...</Text>
-        </View>
-        
         {/* loading content with centered text */}
         <Text style={styles.loadingText}>Loading tasks...</Text>
       </ScreenContainer>
@@ -252,12 +246,6 @@ export default function TodayScreen() {
   if (error && tasks.length === 0) {
     return (
       <ScreenContainer scrollable={false} paddingHorizontal={0}>
-        {/* header section with title and error message */}
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>Today</Text>
-          <Text style={styles.subtitle}>Error loading tasks</Text>
-        </View>
-        
         {/* error content with retry instructions */}
         <Text style={styles.errorText}>Failed to load tasks</Text>
         <Text style={styles.hint}>Pull down to try again</Text>
@@ -268,39 +256,9 @@ export default function TodayScreen() {
   // render main content with today's tasks
   return (
     <ScreenContainer 
-      scrollable={true}
+      scrollable={false}
       paddingHorizontal={0}
-      scrollViewProps={{
-        refreshControl: (
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={handleRefresh}
-            tintColor="#007AFF" // iOS blue color for pull-to-refresh indicator
-          />
-        ),
-        contentInsetAdjustmentBehavior: 'automatic',
-        contentInset: { top: insets.top  }, // reduced extra top spacing to pull header closer
-        contentOffset: { x: 0, y: -(insets.top) }, // keep offset in sync with inset
-        onScroll: (event) => {
-          // Notify the layout about scroll position changes
-          if ((global as any).trackScrollToTodayLayout) {
-            (global as any).trackScrollToTodayLayout(event.nativeEvent.contentOffset.y);
-          }
-        },
-        scrollEventThrottle: 16, // Optimize scroll performance
-      }}
      >
-        {/* header section with title and dynamic task count */}
-       <View style={styles.headerContainer}>
-         <Text style={styles.title}>Today</Text>
-         <Text style={styles.subtitle}>
-           {totalTaskCount === 0 
-             ? "No tasks for today" 
-             : `${totalTaskCount} task${totalTaskCount === 1 ? '' : 's'} for today`
-           }
-         </Text>
-       </View>
-      
       {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
       {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
       <ListCard
@@ -318,6 +276,21 @@ export default function TodayScreen() {
         groupBy="dueDate" // group tasks by due date to separate overdue and today's tasks
         sortBy="dueDate" // sort tasks by due date within each group
         sortDirection="asc" // show overdue tasks first, then today's tasks (ascending = oldest first)
+        onRefresh={handleRefresh}
+        refreshing={isLoading}
+        onScroll={(event) => {
+          // Notify the layout about scroll position changes
+          if ((global as any).trackScrollToTodayLayout) {
+            (global as any).trackScrollToTodayLayout(event.nativeEvent.contentOffset.y);
+          }
+        }}
+        scrollEventThrottle={16}
+        headerTitle="Today"
+        headerSubtitle={
+          totalTaskCount === 0 
+            ? "No tasks for today" 
+            : `${totalTaskCount} task${totalTaskCount === 1 ? '' : 's'} for today`
+        }
       />
     </ScreenContainer>
   );
@@ -332,31 +305,6 @@ const createStyles = (
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
 
-  // header container for proper spacing
-  headerContainer: {
-    paddingHorizontal: 20, // add horizontal padding back for header text
-    paddingTop: 8, // reduced padding since we're handling spacing in scrollViewProps
-  },
-  
-  // title text styling for the main header
-  // using typography system for consistent text styling
-  title: {
-    // use the heading-1 text style from typography system (36px, bold, satoshi font)
-    ...typography.getTextStyle('heading-1'),
-    // use theme-aware primary text color from color system
-    color: themeColors.text.primary(),
-  },
-  
-  // subtitle text styling for the main header section
-  // using typography system for consistent text styling
-  subtitle: {
-    // use the heading-4 text style from typography system (16px, bold, satoshi font)
-    ...typography.getTextStyle('heading-4'),
-    // add top margin for spacing from title
-    marginTop: 8,
-    // use theme-aware secondary text color from color system
-    color: themeColors.text.secondary(),
-  },
   
   // loading text styling for initial load state
   // using typography system for consistent text styling
