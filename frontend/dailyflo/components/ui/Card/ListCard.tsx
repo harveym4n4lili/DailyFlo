@@ -470,7 +470,7 @@ export default function ListCard({
       refreshing={refreshing}
       onRefresh={onRefresh}
       tintColor="#007AFF" // iOS blue color for pull-to-refresh indicator
-      progressViewOffset={insets.top+20} // Offset from top
+      progressViewOffset={20} // Offset from top
       style={{ padding: 20 }}
     />
   ) : undefined;
@@ -573,7 +573,6 @@ const createStyles = (
   // list container for proper spacing
   listContainer: {
     paddingBottom: 20, // bottom padding for better scrolling
-    paddingTop: insets.top,
     paddingHorizontal: 20, // horizontal padding for task cards
   },
   

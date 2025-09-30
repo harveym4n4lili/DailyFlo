@@ -7,6 +7,7 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 
 // import our new task components
 import { ListCard } from '@/components/ui/Card';
+import { FloatingActionButton } from '@/components/ui/Button';
 
 // import color palette system for consistent theming
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
@@ -291,6 +292,16 @@ export default function TodayScreen() {
             ? "No tasks for today" 
             : `${totalTaskCount} task${totalTaskCount === 1 ? '' : 's'} for today`
         }
+      />
+      
+      {/* Floating Action Button for quick task creation */}
+      <FloatingActionButton
+        onPress={() => {
+          console.log('FAB Pressed - Ready to create new task!');
+          // TODO: Navigate to task creation modal
+        }}
+        accessibilityLabel="Add new task"
+        accessibilityHint="Double tap to create a new task"
       />
     </ScreenContainer>
   );
