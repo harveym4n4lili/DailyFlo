@@ -8,5 +8,5 @@
 // screen layout components
 export * from './ScreenLayout';
 
-// modal layout components (to be implemented later)
-// export * from './ModalLayout';
+// modal layout components
+export * from './ModalLayout';
