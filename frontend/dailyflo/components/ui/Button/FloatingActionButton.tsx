@@ -17,6 +17,8 @@ import {
   StyleSheet,        // utility for creating optimized stylesheets
   ViewStyle,         // typescript type for view/container styles
   AccessibilityInfo, // utility for accessibility features (not directly used but available)
+  Animated,          // animated api for creating performant animations
+  Easing,            // easing functions for smoother animation curves
 } from 'react-native';
 
 // REACT NATIVE SAFE AREA CONTEXT IMPORT
@@ -117,6 +119,57 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   // flow: device provides insets → hook reads them → we use them for positioning
   const insets = useSafeAreaInsets();
   
+  // pulse animation values
+  // using two animated values: one for scale and one for opacity
+  const pulseScale = React.useRef(new Animated.Value(0)).current;
+  const pulseOpacity = React.useRef(new Animated.Value(0.25)).current;
+  
+  // start looping pulse animation (respects reduced motion when enabled)
+  React.useEffect(() => {
+    let isMounted = true;
+    const startAnimation = (shouldAnimate: boolean) => {
+      if (!isMounted || !shouldAnimate) return;
+      // animate scale (0→1 mapped to actual scale via interpolate) and fade out
+      const growAndFade = Animated.parallel([
+        Animated.timing(pulseScale, {
+          toValue: 0.25, // change pulse size here
+          duration: 600,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseOpacity, {
+          toValue: 0,
+          duration: 700,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ]);
+      const resetInstant = Animated.parallel([
+        Animated.timing(pulseScale, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseOpacity, {
+          toValue: 0.25,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]);
+      Animated.loop(
+        Animated.sequence([growAndFade, resetInstant]),
+        { resetBeforeIteration: true }
+      ).start();
+    };
+    // check for reduced motion to improve accessibility
+    AccessibilityInfo.isReduceMotionEnabled?.()
+      .then((reduced) => startAnimation(!reduced))
+      .catch(() => startAnimation(true));
+    return () => {
+      isMounted = false;
+    };
+  }, [pulseOpacity, pulseScale]);
+  
   /**
    * Handle FAB press
    * For now, logs to console as requested
@@ -139,59 +192,63 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   // this is what gets displayed on screen
   // flow: parent renders FAB → this JSX is rendered → user sees circular button with plus icon
   return (
-    // TOUCHABLE CONTAINER
-    // TouchableOpacity provides the tappable area and press feedback
-    // when pressed, it reduces opacity briefly to give visual feedback
-    <TouchableOpacity
-      // STYLE ARRAY
-      // styles are applied in order: base styles → inset-based positioning → theme colors → disabled styles → custom styles
-      // later styles override earlier ones if there are conflicts
+    // container keeps the fab positioned and allows the pulse to radiate outside
+    <Animated.View
+      pointerEvents="box-none"
       style={[
-        styles.fab,                    // base FAB styles (size, shape, shadow, z-index)
+        styles.fabContainer,
         {
-          // DYNAMIC POSITIONING BASED ON SAFE AREA INSETS
-          // position the FAB above the home indicator and away from screen edges
-          // bottom: 16px base margin + bottom inset (for home indicator)
-          // right: 16px base margin + right inset (for rounded corners/notches)
-          // flow: device provides insets → we add base margin → FAB positioned safely
-          bottom: 20 +insets.bottom,  // 16px margin + safe area (home indicator spacing)
-          right: 8 + insets.right,    // 16px margin + safe area (rounded corners/notch spacing)
-          // THEME COLORS
-          // use white background from color palette
-          backgroundColor: themeColors.interactive.primary(), // white background
+          // dynamic positioning based on safe area insets
+          bottom: 20 + insets.bottom,
+          right: 16 + insets.right,
         },
-        //disabled && styles.fabDisabled, // if disabled is true, apply disabled styles (grayed out)
-        //style,                         // custom styles from parent (overrides everything)
       ]}
-      // TOUCH HANDLER
-      // onPress: called when user taps the button
-      // flow: user taps → TouchableOpacity detects tap → calls handlePress function
-      onPress={handlePress}
-      // DISABLED STATE
-      // if true, button won't respond to taps and will show disabled styling
-      disabled={disabled}
-      // ACTIVE OPACITY
-      // controls how transparent the button becomes when pressed (0.8 = 80% opacity)
-      // this provides visual feedback that the button was tapped
-      activeOpacity={0.8}
-      // ACCESSIBILITY PROPERTIES
-      // these help screen readers understand and announce the button correctly
-      // flow: screen reader focuses button → reads role → reads label → reads hint → reads state
-      accessibilityRole="button"           // tells screen reader this is a button element
-      accessibilityLabel={accessibilityLabel} // what the button does ("Add new task")
-      accessibilityHint={accessibilityHint}   // how to use it ("Double tap to create a new task")
-      accessibilityState={{ disabled }}       // current state (disabled: true/false)
     >
-      {/* PLUS ICON */}
-      {/* this is the black + symbol that appears inside the white circular button */}
-      {/* Ionicons component renders vector icons that scale perfectly at any size */}
-      <Ionicons
-        name="add"        // icon name from ionicons library (+ symbol)
-        size={32}         // icon size in pixels (24px as per design specs)
-        color={themeColors.interactive.secondary()}   // icon color (black from theme for contrast against white background)
-        style={styles.fabIcon} // additional icon styles (currently empty but available for future use)
+      {/* animated pulse behind the button (ghost ripple) */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.pulse,
+          {
+            opacity: pulseOpacity,
+            transform: [
+              {
+                // map 0→1 to actual scale values so the pulse grows beyond the fab
+                scale: pulseScale.interpolate({ inputRange: [0, 1], outputRange: [1, 2.4] }),
+              },
+            ],
+            backgroundColor: themeColors.interactive.primary(),
+          },
+        ]}
       />
-    </TouchableOpacity>
+
+      {/* tappable fab */}
+      <TouchableOpacity
+        style={[
+          styles.fab,
+          {
+            // theme colors
+            backgroundColor: themeColors.interactive.primary(),
+          },
+          style, // allow parent to override size/shape while we keep content centered
+        ]}
+        onPress={handlePress}
+        disabled={disabled}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint}
+        accessibilityState={{ disabled }}
+      >
+        {/* plus icon */}
+        <Ionicons
+          name="add"
+          size={32}
+          color={themeColors.interactive.secondary()}
+          style={styles.fabIcon}
+        />
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
@@ -214,31 +271,28 @@ const styles = StyleSheet.create({
   // BASE FAB STYLES
   // these styles define the appearance and positioning of the floating action button
   // they follow the design system specifications from the documentation
+  fabContainer: {
+    // absolute container sized to its child to host the pulse and button
+    position: 'absolute',
+    zIndex: 1000,
+  },
+
+  // base fab styles
   fab: {
     // SIZE AND SHAPE
-    // the FAB is a perfect circle created by equal width/height and borderRadius = half the size
-    width: 64,              // 64px width as per design specs
-    height: 64,             // 64px height as per design specs
-    borderRadius: 32,       // half of width/height (64/2 = 32) creates perfect circle
+    // default size can be overridden via style prop; keep content centered regardless of size
+    width: 64,
+    height: 64,
+    borderRadius: 999, // large radius keeps fully rounded corners for any size
     
     // BACKGROUND COLOR
     // background color is set dynamically in the component using themeColors
     // this allows the FAB to adapt to theme changes (white background)
     // backgroundColor is applied in the style array in the component
     
-    // POSITIONING
-    // position: 'absolute' removes the FAB from normal document flow
-    // this allows it to float over other content without affecting layout
-    // note: bottom and right values are set dynamically in the component using insets
-    // this ensures the FAB respects safe areas (home indicators, notches, etc.)
-    position: 'absolute',   // take out of normal flow so it floats over content
-    // bottom and right are set dynamically in component: 20 + insets.bottom/right
-    // this ensures proper spacing on all devices (iPhones with notches, home indicators, etc.)
-    
-    // Z-INDEX
-    // ensures the FAB appears above all other content on the screen
-    // higher z-index means it stacks on top of elements with lower z-index
-    zIndex: 1000,           // very high z-index ensures FAB is always on top
+    // z-index
+    // ensures the fab appears above its pulse background
+    zIndex: 1,
     
     // FLEXBOX CENTERING
     // these properties center the icon inside the circular button
@@ -246,10 +300,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center', // center children vertically in the container
     alignItems: 'center',     // center children horizontally in the container
     
-    // TOUCH FEEDBACK
-    // overflow: 'hidden' clips anything that goes outside the border radius
-    // this ensures press effects stay within the circular shape
-    overflow: 'hidden',       // clip content to border radius (keeps ripple effect circular)
+    // touch feedback
+    // keep overflow hidden so press feedback remains circular (pulse sits behind in container)
+    overflow: 'hidden',
+  },
+  
+  // pulse circle expands and fades repeatedly to create a ghost ripple effect
+  pulse: {
+    ...StyleSheet.absoluteFillObject, // fill the button area so it adapts to any size
+    borderRadius: 999,
+    zIndex: 0,
   },
   
   
