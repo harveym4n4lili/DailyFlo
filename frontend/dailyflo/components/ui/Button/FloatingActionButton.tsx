@@ -30,9 +30,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 // CUSTOM HOOKS IMPORTS
-// useColorScheme: hook that detects if user is in light or dark mode
-// this allows the FAB to potentially adapt to theme changes in the future
-import { useColorScheme } from '@/hooks/useColorScheme';
+// useThemeColors: hook that provides theme-aware colors
+// this allows the FAB to adapt to theme changes and use design system colors
+import { useThemeColors } from '@/hooks/useColorPalette';
 
 /**
  * Props for the FloatingActionButton component
@@ -102,11 +102,10 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   accessibilityLabel = 'Add new task',                  // screen reader label (default provided)
   accessibilityHint = 'Double tap to create a new task', // screen reader hint (default provided)
 }) => {
-  // THEME DETECTION
-  // get the current color scheme (light or dark mode) from the system
-  // this allows the FAB to potentially adapt to theme changes in the future
-  // currently we use a fixed dark color, but this hook is here for future enhancements
-  const colorScheme = useColorScheme();
+  // COLOR PALETTE USAGE
+  // get theme-aware colors from the design system
+  // this provides consistent colors that work with both light and dark modes
+  const themeColors = useThemeColors();
   
   // SAFE AREA INSETS
   // get the safe area insets for the current device
@@ -145,10 +144,10 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
     // when pressed, it reduces opacity briefly to give visual feedback
     <TouchableOpacity
       // STYLE ARRAY
-      // styles are applied in order: base styles → inset-based positioning → disabled styles → custom styles
+      // styles are applied in order: base styles → inset-based positioning → theme colors → disabled styles → custom styles
       // later styles override earlier ones if there are conflicts
       style={[
-        styles.fab,                    // base FAB styles (size, shape, color, shadow, z-index)
+        styles.fab,                    // base FAB styles (size, shape, shadow, z-index)
         {
           // DYNAMIC POSITIONING BASED ON SAFE AREA INSETS
           // position the FAB above the home indicator and away from screen edges
@@ -157,6 +156,9 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
           // flow: device provides insets → we add base margin → FAB positioned safely
           bottom: 20 +insets.bottom,  // 16px margin + safe area (home indicator spacing)
           right: 8 + insets.right,    // 16px margin + safe area (rounded corners/notch spacing)
+          // THEME COLORS
+          // use white background from color palette
+          backgroundColor: themeColors.interactive.primary(), // white background
         },
         //disabled && styles.fabDisabled, // if disabled is true, apply disabled styles (grayed out)
         //style,                         // custom styles from parent (overrides everything)
@@ -181,12 +183,12 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
       accessibilityState={{ disabled }}       // current state (disabled: true/false)
     >
       {/* PLUS ICON */}
-      {/* this is the white + symbol that appears inside the circular button */}
+      {/* this is the black + symbol that appears inside the white circular button */}
       {/* Ionicons component renders vector icons that scale perfectly at any size */}
       <Ionicons
         name="add"        // icon name from ionicons library (+ symbol)
-        size={24}         // icon size in pixels (24px as per design specs)
-        color="#FFFFFF"   // icon color (white for contrast against dark background)
+        size={32}         // icon size in pixels (24px as per design specs)
+        color={themeColors.interactive.secondary()}   // icon color (black from theme for contrast against white background)
         style={styles.fabIcon} // additional icon styles (currently empty but available for future use)
       />
     </TouchableOpacity>
@@ -198,7 +200,8 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
  * 
  * Follows the design system specifications:
  * - 56px diameter circular button
- * - Dark background (#111827)
+ * - White background (from color palette)
+ * - Black icon (from color palette)
  * - Bottom right positioning with 16px margins
  * - Large elevation shadow
  * - High z-index for overlay positioning
@@ -214,14 +217,14 @@ const styles = StyleSheet.create({
   fab: {
     // SIZE AND SHAPE
     // the FAB is a perfect circle created by equal width/height and borderRadius = half the size
-    width: 64,              // 56px width as per design specs
-    height: 64,             // 56px height as per design specs
-    borderRadius: 28,       // half of width/height (56/2 = 28) creates perfect circle
+    width: 64,              // 64px width as per design specs
+    height: 64,             // 64px height as per design specs
+    borderRadius: 32,       // half of width/height (64/2 = 32) creates perfect circle
     
     // BACKGROUND COLOR
-    // dark background from the design system color palette
-    // this matches the primary dark color used throughout the app
-    backgroundColor: '#111827', // primary dark color from design system (#111827)
+    // background color is set dynamically in the component using themeColors
+    // this allows the FAB to adapt to theme changes (white background)
+    // backgroundColor is applied in the style array in the component
     
     // POSITIONING
     // position: 'absolute' removes the FAB from normal document flow
@@ -229,7 +232,7 @@ const styles = StyleSheet.create({
     // note: bottom and right values are set dynamically in the component using insets
     // this ensures the FAB respects safe areas (home indicators, notches, etc.)
     position: 'absolute',   // take out of normal flow so it floats over content
-    // bottom and right are set dynamically in component: 16 + insets.bottom/right
+    // bottom and right are set dynamically in component: 20 + insets.bottom/right
     // this ensures proper spacing on all devices (iPhones with notches, home indicators, etc.)
     
     // Z-INDEX
