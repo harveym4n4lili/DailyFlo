@@ -8,7 +8,7 @@
 
 // REACT IMPORTS
 // react: core react library for building components
-import React from 'react';
+import React, { useState } from 'react';
 
 // REACT NATIVE IMPORTS
 // these are the building blocks from react native that we use to create the FAB
@@ -19,6 +19,9 @@ import {
   AccessibilityInfo, // utility for accessibility features (not directly used but available)
   Animated,          // animated api for creating performant animations
   Easing,            // easing functions for smoother animation curves
+  View,              // container component for modal content
+  Text,              // text component for modal content
+  Modal,             // proper react native modal component
 } from 'react-native';
 
 // REACT NATIVE SAFE AREA CONTEXT IMPORT
@@ -39,6 +42,11 @@ import * as Haptics from 'expo-haptics';
 // useThemeColors: hook that provides theme-aware colors
 // this allows the FAB to adapt to theme changes and use design system colors
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { useTypography } from '@/hooks/useTypography';
+
+// MODAL COMPONENTS IMPORTS
+// ModalBackdrop and ModalContainer: modal layout components with color palette integration
+import { ModalBackdrop, ModalContainer } from '@/components/layout/ModalLayout';
 
 /**
  * Props for the FloatingActionButton component
@@ -108,10 +116,19 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   accessibilityLabel = 'Add new task',                  // screen reader label (default provided)
   accessibilityHint = 'Double tap to create a new task', // screen reader hint (default provided)
 }) => {
+  // MODAL STATE MANAGEMENT
+  // state to control whether the modal is visible
+  // useState hook manages local component state for modal visibility
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  
   // COLOR PALETTE USAGE
   // get theme-aware colors from the design system
   // this provides consistent colors that work with both light and dark modes
   const themeColors = useThemeColors();
+  
+  // TYPOGRAPHY USAGE
+  // get typography system for consistent text styling
+  const typography = useTypography();
   
   // SAFE AREA INSETS
   // get the safe area insets for the current device
@@ -176,86 +193,127 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   
   /**
    * Handle FAB press
-   * For now, logs to console as requested
+   * Opens the modal for task creation
    */
   // PRESS HANDLER FUNCTION
   // this function runs when the user taps the FAB button
-  // flow: user taps FAB → TouchableOpacity calls this function → we log to console → we call parent's onPress
+  // flow: user taps FAB → TouchableOpacity calls this function → we show modal → we call parent's onPress
   const handlePress = () => {
     // give light haptic feedback on tap (no-op on unsupported platforms)
     Haptics.impactAsync?.(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
 
     // first, log to console as requested in requirements
     // this helps with debugging and shows that the button is working
-    console.log('FAB Pressed');
+    console.log('FAB Pressed - Opening modal');
+    
+    // show the modal
+    setIsModalVisible(true);
     
     // then call the parent's onPress callback if it was provided
     // the ?. is optional chaining - only calls onPress if it exists
-    // this allows the parent component to handle what happens next (e.g., open task creation modal)
+    // this allows the parent component to handle what happens next
     onPress?.();
+  };
+
+  /**
+   * Handle modal close
+   * Closes the modal
+   */
+  // MODAL CLOSE HANDLER
+  // this function runs when the user wants to close the modal
+  // flow: user taps close button → this function is called → modal is hidden
+  const handleModalClose = () => {
+    console.log('Modal closed');
+    setIsModalVisible(false);
   };
 
   // COMPONENT RENDER
   // this is what gets displayed on screen
-  // flow: parent renders FAB → this JSX is rendered → user sees circular button with plus icon
+  // flow: parent renders FAB → this JSX is rendered → user sees circular button with plus icon and modal
   return (
-    // container keeps the fab positioned and allows the pulse to radiate outside
-    <Animated.View
-      pointerEvents="box-none"
-      style={[
-        styles.fabContainer,
-        {
-          // dynamic positioning based on safe area insets
-          bottom: 20 + insets.bottom,
-          right: 16 + insets.right,
-        },
-      ]}
-    >
-      {/* animated pulse behind the button (ghost ripple) */}
+    <>
+      {/* container keeps the fab positioned and allows the pulse to radiate outside */}
       <Animated.View
-        pointerEvents="none"
+        pointerEvents="box-none"
         style={[
-          styles.pulse,
+          styles.fabContainer,
           {
-            opacity: pulseOpacity,
-            transform: [
-              {
-                // map 0→1 to actual scale values so the pulse grows beyond the fab
-                scale: pulseScale.interpolate({ inputRange: [0, 1], outputRange: [1, 2.4] }),
-              },
-            ],
-            backgroundColor: themeColors.interactive.primary(),
+            // dynamic positioning based on safe area insets
+            bottom: 20 + insets.bottom,
+            right: 16 + insets.right,
           },
         ]}
-      />
-
-      {/* tappable fab */}
-      <TouchableOpacity
-        style={[
-          styles.fab,
-          {
-            // theme colors
-            backgroundColor: themeColors.interactive.primary(),
-          },
-          style, // allow parent to override size/shape while we keep content centered
-        ]}
-        onPress={handlePress}
-        disabled={disabled}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel}
-        accessibilityHint={accessibilityHint}
-        accessibilityState={{ disabled }}
       >
-        {/* plus icon */}
-        <Ionicons
-          name="add"
-          size={32}
-          color={themeColors.interactive.secondary()}
-          style={styles.fabIcon}
+        {/* animated pulse behind the button (ghost ripple) */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.pulse,
+            {
+              opacity: pulseOpacity,
+              transform: [
+                {
+                  // map 0→1 to actual scale values so the pulse grows beyond the fab
+                  scale: pulseScale.interpolate({ inputRange: [0, 1], outputRange: [1, 2.4] }),
+                },
+              ],
+              backgroundColor: themeColors.interactive.primary(),
+            },
+          ]}
         />
-      </TouchableOpacity>
-    </Animated.View>
+
+        {/* tappable fab */}
+        <TouchableOpacity
+          style={[
+            styles.fab,
+            {
+              // theme colors
+              backgroundColor: themeColors.interactive.primary(),
+            },
+            style, // allow parent to override size/shape while we keep content centered
+          ]}
+          onPress={handlePress}
+          disabled={disabled}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={accessibilityLabel}
+          accessibilityHint={accessibilityHint}
+          accessibilityState={{ disabled }}
+        >
+          {/* plus icon */}
+          <Ionicons
+            name="add"
+            size={32}
+            color={themeColors.interactive.secondary()}
+            style={styles.fabIcon}
+          />
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* proper react native modal with slide-up animation */}
+      <Modal
+        visible={isModalVisible}
+        animationType="slide" // iOS-style slide up animation
+        presentationStyle="pageSheet" // iOS-style presentation
+        onRequestClose={handleModalClose} // handles back button on Android
+      >
+        <View style={styles.modalContainer}>
+          <ModalContainer 
+            title="Create New Task" 
+            onClose={handleModalClose}
+            showCloseButton={true}
+            slideUp={true}
+          >
+            {/* placeholder content for now */}
+            <View style={styles.modalContent}>
+              <Text style={[styles.modalPlaceholderText, { color: themeColors.text.secondary() }]}>
+                Task creation form will go here...
+              </Text>
+            </View>
+          </ModalContainer>
+        </View>
+      </Modal>
+    </>
   );
 };
 
@@ -328,6 +386,29 @@ const styles = StyleSheet.create({
     // - size is set via the size prop (24px)
     // - color is set via the color prop (#FFFFFF white)
     // this style object is here for future customization if needed
+  },
+  
+  // MODAL CONTAINER STYLES
+  // container for the modal content (Modal component handles overlay automatically)
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'transparent', // let the modal content handle background
+  },
+  
+  // MODAL CONTENT STYLES
+  // styles for the modal content placeholder
+  modalContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  
+  modalPlaceholderText: {
+    // use body-large text style from typography system (14px, regular, satoshi font)
+    fontSize: 16,
+    textAlign: 'center',
+    // color is set dynamically using themeColors.text.secondary()
   },
 });
 
