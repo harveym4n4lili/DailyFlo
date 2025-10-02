@@ -26,8 +26,8 @@ const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
+    justifyContent: 'flex-end', // align to bottom for slide-up modal
+    padding: 0, // no padding to allow modal to touch edges
   },
 });
 
