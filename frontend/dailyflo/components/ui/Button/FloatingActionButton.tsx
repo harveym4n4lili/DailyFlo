@@ -31,6 +31,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // expo provides a large library of icons through @expo/vector-icons
 import { Ionicons } from '@expo/vector-icons';
 
+// EXPO HAPTICS IMPORT
+// provides subtle vibration feedback on supported devices
+import * as Haptics from 'expo-haptics';
+
 // CUSTOM HOOKS IMPORTS
 // useThemeColors: hook that provides theme-aware colors
 // this allows the FAB to adapt to theme changes and use design system colors
@@ -178,6 +182,9 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   // this function runs when the user taps the FAB button
   // flow: user taps FAB → TouchableOpacity calls this function → we log to console → we call parent's onPress
   const handlePress = () => {
+    // give light haptic feedback on tap (no-op on unsupported platforms)
+    Haptics.impactAsync?.(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+
     // first, log to console as requested in requirements
     // this helps with debugging and shows that the button is working
     console.log('FAB Pressed');
