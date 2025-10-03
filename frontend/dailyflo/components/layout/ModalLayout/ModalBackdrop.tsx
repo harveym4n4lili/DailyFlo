@@ -10,13 +10,23 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 
 export interface ModalBackdropProps {
   children?: React.ReactNode;
+  variant?: 'detail' | 'create';
 }
 
-export function ModalBackdrop({ children }: ModalBackdropProps) {
+export function ModalBackdrop({ children, variant = 'detail' }: ModalBackdropProps) {
   const colors = useThemeColors();
+  const isCreate = variant === 'create';
 
   return (
-    <View style={[styles.backdrop, { backgroundColor: colors.background.overlay() }]}>
+    <View
+      style={[
+        styles.backdrop,
+        {
+          backgroundColor: isCreate ? colors.background.primary() : colors.background.overlay(),
+          justifyContent: isCreate ? 'flex-start' : 'flex-end',
+        },
+      ]}
+    >
       {children}
     </View>
   );
