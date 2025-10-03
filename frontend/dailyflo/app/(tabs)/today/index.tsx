@@ -1,6 +1,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, RefreshControl, View, Text, Alert } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 // import our custom layout components
 import { ScreenContainer, SafeAreaWrapper } from '@/components';
@@ -8,6 +9,7 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 // import our new task components
 import { ListCard } from '@/components/ui/Card';
 import { FloatingActionButton } from '@/components/ui/Button';
+import { ModalContainer } from '@/components/layout/ModalLayout';
 
 // import color palette system for consistent theming
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
@@ -38,6 +40,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function TodayScreen() {
   // REFRESH STATE - Controls the pull-to-refresh indicator
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // TASK DETAIL MODAL STATE
+  const [isTaskDetailModalVisible, setIsTaskDetailModalVisible] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   
   // COLOR PALETTE USAGE - Getting theme-aware colors
   // useThemeColors: Hook that provides theme-aware colors (background, text, borders, etc.)
@@ -134,11 +140,22 @@ export default function TodayScreen() {
   // TASK INTERACTION HANDLERS - Functions that handle user interactions with tasks
   // These functions demonstrate the flow: User interaction → Redux action → State update → UI re-render
   
-  // handle task press (for future task detail modal)
+  // handle task press - shows task detail modal with haptic feedback
   const handleTaskPress = (task: Task) => {
     console.log('📱 Task pressed:', task.title);
-    // TODO: Navigate to task detail modal or show task details
-    // This will be implemented when we add task detail functionality
+    
+    // provide medium haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    // show task detail modal
+    setSelectedTask(task);
+    setIsTaskDetailModalVisible(true);
+  };
+  
+  // handle task detail modal close
+  const handleTaskDetailModalClose = () => {
+    setIsTaskDetailModalVisible(false);
+    setSelectedTask(null);
   };
   
   // handle task completion toggle
@@ -303,6 +320,58 @@ export default function TodayScreen() {
         accessibilityLabel="Add new task"
         accessibilityHint="Double tap to create a new task"
       />
+      
+      {/* Task Detail Modal */}
+      <ModalContainer
+        visible={isTaskDetailModalVisible}
+        title={selectedTask?.title || "Task Details"}
+        onClose={handleTaskDetailModalClose}
+        onRequestClose={handleTaskDetailModalClose}
+        showCloseButton={true}
+        slideUp={true}
+        variant="detail"
+        animationType="slide"
+      >
+        {selectedTask && (
+          <View style={styles.taskDetailContent}>
+            <Text style={styles.taskDetailTitle}>{selectedTask.title}</Text>
+            
+            {selectedTask.description && (
+              <View style={styles.taskDetailSection}>
+                <Text style={styles.taskDetailSectionTitle}>Description</Text>
+                <Text style={styles.taskDetailDescription}>{selectedTask.description}</Text>
+              </View>
+            )}
+            
+            <View style={styles.taskDetailSection}>
+              <Text style={styles.taskDetailSectionTitle}>Due Date</Text>
+              <Text style={styles.taskDetailValue}>
+                {selectedTask.dueDate 
+                  ? new Date(selectedTask.dueDate).toLocaleDateString()
+                  : 'No due date'
+                }
+              </Text>
+            </View>
+            
+            <View style={styles.taskDetailSection}>
+              <Text style={styles.taskDetailSectionTitle}>Priority</Text>
+              <Text style={styles.taskDetailValue}>
+                {selectedTask.priorityLevel === 5 ? 'Critical' :
+                 selectedTask.priorityLevel === 4 ? 'High' :
+                 selectedTask.priorityLevel === 3 ? 'Medium' :
+                 selectedTask.priorityLevel === 2 ? 'Low' : 'Minimal'}
+              </Text>
+            </View>
+            
+            <View style={styles.taskDetailSection}>
+              <Text style={styles.taskDetailSectionTitle}>Status</Text>
+              <Text style={[styles.taskDetailValue, { color: selectedTask.isCompleted ? semanticColors.success() : themeColors.text.secondary() }]}>
+                {selectedTask.isCompleted ? 'Completed' : 'In Progress'}
+              </Text>
+            </View>
+          </View>
+        )}
+      </ModalContainer>
     </ScreenContainer>
   );
 }
@@ -370,6 +439,44 @@ const createStyles = (
     marginBottom: 8,
     // use theme-aware primary text color from color system
     color: themeColors.text.primary(),
+  },
+  
+  // TASK DETAIL MODAL STYLES
+  taskDetailContent: {
+    flex: 1,
+    paddingVertical: 8,
+  },
+  
+  taskDetailTitle: {
+    ...typography.getTextStyle('heading-2'),
+    color: themeColors.text.primary(),
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  
+  taskDetailSection: {
+    marginBottom: 20,
+  },
+  
+  taskDetailSectionTitle: {
+    ...typography.getTextStyle('body-large'),
+    color: themeColors.text.secondary(),
+    fontWeight: '600',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  
+  taskDetailValue: {
+    ...typography.getTextStyle('body-large'),
+    color: themeColors.text.primary(),
+    lineHeight: 20,
+  },
+  
+  taskDetailDescription: {
+    ...typography.getTextStyle('body-large'),
+    color: themeColors.text.primary(),
+    lineHeight: 22,
   },
   
 });
