@@ -21,7 +21,6 @@ import {
   Easing,            // easing functions for smoother animation curves
   View,              // container component for modal content
   Text,              // text component for modal content
-  Modal,             // proper react native modal component
 } from 'react-native';
 
 // REACT NATIVE SAFE AREA CONTEXT IMPORT
@@ -290,29 +289,24 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
         </TouchableOpacity>
       </Animated.View>
 
-      {/* proper react native modal with slide-up animation */}
-      <Modal
+      {/* modal container with integrated React Native Modal */}
+      <ModalContainer 
         visible={isModalVisible}
-        animationType="slide" // iOS-style slide up animation
-        presentationStyle="pageSheet" // iOS-style presentation
-        onRequestClose={handleModalClose} // handles back button on Android
+        title="Create New Task" 
+        onClose={handleModalClose}
+        onRequestClose={handleModalClose}
+        showCloseButton={true}
+        slideUp={true}
+        variant="create"
+        animationType="slide"
       >
-        <View style={styles.modalContainer}>
-          <ModalContainer 
-            title="Create New Task" 
-            onClose={handleModalClose}
-            showCloseButton={true}
-            slideUp={true}
-          >
-            {/* placeholder content for now */}
-            <View style={styles.modalContent}>
-              <Text style={[styles.modalPlaceholderText, { color: themeColors.text.secondary() }]}>
-                Task creation form will go here...
-              </Text>
-            </View>
-          </ModalContainer>
+        {/* placeholder content for now */}
+        <View style={styles.modalContent}>
+          <Text style={[styles.modalPlaceholderText, { color: themeColors.text.secondary() }]}>
+            Task creation form will go here...
+          </Text>
         </View>
-      </Modal>
+      </ModalContainer>
     </>
   );
 };
@@ -388,12 +382,6 @@ const styles = StyleSheet.create({
     // this style object is here for future customization if needed
   },
   
-  // MODAL CONTAINER STYLES
-  // container for the modal content (Modal component handles overlay automatically)
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'transparent', // let the modal content handle background
-  },
   
   // MODAL CONTENT STYLES
   // styles for the modal content placeholder
