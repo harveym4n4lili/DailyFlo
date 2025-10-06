@@ -199,7 +199,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   // flow: user taps FAB → TouchableOpacity calls this function → we show modal → we call parent's onPress
   const handlePress = () => {
     // give light haptic feedback on tap (no-op on unsupported platforms)
-    Haptics.impactAsync?.(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync?.(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
 
     // first, log to console as requested in requirements
     // this helps with debugging and shows that the button is working

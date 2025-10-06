@@ -91,17 +91,19 @@ export function ModalContainer({
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 16,
-      paddingVertical: 8,
-      paddingBottom: 12, // slightly less bottom padding for visual balance
-      paddingTop: isCreate ? insets.top : 0,
+      paddingVertical: 12,
+      paddingTop: isCreate ? insets.top + 12 : 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border.primary(),
       backgroundColor: isCreate ? colors.background.primary() : colors.background.elevated(),
+      minHeight: 56, // ensure consistent header height for proper centering
     },
     
     titleContainer: {
       flex: 1,
       marginRight: 16, // space for close button
+      justifyContent: 'center', // center title vertically
+      alignItems: 'flex-start', // align title to left
     },
     
     title: {
@@ -118,6 +120,7 @@ export function ModalContainer({
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: 'transparent',
+      alignSelf: 'center', // ensure button is centered vertically in header
     },
     
     closeIcon: {
