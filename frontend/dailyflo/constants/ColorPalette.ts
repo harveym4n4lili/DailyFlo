@@ -224,6 +224,7 @@ export const ThemeColors = {
       primary: PrimaryColors.dark[900],      // light gray - primary text
       secondary: PrimaryColors.dark[400],    // medium gray - secondary text
       tertiary: PrimaryColors.dark[300],     // darker gray - tertiary text
+      quaternary: PrimaryColors.dark[200],    // medium gray - quaternary text
       inverse: PrimaryColors.dark[900],      // very light - text on dark backgrounds
       disabled: PrimaryColors.dark[300],     // darker gray - disabled text
     },
@@ -240,8 +241,8 @@ export const ThemeColors = {
     // interactive colors - buttons and controls
     interactive: {
       primary: PrimaryColors.dark[900],      // light gray - primary buttons
-      secondary: PrimaryColors.dark[200],    // medium gray - secondary buttons
-      tertiary: 'transparent',               // transparent - tertiary buttons
+      secondary: PrimaryColors.dark[600],    // medium gray - secondary buttons
+      tertiary: PrimaryColors.dark[300],               // transparent - tertiary buttons
       hover: PrimaryColors.dark[700],        // lighter gray - hover states
       active: PrimaryColors.dark[800],       // lightest gray - active states
       disabled: PrimaryColors.dark[200],     // medium gray - disabled states
