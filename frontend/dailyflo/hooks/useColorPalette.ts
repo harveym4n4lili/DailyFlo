@@ -174,6 +174,7 @@ export function useThemeColors() {
       primary: () => getThemeColor('text', 'primary'),
       secondary: () => getThemeColor('text', 'secondary'),
       tertiary: () => getThemeColor('text', 'tertiary'),
+      quaternary: () => getThemeColor('text', 'quaternary'),
     },
     
     border: {
