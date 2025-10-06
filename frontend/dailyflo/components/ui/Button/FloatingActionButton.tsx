@@ -19,8 +19,6 @@ import {
   AccessibilityInfo, // utility for accessibility features (not directly used but available)
   Animated,          // animated api for creating performant animations
   Easing,            // easing functions for smoother animation curves
-  View,              // container component for modal content
-  Text,              // text component for modal content
 } from 'react-native';
 
 // REACT NATIVE SAFE AREA CONTEXT IMPORT
@@ -46,6 +44,7 @@ import { useTypography } from '@/hooks/useTypography';
 // MODAL COMPONENTS IMPORTS
 // ModalBackdrop and ModalContainer: modal layout components with color palette integration
 import { ModalBackdrop, ModalContainer } from '@/components/layout/ModalLayout';
+import { TaskForm } from '@/components/forms/TaskForm';
 
 /**
  * Props for the FloatingActionButton component
@@ -300,12 +299,8 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
         variant="create"
         animationType="slide"
       >
-        {/* placeholder content for now */}
-        <View style={styles.modalContent}>
-          <Text style={[styles.modalPlaceholderText, { color: themeColors.text.secondary() }]}>
-            Task creation form will go here...
-          </Text>
-        </View>
+        {/* render task form inside modal; on submit we close the modal */}
+        <TaskForm onSubmitted={handleModalClose} />
       </ModalContainer>
     </>
   );
