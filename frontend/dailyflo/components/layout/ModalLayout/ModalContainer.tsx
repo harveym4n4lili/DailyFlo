@@ -86,47 +86,6 @@ export function ModalContainer({
       borderColor: isCreate ? 'transparent' : colors.border.primary(),
     },
     
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      paddingTop: isCreate ? insets.top + 12 : 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border.primary(),
-      backgroundColor: isCreate ? colors.background.primary() : colors.background.elevated(),
-      minHeight: 56, // ensure consistent header height for proper centering
-    },
-    
-    titleContainer: {
-      flex: 1,
-      marginRight: 16, // space for close button
-      justifyContent: 'center', // center title vertically
-      alignItems: 'flex-start', // align title to left
-    },
-    
-    title: {
-      // use heading-3 text style from typography system (18px, bold, satoshi font)
-      ...typography.getTextStyle('heading-3'),
-      color: colors.text.primary(),
-      textAlign: 'left',
-    },
-    
-    closeButton: {
-      width: 44, // minimum touch target size for accessibility
-      height: 44,
-      borderRadius: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'transparent',
-      alignSelf: 'center', // ensure button is centered vertically in header
-    },
-    
-    closeIcon: {
-      // icon styling handled by Ionicons component props
-    },
-    
     content: {
       flex: 1,
       paddingHorizontal: 16,
@@ -142,34 +101,7 @@ export function ModalContainer({
       onRequestClose={handleRequestClose}
     >
       <View style={styles.container}>
-        {/* header section with title and close button */}
-        <View style={styles.header}>
-          {/* title section */}
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>{title}</Text>
-          </View>
-          
-          {/* close button section */}
-          {showCloseButton && (
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={handleClose}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Close modal"
-              accessibilityHint="Double tap to close this modal"
-            >
-              <Ionicons
-                name="close"
-                size={24}
-                color={colors.text.secondary()}
-                style={styles.closeIcon}
-              />
-            </TouchableOpacity>
-          )}
-        </View>
-        
-        {/* modal content */}
+        {/* modal content (header removed) */}
         <View style={styles.content}>
           {children}
         </View>
