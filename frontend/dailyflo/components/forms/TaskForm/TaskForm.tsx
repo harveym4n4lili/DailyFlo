@@ -1,0 +1,141 @@
+/**
+ * task form (prototype)
+ *
+ * this is a minimal, controlled form for creating a task.
+ * it uses redux via hooks for dispatching create actions and reading loading/error states.
+ * it uses constants for colors and typography.
+ */
+
+import React, { useMemo, useState } from 'react';
+import { View, Text, TextInput, Pressable } from 'react-native';
+import { useTasks, useUI } from '@/store/hooks';
+import { useAppDispatch } from '@/store';
+import { createTask } from '@/store/slices/tasks/tasksSlice';
+import { getTextStyle } from '@/constants/Typography';
+import { TaskCategoryColors, TaskCategoryColorName } from '@/constants/ColorPalette';
+import type { PriorityLevel, RoutineType } from '@/types';
+import TaskValidation, { validateAll, TaskFormValues } from './TaskValidation';
+
+export interface TaskFormProps {
+  initialValues?: Partial<TaskFormValues>;
+  onSubmitted?: () => void;
+}
+
+const DEFAULTS: TaskFormValues = {
+  title: '',
+  description: '',
+  dueDate: undefined,
+  priorityLevel: 3 as PriorityLevel,
+  color: 'blue',
+  routineType: 'once' as RoutineType,
+  listId: undefined,
+};
+
+const TaskForm: React.FC<TaskFormProps> = ({ initialValues, onSubmitted }) => {
+  // redux hooks - state and dispatch
+  // useTasks gives access to tasks slice state like isCreating, createError
+  const { isCreating, createError } = useTasks();
+  const ui = useUI(); // ui slice for simple feedback patterns if needed later
+  const dispatch = useAppDispatch(); // typed redux dispatch for thunks
+
+  // local form state - controlled inputs live locally; redux holds domain data
+  const [values, setValues] = useState<TaskFormValues>({ ...DEFAULTS, ...initialValues });
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // derived validation state
+  const errors = useMemo(() => validateAll(values), [values]);
+  const isValid = useMemo(() => Object.keys(errors).length === 0, [errors]);
+
+  const onChange = <K extends keyof TaskFormValues>(key: K, v: TaskFormValues[K]) => {
+    setValues((prev) => ({ ...prev, [key]: v }));
+  };
+
+  const onBlur = (key: keyof TaskFormValues) => {
+    setTouched((prev) => ({ ...prev, [key]: true }));
+  };
+
+  const submit = async () => {
+    // guard invalid
+    if (!isValid) {
+      // surface validation via ui slice if desired
+      ui.setValidationError?.({ scope: 'taskForm', errors });
+      return;
+    }
+
+    // dispatch create action to redux
+    // redux toolkit thunk handles updating isCreating/createError in tasks slice
+    await dispatch(createTask({
+      title: values.title.trim(),
+      description: values.description?.trim() || '',
+      dueDate: values.dueDate || undefined,
+      priorityLevel: values.priorityLevel,
+      color: values.color,
+      routineType: values.routineType,
+      listId: values.listId,
+    } as any));
+
+    onSubmitted?.();
+  };
+
+  // simple color preview using constants
+  const colorKey: TaskCategoryColorName = (values.color || 'blue') as TaskCategoryColorName;
+  const accent = TaskCategoryColors[colorKey][500];
+
+  return (
+    <View style={{ gap: 12, padding: 16 }}>
+      <Text style={getTextStyle('heading-3')}>Create task</Text>
+
+      <View style={{ gap: 6 }}>
+        <Text style={getTextStyle('body-medium')}>Title</Text>
+        <TextInput
+          value={values.title}
+          onChangeText={(t) => onChange('title', t)}
+          onBlur={() => onBlur('title')}
+          placeholder="enter a task title"
+          style={{ borderWidth: 1, borderColor: touched.title && errors.title ? '#EF4444' : '#DBEAFE', borderRadius: 8, padding: 10 }}
+        />
+        {touched.title && errors.title ? (
+          <Text style={{ color: '#EF4444', fontSize: 12 }}>{errors.title}</Text>
+        ) : null}
+      </View>
+
+      <View style={{ gap: 6 }}>
+        <Text style={getTextStyle('body-medium')}>Description</Text>
+        <TextInput
+          value={values.description}
+          onChangeText={(t) => onChange('description', t)}
+          onBlur={() => onBlur('description')}
+          placeholder="optional description"
+          multiline
+          style={{ borderWidth: 1, borderColor: '#DBEAFE', borderRadius: 8, padding: 10, minHeight: 60 }}
+        />
+        {touched.description && (errors as any).description ? (
+          <Text style={{ color: '#EF4444', fontSize: 12 }}>{(errors as any).description}</Text>
+        ) : null}
+      </View>
+
+      {/* simple color preview uses constants; swap for a picker later */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: accent }} />
+        <Text style={getTextStyle('body-medium')}>{values.color}</Text>
+      </View>
+
+      <Pressable
+        onPress={submit}
+        disabled={!isValid || isCreating}
+        style={{ backgroundColor: isValid ? accent : '#CBD5E1', padding: 12, borderRadius: 10, alignItems: 'center' }}
+      >
+        <Text style={{ color: 'white', fontWeight: '600' }}>{isCreating ? 'Creating…' : 'Create task'}</Text>
+      </Pressable>
+
+      {createError ? (
+        <Text style={{ color: '#EF4444', fontSize: 12 }}>failed to create: {createError}</Text>
+      ) : null}
+    </View>
+  );
+};
+
+export type { TaskFormValues };
+export default TaskForm;
+
+
