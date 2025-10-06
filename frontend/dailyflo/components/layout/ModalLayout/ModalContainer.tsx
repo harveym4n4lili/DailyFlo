@@ -85,6 +85,20 @@ export function ModalContainer({
       backgroundColor: isCreate ? colors.background.primary() : colors.background.elevated(),
       borderColor: isCreate ? 'transparent' : colors.border.primary(),
     },
+    cancelButton: {
+      position: 'absolute',
+      top: insets.top + 8,
+      left: 18,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 16,
+      backgroundColor: colors.interactive.tertiary(),
+      zIndex: 5,
+    },
+    cancelText: {
+      ...typography.getTextStyle('button-secondary'),
+      color: colors.text.quaternary(),
+    },
     
     content: {
       flex: 1,
@@ -101,6 +115,19 @@ export function ModalContainer({
       onRequestClose={handleRequestClose}
     >
       <View style={styles.container}>
+        {/* absolute-positioned cancel button (respects safe area insets) */}
+        {isCreate && onClose && (
+          <TouchableOpacity
+            onPress={handleClose}
+            style={styles.cancelButton}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+            accessibilityHint="Double tap to close this modal"
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+        )}
         {/* modal content (header removed) */}
         <View style={styles.content}>
           {children}
