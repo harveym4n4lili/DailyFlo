@@ -72,7 +72,7 @@ export const TextStyles = {
     fontFamily: 'Satoshi-Bold',  // specific font family for react native
   },
   'heading-2': {
-    fontSize: 24,        // medium title size
+    fontSize: 28,        // medium title size
     lineHeight: 28,      // slightly tighter than body text
     fontWeight: FontWeight.bold,  // bold weight for emphasis
     fontFamily: 'Satoshi-Bold',  // specific font family for react native

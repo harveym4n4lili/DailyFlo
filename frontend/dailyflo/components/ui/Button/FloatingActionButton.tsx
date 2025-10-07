@@ -282,7 +282,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
           <Ionicons
             name="add"
             size={32}
-            color={themeColors.interactive.secondary()}
+            color={themeColors.interactive.tertiary()}
             style={styles.fabIcon}
           />
         </TouchableOpacity>
