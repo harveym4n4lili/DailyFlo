@@ -1,6 +1,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, RefreshControl, View, Text, Alert } from 'react-native';
+import { StyleSheet, RefreshControl, View, Text, Alert, Modal } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 // import our custom layout components
@@ -321,57 +321,61 @@ export default function TodayScreen() {
         accessibilityHint="Double tap to create a new task"
       />
       
-      {/* Task Detail Modal */}
-      <ModalContainer
+      {/* Task Detail Modal - pageSheet style modal for viewing task details */}
+      <Modal
         visible={isTaskDetailModalVisible}
-        title={selectedTask?.title || "Task Details"}
-        onClose={handleTaskDetailModalClose}
-        onRequestClose={handleTaskDetailModalClose}
-        showCloseButton={true}
-        slideUp={true}
-        variant="detail"
         animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleTaskDetailModalClose}
       >
-        {selectedTask && (
-          <View style={styles.taskDetailContent}>
-            <Text style={styles.taskDetailTitle}>{selectedTask.title}</Text>
-            
-            {selectedTask.description && (
+        <ModalContainer
+          presentationStyle="pageSheet"
+          title={selectedTask?.title || "Task Details"}
+          onClose={handleTaskDetailModalClose}
+          showCloseButton={true}
+          showHeader={true}
+        >
+          {selectedTask && (
+            <View style={styles.taskDetailContent}>
+              <Text style={styles.taskDetailTitle}>{selectedTask.title}</Text>
+              
+              {selectedTask.description && (
+                <View style={styles.taskDetailSection}>
+                  <Text style={styles.taskDetailSectionTitle}>Description</Text>
+                  <Text style={styles.taskDetailDescription}>{selectedTask.description}</Text>
+                </View>
+              )}
+              
               <View style={styles.taskDetailSection}>
-                <Text style={styles.taskDetailSectionTitle}>Description</Text>
-                <Text style={styles.taskDetailDescription}>{selectedTask.description}</Text>
+                <Text style={styles.taskDetailSectionTitle}>Due Date</Text>
+                <Text style={styles.taskDetailValue}>
+                  {selectedTask.dueDate 
+                    ? new Date(selectedTask.dueDate).toLocaleDateString()
+                    : 'No due date'
+                  }
+                </Text>
               </View>
-            )}
-            
-            <View style={styles.taskDetailSection}>
-              <Text style={styles.taskDetailSectionTitle}>Due Date</Text>
-              <Text style={styles.taskDetailValue}>
-                {selectedTask.dueDate 
-                  ? new Date(selectedTask.dueDate).toLocaleDateString()
-                  : 'No due date'
-                }
-              </Text>
+              
+              <View style={styles.taskDetailSection}>
+                <Text style={styles.taskDetailSectionTitle}>Priority</Text>
+                <Text style={styles.taskDetailValue}>
+                  {selectedTask.priorityLevel === 5 ? 'Critical' :
+                   selectedTask.priorityLevel === 4 ? 'High' :
+                   selectedTask.priorityLevel === 3 ? 'Medium' :
+                   selectedTask.priorityLevel === 2 ? 'Low' : 'Minimal'}
+                </Text>
+              </View>
+              
+              <View style={styles.taskDetailSection}>
+                <Text style={styles.taskDetailSectionTitle}>Status</Text>
+                <Text style={[styles.taskDetailValue, { color: selectedTask.isCompleted ? semanticColors.success() : themeColors.text.secondary() }]}>
+                  {selectedTask.isCompleted ? 'Completed' : 'In Progress'}
+                </Text>
+              </View>
             </View>
-            
-            <View style={styles.taskDetailSection}>
-              <Text style={styles.taskDetailSectionTitle}>Priority</Text>
-              <Text style={styles.taskDetailValue}>
-                {selectedTask.priorityLevel === 5 ? 'Critical' :
-                 selectedTask.priorityLevel === 4 ? 'High' :
-                 selectedTask.priorityLevel === 3 ? 'Medium' :
-                 selectedTask.priorityLevel === 2 ? 'Low' : 'Minimal'}
-              </Text>
-            </View>
-            
-            <View style={styles.taskDetailSection}>
-              <Text style={styles.taskDetailSectionTitle}>Status</Text>
-              <Text style={[styles.taskDetailValue, { color: selectedTask.isCompleted ? semanticColors.success() : themeColors.text.secondary() }]}>
-                {selectedTask.isCompleted ? 'Completed' : 'In Progress'}
-              </Text>
-            </View>
-          </View>
-        )}
-      </ModalContainer>
+          )}
+        </ModalContainer>
+      </Modal>
     </ScreenContainer>
   );
 }
