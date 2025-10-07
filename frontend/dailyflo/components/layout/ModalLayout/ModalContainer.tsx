@@ -1,30 +1,29 @@
 /**
  * ModalContainer
  * 
- * A complete modal component that uses React Native's Modal component internally.
- * Provides the elevated surface that holds modal content with a header section and close button.
- * Integrates color palette and typography systems.
- * Supports both detail (pageSheet) and create (fullScreen) presentation styles.
- * Includes iOS-style slide up animation from bottom of screen.
+ * Flexible modal container that adapts to different presentation styles.
+ * Supports fullScreen, pageSheet, and pageSheet with fixed height.
+ * Used for task/list creation modals and detail views.
+ * This is a presentational component - modal state management happens in parent.
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, ViewStyle, TextStyle, DimensionValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 
+export type ModalPresentationStyle = 'fullScreen' | 'pageSheet' | 'pageSheetWithHeight';
+
 export interface ModalContainerProps {
   children?: React.ReactNode;
   title?: string; // title text for the header
   onClose?: () => void; // callback when close button is pressed
-  showCloseButton?: boolean; // whether to show the close button
-  slideUp?: boolean; // whether to use slide up animation from bottom
-  variant?: 'detail' | 'create'; // choose modal style; create is full-screen
-  visible: boolean; // whether the modal is visible
-  onRequestClose?: () => void; // callback for Android back button
-  animationType?: 'slide' | 'fade' | 'none'; // animation type for modal
+  showCloseButton?: boolean; // whether to show the close button (X icon for pageSheet, Cancel text for fullScreen)
+  presentationStyle?: ModalPresentationStyle; // how the modal is presented
+  height?: DimensionValue; // specific height for pageSheetWithHeight (e.g., 400 or '60%')
+  showHeader?: boolean; // whether to show the header section (title + close button)
 }
 
 export function ModalContainer({ 
@@ -32,11 +31,9 @@ export function ModalContainer({
   title = "Modal Title",
   onClose,
   showCloseButton = true,
-  slideUp = true,
-  variant = 'detail',
-  visible,
-  onRequestClose,
-  animationType = 'slide',
+  presentationStyle = 'pageSheet',
+  height,
+  showHeader = true,
 }: ModalContainerProps) {
   // get theme-aware colors from color palette system
   const colors = useThemeColors();
@@ -45,93 +42,137 @@ export function ModalContainer({
   const typography = useTypography();
   const insets = useSafeAreaInsets();
   
-  // note: animation is now handled by React Native Modal component
-  // no need for custom animation logic when using proper Modal component
-
-  const isCreate = variant === 'create';
-
-  // determine presentation style based on variant
-  const presentationStyle = isCreate ? 'fullScreen' : 'pageSheet';
-
-  // handle close functionality
-  const handleClose = () => {
-    if (onClose) {
-      onClose();
-    }
-  };
-
-  // handle request close (Android back button, etc.)
-  const handleRequestClose = () => {
-    if (onRequestClose) {
-      onRequestClose();
-    } else if (onClose) {
-      onClose();
-    }
-  };
+  // determine styling based on presentation style
+  const isFullScreen = presentationStyle === 'fullScreen';
+  const isPageSheet = presentationStyle === 'pageSheet';
+  const isPageSheetWithHeight = presentationStyle === 'pageSheetWithHeight';
 
   // create dynamic styles using color palette and typography
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1, // take full height when used with React Native Modal
-      width: '100%', // full width as requested
-      borderBottomLeftRadius: isCreate ? 0 : (slideUp ? 0 : 16),
-      borderBottomRightRadius: isCreate ? 0 : (slideUp ? 0 : 16),
-      borderWidth: isCreate ? 0 : Platform.select({ 
-        ios: StyleSheet.hairlineWidth, 
-        android: StyleSheet.hairlineWidth, 
-        default: 1 
-      }),
-      overflow: 'hidden',
-      backgroundColor: isCreate ? colors.background.primary() : colors.background.elevated(),
-      borderColor: isCreate ? 'transparent' : colors.border.primary(),
-    },
-    cancelButton: {
-      position: 'absolute',
-      top: insets.top + 8,
-      left: 18,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 16,
-      backgroundColor: colors.interactive.tertiary(),
-      zIndex: 5,
-    },
-    cancelText: {
-      ...typography.getTextStyle('button-secondary'),
-      color: colors.text.quaternary(),
-    },
-    
-    content: {
-      flex: 1,
-    },
-  });
+  const containerStyle: ViewStyle = {
+    flex: isPageSheetWithHeight ? 0 : 1,
+    height: isPageSheetWithHeight ? height : undefined,
+    width: '100%',
+    borderTopLeftRadius: isFullScreen ? 0 : 16,
+    borderTopRightRadius: isFullScreen ? 0 : 16,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    borderWidth: isFullScreen ? 0 : Platform.select({ 
+      ios: StyleSheet.hairlineWidth, 
+      android: StyleSheet.hairlineWidth, 
+      default: 1 
+    }),
+    overflow: 'hidden',
+    backgroundColor: isFullScreen ? colors.background.primary() : colors.background.elevated(),
+    borderColor: isFullScreen ? 'transparent' : colors.border.primary(),
+  };
+  
+  // header for pageSheet styles (title + X button)
+  const headerStyle: ViewStyle = {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingBottom: 12,
+    paddingTop: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border.primary(),
+    backgroundColor: isFullScreen ? colors.background.primary() : colors.background.elevated(),
+  };
+  
+  const titleContainerStyle: ViewStyle = {
+    flex: 1,
+    marginRight: 16, // space for close button
+  };
+  
+  const titleStyle: TextStyle = {
+    // use heading-3 text style from typography system (18px, bold, satoshi font)
+    ...typography.getTextStyle('heading-3'),
+    color: colors.text.primary(),
+    textAlign: 'left',
+  };
+  
+  const closeButtonStyle: ViewStyle = {
+    width: 44, // minimum touch target size for accessibility
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  };
+
+  // cancel button for fullScreen (positioned absolutely top-left)
+  const cancelButtonStyle: ViewStyle = {
+    position: 'absolute',
+    top: insets.top + 8,
+    left: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: colors.interactive.tertiary(),
+    zIndex: 1000,
+  };
+  
+  const cancelTextStyle: TextStyle = {
+    ...typography.getTextStyle('button-secondary'),
+    color: colors.text.quaternary(),
+  };
+  
+  const contentStyle: ViewStyle = {
+    flex: 1,
+    paddingHorizontal: isFullScreen ? 0 : 16,
+    paddingVertical: isFullScreen ? 0 : 20,
+  };
 
   return (
-    <Modal
-      visible={visible}
-      animationType={animationType}
-      presentationStyle={presentationStyle}
-      onRequestClose={handleRequestClose}
-    >
-      <View style={styles.container}>
-        {/* absolute-positioned cancel button (respects safe area insets) */}
-        {isCreate && onClose && (
-          <TouchableOpacity
-            onPress={handleClose}
-            style={styles.cancelButton}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel"
-            accessibilityHint="Double tap to close this modal"
-            activeOpacity={0.7}
-          >
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-        )}
-        {/* modal content (header removed) */}
-        <View style={styles.content}>
-          {children}
+    <View style={containerStyle}>
+      {/* fullScreen style: floating Cancel button at top-left */}
+      {isFullScreen && showCloseButton && onClose && (
+        <TouchableOpacity
+          style={cancelButtonStyle}
+          onPress={onClose}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
+          accessibilityHint="Double tap to close this modal"
+        >
+          <Text style={cancelTextStyle}>Cancel</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* pageSheet styles: header section with title and close button */}
+      {!isFullScreen && showHeader && (
+        <View style={headerStyle}>
+          {/* title section */}
+          <View style={titleContainerStyle}>
+            <Text style={titleStyle}>{title}</Text>
+          </View>
+          
+          {/* close button section */}
+          {showCloseButton && (
+            <TouchableOpacity
+              style={closeButtonStyle}
+              onPress={onClose}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Close modal"
+              accessibilityHint="Double tap to close this modal"
+            >
+              <Ionicons
+                name="close"
+                size={24}
+                color={colors.text.secondary()}
+              />
+            </TouchableOpacity>
+          )}
         </View>
+      )}
+      
+      {/* modal content */}
+      <View style={contentStyle}>
+        {children}
       </View>
-    </Modal>
+    </View>
   );
 }
 
