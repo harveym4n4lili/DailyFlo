@@ -102,8 +102,6 @@ export function ModalContainer({
     
     content: {
       flex: 1,
-      paddingHorizontal: 16,
-      paddingVertical: 20,
     },
   });
 
