@@ -41,10 +41,9 @@ import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 
-// MODAL COMPONENTS IMPORTS
-// ModalBackdrop and ModalContainer: modal layout components with color palette integration
-import { ModalBackdrop, ModalContainer } from '@/components/layout/ModalLayout';
-import { TaskForm } from '@/components/forms/TaskForm';
+// TASK CREATION MODAL IMPORT
+// TaskCreationModal: full-screen modal for creating new tasks
+import { TaskCreationModal } from '@/components/features/tasks/TaskCreation';
 
 /**
  * Props for the FloatingActionButton component
@@ -288,20 +287,11 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
         </TouchableOpacity>
       </Animated.View>
 
-      {/* modal container with integrated React Native Modal */}
-      <ModalContainer 
+      {/* Task Creation Modal - full-screen modal for creating new tasks */}
+      <TaskCreationModal 
         visible={isModalVisible}
-        title="Create New Task" 
         onClose={handleModalClose}
-        onRequestClose={handleModalClose}
-        showCloseButton={true}
-        slideUp={true}
-        variant="create"
-        animationType="slide"
-      >
-        {/* render task form inside modal; on submit we close the modal */}
-        <TaskForm onSubmitted={handleModalClose} />
-      </ModalContainer>
+      />
     </>
   );
 };
@@ -375,23 +365,6 @@ const styles = StyleSheet.create({
     // - size is set via the size prop (24px)
     // - color is set via the color prop (#FFFFFF white)
     // this style object is here for future customization if needed
-  },
-  
-  
-  // MODAL CONTENT STYLES
-  // styles for the modal content placeholder
-  modalContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  
-  modalPlaceholderText: {
-    // use body-large text style from typography system (14px, regular, satoshi font)
-    fontSize: 16,
-    textAlign: 'center',
-    // color is set dynamically using themeColors.text.secondary()
   },
 });
 
