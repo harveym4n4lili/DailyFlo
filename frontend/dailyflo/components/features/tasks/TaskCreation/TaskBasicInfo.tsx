@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getTextStyle } from '@/constants/Typography';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { validateAll, TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
+import { DatePickerModal } from '@/components/features/calendar';
 
 export interface TaskBasicInfoProps {
   initialValues?: Partial<TaskFormValues>;
@@ -29,6 +30,11 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   const insets = useSafeAreaInsets();
   
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  
+  // state for date picker modal visibility
+  // this controls whether the date picker modal is shown
+  // flow: user taps date button → handleShowDatePicker sets this to true → modal opens
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
 
   // derived validation state
   const errors = useMemo(() => validateAll(values as TaskFormValues), [values]);
@@ -38,8 +44,23 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   };
 
   // date picker handlers
+  // this opens the date picker modal when user taps the date button
   const handleShowDatePicker = () => {
-    console.log('Date picker button pressed - implement custom modal here');
+    console.log('Opening date picker modal');
+    setIsDatePickerVisible(true);
+  };
+  
+  // this handles when user selects a date from the picker
+  // flow: user picks date in modal → onSelectDate callback → this function → onChange updates form state
+  const handleDateSelect = (date: string) => {
+    console.log('Date selected:', date);
+    onChange('dueDate', date);
+  };
+  
+  // this handles when user closes the date picker modal
+  const handleDatePickerClose = () => {
+    console.log('Date picker modal closed');
+    setIsDatePickerVisible(false);
   };
 
   const handleClearDate = () => {
@@ -190,6 +211,17 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
           </View>
         </ScrollView>
       </View>
+      
+      {/* date picker modal */}
+      {/* this modal appears when user wants to select a date */}
+      {/* flow: user taps date button → modal opens → user picks date → onSelectDate called → modal closes */}
+      <DatePickerModal
+        visible={isDatePickerVisible}
+        selectedDate={values.dueDate || new Date().toISOString()}
+        onClose={handleDatePickerClose}
+        onSelectDate={handleDateSelect}
+        title="Date"
+      />
     </KeyboardAvoidingView>
   );
 };
