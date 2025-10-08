@@ -5,12 +5,14 @@
  * Supports fullScreen, pageSheet, and pageSheet with fixed height.
  * Used for task/list creation modals and detail views.
  * This is a presentational component - modal state management happens in parent.
+ * 
+ * Note: Headers are now managed by individual modals using the ModalHeader component.
+ * This allows each modal to have custom header styling.
  */
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, ViewStyle, TextStyle, DimensionValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 
@@ -18,22 +20,20 @@ export type ModalPresentationStyle = 'fullScreen' | 'pageSheet' | 'pageSheetWith
 
 export interface ModalContainerProps {
   children?: React.ReactNode;
-  title?: string; // title text for the header
-  onClose?: () => void; // callback when close button is pressed
-  showCloseButton?: boolean; // whether to show the close button (X icon for pageSheet, Cancel text for fullScreen)
+  onClose?: () => void; // callback when close button is pressed (for fullScreen cancel button)
+  showCancelButton?: boolean; // whether to show the cancel button (for fullScreen modals only)
   presentationStyle?: ModalPresentationStyle; // how the modal is presented
   height?: DimensionValue; // specific height for pageSheetWithHeight (e.g., 400 or '60%')
-  showHeader?: boolean; // whether to show the header section (title + close button)
+  noPadding?: boolean; // whether to remove content padding (for edge-to-edge content)
 }
 
 export function ModalContainer({ 
   children, 
-  title = "Modal Title",
   onClose,
-  showCloseButton = true,
+  showCancelButton = true,
   presentationStyle = 'pageSheet',
   height,
-  showHeader = true,
+  noPadding = false,
 }: ModalContainerProps) {
   // get theme-aware colors from color palette system
   const colors = useThemeColors();
@@ -44,7 +44,6 @@ export function ModalContainer({
   
   // determine styling based on presentation style
   const isFullScreen = presentationStyle === 'fullScreen';
-  const isPageSheet = presentationStyle === 'pageSheet';
   const isPageSheetWithHeight = presentationStyle === 'pageSheetWithHeight';
 
   // create dynamic styles using color palette and typography
@@ -52,10 +51,6 @@ export function ModalContainer({
     flex: isPageSheetWithHeight ? 0 : 1,
     height: isPageSheetWithHeight ? height : undefined,
     width: '100%',
-    borderTopLeftRadius: isFullScreen ? 0 : 16,
-    borderTopRightRadius: isFullScreen ? 0 : 16,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
     borderWidth: isFullScreen ? 0 : Platform.select({ 
       ios: StyleSheet.hairlineWidth, 
       android: StyleSheet.hairlineWidth, 
@@ -64,41 +59,6 @@ export function ModalContainer({
     overflow: 'hidden',
     backgroundColor: isFullScreen ? colors.background.primary() : colors.background.elevated(),
     borderColor: isFullScreen ? 'transparent' : colors.border.primary(),
-  };
-  
-  // header for pageSheet styles (title + X button)
-  const headerStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    paddingBottom: 12,
-    paddingTop: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border.primary(),
-    backgroundColor: isFullScreen ? colors.background.primary() : colors.background.elevated(),
-  };
-  
-  const titleContainerStyle: ViewStyle = {
-    flex: 1,
-    marginRight: 16, // space for close button
-  };
-  
-  const titleStyle: TextStyle = {
-    // use heading-3 text style from typography system (18px, bold, satoshi font)
-    ...typography.getTextStyle('heading-3'),
-    color: colors.text.primary(),
-    textAlign: 'left',
-  };
-  
-  const closeButtonStyle: ViewStyle = {
-    width: 44, // minimum touch target size for accessibility
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
   };
 
   // cancel button for fullScreen (positioned absolutely top-left)
@@ -120,14 +80,16 @@ export function ModalContainer({
   
   const contentStyle: ViewStyle = {
     flex: 1,
-    paddingHorizontal: isFullScreen ? 0 : 16,
-    paddingVertical: isFullScreen ? 0 : 20,
+    // apply padding unless noPadding prop is true or fullScreen style
+    paddingHorizontal: noPadding || isFullScreen ? 0 : 16,
+    paddingVertical: noPadding || isFullScreen ? 0 : 20,
   };
 
   return (
     <View style={containerStyle}>
       {/* fullScreen style: floating Cancel button at top-left */}
-      {isFullScreen && showCloseButton && onClose && (
+      {/* only shown for fullScreen modals when showCancelButton is true */}
+      {isFullScreen && showCancelButton && onClose && (
         <TouchableOpacity
           style={cancelButtonStyle}
           onPress={onClose}
@@ -139,36 +101,9 @@ export function ModalContainer({
           <Text style={cancelTextStyle}>Cancel</Text>
         </TouchableOpacity>
       )}
-
-      {/* pageSheet styles: header section with title and close button */}
-      {!isFullScreen && showHeader && (
-        <View style={headerStyle}>
-          {/* title section */}
-          <View style={titleContainerStyle}>
-            <Text style={titleStyle}>{title}</Text>
-          </View>
-          
-          {/* close button section */}
-          {showCloseButton && (
-            <TouchableOpacity
-              style={closeButtonStyle}
-              onPress={onClose}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Close modal"
-              accessibilityHint="Double tap to close this modal"
-            >
-              <Ionicons
-                name="close"
-                size={24}
-                color={colors.text.secondary()}
-              />
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
       
       {/* modal content */}
+      {/* headers are now managed by individual modals using ModalHeader component */}
       <View style={contentStyle}>
         {children}
       </View>
