@@ -77,8 +77,7 @@ export function TaskCreationModal({
       <ModalContainer
         presentationStyle="fullScreen"
         onClose={onClose}
-        showCloseButton={true}
-        showHeader={false}
+        showCancelButton={true}
       >
         <TaskBasicInfo 
           values={values}
