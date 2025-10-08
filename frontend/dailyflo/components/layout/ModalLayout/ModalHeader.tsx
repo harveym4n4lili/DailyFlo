@@ -96,14 +96,18 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   
   // header container style
   const headerStyle: ViewStyle = {
+    minHeight: 60,
+    height: 60,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    position: 'relative',
     paddingHorizontal,
-    paddingVertical,
-    paddingBottom: 12,
-    paddingTop: 8,
-    borderBottomWidth: showBorder ? StyleSheet.hairlineWidth : 0,
+    // remove vertical padding so the title is mathematically centered in the 60px header
+    paddingVertical: 0,
+    paddingBottom: 0,
+    paddingTop: 0,
+    borderBottomWidth: 1,
     borderBottomColor: colors.border.primary(),
     backgroundColor: backgroundColor || colors.background.elevated(),
     ...customContainerStyle,
@@ -112,25 +116,32 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   // title container style
   const titleContainerStyle: ViewStyle = {
     flex: 1,
-    marginRight: showCloseButton ? 16 : 0,
+    // occupy full height to center perfectly
+    height: '100%',
+    // center title both vertically and horizontally; close button is absolute
+    alignItems: 'center',
+    justifyContent: 'center',
   };
   
   // title text style
   const titleStyle: TextStyle = {
-    ...typography.getTextStyle('heading-3'),
+    ...typography.getTextStyle('heading-2'),
     color: colors.text.primary(),
-    textAlign: 'left',
+    textAlign: 'center',
     ...customTitleStyle,
   };
   
   // close button style
   const closeButtonStyle: ViewStyle = {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    width: 30,
+    height: 30,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: colors.background.tertiary(),
   };
 
   return (
@@ -152,8 +163,8 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
         >
           <Ionicons
             name="close"
-            size={24}
-            color={colors.text.secondary()}
+            size={16}
+            color={colors.text.primary()}
           />
         </TouchableOpacity>
       )}
