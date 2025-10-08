@@ -557,7 +557,7 @@ Updated User app, models, serializers, views and urls
 ## [07/10/2025] - [Tuesday]
 
 ### Today's Goals
-- [X] Finished styling task creation modal
+- [X] Finished styling header task creation modal
 - [X] Prepared a date picker UI button
 - [X] Implemented a task creation modal component, with first step component
 - [X] Implemented new modal to app and FAB
@@ -567,6 +567,21 @@ Updated User app, models, serializers, views and urls
 - Finish taskform creation and styling
 - Consider styling and implementing task detail modal
 - Plan how to design date pick modal
+
+### Notes
+- No Notes
+---
+## [08/10/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Implementing date picker modal and components
+- [X] Introduced new modal ehader component to be reused
+- [X] Implemented quick date options in date picker modal
+
+
+### Plans For Future
+- Finish date picker modal and styling
+- Plan how to implement calendar day view for select
 
 ### Notes
 - No Notes
