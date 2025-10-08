@@ -6,5 +6,6 @@
 
 export * from './ModalBackdrop';
 export * from './ModalContainer';
+export * from './ModalHeader';
 
 
