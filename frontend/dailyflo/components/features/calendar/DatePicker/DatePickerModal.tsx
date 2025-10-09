@@ -117,7 +117,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
         >
           {/* quick date options */}
           <QuickDateOptions
-            selectedDate={selectedDate || new Date().toISOString()}
+            selectedDate={selectedDate || ''}
             onSelectDate={handleQuickDateSelect}
           />
         
