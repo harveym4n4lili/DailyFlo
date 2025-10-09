@@ -26,6 +26,9 @@ import { ModalContainer, ModalHeader } from '@/components/layout/ModalLayout';
 // quick date options component
 import { QuickDateOptions } from './QuickDateOptions';
 
+// calendar view component
+import { CalendarView } from './CalendarView';
+
 /**
  * Props for DatePickerModal component
  */
@@ -85,6 +88,18 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   };
   
   /**
+   * Handle date selection from calendar view
+   * This immediately confirms the selection and closes the modal
+   */
+  // when user picks a specific date from the calendar, we immediately apply it
+  // flow: user taps calendar date → this function runs → parent receives new date → modal closes
+  const handleCalendarDateSelect = (date: string) => {
+    console.log(`Calendar date selected: ${date}`);
+    onSelectDate(date); // notify parent component
+    onClose(); // close modal
+  };
+  
+  /**
    * Handle modal close
    */
   const handleModalClose = () => {
@@ -119,6 +134,13 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
           <QuickDateOptions
             selectedDate={selectedDate || ''}
             onSelectDate={handleQuickDateSelect}
+          />
+          
+          {/* calendar view for specific date selection */}
+          <CalendarView
+            selectedDate={selectedDate || ''}
+            onSelectDate={handleCalendarDateSelect}
+            initialMonth={selectedDate ? new Date(selectedDate) : undefined}
           />
         
         </ScrollView>
