@@ -176,12 +176,15 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
                     color: themeColors.text.primary() 
                   }
                 ]}>
-                  {new Date(values.dueDate || new Date()).toLocaleDateString('en-US', { 
-                    weekday: 'short', 
-                    month: 'short', 
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
+                  {values.dueDate 
+                    ? new Date(values.dueDate).toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        month: 'short', 
+                        day: 'numeric',
+                        year: 'numeric'
+                      })
+                    : 'No Deadline'
+                  }
                 </Text>
                 
                 <Text style={[
@@ -190,12 +193,13 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
                     color: themeColors.text.tertiary?.() || labelColor 
                   }
                 ]}>
-                  {getRelativeDateMessage(values.dueDate || new Date().toISOString())}
+                  {values.dueDate ? getRelativeDateMessage(values.dueDate) : '—'}
                 </Text>
               </View>
               
-              {/* clear button */}
+              {/* clear button - only show if date is set and not today */}
               {values.dueDate && 
+                values.dueDate !== '' &&
                 new Date(values.dueDate).toDateString() !== new Date().toDateString() && (
                 <Pressable
                   onPress={handleClearDate}
