@@ -63,10 +63,6 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
     setIsDatePickerVisible(false);
   };
 
-  const handleClearDate = () => {
-    onChange('dueDate', new Date().toISOString());
-  };
-
   const dismissKeyboard = () => {
     Keyboard.dismiss();
   };
@@ -196,21 +192,6 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
                   {values.dueDate ? getRelativeDateMessage(values.dueDate) : '—'}
                 </Text>
               </View>
-              
-              {/* clear button - only show if date is set and not today */}
-              {values.dueDate && 
-                values.dueDate !== '' &&
-                new Date(values.dueDate).toDateString() !== new Date().toDateString() && (
-                <Pressable
-                  onPress={handleClearDate}
-                  style={{
-                    padding: 4,
-                    marginLeft: 8,
-                  }}
-                >
-                  <Text style={{ color: themeColors.text.primary(), fontSize: 16 }}>✕</Text>
-                </Pressable>
-              )}
             </Pressable>
           </View>
         </ScrollView>
