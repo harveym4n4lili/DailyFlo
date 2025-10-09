@@ -585,3 +585,19 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - No Notes
+---
+## [09/10/2025] - [Thursday]
+
+### Today's Goals
+- [X] Finished date picker modal
+- [X] Introduced new calendar view component for date picker modal
+- [X] Fully styled calendar and quick date options
+- [X] Added task repeat option, no functionality yet
+
+
+### Plans For Future
+- Plan next implementation of task creation basic info
+- Plan how to implement repeating task selection
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
