@@ -11,11 +11,14 @@ import React from 'react';
 // react native components we need for the UI
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 
+// icons from expo vector icons
+import { Ionicons } from '@expo/vector-icons';
+
 // typography system for consistent text styling
 import { getTextStyle } from '@/constants/Typography';
 
 // hooks for theme-aware colors
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { useThemeColors, useTaskColors, useSemanticColors } from '@/hooks/useColorPalette';
 
 /**
  * Props for QuickDateOptions component
@@ -47,6 +50,8 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
 }) => {
   // get theme-aware colors for styling buttons
   const themeColors = useThemeColors();
+  const taskColors = useTaskColors();
+  const semanticColors = useSemanticColors();
   
   /**
    * Helper function to calculate a date relative to today
@@ -92,17 +97,38 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
   };
   
   /**
+   * Helper function to get the date for this weekend (next Saturday)
+   * @returns ISO string of this weekend's date
+   */
+  // this function calculates the next Saturday (this weekend)
+  const getThisWeekendDate = (): string => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
+    const daysUntilSaturday = dayOfWeek === 0 ? 6 : 6 - dayOfWeek; // if today is Sunday, next Saturday is 6 days away
+    
+    const weekendDate = new Date(today);
+    weekendDate.setDate(today.getDate() + daysUntilSaturday);
+    weekendDate.setHours(0, 0, 0, 0);
+    return weekendDate.toISOString();
+  };
+
+  /**
    * Quick date options configuration
    * Each option has a label, the number of days from today, and an icon
    */
   // this array defines all the quick date options we want to show
   // each option calculates its date relative to today using daysFromToday
-  const quickOptions: { label: string; daysFromToday: number | null }[] = [
-    { label: 'Today', daysFromToday: 0 },
-    { label: 'Tomorrow', daysFromToday: 1 },
-    { label: 'Next Week', daysFromToday: 7 },
-    { label: 'Next Month', daysFromToday: 30 },
-    { label: 'No Deadline', daysFromToday: null },
+  const quickOptions: { 
+    label: string; 
+    daysFromToday: number | null; 
+    icon: keyof typeof Ionicons.glyphMap;
+    iconColor: () => string;
+  }[] = [
+    { label: 'Today', daysFromToday: 0, icon: 'calendar-outline', iconColor: () => semanticColors.success() }, // green
+    { label: 'Tomorrow', daysFromToday: 1, icon: 'sunny-outline', iconColor: () => semanticColors.warning() }, // yellow
+    { label: 'This Weekend', daysFromToday: null, icon: 'calendar-outline', iconColor: () => semanticColors.info() }, // blue (special case)
+    { label: 'Next Week', daysFromToday: 7, icon: 'arrow-forward-outline', iconColor: () => taskColors.purple() }, // purple
+    { label: 'No Deadline', daysFromToday: null, icon: 'remove-circle-outline', iconColor: () => themeColors.text.tertiary() }, // grey
   ];
   
   return (
@@ -110,7 +136,10 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
       {/* quick date options list */}
       {quickOptions.map((option) => {
         // calculate the actual date for this option
-        const optionDate = getDateFromToday(option.daysFromToday);
+        // special handling for "This Weekend" - use custom function
+        const optionDate = option.label === 'This Weekend' 
+          ? getThisWeekendDate() 
+          : getDateFromToday(option.daysFromToday);
         
         // get the day of week for this date
         const dayOfWeek = getDayOfWeek(optionDate);
@@ -134,18 +163,29 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
             accessibilityLabel={`Select ${option.label}${dayOfWeek ? ", " + dayOfWeek : ''}`}
             accessibilityState={{ selected: false }}
           >
-            {/* option label on the left */}
-            <Text
-              style={[
-                getTextStyle('body-large'),
-                styles.optionText,
-                {
-                  color: themeColors.text.primary()
-                },
-              ]}
-            >
-              {option.label}
-            </Text>
+            {/* icon and label on the left with proper spacing */}
+            <View style={styles.leftContent}>
+              <View style={styles.iconContainer}>
+                <Ionicons 
+                  name={option.icon} 
+                  size={20} 
+                  color={option.iconColor()}
+                />
+              </View>
+              
+              {/* option label next to the icon */}
+              <Text
+                style={[
+                  getTextStyle('body-large'),
+                  styles.optionText,
+                  {
+                    color: themeColors.text.primary()
+                  },
+                ]}
+              >
+                {option.label}
+              </Text>
+            </View>
             
             {/* day of week on the right */}
             <Text
@@ -183,7 +223,7 @@ const styles = StyleSheet.create({
     // border
     borderBottomWidth: 1,
     
-    // use flexbox to position label on left and day on right
+    // use flexbox to position left content (icon + label) and right content (day)
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -191,6 +231,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     height: 48,
+  },
+  // container for icon and label on the left
+  leftContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1, // take up available space
+  },
+  // container for the icon on the left
+  iconContainer: {
+    width: 20, // fixed width to align icons consistently
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12, // space between icon and label
   },
   // text style for option label
   optionText: {
