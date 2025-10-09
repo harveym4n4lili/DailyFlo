@@ -13,6 +13,10 @@ export type { DatePickerModalProps } from './DatePickerModal';
 export { QuickDateOptions } from './QuickDateOptions';
 export type { QuickDateOptionsProps } from './QuickDateOptions';
 
+// export the calendar view component
+export { CalendarView } from './CalendarView';
+export type { CalendarViewProps } from './CalendarView';
+
 // default export for convenience
 export { DatePickerModal as default } from './DatePickerModal';
 
