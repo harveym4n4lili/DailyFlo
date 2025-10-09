@@ -69,6 +69,10 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
    */
   // this helps us highlight the currently selected option
   const isDateSelected = (dateToCheck: string): boolean => {
+    // handle empty strings (no deadline case)
+    if (!selectedDate && !dateToCheck) return true;
+    if (!selectedDate || !dateToCheck) return false;
+    
     const selectedDay = new Date(selectedDate).setHours(0, 0, 0, 0);
     const checkDay = new Date(dateToCheck).setHours(0, 0, 0, 0);
     return selectedDay === checkDay;
