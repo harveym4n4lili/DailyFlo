@@ -1,11 +1,13 @@
 /**
  * DatePickerModal Component
  * 
- * A modal for selecting dates with quick options.
+ * A draggable modal for selecting dates with quick options.
  * This modal provides an intuitive interface for date selection in task creation/editing.
+ * Uses DraggableModal for smooth drag-to-dismiss and snap point functionality.
  * 
  * Features:
  * - Quick date options (Today, Tomorrow, In 3 Days, Next Week, Next Month)
+ * - Draggable bottom sheet with snap points
  * - Theme-aware styling
  * - Smooth animations
  */
@@ -15,19 +17,19 @@ import React from 'react';
 
 // react native components for the UI
 import {
-  Modal,
   ScrollView,
   View,
   Text,
   Pressable,
   StyleSheet,
+  Modal,
 } from 'react-native';
 
 // safe area handling for devices with notches/home indicators
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // modal layout components
-import { ModalContainer, ModalHeader } from '@/components/layout/ModalLayout';
+import { DraggableModal, ModalHeader } from '@/components/layout/ModalLayout';
 
 // quick date options component
 import { QuickDateOptions } from './QuickDateOptions';
@@ -127,24 +129,80 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
     onClose();
   };
   
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleModalClose}
-    >
-      <ModalContainer
-        presentationStyle="pageSheet"
-        noPadding={true}
+  // create the repeating section as a separate element to pass to DraggableModal
+  // this floating container stays fixed at bottom while modal drags
+  const repeatingContainer = (
+    <View style={[
+      styles.repeatingSection, 
+      { 
+        paddingBottom: insets.bottom,
+        backgroundColor: themeColors.background.elevated(),
+      }
+    ]}>
+      <Pressable
+        onPress={() => {
+          // repeating option has no functionality - do nothing
+        }}
+        style={({ pressed }) => [
+          styles.repeatingButton,
+          {
+            backgroundColor: pressed
+              ? themeColors.background.tertiary()
+              : themeColors.background.elevated(),
+            borderColor: themeColors.border.primary(),
+          },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel="Repeating task option"
       >
-        {/* custom header for date picker modal */}
-        <ModalHeader
-          title={title}
-          onClose={handleModalClose}
-          showCloseButton={true}
-          showBorder={true}
-        />
+        {/* icon and label on the left with proper spacing */}
+        <View style={styles.repeatingLeftContent}>
+          <View style={styles.repeatingIconContainer}>
+            <Ionicons 
+              name="repeat-outline" 
+              size={20} 
+              color={taskColors.teal()}
+            />
+          </View>
+          
+          {/* repeating label next to the icon */}
+          <Text
+            style={[
+              getTextStyle('body-large'),
+              styles.repeatingText,
+              {
+                color: themeColors.text.primary()
+              },
+            ]}
+          >
+            Repeating
+          </Text>
+        </View>
+      </Pressable>
+    </View>
+  );
+  
+  return (
+    <DraggableModal
+      visible={visible}
+      onClose={handleModalClose}
+      // snap points: close at 30%, initial at 60%, expanded at 95%
+      // lowest snap point (30%) will dismiss the modal
+      snapPoints={[0.3, 0.6, 0.95]}
+      // start at the middle snap point (60%)
+      initialSnapPoint={1}
+      borderRadius={20}
+      // pass the repeating container to float independently of modal drag
+      floatingContainer={repeatingContainer}
+    >
+      {/* custom header for date picker modal */}
+      <ModalHeader
+        title={title}
+        onClose={handleModalClose}
+        showCloseButton={false}
+        showDragIndicator={true}
+        showBorder={true}
+      />
         
         <ScrollView
           style={styles.scrollView}
@@ -165,57 +223,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
           />
         
         </ScrollView>
-        
-        {/* 
-          REPEATING OPTION SECTION
-          Anchored to bottom of modal, outside of ScrollView
-          Same styling as quick date options but no functionality
-          Uses safe area insets to avoid home indicator overlap
-        */}
-        <View style={[styles.repeatingSection, { paddingBottom: insets.bottom + 24 }]}>
-          <Pressable
-            onPress={() => {
-              // repeating option has no functionality - do nothing
-            }}
-            style={({ pressed }) => [
-              styles.repeatingButton,
-              {
-                backgroundColor: pressed
-                  ? themeColors.background.tertiary()
-                  : themeColors.background.elevated(),
-                borderColor: themeColors.border.primary(),
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Repeating task option"
-          >
-            {/* icon and label on the left with proper spacing */}
-            <View style={styles.repeatingLeftContent}>
-              <View style={styles.repeatingIconContainer}>
-                <Ionicons 
-                  name="repeat-outline" 
-                  size={20} 
-                  color={taskColors.teal()}
-                />
-              </View>
-              
-              {/* repeating label next to the icon */}
-              <Text
-                style={[
-                  getTextStyle('body-large'),
-                  styles.repeatingText,
-                  {
-                    color: themeColors.text.primary()
-                  },
-                ]}
-              >
-                Repeating
-              </Text>
-            </View>
-          </Pressable>
-        </View>
-      </ModalContainer>
-    </Modal>
+    </DraggableModal>
   );
 };
 
@@ -230,25 +238,36 @@ const styles = StyleSheet.create({
   
   // content container
   contentContainer: {
+    flexGrow: 1, // stretch to fill available space
     // removed padding to allow full-width buttons
     // removed gap to allow buttons to touch each other
   },
   
-  // repeating section container - anchored to bottom
+  // repeating section container - fixed at bottom, independent of modal drag
+  // stretches all the way to the bottom edge of the screen
   repeatingSection: {
-    // no margin/padding needed - anchored to bottom
+    position: 'absolute',        // fixed relative to screen viewport
+    left: 0,                     // align to left edge
+    right: 0,                    // align to right edge
+    bottom: 0,                   // stretch to bottom edge
+    zIndex: 100,                 // very high z-index to be above modal content
   },
   
   // repeating button styling (matches quick date options)
   repeatingButton: {
     width: '100%',             // full width to touch edges
     borderTopWidth: 1,         // border at top to separate from content
-    borderBottomWidth: 1,      // border at bottom to match other options
     flexDirection: 'row',      // horizontal layout
     alignItems: 'center',      // center vertically
     paddingVertical: 12,       // top/bottom padding
     paddingHorizontal: 16,     // left/right padding
-    height: 48,                // consistent height
+    minHeight: 48,             // minimum height for tap target
+    // shadow for floating effect
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,              // shadow for Android
   },
   
   // container for icon and label on the left
