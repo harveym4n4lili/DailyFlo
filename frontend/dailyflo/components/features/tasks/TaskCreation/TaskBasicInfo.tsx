@@ -13,6 +13,9 @@ import { getTextStyle } from '@/constants/Typography';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { validateAll, TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
 import { DatePickerModal } from '@/components/features/calendar';
+import { TaskColorSelectModal } from './TaskColorSelectModal';
+import { TaskCategoryColors } from '@/constants/ColorPalette';
+import type { TaskColor } from '@/types';
 
 export interface TaskBasicInfoProps {
   initialValues?: Partial<TaskFormValues>;
@@ -35,6 +38,11 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   // this controls whether the date picker modal is shown
   // flow: user taps date button → handleShowDatePicker sets this to true → modal opens
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  
+  // state for color select modal visibility
+  // this controls whether the color select modal is shown
+  // flow: user taps color icon → handleShowColorPicker sets this to true → modal opens
+  const [isColorPickerVisible, setIsColorPickerVisible] = useState(false);
 
   // derived validation state
   const errors = useMemo(() => validateAll(values as TaskFormValues), [values]);
@@ -61,6 +69,26 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   const handleDatePickerClose = () => {
     console.log('Date picker modal closed');
     setIsDatePickerVisible(false);
+  };
+
+  // color picker handlers
+  // this opens the color picker modal when user taps the color icon
+  const handleShowColorPicker = () => {
+    console.log('Opening color picker modal');
+    setIsColorPickerVisible(true);
+  };
+  
+  // this handles when user selects a color from the picker
+  // flow: user picks color in modal → onSelectColor callback → this function → onChange updates form state
+  const handleColorSelect = (color: TaskColor) => {
+    console.log('Color selected:', color);
+    onChange('color', color);
+  };
+  
+  // this handles when user closes the color picker modal
+  const handleColorPickerClose = () => {
+    console.log('Color picker modal closed');
+    setIsColorPickerVisible(false);
   };
 
   const dismissKeyboard = () => {
@@ -100,33 +128,67 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
       style={{ flex: 1 }}
     >
       <View style={{ flex: 1 }}>
-        {/* header with title input */}
+        {/* header with title input and color icon */}
         <TouchableWithoutFeedback onPress={dismissKeyboard}>
           <View
             style={{
               paddingTop: insets.top + 60,
-              paddingBottom: 20,
-              backgroundColor: themeColors.background.secondary(),
+              paddingBottom: 30,
+              // use the selected task color as background (lighter shade for better contrast)
+              backgroundColor: values.color 
+                ? TaskCategoryColors[values.color][500] 
+                : TaskCategoryColors.blue[50],
               paddingHorizontal: 20,
+              paddingRight: 40,
             }}
           >
-          <TextInput
-            value={values.title || ''}
-            onChangeText={(t) => onChange('title', t)}
-            onBlur={() => onBlur('title')}
-            placeholder="Task title"
-            placeholderTextColor={themeColors.text.tertiary?.() || labelColor}
-            style={{
-              ...getTextStyle('heading-2'),
-              color: themeColors.text.primary(),
-              paddingVertical: 8,
-              paddingHorizontal: 0,
-              borderBottomWidth: 2,
-              borderBottomColor: themeColors.border.primary(),
-            }}
-            autoFocus={true}
-            returnKeyType="next"
-          />
+            {/* flex row to align color icon and title input */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              {/* color icon button on the left */}
+              {/* when tapped, opens the color select modal */}
+              <Pressable
+                onPress={handleShowColorPicker}
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  // use the selected color from TaskCategoryColors palette
+                  backgroundColor: themeColors.background.elevated(),
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {/* palette icon to indicate this is for color selection */}
+                <Ionicons
+                  name="color-palette"
+                  size={24}
+                  // use a light color for the icon so it contrasts well with the colored background
+                  color={themeColors.text.primary()}
+                />
+              </Pressable>
+              
+              {/* title input takes up remaining space */}
+              <TextInput
+                value={values.title || ''}
+                onChangeText={(t) => onChange('title', t)}
+                onBlur={() => onBlur('title')}
+                placeholder="Task title"
+                placeholderTextColor={themeColors.background.lightOverlay()}
+                selectionColor={'#fff'}
+                style={{
+                  ...getTextStyle('heading-2'),
+                  color: '#fff',
+                  paddingVertical: 6,
+                  paddingHorizontal: 0,
+                  borderBottomWidth: 1,
+                  // use the selected task color for the border to match the theme
+                  borderBottomColor: '#fff',
+                  flex: 1,
+                }}
+                autoFocus={true}
+                returnKeyType="next"
+              />
+            </View>
           </View>
         </TouchableWithoutFeedback>
 
@@ -206,6 +268,16 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
         onClose={handleDatePickerClose}
         onSelectDate={handleDateSelect}
         title="Date"
+      />
+      
+      {/* color picker modal */}
+      {/* this modal appears when user wants to select a task color */}
+      {/* flow: user taps color icon → modal opens → user picks color → onSelectColor called → modal closes */}
+      <TaskColorSelectModal
+        visible={isColorPickerVisible}
+        selectedColor={(values.color as TaskColor) || 'blue'}
+        onClose={handleColorPickerClose}
+        onSelectColor={handleColorSelect}
       />
     </KeyboardAvoidingView>
   );
