@@ -44,6 +44,13 @@ export interface ModalHeaderProps {
   showBorder?: boolean;
   
   /**
+   * Whether to show the draggable indicator (small rounded bar at top)
+   * useful for bottom sheet style modals that can be dragged
+   * @default false
+   */
+  showDragIndicator?: boolean;
+  
+  /**
    * Custom title text style override
    */
   titleStyle?: TextStyle;
@@ -82,6 +89,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   onClose,
   showCloseButton = true,
   showBorder = true,
+  showDragIndicator = false,
   titleStyle: customTitleStyle,
   containerStyle: customContainerStyle,
   backgroundColor,
@@ -121,6 +129,8 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
     // center title both vertically and horizontally; close button is absolute
     alignItems: 'center',
     justifyContent: 'center',
+    // add top padding to lower the text slightly
+    paddingTop: 8,
   };
   
   // title text style
@@ -145,29 +155,56 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   };
 
   return (
-    <View style={headerStyle}>
-      {/* title section */}
-      <View style={titleContainerStyle}>
-        {title && <Text style={titleStyle}>{title}</Text>}
+    <View>
+      {/* header section with title and optional close button */}
+      <View style={headerStyle}>
+        {/* drag indicator - positioned absolutely at the top, doesn't affect spacing */}
+        {/* small rounded bar that visually indicates the modal can be dragged */}
+        {showDragIndicator && (
+          <View
+            style={{
+              position: 'absolute',
+              top: 8,
+              left: 0,
+              right: 0,
+              alignItems: 'center',
+              zIndex: 1,
+            }}
+          >
+            <View
+              style={{
+                width: 36,
+                height: 5,
+                borderRadius: 3,
+                backgroundColor: colors.border.primary(),
+              }}
+            />
+          </View>
+        )}
+        
+        {/* title section */}
+        <View style={titleContainerStyle}>
+          {title && <Text style={titleStyle}>{title}</Text>}
+        </View>
+        
+        {/* close button section */}
+        {showCloseButton && onClose && (
+          <TouchableOpacity
+            style={closeButtonStyle}
+            onPress={onClose}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Close modal"
+            accessibilityHint="Double tap to close this modal"
+          >
+            <Ionicons
+              name="close"
+              size={16}
+              color={colors.text.primary()}
+            />
+          </TouchableOpacity>
+        )}
       </View>
-      
-      {/* close button section */}
-      {showCloseButton && onClose && (
-        <TouchableOpacity
-          style={closeButtonStyle}
-          onPress={onClose}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Close modal"
-          accessibilityHint="Double tap to close this modal"
-        >
-          <Ionicons
-            name="close"
-            size={16}
-            color={colors.text.primary()}
-          />
-        </TouchableOpacity>
-      )}
     </View>
   );
 };
