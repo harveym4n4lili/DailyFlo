@@ -428,3 +428,176 @@ Updated User app, models, serializers, views and urls
 - consider changing and experimenting ui colors 
 - Plan how to change nacbar color
 ---
+## [20/09/2025] - [Saturday]
+
+### Today's Goals
+- [X] Refactored the navbar to include color hooks
+
+### Plans For Future
+- Begin to plan how to implement typography system
+
+### Notes
+- consider styling changes to be made
+---
+## [23/09/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Implemented a typography constants file
+- [X] Implemented satoshi font assets
+- [X] Wrote typography hook file
+- [X] Implemented new typography system in app
+
+### Plans For Future
+- Begin to plan how to implement tasks, how they are displayed and interactions
+
+### Notes
+- consider swiping gestures
+---
+## [24/09/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Created Listcard and taskcard components
+- [X] Included Collapsible group headers
+- [X] Included delete, complete and edit task interactions
+- [X] Included swipe gestures with appropriate styling
+
+### Plans For Future
+- Improve styling of task cards
+
+### Notes
+- consider animations
+---
+## [25/09/2025] - [Thursday]
+
+### Today's Goals
+- [X] Styling changes to Today Screen Header
+
+### Plans For Future
+- Improve styling of task cards
+
+### Notes
+- consider animations
+---
+## [26/09/2025] - [Friday]
+
+### Today's Goals
+- [X] Added smooth animations to group expansion of task cards
+- [X] Resolved Virtualized list nesting
+
+### Plans For Future
+- Plant to implement modal components and FAB for task creation and view
+
+### Notes
+- consider animations
+
+---
+## [30/09/2025] - [Thursday]
+
+### Today's Goals
+- [X] Prepared a basic FAB component
+
+### Plans For Future
+- Improve styling of FAB
+- prepare modal components
+
+### Notes
+- consider animations
+---
+## [01/10/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Styled FAB
+- [X] Added ghost pulse animation to FAB
+- [X] Prepared basic modal backdrop/container components
+
+### Plans For Future
+- Improved modal screens
+
+### Notes
+- No Notes
+---
+## [02/10/2025] - [Thursday]
+
+### Today's Goals
+- [X] Improved and implemented base modal screen to app
+
+### Plans For Future
+- Consider modal screen for task view and task creation
+- plan to implement variants of modal screens
+
+### Notes
+- No Notes
+---
+## [03/10/2025] - [Friday]
+
+### Today's Goals
+- [X] Refactored Modal screen to have variants
+- [X] Implemented this new modal screen to task detail and task create
+
+### Plans For Future
+- Plan to implement task form, and modal styling
+### Notes
+- No Notes
+---
+## [06/10/2025] - [Monday]
+
+### Today's Goals
+- [X] Created a task form component prototype
+- [X] Begun to style header section of create modal
+
+
+### Plans For Future
+- Finish taskform creation and styling
+- Plan how to test task creation and edit
+- Consider styling and implementing task detail modal
+
+### Notes
+- No Notes
+---
+## [07/10/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Finished styling header task creation modal
+- [X] Prepared a date picker UI button
+- [X] Implemented a task creation modal component, with first step component
+- [X] Implemented new modal to app and FAB
+
+
+### Plans For Future
+- Finish taskform creation and styling
+- Consider styling and implementing task detail modal
+- Plan how to design date pick modal
+
+### Notes
+- No Notes
+---
+## [08/10/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Implementing date picker modal and components
+- [X] Introduced new modal ehader component to be reused
+- [X] Implemented quick date options in date picker modal
+
+
+### Plans For Future
+- Finish date picker modal and styling
+- Plan how to implement calendar day view for select
+
+### Notes
+- No Notes
+---
+## [09/10/2025] - [Thursday]
+
+### Today's Goals
+- [X] Finished date picker modal
+- [X] Introduced new calendar view component for date picker modal
+- [X] Fully styled calendar and quick date options
+- [X] Added task repeat option, no functionality yet
+
+
+### Plans For Future
+- Plan next implementation of task creation basic info
+- Plan how to implement repeating task selection
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
