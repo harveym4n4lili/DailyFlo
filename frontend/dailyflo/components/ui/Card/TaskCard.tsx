@@ -5,12 +5,20 @@
  * It shows task information like title, description, due date, priority, and color.
  * It also provides basic interaction capabilities like completing tasks.
  * 
+ * NEW FEATURE: Swipe Gestures
+ * - Swipe left: triggers onSwipeLeft callback (e.g., for delete/archive actions)
+ * - Swipe right: triggers onSwipeRight callback (e.g., for complete/edit actions)
+ * - Swipe threshold: 100 pixels minimum distance to trigger action
+ * - Smooth animations: card moves with finger and springs back to center
+ * - Visual feedback: color indicator background and checkbox border change to card background during swipe
+ * 
  * This component demonstrates the flow from Redux store → Component → User interaction.
  */
 
-import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useMemo, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 
 // TYPES FOLDER IMPORTS - TypeScript type definitions
 // The types folder contains all TypeScript interfaces and type definitions
@@ -40,6 +48,10 @@ export interface TaskCardProps {
   onEdit?: (task: Task) => void;            // called when user wants to edit task
   onDelete?: (task: Task) => void;          // called when user wants to delete task
   
+  // swipe gesture callback functions
+  onSwipeLeft?: (task: Task) => void;       // called when user swipes left on the card
+  onSwipeRight?: (task: Task) => void;      // called when user swipes right on the card
+  
   // optional display options
   showCategory?: boolean;                   // whether to show the list/category name
   compact?: boolean;                        // whether to use compact layout
@@ -59,6 +71,8 @@ export default function TaskCard({
   onComplete,
   onEdit,
   onDelete,
+  onSwipeLeft,
+  onSwipeRight,
   showCategory = false,
   compact = false,
 }: TaskCardProps) {
@@ -72,6 +86,16 @@ export default function TaskCard({
   // TYPOGRAPHY USAGE - Getting typography system for consistent text styling
   // useTypography: Hook that provides typography styles, font families, and text utilities
   const typography = useTypography();
+  
+  // SWIPE GESTURE STATE - Animation and gesture handling
+  // translateX: controls horizontal movement of the card during swipe
+  // swipeThreshold: minimum distance required to trigger a swipe action
+  const translateX = useRef(new Animated.Value(0)).current;
+  const swipeThreshold = 60; // pixels - reduced for shorter activation
+  
+  // TOUCH STATE - Controls visual feedback when user touches the card
+  // isPressed: tracks whether the user is currently touching the card
+  const isPressed = useRef(new Animated.Value(0)).current;
   
   // create dynamic styles using the color palette system and typography system
   // we pass typography to the createStyles function so it can use typography styles
@@ -144,23 +168,218 @@ export default function TaskCard({
   const priorityInfo = getPriorityInfo(task.priorityLevel);
   const taskColor = getTaskColor(task.color);
 
+  // TOUCH-BASED ANIMATIONS - Create animated values for visual feedback when user touches the card
+  // colorIndicatorBackground: changes background color of the color indicator when touched
+  // checkboxBorderColor: changes border color of the checkbox when touched
+  const colorIndicatorBackground = isPressed.interpolate({
+    inputRange: [0, 1], // touch state (0 = not touched, 1 = touched)
+    outputRange: [taskColor, themeColors.background.elevated()], // normal color to card background when touched
+    extrapolate: 'clamp', // prevent values outside the input range
+  });
+  
+  const checkboxBorderColor = isPressed.interpolate({
+    inputRange: [0, 1], // touch state (0 = not touched, 1 = touched)
+    outputRange: [themeColors.border.primary(), themeColors.background.elevated()], // normal border to card background when touched
+    extrapolate: 'clamp', // prevent values outside the input range
+  });
+
+  // SWIPE GESTURE HANDLERS - Functions that handle swipe gesture events and touch state
+  // onGestureEvent: called continuously during the swipe gesture
+  // onHandlerStateChange: called when the gesture starts, changes, or ends
+  
+  // handle continuous movement during swipe - updates translateX animation value
+  const onGestureEvent = Animated.event(
+    [{ nativeEvent: { translationX: translateX } }],
+    { useNativeDriver: true } // use native driver for better performance
+  );
+  
+  // handle gesture state changes (start, end, cancel, etc.)
+  const onHandlerStateChange = (event: any) => {
+    const { state } = event.nativeEvent;
+    
+    // handle gesture start - animate touch state to pressed
+    if (state === State.BEGAN) {
+      Animated.timing(isPressed, {
+        toValue: 1, // set to pressed state
+        duration: 150, // smooth transition
+        useNativeDriver: false, // color animations don't support native driver
+      }).start();
+    }
+    
+    // handle gesture end - reset both position and touch state
+    if (state === State.END) {
+      // get the final translation distance
+      const { translationX } = event.nativeEvent;
+      
+      // determine if swipe threshold was met and in which direction
+      if (Math.abs(translationX) > swipeThreshold) {
+        // swipe left (negative translationX) - call onSwipeLeft callback
+        if (translationX < 0 && onSwipeLeft) {
+          onSwipeLeft(task);
+        }
+        // swipe right (positive translationX) - call onSwipeRight callback
+        else if (translationX > 0 && onSwipeRight) {
+          onSwipeRight(task);
+        }
+      }
+      
+      // reset card position and touch state with smooth animations
+      Animated.parallel([
+        // reset card position to center
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 100, // spring tension for smooth animation
+          friction: 8,  // spring friction for natural feel
+          overshootClamping: true,
+        }),
+        // reset touch state to not pressed
+        Animated.timing(isPressed, {
+          toValue: 0, // set to not pressed state
+          duration: 150, // smooth transition
+          useNativeDriver: false, // color animations don't support native driver
+        })
+      ]).start();
+    }
+    
+    // handle gesture cancellation - reset touch state
+    if (state === State.CANCELLED || state === State.FAILED) {
+      Animated.timing(isPressed, {
+        toValue: 0, // set to not pressed state
+        duration: 150, // smooth transition
+        useNativeDriver: false, // color animations don't support native driver
+      }).start();
+    }
+  };
+
   return (
     <View style={styles.cardContainer}>
-      {/* colored rectangle indicator on the left - uses taskColor from getTaskColor helper */}
-      <View style={[styles.colorIndicator, { backgroundColor: taskColor }]} />
+       {/* blue background that appears when swiping left for edit */}
+       <Animated.View
+         style={[
+           styles.swipeBackgroundLeft,
+           {
+             opacity: translateX.interpolate({
+               inputRange: [-100, -5, 0, 100],
+               outputRange: [1, 0.3, 0, 0],
+               extrapolate: 'clamp',
+             }),
+           },
+         ]}
+       >
+        {/* edit icon that stretches across the swipe area */}
+        <Animated.View
+          style={[
+            styles.editIconContainer,
+             {
+               opacity: translateX.interpolate({
+                 inputRange: [-100, -5, 0, 100],
+                 outputRange: [1, 0.3, 0, 0],
+                 extrapolate: 'clamp',
+               }),
+              transform: [
+                {
+                  translateX: translateX.interpolate({
+                    inputRange: [-80, 0],
+                    outputRange: [-20, 0], // stretch across the swipe area
+                    extrapolate: 'clamp',
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Ionicons 
+            name="create-outline" 
+            size={24} 
+            color="white" 
+          />
+        </Animated.View>
+      </Animated.View>
       
-      {/* main card touchable area - applies conditional styles based on compact and completion state */}
-      <TouchableOpacity
-        style={[
-          styles.card,
-          compact && styles.compactCard, // conditionally applies compact padding when compact prop is true
-          task.isCompleted && styles.completedCard, // conditionally applies transparent background when task is completed
-        ]}
-        onPress={() => onPress?.(task)} // calls onPress callback with task data when tapped
-        activeOpacity={0.7} // provides visual feedback on press
+       {/* red background that appears when swiping right for delete */}
+       <Animated.View
+         style={[
+           styles.swipeBackground,
+           {
+             opacity: translateX.interpolate({
+               inputRange: [-100, 0, 5, 50],
+               outputRange: [0, 0, 0.1, 1],
+               extrapolate: 'clamp',
+             }),
+           },
+         ]}
+       >
+        {/* delete icon that stretches across the swipe area */}
+        <Animated.View
+          style={[
+            styles.deleteIconContainer,
+             {
+               opacity: translateX.interpolate({
+                 inputRange: [-100, 0, 5, 100],
+                 outputRange: [0, 0, 0.3, 1],
+                 extrapolate: 'clamp',
+               }),
+              transform: [
+                {
+                  translateX: translateX.interpolate({
+                    inputRange: [0, 80],
+                    outputRange: [0, 20], // stretch across the swipe area
+                    extrapolate: 'clamp',
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Ionicons 
+            name="trash-outline" 
+            size={24} 
+            color="white" 
+          />
+        </Animated.View>
+      </Animated.View>
+      
+      {/* swipe gesture handler - wraps the entire card to detect horizontal swipes */}
+      <PanGestureHandler
+        onGestureEvent={onGestureEvent} // handles continuous swipe movement
+        onHandlerStateChange={onHandlerStateChange} // handles swipe start/end events
+        activeOffsetX={[-10, 10]} // horizontal movement threshold to activate gesture (no minDist needed)
       >
+        {/* animated view that moves horizontally during swipe gestures */}
+        <Animated.View
+          style={[
+            styles.swipeContainer, // container for swipeable content
+            { transform: [{ translateX }] } // applies horizontal translation based on swipe
+          ]}
+        >
+          {/* colored rectangle indicator on the left - uses taskColor from getTaskColor helper */}
+          <Animated.View 
+            style={[
+              styles.colorIndicator, 
+              { 
+                backgroundColor: colorIndicatorBackground // animated background color based on swipe distance
+              }
+            ]} 
+          />
+          {/* main card touchable area - applies conditional styles based on compact and completion state */}
+          <TouchableOpacity
+            style={[
+              styles.card,
+              compact && styles.compactCard, // conditionally applies compact padding when compact prop is true
+              task.isCompleted && styles.completedCard, // conditionally applies transparent background when task is completed
+            ]}
+            onPress={() => onPress?.(task)} // calls onPress callback with task data when tapped
+            activeOpacity={1} // prevent background opacity change
+          >
         {/* row container for main content layout */}
-        <View style={styles.row}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.row,
+            { opacity: pressed ? 0.7 : 1 } // opacity feedback only for content
+          ]}
+          onPress={() => onPress?.(task)}
+        >
           {/* main content area containing all text elements */}
           <View style={styles.content}>
             {/* task title - conditionally applies strikethrough styling when completed */}
@@ -216,23 +435,28 @@ export default function TaskCard({
               </View>
             </View>
           </View>
-        </View>
-      </TouchableOpacity>
-      
-      {/* checkbox positioned absolutely in top-right corner - conditionally styled based on completion state */}
-      <TouchableOpacity
-        style={[
-          styles.checkbox,
-          task.isCompleted && styles.completedCheckbox, // conditionally applies green background when completed
-        ]}
-        onPress={() => onComplete?.(task)} // calls onComplete callback with task data when tapped
-      >
-        {/* checkmark - conditionally rendered only when task is completed */}
-        {task.isCompleted && <Text style={styles.checkmark}>✓</Text>}
-      </TouchableOpacity>
-      
-      {/* bottom indicators container - positioned absolutely in bottom-right corner */}
-      <View style={styles.bottomIndicators}>
+        </Pressable>
+          </TouchableOpacity>
+          
+          {/* checkbox positioned absolutely in top-right corner - conditionally styled based on completion state */}
+          <Animated.View
+            style={[
+              styles.checkbox,
+              task.isCompleted && styles.completedCheckbox, // conditionally applies green background when completed
+              { borderColor: checkboxBorderColor } // animated border color based on swipe distance
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.checkboxTouchable}
+              onPress={() => onComplete?.(task)} // calls onComplete callback with task data when tapped
+            >
+              {/* checkmark - conditionally rendered only when task is completed */}
+              {task.isCompleted && <Text style={styles.checkmark}>✓</Text>}
+            </TouchableOpacity>
+          </Animated.View>
+          
+          {/* bottom indicators container - positioned absolutely in bottom-right corner */}
+          <View style={styles.bottomIndicators}>
         {/* repeating indicator - conditionally rendered only when routine type is not 'once' */}
         {task.routineType !== 'once' && (
           <View style={styles.indicator}>
@@ -266,7 +490,9 @@ export default function TaskCard({
             {task.listId ? 'List' : 'Inbox'}
           </Text>
         </View>
-      </View>
+          </View>
+        </Animated.View>
+      </PanGestureHandler>
     </View>
   );
 }
@@ -281,14 +507,63 @@ const createStyles = (
   cardContainer: {
     flexDirection: 'row',
     marginBottom: 12, // spacing between cards
+    position: 'relative', // needed for absolute positioning of background
+  },
+
+  // blue background that appears when swiping left for edit
+  swipeBackgroundLeft: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#007AFF', // iOS blue color
+    borderRadius: 16, // match card border radius
+    justifyContent: 'center',
+    alignItems: 'flex-end', // align to right side
+    zIndex: 0, // behind the card content
+  },
+
+  // red background that appears when swiping right for delete
+  swipeBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FF3B30', // iOS red color
+    borderRadius: 16, // match card border radius
+    justifyContent: 'center',
+    alignItems: 'flex-start', // align to left side
+    zIndex: 0, // behind the card content
+  },
+
+  // container for the edit icon
+  editIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // container for the delete icon
+  deleteIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // swipe container for animated swipe gestures
+  swipeContainer: {
+    flex: 1, // takes up remaining space in the row
+    flexDirection: 'row', // horizontal layout for color indicator and card
+    position: 'relative', // needed for absolute positioning of checkbox and indicators
+    zIndex: 1, // above the background
   },
 
   // colored rectangle indicator on the left
   colorIndicator: {
     width: 4,
     backgroundColor: 'transparent', // will be overridden by task color
-    borderTopLeftRadius: 12,
-    borderBottomLeftRadius: 12,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
   },
 
   // main card container
@@ -353,9 +628,16 @@ const createStyles = (
     borderRadius: 12, // circular checkbox
     borderWidth: 2,
     borderColor: themeColors.border.primary(), // theme-aware border color
+    backgroundColor: 'transparent',
+  },
+  
+  // touchable area inside the checkbox for tap handling
+  checkboxTouchable: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12, // circular touchable area
     justifyContent: 'center', // center checkmark
     alignItems: 'center', // center checkmark
-    backgroundColor: 'transparent',
   },
   
   // completed checkbox styling

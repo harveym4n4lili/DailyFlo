@@ -173,11 +173,19 @@ export const ThemeColors = {
   light: {
     // background colors - surfaces and containers
     background: {
-      primary: PrimaryColors.light[200],      // white - main backgrounds
+      primary: PrimaryColors.light[100],      // white - main backgrounds
       secondary: PrimaryColors.light[100],   // light gray - secondary surfaces
       tertiary: PrimaryColors.light[200],    // medium gray - tertiary surfaces
+      quaternary: PrimaryColors.light[50],   // very light - quaternary surfaces
       elevated: PrimaryColors.light[50],     // white - elevated surfaces (modals, cards)
       overlay: 'rgba(0, 0, 0, 0.5)',        // black overlay - modal backdrops
+      darkOverlay: 'rgba(0, 0, 0, 0.7)',    // darker black overlay - stronger backdrops
+      lightOverlay: 'rgba(255, 255, 255, 0.5)', // white overlay - light backdrops
+      // inverted colors - dark mode colors used in light theme
+      invertedPrimary: PrimaryColors.dark[50],      // dark - inverted primary
+      invertedSecondary: PrimaryColors.dark[100],   // darker - inverted secondary
+      invertedTertiary: PrimaryColors.dark[200],    // medium dark - inverted tertiary
+      invertedElevated: PrimaryColors.dark[100],    // darker - inverted elevated
     },
     
     // text colors - typography hierarchy
@@ -187,25 +195,41 @@ export const ThemeColors = {
       tertiary: PrimaryColors.light[300],    // light gray - tertiary text
       inverse: PrimaryColors.light[50],      // white - text on dark backgrounds
       disabled: PrimaryColors.light[300],    // light gray - disabled text
+      // inverted colors - dark mode colors used in light theme
+      invertedPrimary: PrimaryColors.dark[900],      // light - inverted primary text
+      invertedSecondary: PrimaryColors.dark[400],    // medium light - inverted secondary text
+      invertedTertiary: PrimaryColors.dark[300],     // darker - inverted tertiary text
+      invertedDisabled: PrimaryColors.dark[300],     // darker - inverted disabled text
     },
     
     // border colors - dividers and outlines
     border: {
-      primary: PrimaryColors.light[200],     // light gray - primary borders
+      primary: PrimaryColors.light[50],     // light gray - primary borders
       secondary: PrimaryColors.light[100],   // very light gray - secondary borders
       focus: PrimaryColors.light[600],       // dark gray - focused borders
       error: SemanticColors.error[500],      // red - error borders
       success: SemanticColors.success[500],  // green - success borders
+      // inverted colors - dark mode colors used in light theme
+      invertedPrimary: PrimaryColors.dark[200],      // medium dark - inverted primary border
+      invertedSecondary: PrimaryColors.dark[100],    // darker - inverted secondary border
+      invertedFocus: PrimaryColors.dark[600],        // light - inverted focus border
     },
     
     // interactive colors - buttons and controls
     interactive: {
       primary: PrimaryColors.light[600],     // dark gray - primary buttons
       secondary: PrimaryColors.light[100],   // light gray - secondary buttons
-      tertiary: 'transparent',               // transparent - tertiary buttons
+      tertiary: PrimaryColors.light[200],               // transparent - tertiary buttons
       hover: PrimaryColors.light[700],       // darker gray - hover states
       active: PrimaryColors.light[800],      // darkest gray - active states
       disabled: PrimaryColors.light[200],    // light gray - disabled states
+      // inverted colors - dark mode colors used in light theme
+      invertedPrimary: PrimaryColors.dark[900],      // light - inverted primary interactive
+      invertedSecondary: PrimaryColors.dark[600],    // medium light - inverted secondary interactive
+      invertedTertiary: PrimaryColors.dark[300],     // darker - inverted tertiary interactive
+      invertedHover: PrimaryColors.dark[700],        // lighter - inverted hover state
+      invertedActive: PrimaryColors.dark[800],       // lightest - inverted active state
+      invertedDisabled: PrimaryColors.dark[200],     // medium dark - inverted disabled state
     },
   },
   
@@ -215,8 +239,16 @@ export const ThemeColors = {
       primary: PrimaryColors.dark[50],       // dark - main backgrounds
       secondary: PrimaryColors.dark[100],    // darker gray - secondary surfaces
       tertiary: PrimaryColors.dark[200],     // medium gray - tertiary surfaces
+      quaternary: PrimaryColors.dark[200],   // darker - quaternary surfaces
       elevated: PrimaryColors.dark[100],     // darker gray - elevated surfaces
       overlay: 'rgba(0, 0, 0, 0.8)',        // black overlay - modal backdrops
+      darkOverlay: 'rgba(0, 0, 0, 0.9)',    // darker black overlay - stronger backdrops
+      lightOverlay: 'rgba(255, 255, 255, 0.2)', // white overlay - light backdrops
+      // inverted colors - light mode colors used in dark theme
+      invertedPrimary: PrimaryColors.light[100],     // white - inverted primary
+      invertedSecondary: PrimaryColors.light[100],   // light gray - inverted secondary
+      invertedTertiary: PrimaryColors.light[200],    // medium light gray - inverted tertiary
+      invertedElevated: PrimaryColors.light[50],     // white - inverted elevated
     },
     
     // text colors - typography hierarchy
@@ -224,8 +256,14 @@ export const ThemeColors = {
       primary: PrimaryColors.dark[900],      // light gray - primary text
       secondary: PrimaryColors.dark[400],    // medium gray - secondary text
       tertiary: PrimaryColors.dark[300],     // darker gray - tertiary text
+      quaternary: PrimaryColors.dark[200],    // medium gray - quaternary text
       inverse: PrimaryColors.dark[900],      // very light - text on dark backgrounds
       disabled: PrimaryColors.dark[300],     // darker gray - disabled text
+      // inverted colors - light mode colors used in dark theme
+      invertedPrimary: PrimaryColors.light[900],     // dark gray - inverted primary text
+      invertedSecondary: PrimaryColors.light[400],   // medium gray - inverted secondary text
+      invertedTertiary: PrimaryColors.light[300],    // light gray - inverted tertiary text
+      invertedDisabled: PrimaryColors.light[300],    // light gray - inverted disabled text
     },
     
     // border colors - dividers and outlines
@@ -235,16 +273,27 @@ export const ThemeColors = {
       focus: PrimaryColors.dark[600],        // light gray - focused borders
       error: SemanticColors.error[500],      // red - error borders
       success: SemanticColors.success[500],  // green - success borders
+      // inverted colors - light mode colors used in dark theme
+      invertedPrimary: PrimaryColors.light[50],      // light gray - inverted primary border
+      invertedSecondary: PrimaryColors.light[100],   // very light gray - inverted secondary border
+      invertedFocus: PrimaryColors.light[600],       // dark gray - inverted focus border
     },
     
     // interactive colors - buttons and controls
     interactive: {
       primary: PrimaryColors.dark[900],      // light gray - primary buttons
-      secondary: PrimaryColors.dark[200],    // medium gray - secondary buttons
-      tertiary: 'transparent',               // transparent - tertiary buttons
+      secondary: PrimaryColors.dark[600],    // medium gray - secondary buttons
+      tertiary: PrimaryColors.dark[300],               // transparent - tertiary buttons
       hover: PrimaryColors.dark[700],        // lighter gray - hover states
       active: PrimaryColors.dark[800],       // lightest gray - active states
       disabled: PrimaryColors.dark[200],     // medium gray - disabled states
+      // inverted colors - light mode colors used in dark theme
+      invertedPrimary: PrimaryColors.light[600],     // dark gray - inverted primary interactive
+      invertedSecondary: PrimaryColors.light[100],   // light gray - inverted secondary interactive
+      invertedTertiary: 'transparent',               // transparent - inverted tertiary interactive
+      invertedHover: PrimaryColors.light[700],       // darker gray - inverted hover state
+      invertedActive: PrimaryColors.light[800],      // darkest gray - inverted active state
+      invertedDisabled: PrimaryColors.light[200],    // light gray - inverted disabled state
     },
   },
 } as const;
@@ -342,22 +391,41 @@ export function withOpacity(color: string, opacity: number): string {
  * USAGE EXAMPLES:
  * 
  * 1. Primary Colors:
- *    - Backgrounds: ThemeColors[theme].background.primary
+ *    - Backgrounds: ThemeColors[theme].background.primary (main)
+ *    - Secondary: ThemeColors[theme].background.secondary (light gray)
+ *    - Tertiary: ThemeColors[theme].background.tertiary (medium gray)
+ *    - Quaternary: ThemeColors[theme].background.quaternary (very light/dark)
+ *    - Elevated: ThemeColors[theme].background.elevated (modals, cards)
  *    - Text: ThemeColors[theme].text.primary
  *    - Borders: ThemeColors[theme].border.primary
  * 
- * 2. Semantic Colors:
+ * 2. Inverted Colors (for contrast within a theme):
+ *    - Inverted Backgrounds: ThemeColors[theme].background.invertedPrimary
+ *    - Inverted Text: ThemeColors[theme].text.invertedPrimary
+ *    - Inverted Borders: ThemeColors[theme].border.invertedPrimary
+ *    - Inverted Interactive: ThemeColors[theme].interactive.invertedPrimary
+ *    
+ *    Example use case: Light theme using dark colors for a header section
+ *    backgroundColor: ThemeColors.light.background.invertedPrimary (gives dark background in light theme)
+ *    color: ThemeColors.light.text.invertedPrimary (gives light text in light theme)
+ * 
+ * 3. Semantic Colors:
  *    - Success: getSemanticColor('success', 500)
  *    - Error: getSemanticColor('error', 500)
  *    - Warning: getSemanticColor('warning', 500)
  *    - Info: getSemanticColor('info', 500)
  * 
- * 3. Task Category Colors:
+ * 4. Task Category Colors:
  *    - Task icons: getTaskCategoryColor('red', 500)
  *    - Task backgrounds: getTaskCategoryColor('red', 50)
  *    - Task hover states: getTaskCategoryColor('red', 100)
  * 
- * 4. With Opacity:
+ * 5. Overlay Colors:
+ *    - Standard overlay: ThemeColors[theme].background.overlay
+ *    - Dark overlay: ThemeColors[theme].background.darkOverlay (stronger dark backdrop)
+ *    - Light overlay: ThemeColors[theme].background.lightOverlay (subtle light backdrop)
+ * 
+ * 6. With Opacity:
  *    - Semi-transparent overlays: withOpacity(ThemeColors[theme].background.primary, 0.5)
  *    - Subtle backgrounds: withOpacity(getSemanticColor('success', 500), 0.1)
  * 
@@ -381,6 +449,13 @@ export function withOpacity(color: string, opacity: number): string {
  * const statusStyle = {
  *   backgroundColor: getSemanticColor(task.isCompleted ? 'success' : 'error', 500),
  *   color: getSemanticColor(task.isCompleted ? 'success' : 'error', 50),
+ * };
+ * 
+ * // Using inverted colors for contrast sections (e.g., header with opposite theme)
+ * const headerStyle = {
+ *   backgroundColor: getThemeColor(theme, 'background', 'invertedPrimary'),
+ *   color: getThemeColor(theme, 'text', 'invertedPrimary'),
+ *   borderColor: getThemeColor(theme, 'border', 'invertedPrimary'),
  * };
  */
 

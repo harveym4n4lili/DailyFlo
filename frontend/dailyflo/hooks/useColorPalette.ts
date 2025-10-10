@@ -166,25 +166,50 @@ export function useThemeColors() {
       primary: () => getThemeColor('background', 'primary'),
       secondary: () => getThemeColor('background', 'secondary'),
       tertiary: () => getThemeColor('background', 'tertiary'),
+      quaternary: () => getThemeColor('background', 'quaternary'),
       elevated: () => getThemeColor('background', 'elevated'),
       overlay: () => getThemeColor('background', 'overlay'),
+      darkOverlay: () => getThemeColor('background', 'darkOverlay'),
+      lightOverlay: () => getThemeColor('background', 'lightOverlay'),
+      // inverted colors - opposite theme colors for contrast sections
+      invertedPrimary: () => getThemeColor('background', 'invertedPrimary'),
+      invertedSecondary: () => getThemeColor('background', 'invertedSecondary'),
+      invertedTertiary: () => getThemeColor('background', 'invertedTertiary'),
+      invertedElevated: () => getThemeColor('background', 'invertedElevated'),
     },
     
     text: {
       primary: () => getThemeColor('text', 'primary'),
       secondary: () => getThemeColor('text', 'secondary'),
       tertiary: () => getThemeColor('text', 'tertiary'),
+      quaternary: () => getThemeColor('text', 'quaternary'),
+      // inverted colors - opposite theme colors for contrast sections
+      invertedPrimary: () => getThemeColor('text', 'invertedPrimary'),
+      invertedSecondary: () => getThemeColor('text', 'invertedSecondary'),
+      invertedTertiary: () => getThemeColor('text', 'invertedTertiary'),
+      invertedDisabled: () => getThemeColor('text', 'invertedDisabled'),
     },
     
     border: {
       primary: () => getThemeColor('border', 'primary'),
       secondary: () => getThemeColor('border', 'secondary'),
+      // inverted colors - opposite theme colors for contrast sections
+      invertedPrimary: () => getThemeColor('border', 'invertedPrimary'),
+      invertedSecondary: () => getThemeColor('border', 'invertedSecondary'),
+      invertedFocus: () => getThemeColor('border', 'invertedFocus'),
     },
     
     interactive: {
       primary: () => getThemeColor('interactive', 'primary'),
       secondary: () => getThemeColor('interactive', 'secondary'),
       tertiary: () => getThemeColor('interactive', 'tertiary'),
+      // inverted colors - opposite theme colors for contrast sections
+      invertedPrimary: () => getThemeColor('interactive', 'invertedPrimary'),
+      invertedSecondary: () => getThemeColor('interactive', 'invertedSecondary'),
+      invertedTertiary: () => getThemeColor('interactive', 'invertedTertiary'),
+      invertedHover: () => getThemeColor('interactive', 'invertedHover'),
+      invertedActive: () => getThemeColor('interactive', 'invertedActive'),
+      invertedDisabled: () => getThemeColor('interactive', 'invertedDisabled'),
     },
     
     // utility functions
@@ -288,6 +313,38 @@ export function useThemeColors() {
  *   };
  *   
  *   return <View style={getButtonStyle()}>Button</View>;
+ * }
+ * ```
+ * 
+ * INVERTED COLORS (for contrast sections):
+ * ```tsx
+ * import { useThemeColors } from '@/hooks/useColorPalette';
+ * 
+ * function ModalHeader() {
+ *   const themeColors = useThemeColors();
+ *   
+ *   // use inverted colors to create a dark header in light mode (and vice versa)
+ *   return (
+ *     <View style={{
+ *       backgroundColor: themeColors.background.invertedPrimary(),
+ *       borderBottomColor: themeColors.border.invertedPrimary(),
+ *     }}>
+ *       <Text style={{
+ *         color: themeColors.text.invertedPrimary(),
+ *       }}>
+ *         Header Title
+ *       </Text>
+ *       <TouchableOpacity style={{
+ *         backgroundColor: themeColors.interactive.invertedTertiary(),
+ *       }}>
+ *         <Text style={{
+ *           color: themeColors.text.invertedSecondary(),
+ *         }}>
+ *           Cancel
+ *         </Text>
+ *       </TouchableOpacity>
+ *     </View>
+ *   );
  * }
  * ```
  */

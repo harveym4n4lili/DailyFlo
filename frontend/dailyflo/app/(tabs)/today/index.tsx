@@ -1,12 +1,15 @@
 
-import React, { useEffect, useMemo } from 'react';
-import { StyleSheet, RefreshControl, View, Text } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, RefreshControl, View, Text, Alert, Modal } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 // import our custom layout components
 import { ScreenContainer, SafeAreaWrapper } from '@/components';
 
 // import our new task components
 import { ListCard } from '@/components/ui/Card';
+import { FloatingActionButton } from '@/components/ui/Button';
+import { ModalContainer } from '@/components/layout/ModalLayout';
 
 // import color palette system for consistent theming
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
@@ -32,8 +35,16 @@ import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSl
 // TYPES FOLDER IMPORTS - TypeScript type definitions
 // The types folder contains all TypeScript interfaces and type definitions
 import { Task } from '@/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TodayScreen() {
+  // REFRESH STATE - Controls the pull-to-refresh indicator
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // TASK DETAIL MODAL STATE
+  const [isTaskDetailModalVisible, setIsTaskDetailModalVisible] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  
   // COLOR PALETTE USAGE - Getting theme-aware colors
   // useThemeColors: Hook that provides theme-aware colors (background, text, borders, etc.)
   // useSemanticColors: Hook that provides semantic colors (success, error, warning, info)
@@ -45,9 +56,12 @@ export default function TodayScreen() {
   // This gives us access to predefined text styles and satoshi font family
   const typography = useTypography();
   
+  // SAFE AREA INSETS - Get safe area insets for proper positioning
+  const insets = useSafeAreaInsets();
+  
   // create dynamic styles using the color palette system and typography system
-  // we pass typography to the createStyles function so it can use typography styles
-  const styles = useMemo(() => createStyles(themeColors, semanticColors, typography), [themeColors, semanticColors, typography]);
+  // we pass typography and insets to the createStyles function so it can use typography styles and safe area
+  const styles = useMemo(() => createStyles(themeColors, semanticColors, typography, insets), [themeColors, semanticColors, typography, insets]);
   
   // STORE USAGE - Getting Redux dispatch function
   // Get dispatch function to send actions to Redux store
@@ -67,25 +81,37 @@ export default function TodayScreen() {
   // useTasks: Custom hook that provides typed access to the tasks slice state
   // This is defined in store/hooks.ts and wraps Redux's useSelector
 
-  // Filter tasks to show only today's tasks
+  // filter tasks to show only today's and overdue tasks (including completed tasks)
   // useMemo ensures this calculation only runs when tasks change
   const todaysTasks = useMemo(() => {
     const today = new Date();
-    const todayString = today.toDateString(); // Get date in "Mon Jan 15 2024" format
+    const todayString = today.toDateString(); // get date in "Mon Jan 15 2024" format
     
     const filtered = tasks.filter(task => {
-      // Include tasks that are due today
+      // include tasks that are due today or overdue (including completed tasks)
       if (task.dueDate) {
         const taskDate = new Date(task.dueDate);
         const isToday = taskDate.toDateString() === todayString;
-        // Include overdue tasks (due before today and not completed)
-        const isOverdue = !task.isCompleted && taskDate < today;
+        // include overdue tasks (due before today, including completed ones)
+        const isOverdue = taskDate < today;
         return isToday || isOverdue;
       }
       return false;
     });
     return filtered;
   }, [tasks]);
+
+  // calculate total task count for header display
+  const totalTaskCount = todaysTasks.length;
+
+  // grouping explanation:
+  // the listcard component will automatically group tasks by due date when groupBy="dueDate" is set
+  // this creates separate sections for:
+  // - "overdue" tasks (due before today and not completed)
+  // - "today" tasks (due today and not completed)
+  // - specific dates if any tasks are due on future dates (and not completed)
+  // completed tasks are filtered out and will not appear in any group
+  // the grouping logic is handled internally by the listcard component
 
   // STORE USAGE - Dispatching actions to fetch data
   // Fetch tasks when component mounts
@@ -103,20 +129,33 @@ export default function TodayScreen() {
 
   // STORE USAGE - Dispatching actions for user interactions
   // Handle pull-to-refresh
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
     // dispatch(fetchTasks()): Triggers a fresh fetch of tasks from the API
     // This is called when the user pulls down to refresh the screen
-    dispatch(fetchTasks());
+    await dispatch(fetchTasks());
+    setIsRefreshing(false);
   };
 
   // TASK INTERACTION HANDLERS - Functions that handle user interactions with tasks
   // These functions demonstrate the flow: User interaction → Redux action → State update → UI re-render
   
-  // handle task press (for future task detail modal)
+  // handle task press - shows task detail modal with haptic feedback
   const handleTaskPress = (task: Task) => {
     console.log('📱 Task pressed:', task.title);
-    // TODO: Navigate to task detail modal or show task details
-    // This will be implemented when we add task detail functionality
+    
+    // provide medium haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    // show task detail modal
+    setSelectedTask(task);
+    setIsTaskDetailModalVisible(true);
+  };
+  
+  // handle task detail modal close
+  const handleTaskDetailModalClose = () => {
+    setIsTaskDetailModalVisible(false);
+    setSelectedTask(null);
   };
   
   // handle task completion toggle
@@ -153,14 +192,68 @@ export default function TodayScreen() {
     dispatch(deleteTask(task.id));
   };
 
+
+  // SWIPE GESTURE HANDLERS - Functions that handle swipe gestures on task cards
+  // these demonstrate how to use the new swipe functionality in TaskCard
+  
+  // handle swipe left gesture - shows confirmation dialog before editing task
+  const handleTaskSwipeLeft = (task: Task) => {
+    console.log('Swiped left on task:', task.title);
+    
+    // show confirmation dialog before editing task
+    Alert.alert(
+      'Edit Task', // dialog title
+      `Do you want to edit "${task.title}"?`, // dialog message with task title
+      [
+        {
+          text: 'Cancel', // cancel button
+          style: 'cancel', // styled as cancel button (appears on left on iOS)
+        },
+        {
+          text: 'Edit', // confirm button
+          style: 'default', // styled as default action
+          onPress: () => {
+            // actually edit the task when user confirms
+            console.log('✏️ User confirmed editing of task:', task.title);
+            handleTaskEdit(task);
+          },
+        },
+      ],
+      { cancelable: true } // allow dismissing dialog by tapping outside
+    );
+  };
+  
+  // handle swipe right gesture - shows confirmation dialog before deleting task
+  const handleTaskSwipeRight = (task: Task) => {
+    console.log('Swiped right on task:', task.title);
+    
+    // show confirmation dialog before deleting task
+    Alert.alert(
+      'Delete Task', // dialog title
+      `Are you sure you want to delete "${task.title}"? This action cannot be undone.`, // dialog message with task title
+      [
+        {
+          text: 'Cancel', // cancel button
+          style: 'cancel', // styled as cancel button (appears on left on iOS)
+        },
+        {
+          text: 'Delete', // confirm button
+          style: 'destructive', // styled as destructive action (red color on iOS)
+          onPress: () => {
+            // actually delete the task when user confirms
+            console.log('🗑️ User confirmed deletion of task:', task.title);
+            handleTaskDelete(task);
+          },
+        },
+      ],
+      { cancelable: true } // allow dismissing dialog by tapping outside
+    );
+  };
+
   // render loading state when no tasks are loaded yet
   if (isLoading && tasks.length === 0) {
     return (
-      <ScreenContainer scrollable={false}>
-        {/* safe area wrapper for header to ensure proper spacing on devices with notches */}
-        <Text style={styles.title}>Today</Text>
-        <Text style={styles.subtitle}>Loading your tasks...</Text>
-        
+      <ScreenContainer scrollable={false} paddingHorizontal={0}>
         {/* loading content with centered text */}
         <Text style={styles.loadingText}>Loading tasks...</Text>
       </ScreenContainer>
@@ -170,11 +263,7 @@ export default function TodayScreen() {
   // render error state when task loading fails
   if (error && tasks.length === 0) {
     return (
-      <ScreenContainer scrollable={false}>
-        {/* header section with title and error message */}
-        <Text style={styles.title}>Today</Text>
-        <Text style={styles.subtitle}>Error loading tasks</Text>
-        
+      <ScreenContainer scrollable={false} paddingHorizontal={0}>
         {/* error content with retry instructions */}
         <Text style={styles.errorText}>Failed to load tasks</Text>
         <Text style={styles.hint}>Pull down to try again</Text>
@@ -185,72 +274,121 @@ export default function TodayScreen() {
   // render main content with today's tasks
   return (
     <ScreenContainer 
-      scrollable={true}
-      scrollViewProps={{
-        refreshControl: (
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={handleRefresh}
-            tintColor="#007AFF" // iOS blue color for pull-to-refresh indicator
-          />
-        )
-      }}
-    >
-       {/* header section with title and dynamic task count */}
-       <Text style={styles.title}>Today</Text>
-        <Text style={styles.subtitle}>
-          {todaysTasks.length === 0 
-            ? "No tasks for today" 
-            : `${todaysTasks.length} task${todaysTasks.length === 1 ? '' : 's'} for today`
-          }
-        </Text>
-      
-      {/* COMPONENT USAGE - Using our new TaskList component */}
-      {/* This demonstrates the flow: Redux Store → Today Screen → TaskList → TaskCard → User Interaction */}
+      scrollable={false}
+      paddingHorizontal={0}
+     >
+      {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
+      {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
       <ListCard
         tasks={todaysTasks}
         onTaskPress={handleTaskPress}
         onTaskComplete={handleTaskComplete}
         onTaskEdit={handleTaskEdit}
         onTaskDelete={handleTaskDelete}
+        onTaskSwipeLeft={handleTaskSwipeLeft}
+        onTaskSwipeRight={handleTaskSwipeRight}
         showCategory={false}
         compact={false}
         emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
         loading={isLoading && todaysTasks.length === 0}
-        groupBy="none"
-        sortBy="dueDate"
-        sortDirection="asc"
+        groupBy="dueDate" // group tasks by due date to separate overdue and today's tasks
+        sortBy="dueDate" // sort tasks by due date within each group
+        sortDirection="asc" // show overdue tasks first, then today's tasks (ascending = oldest first)
+        onRefresh={handleRefresh}
+        refreshing={isLoading}
+        onScroll={(event) => {
+          // Notify the layout about scroll position changes
+          if ((global as any).trackScrollToTodayLayout) {
+            (global as any).trackScrollToTodayLayout(event.nativeEvent.contentOffset.y);
+          }
+        }}
+        scrollEventThrottle={16}
+        headerTitle="Today"
+        headerSubtitle={
+          totalTaskCount === 0 
+            ? "No tasks for today" 
+            : `${totalTaskCount} task${totalTaskCount === 1 ? '' : 's'} for today`
+        }
       />
+      
+      {/* Floating Action Button for quick task creation */}
+      <FloatingActionButton
+        onPress={() => {
+          console.log('FAB Pressed - Ready to create new task!');
+          // TODO: Navigate to task creation modal
+        }}
+        accessibilityLabel="Add new task"
+        accessibilityHint="Double tap to create a new task"
+      />
+      
+      {/* Task Detail Modal - pageSheet style modal for viewing task details */}
+      <Modal
+        visible={isTaskDetailModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleTaskDetailModalClose}
+      >
+        <ModalContainer
+          presentationStyle="pageSheet"
+          title={selectedTask?.title || "Task Details"}
+          onClose={handleTaskDetailModalClose}
+          showCloseButton={true}
+          showHeader={true}
+        >
+          {selectedTask && (
+            <View style={styles.taskDetailContent}>
+              <Text style={styles.taskDetailTitle}>{selectedTask.title}</Text>
+              
+              {selectedTask.description && (
+                <View style={styles.taskDetailSection}>
+                  <Text style={styles.taskDetailSectionTitle}>Description</Text>
+                  <Text style={styles.taskDetailDescription}>{selectedTask.description}</Text>
+                </View>
+              )}
+              
+              <View style={styles.taskDetailSection}>
+                <Text style={styles.taskDetailSectionTitle}>Due Date</Text>
+                <Text style={styles.taskDetailValue}>
+                  {selectedTask.dueDate 
+                    ? new Date(selectedTask.dueDate).toLocaleDateString()
+                    : 'No due date'
+                  }
+                </Text>
+              </View>
+              
+              <View style={styles.taskDetailSection}>
+                <Text style={styles.taskDetailSectionTitle}>Priority</Text>
+                <Text style={styles.taskDetailValue}>
+                  {selectedTask.priorityLevel === 5 ? 'Critical' :
+                   selectedTask.priorityLevel === 4 ? 'High' :
+                   selectedTask.priorityLevel === 3 ? 'Medium' :
+                   selectedTask.priorityLevel === 2 ? 'Low' : 'Minimal'}
+                </Text>
+              </View>
+              
+              <View style={styles.taskDetailSection}>
+                <Text style={styles.taskDetailSectionTitle}>Status</Text>
+                <Text style={[styles.taskDetailValue, { color: selectedTask.isCompleted ? semanticColors.success() : themeColors.text.secondary() }]}>
+                  {selectedTask.isCompleted ? 'Completed' : 'In Progress'}
+                </Text>
+              </View>
+            </View>
+          )}
+        </ModalContainer>
+      </Modal>
     </ScreenContainer>
   );
 }
 
 // create dynamic styles using the color palette system and typography system
-// this function combines colors and typography to create consistent styling
+// this function combines colors, typography, and safe area insets to create consistent styling
 const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>, 
   semanticColors: ReturnType<typeof useSemanticColors>,
-  typography: ReturnType<typeof useTypography>
+  typography: ReturnType<typeof useTypography>,
+  insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
-  // title text styling for the main header
-  // using typography system for consistent text styling
-  title: {
-    // use the heading-1 text style from typography system (36px, bold, satoshi font)
-    ...typography.getTextStyle('heading-1'),
-    // use theme-aware primary text color from color system
-    color: themeColors.text.primary(),
-  },
-  
-  // subtitle text styling for the main header section
-  // using typography system for consistent text styling
-  subtitle: {
-    // use the heading-4 text style from typography system (16px, bold, satoshi font)
-    ...typography.getTextStyle('heading-4'),
-    // add top margin for spacing from title
-    marginTop: 8,
-    // use theme-aware secondary text color from color system
-    color: themeColors.text.secondary(),
-  },
+
   
   // loading text styling for initial load state
   // using typography system for consistent text styling
@@ -305,6 +443,44 @@ const createStyles = (
     marginBottom: 8,
     // use theme-aware primary text color from color system
     color: themeColors.text.primary(),
+  },
+  
+  // TASK DETAIL MODAL STYLES
+  taskDetailContent: {
+    flex: 1,
+    paddingVertical: 8,
+  },
+  
+  taskDetailTitle: {
+    ...typography.getTextStyle('heading-2'),
+    color: themeColors.text.primary(),
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  
+  taskDetailSection: {
+    marginBottom: 20,
+  },
+  
+  taskDetailSectionTitle: {
+    ...typography.getTextStyle('body-large'),
+    color: themeColors.text.secondary(),
+    fontWeight: '600',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  
+  taskDetailValue: {
+    ...typography.getTextStyle('body-large'),
+    color: themeColors.text.primary(),
+    lineHeight: 20,
+  },
+  
+  taskDetailDescription: {
+    ...typography.getTextStyle('body-large'),
+    color: themeColors.text.primary(),
+    lineHeight: 22,
   },
   
 });

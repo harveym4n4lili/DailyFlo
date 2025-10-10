@@ -72,8 +72,8 @@ export const TextStyles = {
     fontFamily: 'Satoshi-Bold',  // specific font family for react native
   },
   'heading-2': {
-    fontSize: 24,        // medium title size
-    lineHeight: 28,      // slightly tighter than body text
+    fontSize: 26,        // medium title size
+    lineHeight: 32,      // slightly tighter than body text
     fontWeight: FontWeight.bold,  // bold weight for emphasis
     fontFamily: 'Satoshi-Bold',  // specific font family for react native
   },
@@ -112,16 +112,16 @@ export const TextStyles = {
   
   // button text styles - for interactive elements
   'button-primary': {
-    fontSize: 14,        // standard button text
+    fontSize: 18,        // standard button text
     lineHeight: 20,      // comfortable line height for buttons
-    fontWeight: FontWeight.medium,  // medium weight for emphasis
-    fontFamily: 'Satoshi-Medium',  // specific font family for react native
+    fontWeight: FontWeight.bold,  // medium weight for emphasis
+    fontFamily: 'Satoshi-Bold',  // specific font family for react native
   },
   'button-secondary': {
-    fontSize: 14,        // same size as primary button
+    fontSize: 16,        // same size as primary button
     lineHeight: 18,      // slightly tighter line height
-    fontWeight: FontWeight.medium,  // medium weight
-    fontFamily: 'Satoshi-Medium',  // specific font family for react native
+    fontWeight: FontWeight.bold,  // medium weight
+    fontFamily: 'Satoshi-Bold',  // specific font family for react native
   },
   'button-text': {
     fontSize: 10,        // small button text (like links)
