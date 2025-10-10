@@ -2,18 +2,17 @@
  * TaskColorSelectModal
  * 
  * Modal for selecting task color from available color palette.
- * Shows a grid of color options using TaskCategoryColors from the design system.
+ * Shows a horizontal scrollable row of color options using TaskCategoryColors from the design system.
+ * Uses DraggableModal component for drag-to-dismiss and snap point functionality.
  */
 
 import React from 'react';
-import { View, Text, Modal, Pressable, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
-import { getTextStyle } from '@/constants/Typography';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
-import { ModalContainer } from '@/components/layout/ModalLayout';
+import { ModalHeader, DraggableModal } from '@/components/layout/ModalLayout';
 
 export interface TaskColorSelectModalProps {
   visible: boolean;
@@ -48,147 +47,110 @@ export function TaskColorSelectModal({
   const insets = useSafeAreaInsets();
 
   // handle color selection
-  // flow: user taps a color → this function updates the form state → modal closes
+  // flow: user taps a color → this function updates the form state
+  // modal stays open so user can continue browsing colors or dismiss manually
   const handleColorSelect = (color: TaskColor) => {
     console.log('Color selected:', color);
     onSelectColor(color);
-    onClose();
   };
 
   return (
-    <Modal
+    <DraggableModal
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-      transparent={false}
+      onClose={onClose}
+      // snap points: close at 30%, initial at 50%, expanded at 93%
+      // lowest snap point (30%) will dismiss the modal
+      snapPoints={[0.3, 0.5, 0.93]}
+      // start at the middle snap point (50%)
+      initialSnapPoint={1}
+      borderRadius={20}
     >
-      <ModalContainer
-        presentationStyle="pageSheetWithHeight"
-        height={480}
-        onClose={onClose}
-        noPadding={false}
-      >
-        {/* modal header */}
-        <View
-          style={{
-            paddingTop: 12,
-            paddingBottom: 20,
-            paddingHorizontal: 4,
-            borderBottomWidth: 1,
-            borderBottomColor: themeColors.border.primary(),
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text
-              style={{
-                ...getTextStyle('heading-3'),
-                color: themeColors.text.primary(),
-              }}
-            >
-              Task Color
-            </Text>
-            
-            {/* close button */}
-            <Pressable
-              onPress={onClose}
-              style={{
-                padding: 8,
-                borderRadius: 8,
-                backgroundColor: themeColors.interactive.tertiary(),
-              }}
-            >
-              <Ionicons
-                name="close"
-                size={24}
-                color={themeColors.text.secondary()}
+              {/* modal header with drag indicator and title */}
+              {/* showDragIndicator displays the small rounded bar at the top */}
+              {/* showCloseButton is false since we dismiss by dragging or tapping backdrop */}
+              <ModalHeader
+                title="Color"
+                showCloseButton={false}
+                showDragIndicator={true}
+                showBorder={true}
               />
-            </Pressable>
-          </View>
-        </View>
 
-        {/* color grid */}
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{
-            paddingTop: 24,
-            paddingBottom: insets.bottom + 24,
-            gap: 12,
-          }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* map through available colors and display them in a grid-like layout */}
-          {AVAILABLE_COLORS.map((color) => {
-            // check if this color is currently selected
-            const isSelected = color === selectedColor;
-            
-            // get the color value from our color palette system
-            // using shade 500 for the main color display
-            const colorValue = TaskCategoryColors[color][500];
-            
-            // get a lighter shade for the background
-            const bgColorValue = TaskCategoryColors[color][50];
-
-            return (
-              <Pressable
-                key={color}
-                onPress={() => handleColorSelect(color)}
-                style={{
-                  flexDirection: 'row',
+              {/* scrollable content area */}
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{
+                  flexGrow: 1,
+                  paddingTop: 12,
+                  paddingBottom: insets.bottom + 24,
+                  paddingHorizontal: 20,
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingVertical: 16,
-                  paddingHorizontal: 16,
-                  borderRadius: 12,
-                  backgroundColor: isSelected 
-                    ? bgColorValue 
-                    : themeColors.background.elevated(),
-                  borderWidth: isSelected ? 2 : 1,
-                  borderColor: isSelected 
-                    ? colorValue 
-                    : themeColors.border.primary(),
                 }}
+                showsVerticalScrollIndicator={false}
               >
-                {/* left side: color circle and name */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                  {/* color circle preview */}
-                  <View
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 16,
-                      backgroundColor: colorValue,
-                      borderWidth: 2,
-                      borderColor: themeColors.border.secondary(),
-                    }}
-                  />
-                  
-                  {/* color name */}
-                  <Text
-                    style={{
-                      ...getTextStyle('body-large'),
-                      color: themeColors.text.primary(),
-                      fontWeight: isSelected ? '600' : '400',
+                {/* horizontal color slider */}
+                <View
+                  style={{
+                    width: '100%',
+                  }}
+                >
+                {/* container with same styling as the color icon button */}
+                <View
+                  style={{
+                    backgroundColor: themeColors.background.tertiary(),
+                    paddingVertical: 8,
+                    paddingHorizontal: 8,
+                    width: '100%',
+                    alignItems: 'center',
+                    borderRadius: 29,
+                  }}
+                >
+                  {/* horizontal scrollable row of color circles */}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{
+                      gap: 16,
+                      alignItems: 'center',
+                      borderRadius: 29,
                     }}
                   >
-                    {COLOR_NAMES[color]}
-                  </Text>
-                </View>
+                  {/* map through available colors and display them as circular swatches */}
+                  {AVAILABLE_COLORS.map((color) => {
+                    // check if this color is currently selected
+                    const isSelected = color === selectedColor;
+                    
+                    // get the color value from our color palette system
+                    // using shade 500 for the main color display
+                    const colorValue = TaskCategoryColors[color][500];
 
-                {/* right side: checkmark if selected */}
-                {isSelected && (
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={24}
-                    color={colorValue}
-                  />
-                )}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </ModalContainer>
-    </Modal>
+                    return (
+                      <Pressable
+                        key={color}
+                        onPress={() => handleColorSelect(color)}
+                        style={{
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {/* color circle swatch */}
+                        <View
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 25,
+                            backgroundColor: colorValue,
+                            borderWidth: isSelected ? 2 : 0,
+                            borderColor: themeColors.border.invertedPrimary(),
+                          }}
+                        />
+                      </Pressable>
+                    );
+                  })}
+                  </ScrollView>
+                </View>
+                </View>
+              </ScrollView>
+    </DraggableModal>
   );
 }
 
