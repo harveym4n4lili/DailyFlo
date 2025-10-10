@@ -16,6 +16,7 @@ import { DatePickerModal } from '@/components/features/calendar';
 import { TaskColorSelectModal } from './TaskColorSelectModal';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
+import { ModalBackdrop } from '@/components/layout/ModalLayout';
 
 export interface TaskBasicInfoProps {
   initialValues?: Partial<TaskFormValues>;
@@ -128,6 +129,12 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
       style={{ flex: 1 }}
     >
       <View style={{ flex: 1 }}>
+        {/* reusable backdrop component that fades when any modal opens */}
+        {/* isVisible is true when any modal (date picker or color picker) is open */}
+        <ModalBackdrop 
+          isVisible={isDatePickerVisible || isColorPickerVisible}
+        />
+
         {/* header with title input and color icon */}
         <TouchableWithoutFeedback onPress={dismissKeyboard}>
           <View
