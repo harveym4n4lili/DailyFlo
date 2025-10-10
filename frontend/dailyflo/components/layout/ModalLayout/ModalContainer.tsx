@@ -25,6 +25,7 @@ export interface ModalContainerProps {
   presentationStyle?: ModalPresentationStyle; // how the modal is presented
   height?: DimensionValue; // specific height for pageSheetWithHeight (e.g., 400 or '60%')
   noPadding?: boolean; // whether to remove content padding (for edge-to-edge content)
+  backgroundColor?: string; // custom background color override
 }
 
 export function ModalContainer({ 
@@ -34,6 +35,7 @@ export function ModalContainer({
   presentationStyle = 'pageSheet',
   height,
   noPadding = false,
+  backgroundColor,
 }: ModalContainerProps) {
   // get theme-aware colors from color palette system
   const colors = useThemeColors();
@@ -57,7 +59,7 @@ export function ModalContainer({
       default: 1 
     }),
     overflow: 'hidden',
-    backgroundColor: isFullScreen ? colors.background.primary() : colors.background.elevated(),
+    backgroundColor: backgroundColor || (isFullScreen ? colors.background.primary() : colors.background.elevated()),
     borderColor: isFullScreen ? 'transparent' : colors.border.primary(),
   };
 
@@ -69,13 +71,13 @@ export function ModalContainer({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,
-    backgroundColor: colors.interactive.tertiary(),
+    backgroundColor: colors.background.lightOverlay(),
     zIndex: 1000,
   };
   
   const cancelTextStyle: TextStyle = {
     ...typography.getTextStyle('button-secondary'),
-    color: colors.text.quaternary(),
+    color: colors.text.invertedPrimary(),
   };
   
   const contentStyle: ViewStyle = {
