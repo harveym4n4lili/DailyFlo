@@ -601,3 +601,31 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+---
+## [10/10/2025] - [Friday]
+
+### Today's Goals
+- [X] Styled task creation modal topsection
+- [X] Added a color pallete icon that opens a color picker mdoal
+- [X] Designed my own Draggable Modal bringing better UX
+- [X] Added inverted colors to palette
+
+
+### Plans For Future
+- Plan next implementation of task creation basic info
+- Plan how to implement repeating task selection
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+---
+## [11/10/2025] - [Saturday]
+
+### Today's Goals
+- [X] 
+
+
+### Plans For Future
+- 
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
