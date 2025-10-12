@@ -49,6 +49,9 @@ export interface Task {
   // Basic task information
   title: string;                    // Title of the task (required)
   description: string;              // Optional description of the task
+  icon?: string;                    // Icon name for the task (e.g., 'briefcase', 'home') - optional visual identifier
+  time?: string;                    // Specific time for the task (HH:MM format) - optional, used with dueDate for precise scheduling
+  duration: number;                 // Duration of the task in minutes (can be 0 if not specified)
   
   // Task scheduling and status
   dueDate: string | null;           // When the task is due (optional) - stored as ISO string for Redux serialization
@@ -81,6 +84,9 @@ export interface Task {
 export interface CreateTaskInput {
   title: string;                    // Required: Task title
   description?: string;             // Optional: Task description
+  icon?: string;                    // Optional: Icon name for visual identification
+  time?: string;                    // Optional: Specific time (HH:MM format) for the task
+  duration?: number;                // Optional: Duration in minutes (defaults to 0)
   dueDate?: string;                 // Optional: Due date - stored as ISO string for Redux serialization
   priorityLevel?: PriorityLevel;    // Optional: Priority (defaults to 3)
   color?: TaskColor;                // Optional: Color (defaults to 'blue')
@@ -95,6 +101,9 @@ export interface UpdateTaskInput {
   id: string;                       // Required: Task ID to update
   title?: string;                   // Optional: New title
   description?: string;             // Optional: New description
+  icon?: string;                    // Optional: New icon name
+  time?: string;                    // Optional: New time (HH:MM format)
+  duration?: number;                // Optional: New duration in minutes
   dueDate?: string | null;          // Optional: New due date (null to remove) - stored as ISO string for Redux serialization
   isCompleted?: boolean;            // Optional: Completion status
   priorityLevel?: PriorityLevel;    // Optional: New priority
