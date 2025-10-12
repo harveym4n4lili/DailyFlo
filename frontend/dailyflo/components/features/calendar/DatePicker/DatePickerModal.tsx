@@ -192,8 +192,8 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
       // start at the middle snap point (60%)
       initialSnapPoint={1}
       borderRadius={20}
-      // pass the repeating container to float independently of modal drag
-      floatingContainer={repeatingContainer}
+      // pass the repeating container as sticky footer - stays fixed at bottom while modal drags
+      stickyFooter={repeatingContainer}
     >
       {/* custom header for date picker modal */}
       <ModalHeader
