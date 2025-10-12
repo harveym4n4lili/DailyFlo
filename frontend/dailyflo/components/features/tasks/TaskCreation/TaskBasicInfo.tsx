@@ -13,7 +13,7 @@ import { getTextStyle } from '@/constants/Typography';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { validateAll, TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
 import { DatePickerModal } from '@/components/features/calendar';
-import { TaskColorSelectModal } from './TaskColorSelectModal';
+import { TaskIconColorModal } from './TaskIconColorModal';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
 import { ModalBackdrop } from '@/components/layout/ModalLayout';
@@ -280,7 +280,7 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
       {/* color picker modal */}
       {/* this modal appears when user wants to select a task color */}
       {/* flow: user taps color icon → modal opens → user picks color → onSelectColor called → modal closes */}
-      <TaskColorSelectModal
+      <TaskIconColorModal
         visible={isColorPickerVisible}
         selectedColor={(values.color as TaskColor) || 'blue'}
         onClose={handleColorPickerClose}
