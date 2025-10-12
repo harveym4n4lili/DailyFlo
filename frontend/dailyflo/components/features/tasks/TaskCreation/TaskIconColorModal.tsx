@@ -28,6 +28,10 @@ export interface TaskIconColorModalProps {
 // available task colors that match our color palette system
 const AVAILABLE_COLORS: TaskColor[] = ['red', 'blue', 'green', 'yellow', 'purple', 'teal', 'orange'];
 
+// icon grid configuration
+const ICON_PADDING = 4; // padding around each icon - adjust this to control spacing
+const ICONS_PER_ROW = 6; // number of icons per row
+
 // available icons for tasks (using Ionicons names)
 // these are common task-related icons that users can choose from
 const AVAILABLE_ICONS = [
@@ -47,6 +51,30 @@ const AVAILABLE_ICONS = [
   { name: 'school-outline', label: 'Study' },
   { name: 'cash-outline', label: 'Finance' },
   { name: 'gift-outline', label: 'Gift' },
+  { name: 'calendar-outline', label: 'Event' },
+  { name: 'time-outline', label: 'Clock' },
+  { name: 'airplane-outline', label: 'Flight' },
+  { name: 'camera-outline', label: 'Photo' },
+  { name: 'heart-outline', label: 'Heart' },
+  { name: 'star-outline', label: 'Star' },
+  { name: 'trophy-outline', label: 'Goal' },
+  { name: 'bed-outline', label: 'Sleep' },
+  { name: 'pizza-outline', label: 'Pizza' },
+  { name: 'beer-outline', label: 'Drink' },
+  { name: 'bicycle-outline', label: 'Bike' },
+  { name: 'game-controller-outline', label: 'Game' },
+  { name: 'tv-outline', label: 'Watch' },
+  { name: 'laptop-outline', label: 'Laptop' },
+  { name: 'phone-portrait-outline', label: 'Phone' },
+  { name: 'cut-outline', label: 'Haircut' },
+  { name: 'paw-outline', label: 'Pet' },
+  { name: 'leaf-outline', label: 'Nature' },
+  { name: 'bulb-outline', label: 'Idea' },
+  { name: 'build-outline', label: 'Fix' },
+  { name: 'hammer-outline', label: 'DIY' },
+  { name: 'brush-outline', label: 'Art' },
+  { name: 'chatbubble-outline', label: 'Chat' },
+  { name: 'document-text-outline', label: 'Doc' },
 ];
 
 export function TaskIconColorModal({
@@ -103,10 +131,9 @@ export function TaskIconColorModal({
               <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{
-                  flexGrow: 1,
                   paddingTop: 12,
                   paddingBottom: insets.bottom + 24,
-                  paddingHorizontal: 20,
+                  
                   gap: 24,
                 }}
                 showsVerticalScrollIndicator={false}
@@ -116,80 +143,84 @@ export function TaskIconColorModal({
                <View style={{ gap: 12 }}>
                   <Text style={[
                     getTextStyle('body-large'),
-                    { color: themeColors.text.primary(), fontWeight: '600' }
+                    { color: themeColors.text.primary(), fontWeight: '600', paddingHorizontal: 20 }
                   ]}>
                     Color
                   </Text>
-                  
-                  {/* horizontal color slider */}
-                  <View
-                    style={{
-                      backgroundColor: themeColors.background.tertiary(),
-                      paddingVertical: 8,
-                      paddingHorizontal: 8,
-                      borderRadius: 29,
-                    }}
-                  >
-                    {/* horizontal scrollable row of color circles */}
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{
-                        gap: 16,
-                        alignItems: 'center',
+
+                  <View style={{ paddingHorizontal: 16 }}>
+                     {/* horizontal color slider */}
+                    <View
+                      style={{
+                        backgroundColor: themeColors.background.tertiary(),
+                        paddingVertical: 8,
+                        paddingHorizontal: 8,
+                        borderRadius: 29,
                       }}
                     >
-                      {/* map through available colors and display them as circular swatches */}
-                      {AVAILABLE_COLORS.map((color) => {
-                        // check if this color is currently selected
-                        const isSelected = color === selectedColor;
-                        
-                        // get the color value from our color palette system
-                        // using shade 500 for the main color display
-                        const colorValue = TaskCategoryColors[color][500];
+                      {/* horizontal scrollable row of color circles */}
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{
+                          gap: 16,
+                          alignItems: 'center',
+                        }}
+                      >
+                        {/* map through available colors and display them as circular swatches */}
+                        {AVAILABLE_COLORS.map((color) => {
+                          // check if this color is currently selected
+                          const isSelected = color === selectedColor;
+                          
+                          // get the color value from our color palette system
+                          // using shade 500 for the main color display
+                          const colorValue = TaskCategoryColors[color][500];
 
-                        return (
-                          <Pressable
-                            key={color}
-                            onPress={() => handleColorSelect(color)}
-                            style={{
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            {/* color circle swatch */}
-                            <View
+                          return (
+                            <Pressable
+                              key={color}
+                              onPress={() => handleColorSelect(color)}
                               style={{
-                                width: 32,
-                                height: 32,
-                                borderRadius: 25,
-                                backgroundColor: colorValue,
-                                borderWidth: isSelected ? 2 : 0,
-                                borderColor: themeColors.border.invertedPrimary(),
+                                alignItems: 'center',
+                                justifyContent: 'center',
                               }}
-                            />
-                          </Pressable>
-                        );
-                      })}
-                    </ScrollView>
+                            >
+                              {/* color circle swatch */}
+                              <View
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: 25,
+                                  backgroundColor: colorValue,
+                                  borderWidth: isSelected ? 2 : 0,
+                                  borderColor: themeColors.border.invertedPrimary(),
+                                }}
+                              />
+                            </Pressable>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
                   </View>
+
+                 
                 </View>
 
                 {/* icon selection section */}
                 <View style={{ gap: 12 }}>
                   <Text style={[
                     getTextStyle('body-large'),
-                    { color: themeColors.text.primary(), fontWeight: '600' }
+                    { color: themeColors.text.primary(), fontWeight: '600', paddingHorizontal: 20 }
                   ]}>
                     Icon
                   </Text>
                   
-                  {/* grid of icon options */}
+                  {/* grid of icon options - 6 icons per row with equal padding */}
                   <View
                     style={{
                       flexDirection: 'row',
                       flexWrap: 'wrap',
-                      gap: 12,
+                      paddingHorizontal: 8, // 20px padding from screen edges
                     }}
                   >
                     {AVAILABLE_ICONS.map((icon) => {
@@ -201,53 +232,39 @@ export function TaskIconColorModal({
                           key={icon.name}
                           onPress={() => handleIconSelect(icon.name)}
                           style={{
-                            width: 72,
+                            width: `${100 / ICONS_PER_ROW}%`, // dynamically calculate width based on icons per row
+                            padding: ICON_PADDING, // equal padding on all sides - change ICON_PADDING constant to adjust
                             alignItems: 'center',
-                            gap: 4,
+                            justifyContent: 'center',
                           }}
                         >
-                          {/* icon circle */}
-                          <View
-                            style={{
-                              width: 48,
-                              height: 48,
-                              borderRadius: 24,
-                              backgroundColor: isSelected 
-                                ? TaskCategoryColors[selectedColor][500]
-                                : themeColors.background.tertiary(),
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              borderWidth: isSelected ? 2 : 0,
-                              borderColor: themeColors.border.invertedPrimary(),
-                            }}
-                          >
-                            <Ionicons
-                              name={icon.name as any}
-                              size={24}
-                              color={isSelected ? '#FFFFFF' : themeColors.text.primary()}
-                            />
-                          </View>
-                          
-                          {/* icon label */}
-                          <Text
-                            style={[
-                              getTextStyle('body-small'),
-                              {
-                                color: isSelected 
-                                  ? themeColors.text.primary()
-                                  : themeColors.text.secondary(),
-                                textAlign: 'center',
-                              }
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {icon.label}
-                          </Text>
+                            {/* icon circle */}
+                            <View
+                              style={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: 24,
+                                backgroundColor: isSelected 
+                                  ? TaskCategoryColors[selectedColor][500]
+                                  : themeColors.background.tertiary(),
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderWidth: isSelected ? 2 : 0,
+                                borderColor: themeColors.border.invertedPrimary(),
+                              }}
+                            >
+                              <Ionicons
+                                name={icon.name as any}
+                                size={24}
+                                color={isSelected ? '#FFFFFF' : themeColors.text.primary()}
+                              />
+                            </View>
                         </Pressable>
                       );
                     })}
                   </View>
                 </View>
+
 
               </ScrollView>
     </DraggableModal>
