@@ -140,6 +140,9 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Complete project proposal',
           description: 'Write and submit the project proposal by Friday',
+          icon: 'briefcase',              // icon field - represents work/business task
+          time: '14:00',                  // time field - specific time in HH:MM format
+          duration: 120,                  // duration field - 120 minutes (2 hours) estimated time
           dueDate: today.toISOString(), // Due today - convert to string for Redux serialization
           isCompleted: false,
           completedAt: null,
@@ -161,6 +164,9 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Buy groceries',
           description: 'Get milk, bread, and eggs from the store',
+          icon: 'cart',                   // icon field - shopping cart icon for grocery task
+          time: '10:00',                  // time field - morning shopping time
+          duration: 45,                   // duration field - 45 minutes for grocery shopping
           dueDate: today.toISOString(), // Due today - convert to string for Redux serialization
           isCompleted: false,
           completedAt: null,
@@ -182,6 +188,9 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Call dentist',
           description: 'Schedule annual checkup appointment',
+          icon: 'medical',                // icon field - medical/health related icon
+          time: '09:00',                  // time field - morning call time
+          duration: 15,                   // duration field - 15 minutes for phone call
           dueDate: yesterday.toISOString(), // Overdue task - convert to string for Redux serialization
           isCompleted: false,
           completedAt: null,
@@ -203,6 +212,9 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Plan weekend trip',
           description: 'Research destinations and book accommodation',
+          icon: 'airplane',               // icon field - travel/trip icon
+          time: '15:30',                  // time field - afternoon planning time
+          duration: 60,                   // duration field - 60 minutes (1 hour) for planning
           dueDate: tomorrow.toISOString(), // Due tomorrow (won't show in today's view) - convert to string for Redux serialization
           isCompleted: false,
           completedAt: null,
@@ -224,6 +236,9 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Review quarterly budget',
           description: 'Analyze Q1 spending and prepare Q2 budget proposal',
+          icon: 'calculator',             // icon field - finance/budget icon
+          time: '11:00',                  // time field - late morning review time
+          duration: 90,                   // duration field - 90 minutes for budget review
           dueDate: tomorrow.toISOString(),
           isCompleted: false,
           completedAt: null,
@@ -245,6 +260,9 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Organize home office',
           description: 'Clean desk, organize files, and set up better workspace',
+          icon: 'home',                   // icon field - home icon
+          time: '13:00',                  // time field - afternoon organizing time
+          duration: 0,                    // duration field - 0 minutes (not specified/open-ended task)
           dueDate: today.toISOString(),
           isCompleted: false,
           completedAt: null,
@@ -266,6 +284,9 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Book vacation flights',
           description: 'Research and book flights for summer vacation',
+          icon: 'airplane',               // icon field - flight/travel icon
+          time: '16:00',                  // time field - afternoon booking time
+          duration: 30,                   // duration field - 30 minutes for flight booking
           dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days from now
           isCompleted: false,
           completedAt: null,
@@ -287,6 +308,9 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Update LinkedIn profile',
           description: 'Add recent projects and update professional summary',
+          icon: 'person',                 // icon field - profile/person icon
+          time: '12:00',                  // time field - lunch time update
+          duration: 25,                   // duration field - 25 minutes for profile update
           dueDate: yesterday.toISOString(), // Overdue
           isCompleted: false,
           completedAt: null,
@@ -308,6 +332,9 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Read new book chapter',
           description: 'Continue reading "Atomic Habits" - chapters 5-6',
+          icon: 'book',                   // icon field - book icon for reading task
+          time: '20:00',                  // time field - evening reading time
+          duration: 40,                   // duration field - 40 minutes for reading
           dueDate: today.toISOString(),
           isCompleted: true, // Completed task
           completedAt: new Date('2024-01-19T10:30:00Z').toISOString(),
@@ -329,6 +356,9 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Prepare presentation slides',
           description: 'Create slides for team meeting next week',
+          icon: 'document',               // icon field - document/presentation icon
+          time: '14:30',                  // time field - afternoon work time
+          duration: 180,                  // duration field - 180 minutes (3 hours) for presentation prep
           dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days from now
           isCompleted: false,
           completedAt: null,
@@ -350,6 +380,9 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Schedule car maintenance',
           description: 'Book oil change and tire rotation appointment',
+          icon: 'car',                    // icon field - car icon for vehicle maintenance
+          time: '08:30',                  // time field - early morning appointment
+          duration: 10,                   // duration field - 10 minutes to make appointment
           dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week from now
           isCompleted: false,
           completedAt: null,
@@ -371,6 +404,9 @@ export const fetchTasks = createAsyncThunk(
           listId: null,
           title: 'Learn new React hooks',
           description: 'Study useCallback, useMemo, and custom hooks patterns',
+          icon: 'code',                   // icon field - code icon for programming task
+          time: '19:00',                  // time field - evening learning time
+          duration: 50,                   // duration field - 50 minutes for learning session
           dueDate: today.toISOString(),
           isCompleted: false,
           completedAt: null,
@@ -408,12 +444,17 @@ export const createTask = createAsyncThunk(
       // return response.data;
       
       // For now, create a mock task
+      // this creates a new task object with all required fields
+      // CreateTaskInput from API is transformed into a full Task object
       const newTask: Task = {
         id: Date.now().toString(), // Simple ID generation
         userId: 'user1',
         listId: taskData.listId || null,
         title: taskData.title,
         description: taskData.description || '',
+        icon: taskData.icon,                // icon field - optional icon name from user input
+        time: taskData.time,                // time field - optional time in HH:MM format from user input
+        duration: taskData.duration || 0,   // duration field - minutes for task (defaults to 0 if not specified)
         dueDate: taskData.dueDate || null,
         isCompleted: false,
         completedAt: null,
