@@ -38,7 +38,7 @@ export const PrimaryColors = {
     50: '#0e0e0e',   // pure white - light backgrounds, modal surfaces
     100: '#141414',  // subtle off-white - page backgrounds, settings panels
     200: '#1C1C1C',  // light neutral - secondary backgrounds
-    300: '#555555',  // medium neutral - secondary buttons, inactive elements
+    300: '#292929',  // medium neutral - secondary buttons, inactive elements
     400: '#9BA2B1',  // dark neutral - secondary text, labels
     500: '#ADBBD5',  // base brand color - primary text, headings
     600: '#BFCBE3',  // darker brand - primary buttons, active states
@@ -239,7 +239,7 @@ export const ThemeColors = {
       primary: PrimaryColors.dark[50],       // dark - main backgrounds
       secondary: PrimaryColors.dark[100],    // darker gray - secondary surfaces
       tertiary: PrimaryColors.dark[200],     // medium gray - tertiary surfaces
-      quaternary: PrimaryColors.dark[200],   // darker - quaternary surfaces
+      quaternary: PrimaryColors.dark[300],   // darker - quaternary surfaces
       elevated: PrimaryColors.dark[100],     // darker gray - elevated surfaces
       overlay: 'rgba(0, 0, 0, 0.8)',        // black overlay - modal backdrops
       darkOverlay: 'rgba(0, 0, 0, 0.9)',    // darker black overlay - stronger backdrops
