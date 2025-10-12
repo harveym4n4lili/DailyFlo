@@ -40,10 +40,15 @@ export interface DraggableModalProps {
   // @default 20
   borderRadius?: number;
   
-  // optional floating container that appears fixed on screen (not draggable with modal)
-  // useful for FABs, action buttons, or any content that should stay in place while modal moves
-  // will be rendered inside the modal but outside the draggable animated content
-  floatingContainer?: React.ReactNode;
+  // optional sticky footer that stays locked to bottom of screen (doesn't move with modal)
+  // useful for FABs, action buttons, or any content that should stay in place while modal drags
+  // will be rendered outside the draggable animated content, fixed to screen
+  stickyFooter?: React.ReactNode;
+  
+  // optional sticky header that moves with modal drag but floats over scrolling content
+  // useful for toolbars, filters, or controls that should always be visible while content scrolls
+  // will be rendered inside the draggable content with absolute positioning
+  stickyHeader?: React.ReactNode;
 }
 
 export function DraggableModal({
@@ -53,7 +58,8 @@ export function DraggableModal({
   snapPoints,
   initialSnapPoint = 1,
   borderRadius = 20,
-  floatingContainer,
+  stickyFooter,
+  stickyHeader,
 }: DraggableModalProps) {
   const { height: screenHeight } = useWindowDimensions();
   const themeColors = useThemeColors();
@@ -223,15 +229,20 @@ export function DraggableModal({
                 overflow: 'hidden',
               }}
             >
+              {/* sticky header that moves with modal but stays fixed over scrolling content */}
+              {/* positioned absolutely within the modal so it moves with modal drag */}
+              {stickyHeader}
+              
+              {/* main modal content */}
               {children}
             </View>
           </Animated.View>
         </GestureDetector>
         
-        {/* floating container rendered inside modal but outside draggable content */}
-        {/* stays fixed on screen while modal slides up/down */}
+        {/* sticky footer rendered outside draggable content */}
+        {/* stays locked to screen position while modal slides up/down */}
         {/* can contain FABs, action buttons, or any custom content */}
-        {floatingContainer}
+        {stickyFooter}
       </View>
     </Modal>
   );

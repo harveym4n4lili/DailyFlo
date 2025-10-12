@@ -116,6 +116,75 @@ export function TaskIconColorModal({
       // start at the middle snap point (60%)
       initialSnapPoint={1}
       borderRadius={20}
+      // sticky header that moves with modal drag but floats over scrolling content
+      stickyHeader={
+        // color slider positioned absolutely to float over icon grid
+        <View
+          style={{
+            position: 'absolute',
+            top: 76, // position below the header
+            left: 0,
+            right: 0,
+            zIndex: 10, // ensure it floats above scrolling content
+            paddingHorizontal: 20,
+          }}
+        >
+          <View>
+            {/* horizontal color slider */}
+            <View
+              style={{
+                backgroundColor: themeColors.background.quaternary(),
+                paddingVertical: 8,
+                paddingHorizontal: 8,
+                borderRadius: 29,
+              }}
+            >
+              {/* horizontal scrollable row of color circles */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{
+                  gap: 16,
+                  alignItems: 'center',
+                }}
+              >
+                {/* map through available colors and display them as circular swatches */}
+                {AVAILABLE_COLORS.map((color) => {
+                  // check if this color is currently selected
+                  const isSelected = color === selectedColor;
+                  
+                  // get the color value from our color palette system
+                  // using shade 500 for the main color display
+                  const colorValue = TaskCategoryColors[color][500];
+
+                  return (
+                    <Pressable
+                      key={color}
+                      onPress={() => handleColorSelect(color)}
+                      style={{
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {/* color circle swatch */}
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 25,
+                          backgroundColor: colorValue,
+                          borderWidth: isSelected ? 2 : 0,
+                          borderColor: themeColors.border.invertedPrimary(),
+                        }}
+                      />
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+        </View>
+      }
     >
               {/* modal header with drag indicator and title */}
               {/* showDragIndicator displays the small rounded bar at the top */}
@@ -127,85 +196,15 @@ export function TaskIconColorModal({
                 showBorder={true}
               />
 
-              {/* scrollable content area */}
+              {/* scrollable icon grid area */}
               <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{
-                  paddingTop: 12,
+                  paddingTop: 80, // padding to account for floating color slider above
                   paddingBottom: insets.bottom + 24,
-                  
-                  gap: 24,
                 }}
                 showsVerticalScrollIndicator={false}
               >
-
-               {/* color selection section */}
-               <View style={{ gap: 12 }}>
-                  <Text style={[
-                    getTextStyle('body-large'),
-                    { color: themeColors.text.primary(), fontWeight: '600', paddingHorizontal: 20 }
-                  ]}>
-                    Color
-                  </Text>
-
-                  <View style={{ paddingHorizontal: 16 }}>
-                     {/* horizontal color slider */}
-                    <View
-                      style={{
-                        backgroundColor: themeColors.background.tertiary(),
-                        paddingVertical: 8,
-                        paddingHorizontal: 8,
-                        borderRadius: 29,
-                      }}
-                    >
-                      {/* horizontal scrollable row of color circles */}
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={{
-                          gap: 16,
-                          alignItems: 'center',
-                        }}
-                      >
-                        {/* map through available colors and display them as circular swatches */}
-                        {AVAILABLE_COLORS.map((color) => {
-                          // check if this color is currently selected
-                          const isSelected = color === selectedColor;
-                          
-                          // get the color value from our color palette system
-                          // using shade 500 for the main color display
-                          const colorValue = TaskCategoryColors[color][500];
-
-                          return (
-                            <Pressable
-                              key={color}
-                              onPress={() => handleColorSelect(color)}
-                              style={{
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              {/* color circle swatch */}
-                              <View
-                                style={{
-                                  width: 32,
-                                  height: 32,
-                                  borderRadius: 25,
-                                  backgroundColor: colorValue,
-                                  borderWidth: isSelected ? 2 : 0,
-                                  borderColor: themeColors.border.invertedPrimary(),
-                                }}
-                              />
-                            </Pressable>
-                          );
-                        })}
-                      </ScrollView>
-                    </View>
-                  </View>
-
-                 
-                </View>
-
                 {/* icon selection section */}
                 <View style={{ gap: 12 }}>
                   <Text style={[
