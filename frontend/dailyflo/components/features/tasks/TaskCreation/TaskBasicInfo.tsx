@@ -45,6 +45,7 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   // flow: user taps color icon → handleShowColorPicker sets this to true → modal opens
   const [isColorPickerVisible, setIsColorPickerVisible] = useState(false);
 
+
   // derived validation state
   const errors = useMemo(() => validateAll(values as TaskFormValues), [values]);
 
@@ -90,6 +91,18 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   const handleColorPickerClose = () => {
     console.log('Color picker modal closed');
     setIsColorPickerVisible(false);
+  };
+
+  // time/duration picker handlers
+  // this logs when user taps the time/duration button (no modal opens)
+  const handleShowTimeDurationPicker = () => {
+    console.log('Opening time/duration picker modal');
+  };
+
+  // alerts picker handlers
+  // this logs when user taps the alerts button (no modal opens)
+  const handleShowAlertsPicker = () => {
+    console.log('Opening alerts picker modal');
   };
 
   const dismissKeyboard = () => {
@@ -204,8 +217,8 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
           style={{ flex: 1 }}
           contentContainerStyle={{ 
             flexGrow: 1,
-            paddingHorizontal: 24,
-            paddingTop: 24,
+            paddingHorizontal: 16,
+            paddingTop: 32,
             paddingBottom: insets.bottom + 20,
             gap: 12,
           }}
@@ -213,18 +226,21 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
           showsVerticalScrollIndicator={false}
           onScrollBeginDrag={dismissKeyboard}
         >
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: 0 }}>
             {/* date picker button */}
             <Pressable
               onPress={handleShowDatePicker}
               style={{
-                borderRadius: 12,
+                borderTopLeftRadius: 12,
+                borderTopRightRadius: 12,
                 paddingHorizontal: 20,
                 paddingVertical: 12,
                 backgroundColor: themeColors.background.elevated(),
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                borderBottomWidth: 1,
+                borderBottomColor: themeColors.border.primary(),
               }}
             >
               <Ionicons 
@@ -261,6 +277,118 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
                   {values.dueDate ? getRelativeDateMessage(values.dueDate) : '—'}
                 </Text>
               </View>
+              
+              <Ionicons 
+                name="chevron-forward" 
+                size={16} 
+                color={themeColors.text.tertiary?.() || labelColor} 
+                style={{ marginLeft: 8 }}
+              />
+            </Pressable>
+
+            {/* time & duration picker button */}
+            <Pressable
+              onPress={handleShowTimeDurationPicker}
+              style={{
+                paddingHorizontal: 20,
+                paddingVertical: 12,
+                backgroundColor: themeColors.background.elevated(),
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottomWidth: 1,
+                borderBottomColor: themeColors.border.primary(),
+              }}
+            >
+              <Ionicons 
+                name="time-outline" 
+                size={20} 
+                color={themeColors.text.primary()} 
+                style={{ marginRight: 12 }}
+              />
+              
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={[
+                  getTextStyle('body-large'),
+                  { 
+                    color: themeColors.text.primary() 
+                  }
+                ]}>
+                  Time & Duration
+                </Text>
+                
+                <Text style={[
+                  getTextStyle('body-large'),
+                  { 
+                    color: themeColors.text.tertiary?.() || labelColor 
+                  }
+                ]}>
+                  {values.time && values.duration 
+                    ? `${values.time} • ${values.duration}min`
+                    : values.time 
+                      ? values.time
+                      : values.duration 
+                        ? `${values.duration}min`
+                        : 'Optional'
+                  }
+                </Text>
+              </View>
+              
+              <Ionicons 
+                name="chevron-forward" 
+                size={16} 
+                color={themeColors.text.tertiary?.() || labelColor} 
+                style={{ marginLeft: 8 }}
+              />
+            </Pressable>
+
+            {/* alerts picker button */}
+            <Pressable
+              onPress={handleShowAlertsPicker}
+              style={{
+                borderBottomLeftRadius: 12,
+                borderBottomRightRadius: 12,
+                paddingHorizontal: 20,
+                paddingVertical: 12,
+                backgroundColor: themeColors.background.elevated(),
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Ionicons 
+                name="notifications-outline" 
+                size={20} 
+                color={themeColors.text.primary()} 
+                style={{ marginRight: 12 }}
+              />
+              
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={[
+                  getTextStyle('body-large'),
+                  { 
+                    color: themeColors.text.primary() 
+                  }
+                ]}>
+                  Alerts
+                </Text>
+                
+                <Text style={[
+                  getTextStyle('body-large'),
+                  { 
+                    color: themeColors.text.tertiary?.() || labelColor 
+                  }
+                ]}>
+                  Not Set
+                </Text>
+              </View>
+              
+              <Ionicons 
+                name="chevron-forward" 
+                size={16} 
+                color={themeColors.text.tertiary?.() || labelColor} 
+                style={{ marginLeft: 8 }}
+              />
             </Pressable>
           </View>
         </ScrollView>
@@ -286,6 +414,7 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
         onClose={handleColorPickerClose}
         onSelectColor={handleColorSelect}
       />
+
     </KeyboardAvoidingView>
   );
 };
