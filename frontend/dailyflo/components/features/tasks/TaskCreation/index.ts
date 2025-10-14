@@ -8,6 +8,7 @@ export * from './TaskCreationModal';
 export { default as TaskCreationModal } from './TaskCreationModal';
 export * from './TaskBasicInfo';
 export * from './TaskIconColorModal';
+export * from './TaskTimeDurationModal';
 
 
 
