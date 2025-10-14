@@ -14,9 +14,11 @@ import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { validateAll, TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
 import { DatePickerModal } from '@/components/features/calendar';
 import { TaskIconColorModal } from './TaskIconColorModal';
+import { TaskTimeDurationModal } from './TaskTimeDurationModal';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
 import { ModalBackdrop } from '@/components/layout/ModalLayout';
+import { GroupedList, type GroupedListItemConfig } from '@/components/ui/List/GroupedList';
 
 export interface TaskBasicInfoProps {
   initialValues?: Partial<TaskFormValues>;
@@ -44,6 +46,11 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   // this controls whether the color select modal is shown
   // flow: user taps color icon → handleShowColorPicker sets this to true → modal opens
   const [isColorPickerVisible, setIsColorPickerVisible] = useState(false);
+  
+  // state for time/duration picker modal visibility
+  // this controls whether the time/duration picker modal is shown
+  // flow: user taps time/duration button → handleShowTimeDurationPicker sets this to true → modal opens
+  const [isTimeDurationPickerVisible, setIsTimeDurationPickerVisible] = useState(false);
 
 
   // derived validation state
@@ -94,9 +101,32 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   };
 
   // time/duration picker handlers
-  // this logs when user taps the time/duration button (no modal opens)
+  // this opens the time/duration picker modal when user taps the time/duration button
   const handleShowTimeDurationPicker = () => {
-    console.log('Opening time/duration picker modal');
+    console.log('🔵 Opening time/duration picker modal');
+    console.log('🔵 Current state before:', isTimeDurationPickerVisible);
+    setIsTimeDurationPickerVisible(true);
+    console.log('🔵 Set state to TRUE');
+  };
+  
+  // this handles when user selects a time from the picker
+  // flow: user picks time in modal → onSelectTime callback → this function → onChange updates form state
+  const handleTimeSelect = (time: string | undefined) => {
+    console.log('Time selected:', time);
+    onChange('time', time);
+  };
+  
+  // this handles when user selects a duration from the picker
+  // flow: user picks duration in modal → onSelectDuration callback → this function → onChange updates form state
+  const handleDurationSelect = (duration: number | undefined) => {
+    console.log('Duration selected:', duration);
+    onChange('duration', duration);
+  };
+  
+  // this handles when user closes the time/duration picker modal
+  const handleTimeDurationPickerClose = () => {
+    console.log('Time/duration picker modal closed');
+    setIsTimeDurationPickerVisible(false);
   };
 
   // alerts picker handlers
@@ -133,6 +163,53 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
     }
   };
 
+  // format time and duration for display
+  // this creates the combined display text for the time & duration value
+  const formatTimeDuration = () => {
+    if (values.time && values.duration) {
+      return `${values.time} • ${values.duration}min`;
+    } else if (values.time) {
+      return values.time;
+    } else if (values.duration) {
+      return `${values.duration}min`;
+    } else {
+      return 'Optional';
+    }
+  };
+
+  // configuration for the grouped list items
+  // this array defines the three picker buttons (date, time/duration, alerts)
+  const pickerItems: GroupedListItemConfig[] = useMemo(() => [
+    {
+      id: 'date',
+      icon: 'calendar-outline',
+      label: values.dueDate 
+        ? new Date(values.dueDate).toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric',
+            year: 'numeric'
+          })
+        : 'No Deadline',
+      value: values.dueDate ? getRelativeDateMessage(values.dueDate) : '—',
+      onPress: handleShowDatePicker,
+    },
+    {
+      id: 'time',
+      icon: 'time-outline',
+      label: 'Time & Duration',
+      value: formatTimeDuration(),
+      onPress: handleShowTimeDurationPicker,
+    },
+    {
+      id: 'alerts',
+      icon: 'notifications-outline',
+      label: 'Alerts',
+      value: 'Not Set',
+      onPress: handleShowAlertsPicker,
+    },
+  ], [values.dueDate, values.time, values.duration]);
+
   const borderError = colors.getSemanticColor('error', 500);
   const labelColor = themeColors.text.secondary();
 
@@ -143,9 +220,9 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
     >
       <View style={{ flex: 1 }}>
         {/* reusable backdrop component that fades when any modal opens */}
-        {/* isVisible is true when any modal (date picker or color picker) is open */}
+        {/* isVisible is true when any modal (date picker, color picker, or time/duration picker) is open */}
         <ModalBackdrop 
-          isVisible={isDatePickerVisible || isColorPickerVisible}
+          isVisible={isDatePickerVisible || isColorPickerVisible || isTimeDurationPickerVisible}
         />
 
         {/* header with title input and color icon */}
@@ -226,171 +303,10 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
           showsVerticalScrollIndicator={false}
           onScrollBeginDrag={dismissKeyboard}
         >
-          <View style={{ gap: 0 }}>
-            {/* date picker button */}
-            <Pressable
-              onPress={handleShowDatePicker}
-              style={{
-                borderTopLeftRadius: 12,
-                borderTopRightRadius: 12,
-                paddingHorizontal: 20,
-                paddingVertical: 12,
-                backgroundColor: themeColors.background.elevated(),
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottomWidth: 1,
-                borderBottomColor: themeColors.border.primary(),
-              }}
-            >
-              <Ionicons 
-                name="calendar-outline" 
-                size={20} 
-                color={themeColors.text.primary()} 
-                style={{ marginRight: 12 }}
-              />
-              
-              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={[
-                  getTextStyle('body-large'),
-                  { 
-                    color: themeColors.text.primary() 
-                  }
-                ]}>
-                  {values.dueDate 
-                    ? new Date(values.dueDate).toLocaleDateString('en-US', { 
-                        weekday: 'short', 
-                        month: 'short', 
-                        day: 'numeric',
-                        year: 'numeric'
-                      })
-                    : 'No Deadline'
-                  }
-                </Text>
-                
-                <Text style={[
-                  getTextStyle('body-large'),
-                  { 
-                    color: themeColors.text.tertiary?.() || labelColor 
-                  }
-                ]}>
-                  {values.dueDate ? getRelativeDateMessage(values.dueDate) : '—'}
-                </Text>
-              </View>
-              
-              <Ionicons 
-                name="chevron-forward" 
-                size={16} 
-                color={themeColors.text.tertiary?.() || labelColor} 
-                style={{ marginLeft: 8 }}
-              />
-            </Pressable>
-
-            {/* time & duration picker button */}
-            <Pressable
-              onPress={handleShowTimeDurationPicker}
-              style={{
-                paddingHorizontal: 20,
-                paddingVertical: 12,
-                backgroundColor: themeColors.background.elevated(),
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottomWidth: 1,
-                borderBottomColor: themeColors.border.primary(),
-              }}
-            >
-              <Ionicons 
-                name="time-outline" 
-                size={20} 
-                color={themeColors.text.primary()} 
-                style={{ marginRight: 12 }}
-              />
-              
-              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={[
-                  getTextStyle('body-large'),
-                  { 
-                    color: themeColors.text.primary() 
-                  }
-                ]}>
-                  Time & Duration
-                </Text>
-                
-                <Text style={[
-                  getTextStyle('body-large'),
-                  { 
-                    color: themeColors.text.tertiary?.() || labelColor 
-                  }
-                ]}>
-                  {values.time && values.duration 
-                    ? `${values.time} • ${values.duration}min`
-                    : values.time 
-                      ? values.time
-                      : values.duration 
-                        ? `${values.duration}min`
-                        : 'Optional'
-                  }
-                </Text>
-              </View>
-              
-              <Ionicons 
-                name="chevron-forward" 
-                size={16} 
-                color={themeColors.text.tertiary?.() || labelColor} 
-                style={{ marginLeft: 8 }}
-              />
-            </Pressable>
-
-            {/* alerts picker button */}
-            <Pressable
-              onPress={handleShowAlertsPicker}
-              style={{
-                borderBottomLeftRadius: 12,
-                borderBottomRightRadius: 12,
-                paddingHorizontal: 20,
-                paddingVertical: 12,
-                backgroundColor: themeColors.background.elevated(),
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Ionicons 
-                name="notifications-outline" 
-                size={20} 
-                color={themeColors.text.primary()} 
-                style={{ marginRight: 12 }}
-              />
-              
-              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={[
-                  getTextStyle('body-large'),
-                  { 
-                    color: themeColors.text.primary() 
-                  }
-                ]}>
-                  Alerts
-                </Text>
-                
-                <Text style={[
-                  getTextStyle('body-large'),
-                  { 
-                    color: themeColors.text.tertiary?.() || labelColor 
-                  }
-                ]}>
-                  Not Set
-                </Text>
-              </View>
-              
-              <Ionicons 
-                name="chevron-forward" 
-                size={16} 
-                color={themeColors.text.tertiary?.() || labelColor} 
-                style={{ marginLeft: 8 }}
-              />
-            </Pressable>
-          </View>
+          {/* ios-style grouped list for picker buttons */}
+          {/* replaces the old hardcoded date, time, and alerts buttons */}
+          {/* the GroupedList component automatically handles border radius and separators */}
+          <GroupedList items={pickerItems} />
         </ScrollView>
       </View>
       
@@ -413,6 +329,18 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
         selectedColor={(values.color as TaskColor) || 'blue'}
         onClose={handleColorPickerClose}
         onSelectColor={handleColorSelect}
+      />
+      
+      {/* time/duration picker modal */}
+      {/* this modal appears when user wants to select time and/or duration */}
+      {/* flow: user taps time/duration button → modal opens → user picks time/duration → callbacks update form → modal stays open or user dismisses */}
+      <TaskTimeDurationModal
+        visible={isTimeDurationPickerVisible}
+        selectedTime={values.time}
+        selectedDuration={values.duration}
+        onClose={handleTimeDurationPickerClose}
+        onSelectTime={handleTimeSelect}
+        onSelectDuration={handleDurationSelect}
       />
 
     </KeyboardAvoidingView>
