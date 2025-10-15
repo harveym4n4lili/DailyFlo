@@ -100,6 +100,14 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
     setIsColorPickerVisible(false);
   };
 
+  // icon selection handler
+  // this handles when user selects an icon from the picker
+  // flow: user picks icon in modal → onSelectIcon callback → this function → onChange updates form state
+  const handleIconSelect = (icon: string) => {
+    console.log('Icon selected:', icon);
+    onChange('icon', icon);
+  };
+
   // time/duration picker handlers
   // this opens the time/duration picker modal when user taps the time/duration button
   const handleShowTimeDurationPicker = () => {
@@ -225,7 +233,7 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
           isVisible={isDatePickerVisible || isColorPickerVisible || isTimeDurationPickerVisible}
         />
 
-        {/* header with title input and color icon */}
+        {/* header with icon display, color palette button, and title input */}
         <TouchableWithoutFeedback onPress={dismissKeyboard}>
           <View
             style={{
@@ -235,36 +243,71 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
               backgroundColor: values.color 
                 ? TaskCategoryColors[values.color][500] 
                 : TaskCategoryColors.blue[50],
-              paddingHorizontal: 20,
+              paddingHorizontal: 24,
               paddingRight: 40,
             }}
           >
-            {/* flex row to align color icon and title input */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              {/* color icon button on the left */}
-              {/* when tapped, opens the color select modal */}
+            {/* flex row to align icon display and title input side by side */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
+              {/* icon display area with color palette at bottom left - entire area is pressable */}
+              {/* when tapped anywhere on this area, opens the icon & color select modal */}
               <Pressable
                 onPress={handleShowColorPicker}
                 style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  // use the selected color from TaskCategoryColors palette
-                  backgroundColor: themeColors.background.elevated(),
+                  width: 64,
+                  height: 88,
+                  borderRadius: 32,
+                  backgroundColor: themeColors.interactive.tertiary(),
+                  borderWidth: 4,
+                  borderColor: themeColors.border.secondary(),
                   alignItems: 'center',
                   justifyContent: 'center',
+                  position: 'relative', // allows positioning of color palette button inside
                 }}
               >
-                {/* palette icon to indicate this is for color selection */}
+                {/* icon display - shows selected icon or default star */}
                 <Ionicons
-                  name="color-palette"
-                  size={24}
-                  // use a light color for the icon so it contrasts well with the colored background
-                  color={themeColors.text.primary()}
+                  name={(values.icon as any) || 'star'}
+                  size={28}
+                  color={values.color 
+                    ? TaskCategoryColors[values.color][500] 
+                    : TaskCategoryColors.blue[500]}
+                    
                 />
+                
+                {/* color palette button positioned at bottom left of icon display */}
+                {/* this button is also pressable and opens the same modal */}
+                {/* using View instead of nested Pressable to avoid touch event conflicts */}
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: -12,
+                    left: -12,
+                    width: 32,
+                    height: 32,
+                    borderRadius: 18,
+                    // use a lighter background for the color palette button
+                    backgroundColor: themeColors.interactive.quaternary(),
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    // add subtle shadow for depth
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                    elevation: 3,
+                  }}
+                >
+                  {/* palette icon to indicate this is for color selection */}
+                  <Ionicons
+                    name="color-palette"
+                    size={20}
+                    color={themeColors.text.primary()}
+                  />
+                </View>
               </Pressable>
               
-              {/* title input takes up remaining space */}
+              {/* title input takes remaining space on the right */}
               <TextInput
                 value={values.title || ''}
                 onChangeText={(t) => onChange('title', t)}
@@ -278,7 +321,7 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
                   paddingVertical: 6,
                   paddingHorizontal: 0,
                   borderBottomWidth: 1,
-                  // use the selected task color for the border to match the theme
+                  // use white border to contrast with colored background
                   borderBottomColor: '#fff',
                   flex: 1,
                 }}
@@ -321,14 +364,16 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
         title="Date"
       />
       
-      {/* color picker modal */}
-      {/* this modal appears when user wants to select a task color */}
-      {/* flow: user taps color icon → modal opens → user picks color → onSelectColor called → modal closes */}
+      {/* color and icon picker modal */}
+      {/* this modal appears when user wants to select a task color or icon */}
+      {/* flow: user taps color palette button → modal opens → user picks color/icon → callbacks update form → modal stays open or user dismisses */}
       <TaskIconColorModal
         visible={isColorPickerVisible}
         selectedColor={(values.color as TaskColor) || 'blue'}
+        selectedIcon={values.icon}
         onClose={handleColorPickerClose}
         onSelectColor={handleColorSelect}
+        onSelectIcon={handleIconSelect}
       />
       
       {/* time/duration picker modal */}
