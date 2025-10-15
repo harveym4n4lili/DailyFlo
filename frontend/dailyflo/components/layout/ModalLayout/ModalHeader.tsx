@@ -135,7 +135,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   
   // title text style
   const titleStyle: TextStyle = {
-    ...typography.getTextStyle('heading-2'),
+    ...typography.getTextStyle('heading-3'),
     color: colors.text.primary(),
     textAlign: 'center',
     ...customTitleStyle,
