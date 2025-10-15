@@ -5,8 +5,8 @@
  * This is the first step in the multi-step task creation flow.
  */
 
-import React, { useMemo, useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Platform } from 'react-native';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Platform, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getTextStyle } from '@/constants/Typography';
@@ -51,18 +51,71 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   // flow: user taps time/duration button → handleShowTimeDurationPicker sets this to true → modal opens
   const [isTimeDurationPickerVisible, setIsTimeDurationPickerVisible] = useState(false);
 
+  // animation state for button highlights
+  // these control the highlight animations that play when buttons are tapped or values change
+  const dateButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
+  const timeButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
+  const alertsButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
+  const [previousDueDate, setPreviousDueDate] = useState(values.dueDate);
 
   // derived validation state
   const errors = useMemo(() => validateAll(values as TaskFormValues), [values]);
 
+  // effect to trigger highlight animation when date changes
+  // this plays a subtle highlight animation when user selects a new date
+  useEffect(() => {
+    // only animate if the date actually changed and it's not the initial render
+    if (previousDueDate !== values.dueDate && previousDueDate !== undefined) {
+      // start highlight animation: fade in then fade out
+      Animated.sequence([
+        // fade in highlight
+        Animated.timing(dateButtonHighlightOpacity, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        // fade out highlight
+        Animated.timing(dateButtonHighlightOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+    
+    // update previous date for next comparison
+    setPreviousDueDate(values.dueDate);
+  }, [values.dueDate, previousDueDate, dateButtonHighlightOpacity]);
+
   const onBlur = (key: keyof TaskFormValues) => {
     setTouched((prev) => ({ ...prev, [key]: true }));
+  };
+
+  // reusable function to trigger button highlight animation
+  // this creates a subtle highlight animation for any button
+  const triggerButtonHighlight = (animatedValue: Animated.Value) => {
+    // start highlight animation: fade in then fade out
+    Animated.sequence([
+      // fade in highlight
+      Animated.timing(animatedValue, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      // fade out highlight
+      Animated.timing(animatedValue, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
   // date picker handlers
   // this opens the date picker modal when user taps the date button
   const handleShowDatePicker = () => {
     console.log('Opening date picker modal');
+    triggerButtonHighlight(dateButtonHighlightOpacity);
     setIsDatePickerVisible(true);
   };
   
@@ -112,6 +165,7 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   const handleShowTimeDurationPicker = () => {
     console.log('🔵 Opening time/duration picker modal');
     console.log('🔵 Current state before:', isTimeDurationPickerVisible);
+    triggerButtonHighlight(timeButtonHighlightOpacity);
     setIsTimeDurationPickerVisible(true);
     console.log('🔵 Set state to TRUE');
   };
@@ -140,6 +194,7 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   // this logs when user taps the alerts button (no modal opens)
   const handleShowAlertsPicker = () => {
     console.log('Opening alerts picker modal');
+    triggerButtonHighlight(alertsButtonHighlightOpacity);
   };
 
   const dismissKeyboard = () => {
@@ -170,17 +225,122 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
     }
   };
 
-  // format time and duration for display
-  // this creates the combined display text for the time & duration value
-  const formatTimeDuration = () => {
+  // get time and duration display text and color based on selection
+  // this determines what text to show for the time & duration button
+  // all states use text.secondary color for consistency
+  const getTimeDurationDisplay = () => {
     if (values.time && values.duration) {
-      return `${values.time} • ${values.duration}min`;
+      // both time and duration selected
+      return {
+        text: `${values.time} • ${values.duration}min`,
+        color: themeColors.text.secondary(),
+        iconColor: themeColors.text.secondary(),
+      };
     } else if (values.time) {
-      return values.time;
+      // only time selected
+      return {
+        text: values.time,
+        color: themeColors.text.secondary(),
+        iconColor: themeColors.text.secondary(),
+      };
     } else if (values.duration) {
-      return `${values.duration}min`;
+      // only duration selected
+      return {
+        text: `${values.duration}min`,
+        color: themeColors.text.secondary(),
+        iconColor: themeColors.text.secondary(),
+      };
     } else {
-      return 'Optional';
+      // neither selected - show default message
+      return {
+        text: 'No Time or Duration',
+        color: themeColors.text.secondary(),
+        iconColor: themeColors.text.secondary(),
+      };
+    }
+  };
+
+  // get date display text and color based on selection
+  // this determines what text to show and what color to use for the date button
+  const getDateDisplay = () => {
+    if (!values.dueDate) {
+      // no date selected - show default "Date" in secondary color
+      return {
+        text: 'No Date',
+        color: themeColors.text.secondary(),
+        iconColor: themeColors.text.secondary(),
+      };
+    }
+
+    const selectedDate = new Date(values.dueDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const dueDate = new Date(selectedDate);
+    dueDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    // check if it's this weekend (upcoming Saturday or Sunday)
+    const selectedDayOfWeek = selectedDate.getDay(); // 0 = Sunday, 6 = Saturday
+    const todayDayOfWeek = today.getDay();
+    
+    // if selected date is Saturday (6) or Sunday (0) and it's within the next 7 days
+    if ((selectedDayOfWeek === 6 || selectedDayOfWeek === 0) && diffDays >= 0 && diffDays <= 7) {
+      // make sure it's not next weekend (more than 6 days away)
+      if (diffDays <= 6) {
+        return {
+          text: 'This Weekend',
+          color: colors.getSemanticColor('info'),
+          iconColor: colors.getSemanticColor('info'),
+        };
+      }
+    }
+
+    // check if it's a quick option (Today, Tomorrow, Yesterday)
+    if (diffDays === 0) {
+      return {
+        text: 'Today',
+        color: colors.getSemanticColor('success'),
+        iconColor: colors.getSemanticColor('success'),
+      };
+    } else if (diffDays === 1) {
+      return {
+        text: 'Tomorrow',
+        color: colors.getSemanticColor('warning'),
+        iconColor: colors.getSemanticColor('warning'),
+      };
+    }  else if (diffDays === 7) {
+      return {
+        text: 'Next Week',
+        color: colors.getTaskCategoryColor('purple'),
+        iconColor: colors.getTaskCategoryColor('purple'),
+      };
+    }else if (diffDays === -1) {
+      return {
+        text: 'Yesterday',
+        color: colors.getSemanticColor('error'),
+        iconColor: colors.getSemanticColor('error'),
+      };
+    }  else if (diffDays < 0) {
+      return {
+        text: diffDays.toString() + " days ago",
+        color: colors.getSemanticColor('error'),
+        iconColor: colors.getSemanticColor('error'),
+      };
+    } else {
+      // custom date - show formatted date in secondary color
+      const formattedDate = selectedDate.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+      return {
+        text: formattedDate, // e.g., "9 Nov 2025"
+        color: themeColors.text.secondary(),
+        iconColor: themeColors.text.secondary(),
+      };
     }
   };
 
@@ -190,7 +350,7 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
     {
       id: 'date',
       icon: 'calendar-outline',
-      label: 'Date',
+      label: 'Date', // this will be overridden by dynamic display logic
       onPress: handleShowDatePicker,
     },
     {
@@ -205,7 +365,7 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
       label: 'Alerts',
       onPress: handleShowAlertsPicker,
     },
-  ], []);
+  ], [values.dueDate, values.time, values.duration]); // include dependencies to trigger re-render when values change
 
   const borderError = colors.getSemanticColor('error', 500);
   const labelColor = themeColors.text.secondary();
@@ -321,72 +481,146 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
           </View>
         </TouchableWithoutFeedback>
 
-        {/* scrollable form fields section */}
-        <ScrollView 
-          style={{ flex: 1 }}
-          contentContainerStyle={{ 
-            flexGrow: 1,
-            paddingTop: 32,
-            paddingBottom: insets.bottom + 20,
-            gap: 12,
+        {/* form fields section */}
+        <View 
+          style={{ 
+            paddingTop: 24,
+            paddingBottom: insets.bottom + 16,
           }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          onScrollBeginDrag={dismissKeyboard}
         >
           {/* horizontal scrollable picker buttons - matches reference image style */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{
-              
+              paddingRight: 16,
               gap: 16,
             }}
-            style={{
-              marginBottom: 12,
-            }}
           >
-            {pickerButtons.map((button) => (
-              <Pressable
-                key={button.id}
-                onPress={button.onPress}
-                style={{
-                  left: 16,
-                  backgroundColor: themeColors.interactive.quinary(),
-                  borderRadius: 12,
-                  paddingVertical: 12,
-                  paddingHorizontal: 12,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  // prevent buttons from stretching vertically
-                  alignSelf: 'flex-start',
-                  // add subtle border for definition
-                  borderWidth: 1,
-                  borderColor: themeColors.border.primary(),
-                }}
-              >
-                {/* icon on the left */}
-                <Ionicons
-                  name={button.icon as any}
-                  size={16}
-                  color={themeColors.text.primary()}
-                />
-                
-                {/* label text */}
-                <Text style={{
-                  ...getTextStyle('body-large'),
-                  color: themeColors.text.primary(),
-                  textAlignVertical: 'center',
-                  includeFontPadding: false,
-                }}>
-                  {button.label}
-                </Text>
-              </Pressable>
-            ))}
+            {pickerButtons.map((button) => {
+              // get dynamic display info for date and time buttons
+              const displayInfo = button.id === 'date' 
+                ? getDateDisplay() 
+                : button.id === 'time' 
+                ? getTimeDurationDisplay() 
+                : null;
+              const iconColor = displayInfo ? displayInfo.iconColor : themeColors.text.secondary();
+              const textColor = displayInfo ? displayInfo.color : themeColors.text.secondary();
+              const displayText = displayInfo ? displayInfo.text : button.label;
+
+              // special handling for date button with animation
+              if (button.id === 'date') {
+                return (
+                  <Animated.View
+                    key={button.id}
+                    style={{
+                      left: 16,
+                      backgroundColor: dateButtonHighlightOpacity.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [themeColors.background.primary(), themeColors.background.quaternary()],
+                      }),
+                      borderRadius: 12,
+                      paddingVertical: 12,
+                      paddingHorizontal: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      // prevent buttons from stretching vertically
+                      alignSelf: 'flex-start',
+                      // add subtle border for definition
+                      borderWidth: 1,
+                      borderColor: themeColors.border.primary(),
+                    }}
+                  >
+                    <Pressable
+                      onPress={button.onPress}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        
+                      }}
+                    >
+                      {/* icon on the left */}
+                      <Ionicons
+                        name={button.icon as any}
+                        size={16}
+                        color={iconColor}
+                      />
+                      
+                      {/* label text */}
+                      <Text style={{
+                        ...getTextStyle('body-large'),
+                        color: textColor,
+                        textAlignVertical: 'center',
+                        includeFontPadding: false,
+                      }}>
+                        {displayText}
+                      </Text>
+                    </Pressable>
+                  </Animated.View>
+                );
+              }
+
+              // animated buttons (time & alerts)
+              const animatedValue = button.id === 'time' ? timeButtonHighlightOpacity : alertsButtonHighlightOpacity;
+              
+              return (
+                <Animated.View
+                  key={button.id}
+                  style={{
+                    left: 16,
+                    backgroundColor: animatedValue.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [themeColors.background.primary(), themeColors.background.quaternary()],
+                    }),
+                    borderRadius: 12,
+                    paddingVertical: 12,
+                    paddingHorizontal: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    // prevent buttons from stretching vertically
+                    alignSelf: 'flex-start',
+                    // add subtle border for definition
+                    borderWidth: 1,
+                    borderColor: themeColors.border.primary(),
+                  }}
+                >
+                  <Pressable
+                    onPress={button.onPress}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    {/* icon on the left */}
+                    <Ionicons
+                      name={button.icon as any}
+                      size={16}
+                      color={iconColor}
+                    />
+                    
+                    {/* label text */}
+                    <Text style={{
+                      ...getTextStyle('body-large'),
+                      color: textColor,
+                      textAlignVertical: 'center',
+                      includeFontPadding: false,
+                    }}>
+                      {displayText}
+                    </Text>
+                  </Pressable>
+                </Animated.View>
+              );
+            })}
           </ScrollView>
-        </ScrollView>
+        </View>
       </View>
       
       {/* date picker modal */}
