@@ -76,12 +76,49 @@ export interface ModalHeaderProps {
    * @default 8
    */
   paddingVertical?: number;
+  
+  /**
+   * Whether to show iOS-style text buttons (Cancel/Done)
+   * When true, shows Cancel on left and Done on right (if hasChanges is true)
+   * @default false
+   */
+  showActionButtons?: boolean;
+  
+  /**
+   * Whether there are changes that need to be saved
+   * Controls visibility of the Done button
+   * @default false
+   */
+  hasChanges?: boolean;
+  
+  /**
+   * Callback when cancel button is pressed
+   * Shows confirmation if hasChanges is true
+   */
+  onCancel?: () => void;
+  
+  /**
+   * Callback when done button is pressed
+   */
+  onDone?: () => void;
+  
+  /**
+   * Custom text for cancel button
+   * @default "Cancel"
+   */
+  cancelText?: string;
+  
+  /**
+   * Custom text for done button
+   * @default "Done"
+   */
+  doneText?: string;
 }
 
 /**
  * ModalHeader Component
  * 
- * Displays a header with title and optional close button.
+ * Displays a header with title and optional close button or action buttons.
  * Provides consistent styling across modals while allowing customization.
  */
 export const ModalHeader: React.FC<ModalHeaderProps> = ({
@@ -95,6 +132,12 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   backgroundColor,
   paddingHorizontal = 16,
   paddingVertical = 8,
+  showActionButtons = false,
+  hasChanges = false,
+  onCancel,
+  onDone,
+  cancelText = 'Cancel',
+  doneText = 'Done',
 }) => {
   // get theme-aware colors
   const colors = useThemeColors();
@@ -102,10 +145,18 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   // get typography system
   const typography = useTypography();
   
+  // handle cancel button press without confirmation
+  const handleCancelPress = () => {
+    if (onCancel) {
+      // call cancel directly without confirmation alert
+      onCancel();
+    }
+  };
+  
   // header container style
   const headerStyle: ViewStyle = {
-    minHeight: 60,
-    height: 60,
+    minHeight: 48,
+    height: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -187,22 +238,84 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
           {title && <Text style={titleStyle}>{title}</Text>}
         </View>
         
-        {/* close button section */}
-        {showCloseButton && onClose && (
-          <TouchableOpacity
-            style={closeButtonStyle}
-            onPress={onClose}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Close modal"
-            accessibilityHint="Double tap to close this modal"
-          >
-            <Ionicons
-              name="close"
-              size={16}
-              color={colors.text.primary()}
-            />
-          </TouchableOpacity>
+        {/* ios-style action buttons (cancel/done) */}
+        {showActionButtons ? (
+          <>
+            {/* cancel button on the left */}
+            {onCancel && (
+              <TouchableOpacity
+                style={{
+                  position: 'absolute',
+                  left: paddingHorizontal,
+                  top: 0,
+                  bottom: 0,
+                  justifyContent: 'center',
+                  paddingVertical: 8,
+                }}
+                onPress={handleCancelPress}
+                activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
+              >
+                <Text
+                  style={{
+                    ...typography.getTextStyle('body-large'),
+                    color: '#007AFF', // ios blue
+                    fontSize: 17,
+                  }}
+                >
+                  {cancelText}
+                </Text>
+              </TouchableOpacity>
+            )}
+            
+            {/* done button on the right - only show if there are changes */}
+            {hasChanges && onDone && (
+              <TouchableOpacity
+                style={{
+                  position: 'absolute',
+                  right: paddingHorizontal,
+                  top: 0,
+                  bottom: 0,
+                  justifyContent: 'center',
+                  paddingVertical: 8,
+                }}
+                onPress={onDone}
+                activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel="Done"
+              >
+                <Text
+                  style={{
+                    ...typography.getTextStyle('body-large'),
+                    color: '#007AFF', // ios blue
+                    fontSize: 17,
+                    fontWeight: '900', // done button is bold
+                  }}
+                >
+                  {doneText}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </>
+        ) : (
+          /* close button section - only show if not using action buttons */
+          showCloseButton && onClose && (
+            <TouchableOpacity
+              style={closeButtonStyle}
+              onPress={onClose}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Close modal"
+              accessibilityHint="Double tap to close this modal"
+            >
+              <Ionicons
+                name="close"
+                size={16}
+                color={colors.text.primary()}
+              />
+            </TouchableOpacity>
+          )
         )}
       </View>
     </View>
