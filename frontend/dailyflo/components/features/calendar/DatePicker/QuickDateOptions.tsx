@@ -123,12 +123,13 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
     daysFromToday: number | null; 
     icon: keyof typeof Ionicons.glyphMap;
     iconColor: () => string;
+    isSpecial?: 'weekend' | 'no-deadline'; // special handling for non-standard dates
   }[] = [
     { label: 'Today', daysFromToday: 0, icon: 'calendar-outline', iconColor: () => semanticColors.success() }, // green
     { label: 'Tomorrow', daysFromToday: 1, icon: 'sunny-outline', iconColor: () => semanticColors.warning() }, // yellow
-    { label: 'This Weekend', daysFromToday: null, icon: 'calendar-outline', iconColor: () => semanticColors.info() }, // blue (special case)
+    { label: 'This Weekend', daysFromToday: null, icon: 'calendar-outline', iconColor: () => semanticColors.info(), isSpecial: 'weekend' }, // blue (special case)
     { label: 'Next Week', daysFromToday: 7, icon: 'arrow-forward-outline', iconColor: () => taskColors.purple() }, // purple
-    { label: 'No Deadline', daysFromToday: null, icon: 'remove-circle-outline', iconColor: () => themeColors.text.tertiary() }, // grey
+    { label: 'No Deadline', daysFromToday: null, icon: 'remove-circle-outline', iconColor: () => themeColors.text.tertiary(), isSpecial: 'no-deadline' }, // grey
   ];
   
   return (
@@ -136,13 +137,18 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
       {/* quick date options list */}
       {quickOptions.map((option) => {
         // calculate the actual date for this option
-        // special handling for "This Weekend" - use custom function
-        const optionDate = option.label === 'This Weekend' 
-          ? getThisWeekendDate() 
-          : getDateFromToday(option.daysFromToday);
+        // special handling for "This Weekend" and "No Deadline"
+        let optionDate = '';
+        if (option.isSpecial === 'weekend') {
+          optionDate = getThisWeekendDate();
+        } else if (option.isSpecial === 'no-deadline') {
+          optionDate = ''; // empty string represents no deadline
+        } else {
+          optionDate = getDateFromToday(option.daysFromToday);
+        }
         
-        // get the day of week for this date
-        const dayOfWeek = getDayOfWeek(optionDate);
+        // get the day of week for this date (empty for "No Deadline")
+        const dayOfWeek = option.isSpecial === 'no-deadline' ? '—' : getDayOfWeek(optionDate);
 
         return (
           <Pressable
