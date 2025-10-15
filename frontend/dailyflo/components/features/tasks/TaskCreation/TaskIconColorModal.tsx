@@ -34,47 +34,48 @@ const ICONS_PER_ROW = 6; // number of icons per row
 
 // available icons for tasks (using Ionicons names)
 // these are common task-related icons that users can choose from
+// using filled/solid variants for thicker stroke appearance
 const AVAILABLE_ICONS = [
-  { name: 'briefcase-outline', label: 'Work' },
-  { name: 'home-outline', label: 'Home' },
-  { name: 'cart-outline', label: 'Shopping' },
-  { name: 'fitness-outline', label: 'Fitness' },
-  { name: 'restaurant-outline', label: 'Food' },
-  { name: 'car-outline', label: 'Travel' },
-  { name: 'book-outline', label: 'Reading' },
-  { name: 'code-slash-outline', label: 'Code' },
-  { name: 'call-outline', label: 'Call' },
-  { name: 'mail-outline', label: 'Email' },
-  { name: 'people-outline', label: 'Meeting' },
-  { name: 'musical-notes-outline', label: 'Music' },
-  { name: 'medkit-outline', label: 'Health' },
-  { name: 'school-outline', label: 'Study' },
-  { name: 'cash-outline', label: 'Finance' },
-  { name: 'gift-outline', label: 'Gift' },
-  { name: 'calendar-outline', label: 'Event' },
-  { name: 'time-outline', label: 'Clock' },
-  { name: 'airplane-outline', label: 'Flight' },
-  { name: 'camera-outline', label: 'Photo' },
-  { name: 'heart-outline', label: 'Heart' },
-  { name: 'star-outline', label: 'Star' },
-  { name: 'trophy-outline', label: 'Goal' },
-  { name: 'bed-outline', label: 'Sleep' },
-  { name: 'pizza-outline', label: 'Pizza' },
-  { name: 'beer-outline', label: 'Drink' },
-  { name: 'bicycle-outline', label: 'Bike' },
-  { name: 'game-controller-outline', label: 'Game' },
-  { name: 'tv-outline', label: 'Watch' },
-  { name: 'laptop-outline', label: 'Laptop' },
-  { name: 'phone-portrait-outline', label: 'Phone' },
-  { name: 'cut-outline', label: 'Haircut' },
-  { name: 'paw-outline', label: 'Pet' },
-  { name: 'leaf-outline', label: 'Nature' },
-  { name: 'bulb-outline', label: 'Idea' },
-  { name: 'build-outline', label: 'Fix' },
-  { name: 'hammer-outline', label: 'DIY' },
-  { name: 'brush-outline', label: 'Art' },
-  { name: 'chatbubble-outline', label: 'Chat' },
-  { name: 'document-text-outline', label: 'Doc' },
+  { name: 'briefcase', label: 'Work' },
+  { name: 'home', label: 'Home' },
+  { name: 'cart', label: 'Shopping' },
+  { name: 'fitness', label: 'Fitness' },
+  { name: 'restaurant', label: 'Food' },
+  { name: 'car', label: 'Travel' },
+  { name: 'book', label: 'Reading' },
+  { name: 'code-slash', label: 'Code' },
+  { name: 'call', label: 'Call' },
+  { name: 'mail', label: 'Email' },
+  { name: 'people', label: 'Meeting' },
+  { name: 'musical-notes', label: 'Music' },
+  { name: 'medkit', label: 'Health' },
+  { name: 'school', label: 'Study' },
+  { name: 'cash', label: 'Finance' },
+  { name: 'gift', label: 'Gift' },
+  { name: 'calendar', label: 'Event' },
+  { name: 'time', label: 'Clock' },
+  { name: 'airplane', label: 'Flight' },
+  { name: 'camera', label: 'Photo' },
+  { name: 'heart', label: 'Heart' },
+  { name: 'star', label: 'Star' },
+  { name: 'trophy', label: 'Goal' },
+  { name: 'bed', label: 'Sleep' },
+  { name: 'pizza', label: 'Pizza' },
+  { name: 'beer', label: 'Drink' },
+  { name: 'bicycle', label: 'Bike' },
+  { name: 'game-controller', label: 'Game' },
+  { name: 'tv', label: 'Watch' },
+  { name: 'laptop', label: 'Laptop' },
+  { name: 'phone-portrait', label: 'Phone' },
+  { name: 'cut', label: 'Haircut' },
+  { name: 'paw', label: 'Pet' },
+  { name: 'leaf', label: 'Nature' },
+  { name: 'bulb', label: 'Idea' },
+  { name: 'build', label: 'Fix' },
+  { name: 'hammer', label: 'DIY' },
+  { name: 'brush', label: 'Art' },
+  { name: 'chatbubble', label: 'Chat' },
+  { name: 'document-text', label: 'Doc' },
 ];
 
 export function TaskIconColorModal({
@@ -244,18 +245,17 @@ export function TaskIconColorModal({
                                 height: 48,
                                 borderRadius: 24,
                                 backgroundColor: isSelected 
-                                  ? TaskCategoryColors[selectedColor][500]
+                                  ? themeColors.background.invertedSecondary()
                                   : themeColors.background.tertiary(),
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                borderWidth: isSelected ? 2 : 0,
-                                borderColor: themeColors.border.invertedPrimary(),
                               }}
                             >
                               <Ionicons
                                 name={icon.name as any}
                                 size={24}
-                                color={isSelected ? '#FFFFFF' : themeColors.text.primary()}
+                                color={isSelected ? themeColors.interactive.invertedPrimary() : themeColors.interactive.primary()}
+                           
                               />
                             </View>
                         </Pressable>
