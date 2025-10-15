@@ -219,7 +219,9 @@ export const ThemeColors = {
     interactive: {
       primary: PrimaryColors.light[600],     // dark gray - primary buttons
       secondary: PrimaryColors.light[100],   // light gray - secondary buttons
-      tertiary: PrimaryColors.light[200],               // transparent - tertiary buttons
+      tertiary: PrimaryColors.light[200],    // light neutral - tertiary buttons
+      quaternary: PrimaryColors.light[300],  // medium neutral - quaternary buttons
+      quinary: PrimaryColors.light[400],     // darker neutral - quinary buttons
       hover: PrimaryColors.light[700],       // darker gray - hover states
       active: PrimaryColors.light[800],      // darkest gray - active states
       disabled: PrimaryColors.light[200],    // light gray - disabled states
@@ -227,6 +229,8 @@ export const ThemeColors = {
       invertedPrimary: PrimaryColors.dark[900],      // light - inverted primary interactive
       invertedSecondary: PrimaryColors.dark[600],    // medium light - inverted secondary interactive
       invertedTertiary: PrimaryColors.dark[300],     // darker - inverted tertiary interactive
+      invertedQuaternary: PrimaryColors.dark[200],   // medium dark - inverted quaternary interactive
+      invertedQuinary: PrimaryColors.dark[100],      // darkest - inverted quinary interactive
       invertedHover: PrimaryColors.dark[700],        // lighter - inverted hover state
       invertedActive: PrimaryColors.dark[800],       // lightest - inverted active state
       invertedDisabled: PrimaryColors.dark[200],     // medium dark - inverted disabled state
@@ -241,7 +245,7 @@ export const ThemeColors = {
       tertiary: PrimaryColors.dark[200],     // medium gray - tertiary surfaces
       quaternary: PrimaryColors.dark[300],   // darker - quaternary surfaces
       elevated: PrimaryColors.dark[100],     // darker gray - elevated surfaces
-      overlay: 'rgba(0, 0, 0, 0.8)',        // black overlay - modal backdrops
+      overlay: 'rgba(0, 0, 0, 0.5)',        // black overlay - modal backdrops
       darkOverlay: 'rgba(0, 0, 0, 0.9)',    // darker black overlay - stronger backdrops
       lightOverlay: 'rgba(255, 255, 255, 0.2)', // white overlay - light backdrops
       // inverted colors - light mode colors used in dark theme
@@ -282,15 +286,19 @@ export const ThemeColors = {
     // interactive colors - buttons and controls
     interactive: {
       primary: PrimaryColors.dark[900],      // light gray - primary buttons
-      secondary: PrimaryColors.dark[600],    // medium gray - secondary buttons
-      tertiary: PrimaryColors.dark[300],               // transparent - tertiary buttons
+      secondary: PrimaryColors.dark[400],    // medium gray - secondary buttons
+      tertiary: PrimaryColors.dark[300],     // medium dark - tertiary buttons
+      quaternary: PrimaryColors.dark[200],   // darker gray - quaternary buttons
+      quinary: PrimaryColors.dark[100],      // darkest gray - quinary buttons
       hover: PrimaryColors.dark[700],        // lighter gray - hover states
       active: PrimaryColors.dark[800],       // lightest gray - active states
       disabled: PrimaryColors.dark[200],     // medium gray - disabled states
       // inverted colors - light mode colors used in dark theme
       invertedPrimary: PrimaryColors.light[600],     // dark gray - inverted primary interactive
       invertedSecondary: PrimaryColors.light[100],   // light gray - inverted secondary interactive
-      invertedTertiary: 'transparent',               // transparent - inverted tertiary interactive
+      invertedTertiary: PrimaryColors.light[200],    // light neutral - inverted tertiary interactive
+      invertedQuaternary: PrimaryColors.light[300],  // medium neutral - inverted quaternary interactive
+      invertedQuinary: PrimaryColors.light[400],     // darker neutral - inverted quinary interactive
       invertedHover: PrimaryColors.light[700],       // darker gray - inverted hover state
       invertedActive: PrimaryColors.light[800],      // darkest gray - inverted active state
       invertedDisabled: PrimaryColors.light[200],    // light gray - inverted disabled state
