@@ -115,7 +115,7 @@ export function TaskIconColorModal({
       snapPoints={[0.3, 0.6, 0.93]}
       // start at the middle snap point (60%)
       initialSnapPoint={1}
-      borderRadius={20}
+      borderRadius={16}
       // sticky header that moves with modal drag but floats over scrolling content
       stickyHeader={
         // color slider positioned absolutely to float over icon grid
