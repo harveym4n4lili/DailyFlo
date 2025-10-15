@@ -618,14 +618,63 @@ Updated User app, models, serializers, views and urls
 ### Notes
 - After task creation is fully implemented, check how current structure follows the planned file architecture
 ---
-## [11/10/2025] - [Saturday]
+## [12/10/2025] - [Sunday]
 
 ### Today's Goals
-- [X] 
-
+- [X] Added icon, time and duration fields to task model
+- [X] Craeted a task icon and color select modal
+- [X] Added a sticky header prop to draggable modal
 
 ### Plans For Future
-- 
+- Plan to implement next form buttons
 
 ### Notes
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+---
+## [13/10/2025] - [Monday]
+
+### Today's Goals
+- [X] Added alert and duration buttons to the task creation modal
+
+### Plans For Future
+- Plan to implement next form modals
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+---
+## [14/10/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Implemented a GroupedList Button Component to be reused
+- [X] Refactored the task creation modal buttons to use the new component
+- [X] Begun designing task time duration modal and implemented react native time wheel picker
+
+### Plans For Future
+- Plan to implement next form modals
+- Consider Animations
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+---
+## [15/10/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Added action buttons to Draggable Modal
+- [X] Refactored all current form modals to use new action buttons
+- [X] Restructured current form buttons to include dynamic displays for saved options
+- [X] Implemented an icon pressable display
+- [X] Added highlight animations for form button tap and saves
+
+### Plans For Future
+- Plan to implement alert selection modal
+- Plan to implement description and sub tasks
+- Turn form buttons into reusable components for modularity, keeping animations
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement better time picker or style my own
+- Implement better duration slider
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+
