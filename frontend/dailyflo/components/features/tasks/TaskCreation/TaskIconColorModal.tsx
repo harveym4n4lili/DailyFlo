@@ -208,8 +208,8 @@ export function TaskIconColorModal({
                 {/* icon selection section */}
                 <View style={{ gap: 12 }}>
                   <Text style={[
-                    getTextStyle('body-large'),
-                    { color: themeColors.text.primary(), fontWeight: '600', paddingHorizontal: 20 }
+                    getTextStyle('heading-4'),
+                    { color: themeColors.text.primary(), paddingHorizontal: 20 }
                   ]}>
                     Icon
                   </Text>
