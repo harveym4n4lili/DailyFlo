@@ -13,7 +13,7 @@
  */
 
 // react: core react library
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 // react native components for the UI
 import {
@@ -98,32 +98,77 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   // get safe area insets to handle devices with notches/home indicators
   const insets = useSafeAreaInsets();
   
+  // internal state for the working date (not applied until "Done")
+  const [workingDate, setWorkingDate] = useState<string | undefined>(selectedDate);
+  
+  // track the initial/committed date
+  const [initialDate, setInitialDate] = useState<string | undefined>(selectedDate);
+  
+  // track if user has made changes
+  const [hasChanges, setHasChanges] = useState(false);
+  
+  // when modal opens, sync working date with selected date
+  useEffect(() => {
+    if (visible) {
+      setWorkingDate(selectedDate);
+      setInitialDate(selectedDate);
+      setHasChanges(false);
+    }
+  }, [visible, selectedDate]);
+  
+  // detect if working date has changed from initial
+  useEffect(() => {
+    if (workingDate !== initialDate) {
+      setHasChanges(true);
+    } else {
+      setHasChanges(false);
+    }
+  }, [workingDate, initialDate]);
+  
   /**
    * Handle date selection from quick options
-   * This immediately confirms the selection and closes the modal
+   * Immediately applies the date and closes the modal
    */
-  // when user picks a quick option (Today, Tomorrow, etc), we immediately apply it
-  // flow: user taps quick option → this function runs → parent receives new date → modal closes
+  // when user picks a quick option (Today, Tomorrow, etc), we apply it immediately
+  // flow: user taps quick option → applies date to parent → modal closes
   const handleQuickDateSelect = (date: string, optionName: string) => {
     console.log(`Quick date selected: ${optionName}`);
-    onSelectDate(date); // notify parent component
-    onClose(); // close modal
+    onSelectDate(date); // apply date to parent immediately
+    onClose(); // close modal immediately
   };
   
   /**
    * Handle date selection from calendar view
-   * This immediately confirms the selection and closes the modal
+   * Updates the working date internally (not applied until "Done")
    */
-  // when user picks a specific date from the calendar, we immediately apply it
-  // flow: user taps calendar date → this function runs → parent receives new date → modal closes
+  // when user picks a specific date from the calendar, we update working date
+  // flow: user taps calendar date → updates working date → modal stays open
   const handleCalendarDateSelect = (date: string) => {
     console.log(`Calendar date selected: ${date}`);
-    onSelectDate(date); // notify parent component
-    onClose(); // close modal
+    setWorkingDate(date); // update internal working date only
+    // don't notify parent - changes applied on "Done"
   };
   
   /**
-   * Handle modal close
+   * Handle cancel button - discard changes and close
+   */
+  const handleCancel = () => {
+    setWorkingDate(initialDate); // reset working date to initial
+    onClose();
+  };
+  
+  /**
+   * Handle done button - apply changes and close
+   */
+  const handleDone = () => {
+    if (workingDate) {
+      onSelectDate(workingDate); // apply the working date to parent
+    }
+    onClose();
+  };
+  
+  /**
+   * Handle modal close (backdrop/drag)
    */
   const handleModalClose = () => {
     onClose();
@@ -191,15 +236,17 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
       snapPoints={[0.3, 0.6, 0.95]}
       // start at the middle snap point (60%)
       initialSnapPoint={1}
-      borderRadius={20}
+      borderRadius={16}
       // pass the repeating container as sticky footer - stays fixed at bottom while modal drags
       stickyFooter={repeatingContainer}
     >
-      {/* custom header for date picker modal */}
+      {/* custom header for date picker modal with action buttons */}
       <ModalHeader
         title={title}
-        onClose={handleModalClose}
-        showCloseButton={false}
+        showActionButtons={true}
+        hasChanges={hasChanges}
+        onCancel={handleCancel}
+        onDone={handleDone}
         showDragIndicator={true}
         showBorder={true}
       />
@@ -211,15 +258,15 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
         >
           {/* quick date options */}
           <QuickDateOptions
-            selectedDate={selectedDate || ''}
+            selectedDate={workingDate || ''}
             onSelectDate={handleQuickDateSelect}
           />
           
           {/* calendar view for specific date selection */}
           <CalendarView
-            selectedDate={selectedDate || ''}
+            selectedDate={workingDate || ''}
             onSelectDate={handleCalendarDateSelect}
-            initialMonth={selectedDate ? new Date(selectedDate) : undefined}
+            initialMonth={workingDate ? new Date(workingDate) : undefined}
           />
         
         </ScrollView>
