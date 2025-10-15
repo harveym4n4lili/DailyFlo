@@ -18,7 +18,6 @@ import { TaskTimeDurationModal } from './TaskTimeDurationModal';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
 import { ModalBackdrop } from '@/components/layout/ModalLayout';
-import { GroupedList, type GroupedListItemConfig } from '@/components/ui/List/GroupedList';
 
 export interface TaskBasicInfoProps {
   initialValues?: Partial<TaskFormValues>;
@@ -185,38 +184,28 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
     }
   };
 
-  // configuration for the grouped list items
-  // this array defines the three picker buttons (date, time/duration, alerts)
-  const pickerItems: GroupedListItemConfig[] = useMemo(() => [
+  // horizontal button configuration for the picker buttons
+  // these buttons match the style shown in the reference image
+  const pickerButtons = useMemo(() => [
     {
       id: 'date',
       icon: 'calendar-outline',
-      label: values.dueDate 
-        ? new Date(values.dueDate).toLocaleDateString('en-US', { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric',
-            year: 'numeric'
-          })
-        : 'No Deadline',
-      value: values.dueDate ? getRelativeDateMessage(values.dueDate) : '—',
+      label: 'Date',
       onPress: handleShowDatePicker,
     },
     {
       id: 'time',
-      icon: 'time-outline',
+      icon: 'time-outline', 
       label: 'Time & Duration',
-      value: formatTimeDuration(),
       onPress: handleShowTimeDurationPicker,
     },
     {
       id: 'alerts',
       icon: 'notifications-outline',
       label: 'Alerts',
-      value: 'Not Set',
       onPress: handleShowAlertsPicker,
     },
-  ], [values.dueDate, values.time, values.duration]);
+  ], []);
 
   const borderError = colors.getSemanticColor('error', 500);
   const labelColor = themeColors.text.secondary();
@@ -337,7 +326,6 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
           style={{ flex: 1 }}
           contentContainerStyle={{ 
             flexGrow: 1,
-            paddingHorizontal: 16,
             paddingTop: 32,
             paddingBottom: insets.bottom + 20,
             gap: 12,
@@ -346,10 +334,58 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
           showsVerticalScrollIndicator={false}
           onScrollBeginDrag={dismissKeyboard}
         >
-          {/* ios-style grouped list for picker buttons */}
-          {/* replaces the old hardcoded date, time, and alerts buttons */}
-          {/* the GroupedList component automatically handles border radius and separators */}
-          <GroupedList items={pickerItems} />
+          {/* horizontal scrollable picker buttons - matches reference image style */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              
+              gap: 16,
+            }}
+            style={{
+              marginBottom: 12,
+            }}
+          >
+            {pickerButtons.map((button) => (
+              <Pressable
+                key={button.id}
+                onPress={button.onPress}
+                style={{
+                  left: 16,
+                  backgroundColor: themeColors.interactive.quinary(),
+                  borderRadius: 12,
+                  paddingVertical: 12,
+                  paddingHorizontal: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  // prevent buttons from stretching vertically
+                  alignSelf: 'flex-start',
+                  // add subtle border for definition
+                  borderWidth: 1,
+                  borderColor: themeColors.border.primary(),
+                }}
+              >
+                {/* icon on the left */}
+                <Ionicons
+                  name={button.icon as any}
+                  size={16}
+                  color={themeColors.text.primary()}
+                />
+                
+                {/* label text */}
+                <Text style={{
+                  ...getTextStyle('body-large'),
+                  color: themeColors.text.primary(),
+                  textAlignVertical: 'center',
+                  includeFontPadding: false,
+                }}>
+                  {button.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </ScrollView>
       </View>
       
