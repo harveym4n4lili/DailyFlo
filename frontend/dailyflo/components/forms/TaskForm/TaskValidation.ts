@@ -28,6 +28,7 @@ export interface TaskFormValues {
   color?: TaskCategoryColorName;      // optional color for visual organization
   routineType?: RoutineType;          // optional routine type (once, daily, weekly, monthly)
   listId?: string;                    // optional list ID to organize task into a list
+  alerts?: string[];                  // optional array of alert/reminder IDs for the task
 }
 
 /** validate a single field and return error string or undefined */
@@ -95,6 +96,18 @@ export function validateField<K extends keyof TaskFormValues>(
       if (v < 0) return 'duration must be 0 or greater';
       // optional: check for reasonable maximum (e.g., 24 hours = 1440 minutes)
       if (v > 1440) return 'duration must be less than 24 hours (1440 minutes)';
+    }
+  }
+
+  // validate alerts field - must be an array of strings
+  // alerts stores IDs of selected alert/reminder options
+  if (key === 'alerts') {
+    const v = value as string[] | undefined;
+    if (v !== undefined) {
+      // check if it's an array
+      if (!Array.isArray(v)) return 'alerts must be an array';
+      // check if all items are strings
+      if (!v.every(item => typeof item === 'string')) return 'all alert items must be strings';
     }
   }
 
