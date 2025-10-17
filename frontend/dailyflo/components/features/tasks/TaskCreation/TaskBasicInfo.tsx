@@ -15,13 +15,15 @@ import { validateAll, TaskFormValues } from '@/components/forms/TaskForm/TaskVal
 import { DatePickerModal } from '@/components/features/calendar';
 import { TaskIconColorModal } from './TaskIconColorModal';
 import { TaskTimeDurationModal } from './TaskTimeDurationModal';
+import { TaskAlertModal } from './TaskAlertModal';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
 import { ModalBackdrop } from '@/components/layout/ModalLayout';
 import { 
   FormPickerButton, 
   getDatePickerDisplay, 
-  getTimeDurationPickerDisplay 
+  getTimeDurationPickerDisplay,
+  getAlertsPickerDisplay,
 } from '@/components/ui/Button';
 
 export interface TaskBasicInfoProps {
@@ -55,6 +57,11 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   // this controls whether the time/duration picker modal is shown
   // flow: user taps time/duration button → handleShowTimeDurationPicker sets this to true → modal opens
   const [isTimeDurationPickerVisible, setIsTimeDurationPickerVisible] = useState(false);
+  
+  // state for alert picker modal visibility
+  // this controls whether the alert picker modal is shown
+  // flow: user taps alerts button → handleShowAlertsPicker sets this to true → modal opens
+  const [isAlertsPickerVisible, setIsAlertsPickerVisible] = useState(false);
 
   // animation state for button highlights
   // these control the highlight animations that play when buttons are tapped or values change
@@ -196,10 +203,24 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   };
 
   // alerts picker handlers
-  // this logs when user taps the alerts button (no modal opens)
+  // this opens the alerts picker modal when user taps the alerts button
   const handleShowAlertsPicker = () => {
     console.log('Opening alerts picker modal');
     triggerButtonHighlight(alertsButtonHighlightOpacity);
+    setIsAlertsPickerVisible(true);
+  };
+  
+  // this handles when user closes the alerts picker modal
+  const handleAlertsPickerClose = () => {
+    console.log('Alerts picker modal closed');
+    setIsAlertsPickerVisible(false);
+  };
+  
+  // this handles when user applies alert changes (presses Done button)
+  // flow: user selects alerts in modal → presses done → this function → onChange updates form state
+  const handleAlertsApply = (alertIds: string[]) => {
+    console.log('Alerts applied:', alertIds);
+    onChange('alerts', alertIds);
   };
 
   const dismissKeyboard = () => {
@@ -236,9 +257,9 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
     >
       <View style={{ flex: 1 }}>
         {/* reusable backdrop component that fades when any modal opens */}
-        {/* isVisible is true when any modal (date picker, color picker, or time/duration picker) is open */}
+        {/* isVisible is true when any modal (date, color, time/duration, or alerts picker) is open */}
         <ModalBackdrop 
-          isVisible={isDatePickerVisible || isColorPickerVisible || isTimeDurationPickerVisible}
+          isVisible={isDatePickerVisible || isColorPickerVisible || isTimeDurationPickerVisible || isAlertsPickerVisible}
         />
 
         {/* header with icon display, color palette button, and title input */}
@@ -357,12 +378,14 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
             }}
           >
             {pickerButtons.map((button) => {
-              // get dynamic display info for date and time buttons using utility functions
+              // get dynamic display info for all buttons using utility functions
               // these utility functions provide consistent logic and semantic colors
               const displayInfo = button.id === 'date' 
                 ? getDatePickerDisplay(values.dueDate, colors, themeColors)
                 : button.id === 'time' 
                 ? getTimeDurationPickerDisplay(values.time, values.duration, themeColors)
+                : button.id === 'alerts'
+                ? getAlertsPickerDisplay(values.alerts?.length || 0, themeColors)
                 : null;
               
               const iconColor = displayInfo ? displayInfo.iconColor : themeColors.text.secondary();
@@ -428,13 +451,19 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
         onSelectTime={handleTimeSelect}
         onSelectDuration={handleDurationSelect}
       />
+      
+      {/* alerts picker modal */}
+      {/* this modal appears when user wants to select task alerts/reminders */}
+      {/* flow: user taps alerts button → modal opens → user selects alerts → presses done → onApplyAlerts updates form → modal closes */}
+      <TaskAlertModal
+        visible={isAlertsPickerVisible}
+        selectedAlerts={values.alerts || []}
+        onClose={handleAlertsPickerClose}
+        onApplyAlerts={handleAlertsApply}
+      />
 
     </KeyboardAvoidingView>
   );
 };
 
 export default TaskBasicInfo;
-
-
-
-

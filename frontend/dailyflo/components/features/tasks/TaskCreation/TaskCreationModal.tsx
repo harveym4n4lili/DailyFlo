@@ -30,6 +30,7 @@ const DEFAULTS: TaskFormValues = {
   color: 'blue',
   routineType: 'once' as RoutineType,
   listId: undefined,
+  alerts: [], // default to no alerts selected
 };
 
 export function TaskCreationModal({ 
