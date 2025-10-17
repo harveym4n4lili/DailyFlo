@@ -9,5 +9,17 @@
 export { FloatingActionButton } from './FloatingActionButton';
 export type { FloatingActionButtonProps } from './FloatingActionButton';
 
-// Default export for convenience
+// Export FormPickerButton component and utilities
+export { FormPickerButton } from './FormPickerButton';
+export type { FormPickerButtonProps } from './FormPickerButton';
+
+export {
+  getDatePickerDisplay,
+  getTimeDurationPickerDisplay,
+  getAlertsPickerDisplay,
+  getRelativeDateMessage,
+} from './FormPickerButton';
+export type { PickerButtonDisplay } from './FormPickerButton';
+
+// Default export for convenience (FloatingActionButton)
 export { FloatingActionButton as default } from './FloatingActionButton';
