@@ -16,6 +16,7 @@ import { DatePickerModal } from '@/components/features/calendar';
 import { TaskIconColorModal } from './TaskIconColorModal';
 import { TaskTimeDurationModal } from './TaskTimeDurationModal';
 import { TaskAlertModal } from './TaskAlertModal';
+import { TaskDescription } from './TaskDescription';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
 import { ModalBackdrop } from '@/components/layout/ModalLayout';
@@ -361,13 +362,20 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
           </View>
         </TouchableWithoutFeedback>
 
-        {/* form fields section */}
-        <View 
-          style={{ 
-            paddingTop: 24,
-            paddingBottom: insets.bottom + 16,
-          }}
+        {/* scrollable content below header */}
+        <ScrollView 
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
         >
+          {/* form fields section */}
+          <View 
+            style={{ 
+              paddingTop: 24,
+              paddingBottom: 16,
+              // removed flex: 1 to prevent it from taking all available space
+            }}
+          >
           {/* horizontal scrollable picker buttons using FormPickerButton component */}
           <ScrollView
             horizontal
@@ -414,7 +422,29 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
               );
             })}
           </ScrollView>
+
         </View>
+
+        {/* Task Description Section - positioned below picker buttons */}
+        {/* This component provides subtask management and description input */}
+        {/* flow: user can add subtasks (placeholder) and enter additional notes */}
+        <View style={{ 
+          paddingHorizontal: 16, 
+          paddingTop: 16,
+          paddingBottom: insets.bottom + 16,
+          // removed flex: 1 to let it size naturally
+        }}>
+          <TaskDescription
+            description={values.description || ''}
+            onDescriptionChange={(description) => onChange('description', description)}
+            onAddSubtask={() => {
+              // TODO: Implement subtask addition logic
+              console.log('Add subtask clicked - placeholder functionality');
+            }}
+            isEditing={true}
+          />
+          </View>
+        </ScrollView>
       </View>
       
       {/* date picker modal */}
