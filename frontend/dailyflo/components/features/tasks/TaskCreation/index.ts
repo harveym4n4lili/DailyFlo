@@ -10,6 +10,6 @@ export * from './TaskBasicInfo';
 export * from './TaskIconColorModal';
 export * from './TaskTimeDurationModal';
 export * from './TaskAlertModal';
-
-
+export * from './TaskDescription';
+export { default as TaskDescription } from './TaskDescription';
 
