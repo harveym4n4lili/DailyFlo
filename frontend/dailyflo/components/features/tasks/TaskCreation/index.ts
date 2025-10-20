@@ -12,4 +12,6 @@ export * from './TaskTimeDurationModal';
 export * from './TaskAlertModal';
 export * from './TaskDescription';
 export { default as TaskDescription } from './TaskDescription';
+export * from './SubtaskSection';
+export { default as SubtaskSection } from './SubtaskSection';
 
