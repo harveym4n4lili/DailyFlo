@@ -66,7 +66,7 @@ export const TaskDescription: React.FC<TaskDescriptionProps> = ({
   const colors = ThemeColors[colorScheme];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
+    <View style={styles.container}>
       {/* Description Text Area */}
       {/* multiline text input for users to add additional task notes */}
       {/* flow: user types → handleDescriptionChange updates state → parent callback is called */}
@@ -74,7 +74,6 @@ export const TaskDescription: React.FC<TaskDescriptionProps> = ({
         style={[
           styles.descriptionInput,
           {
-            backgroundColor: colors.background.primary,
             color: colors.text.primary,
             borderColor: colors.border.primary,
           }
@@ -119,7 +118,8 @@ const styles = StyleSheet.create({
     fontFamily: getFontFamily('ios'),
     // spacing around text
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 4,
+    paddingBottom: 12,
     // align text to top of input for multiline
     textAlignVertical: 'top',
   },
