@@ -1,0 +1,553 @@
+/**
+ * TaskCreationContent Component
+ * 
+ * The content and logic for the task creation modal.
+ * Contains the KeyboardModal, form UI, and all picker modals.
+ * Separated from TaskCreationModal for better organization.
+ */
+
+// REACT IMPORTS
+// react: core react library for building components
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+
+// REACT NATIVE IMPORTS
+// these are the building blocks from react native that we use to create the content
+import {
+  View,                      // basic container component
+  TextInput,                 // text input component for task title
+  Pressable,                 // pressable component for interactive elements
+  ScrollView,                // scrollable container for long content
+  Animated,                  // animated api for animations
+  Alert,                     // alert dialog for confirmation prompts
+  Keyboard,                  // keyboard api for dismissing keyboard
+} from 'react-native';
+
+// REACT NATIVE SAFE AREA CONTEXT IMPORT
+// useSafeAreaInsets: hook that provides safe area insets for the device
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// EXPO VECTOR ICONS IMPORT
+// ionicons: provides icons for the UI
+import { Ionicons } from '@expo/vector-icons';
+
+// LAYOUT COMPONENTS IMPORTS
+// KeyboardModal: bottom sheet modal that appears with keyboard, no keyboard avoiding
+// ModalBackdrop: reusable backdrop component that fades in/out
+import { KeyboardModal, ModalBackdrop } from '@/components/layout/ModalLayout';
+
+// UI COMPONENTS IMPORTS
+// button components for the form
+import { 
+  FormPickerButton, 
+  getDatePickerDisplay, 
+  getTimeDurationPickerDisplay,
+  getAlertsPickerDisplay,
+} from '@/components/ui/Button';
+
+// FEATURE COMPONENTS IMPORTS
+// task creation sub-components and modals
+import { DatePickerModal } from '@/components/features/calendar';
+import { TaskIconColorModal } from './TaskIconColorModal';
+import { TaskTimeDurationModal } from './TaskTimeDurationModal';
+import { TaskAlertModal } from './TaskAlertModal';
+import { TaskDescription } from './TaskDescription';
+import { SubtaskSection } from './SubtaskSection';
+
+// CONSTANTS IMPORTS
+// design system constants for styling
+import { getTextStyle } from '@/constants/Typography';
+import { TaskCategoryColors } from '@/constants/ColorPalette';
+
+// CUSTOM HOOKS IMPORTS
+// hooks for accessing design system and theme
+import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
+
+// TYPES IMPORTS
+// typescript types for type safety
+import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
+import type { TaskColor } from '@/types';
+
+/**
+ * Props for TaskCreationContent component
+ */
+export interface TaskCreationContentProps {
+  /** Whether the content is visible */
+  visible: boolean;
+  
+  /** Form values */
+  values: Partial<TaskFormValues>;
+  
+  /** Form change handler */
+  onChange: <K extends keyof TaskFormValues>(key: K, v: TaskFormValues[K]) => void;
+  
+  /** Callback when modal should close */
+  onClose: () => void;
+  
+  /** Whether form has unsaved changes */
+  hasChanges: boolean;
+}
+
+// CONSTANTS
+// padding for the bottom action section (with create button)
+const BOTTOM_SECTION_PADDING_VERTICAL = 16;
+const BOTTOM_SECTION_TOTAL_PADDING = BOTTOM_SECTION_PADDING_VERTICAL * 2; // top + bottom = 32px
+
+/**
+ * TaskCreationContent Component
+ * 
+ * Contains all the UI and logic for task creation modal content.
+ */
+export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
+  visible,
+  values,
+  onChange,
+  onClose,
+  hasChanges,
+}) => {
+  // HOOKS
+  const colors = useColorPalette();
+  const themeColors = useThemeColors();
+  const insets = useSafeAreaInsets();
+  
+  // FORM STATE
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  
+  // PICKER MODAL VISIBILITY STATE
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [isColorPickerVisible, setIsColorPickerVisible] = useState(false);
+  const [isTimeDurationPickerVisible, setIsTimeDurationPickerVisible] = useState(false);
+  const [isAlertsPickerVisible, setIsAlertsPickerVisible] = useState(false);
+
+  // ANIMATION STATE
+  const dateButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
+  const timeButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
+  const alertsButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
+  const [previousDueDate, setPreviousDueDate] = useState(values.dueDate);
+
+  // ANIMATION EFFECT
+  useEffect(() => {
+    if (previousDueDate !== values.dueDate && previousDueDate !== undefined) {
+      Animated.sequence([
+        Animated.timing(dateButtonHighlightOpacity, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dateButtonHighlightOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+    setPreviousDueDate(values.dueDate);
+  }, [values.dueDate, previousDueDate, dateButtonHighlightOpacity]);
+
+  // FORM HANDLERS
+  const onBlur = (key: keyof TaskFormValues) => {
+    setTouched((prev) => ({ ...prev, [key]: true }));
+  };
+
+  const triggerButtonHighlight = (animatedValue: Animated.Value) => {
+    Animated.sequence([
+      Animated.timing(animatedValue, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animatedValue, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  // DATE PICKER HANDLERS
+  const handleShowDatePicker = () => {
+    console.log('🔵 DATE PICKER: Button tapped - opening modal');
+    triggerButtonHighlight(dateButtonHighlightOpacity);
+    setIsDatePickerVisible(true);
+    console.log('🔵 DATE PICKER: State set to true');
+  };
+  
+  const handleDateSelect = (date: string) => {
+    console.log('Date selected:', date);
+    onChange('dueDate', date);
+  };
+  
+  const handleDatePickerClose = () => {
+    console.log('Date picker modal closed');
+    setIsDatePickerVisible(false);
+  };
+
+  // COLOR PICKER HANDLERS
+  const handleShowColorPicker = () => {
+    console.log('Opening color picker modal');
+    setIsColorPickerVisible(true);
+  };
+  
+  const handleColorSelect = (color: TaskColor) => {
+    console.log('Color selected:', color);
+    onChange('color', color);
+  };
+  
+  const handleColorPickerClose = () => {
+    console.log('Color picker modal closed');
+    setIsColorPickerVisible(false);
+  };
+
+  // ICON SELECTION HANDLER
+  const handleIconSelect = (icon: string) => {
+    console.log('Icon selected:', icon);
+    onChange('icon', icon);
+  };
+
+  // TIME/DURATION PICKER HANDLERS
+  const handleShowTimeDurationPicker = () => {
+    console.log('🔵 TIME PICKER: Button tapped - opening modal');
+    triggerButtonHighlight(timeButtonHighlightOpacity);
+    setIsTimeDurationPickerVisible(true);
+    console.log('🔵 TIME PICKER: State set to true');
+  };
+  
+  const handleTimeSelect = (time: string | undefined) => {
+    console.log('Time selected:', time);
+    onChange('time', time);
+  };
+  
+  const handleDurationSelect = (duration: number | undefined) => {
+    console.log('Duration selected:', duration);
+    onChange('duration', duration);
+  };
+  
+  const handleTimeDurationPickerClose = () => {
+    console.log('Time/duration picker modal closed');
+    setIsTimeDurationPickerVisible(false);
+  };
+
+  // ALERTS PICKER HANDLERS
+  const handleShowAlertsPicker = () => {
+    console.log('🔵 ALERTS PICKER: Button tapped - opening modal');
+    triggerButtonHighlight(alertsButtonHighlightOpacity);
+    setIsAlertsPickerVisible(true);
+    console.log('🔵 ALERTS PICKER: State set to true');
+  };
+  
+  const handleAlertsPickerClose = () => {
+    console.log('Alerts picker modal closed');
+    setIsAlertsPickerVisible(false);
+  };
+  
+  const handleAlertsApply = (alertIds: string[]) => {
+    console.log('Alerts applied:', alertIds);
+    onChange('alerts', alertIds);
+  };
+
+  // CLOSE HANDLER WITH CHANGE DETECTION
+  const handleClose = () => {
+    if (hasChanges) {
+      Alert.alert(
+        'Discard Changes?',
+        'You have unsaved changes. Are you sure you want to discard them?',
+        [
+          {
+            text: 'Continue Editing',
+            style: 'cancel',
+            onPress: () => {
+              console.log('User chose to continue editing');
+            },
+          },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              console.log('User chose to discard changes');
+              Keyboard.dismiss();
+              onClose();
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    } else {
+      console.log('No changes, closing modal');
+      Keyboard.dismiss();
+      onClose();
+    }
+  };
+
+  // PICKER BUTTONS CONFIGURATION
+  const pickerButtons = [
+    {
+      id: 'date',
+      icon: 'calendar-outline',
+      label: 'No Date',
+      onPress: handleShowDatePicker,
+    },
+    {
+      id: 'time',
+      icon: 'time-outline', 
+      label: 'No Time or Duration',
+      onPress: handleShowTimeDurationPicker,
+    },
+    {
+      id: 'alerts',
+      icon: 'notifications-outline',
+      label: 'No Alerts',
+      onPress: handleShowAlertsPicker,
+    },
+  ];
+
+  return (
+    <>
+      {/* Visual backdrop - non-tappable, just for darkening effect */}
+      {/* showsonly when task modal is visible, NOT when picker modals are open */}
+      {/* KeyboardModal's transparent backdrop handles taps */}
+      <ModalBackdrop 
+        isVisible={visible}
+        zIndex={9999}
+      />
+
+      {/* KeyboardModal - bottom sheet modal that appears with keyboard */}
+      {/* showBackdrop=true: uses transparent backdrop to catch taps */}
+      {/* backdropDismiss=true: tapping backdrop triggers handleClose */}
+      {/* bottomSectionHeight: accounts for bottom action section padding (32px) */}
+      <KeyboardModal
+        visible={visible}
+        onClose={handleClose}
+        backgroundColor={themeColors.background.primary()}
+        dynamicKeyboardHeight={true}
+        showBackdrop={true}
+        backdropDismiss={true}
+        bottomSectionHeight={BOTTOM_SECTION_TOTAL_PADDING}
+      >
+        {/* main scrollable content wrapper */}
+        <ScrollView 
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="always"
+          contentContainerStyle={{ paddingBottom: 0 }}
+        >
+          {/* header with icon display and title input - now inside ScrollView */}
+          <View
+            style={{
+              paddingTop: 12,
+              paddingBottom: 0,
+              paddingHorizontal: 16,
+            }}
+          >
+            {/* flex row to align icon and title side by side */}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 16 }}>
+              {/* icon display area - positioned on LEFT */}
+              <Pressable
+                onPress={handleShowColorPicker}
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                }}
+              >
+                {/* icon display */}
+                <Ionicons
+                  name={(values.icon as any) || 'star'}
+                  size={28}
+                  color={values.color 
+                    ? TaskCategoryColors[values.color][500] 
+                    : TaskCategoryColors.blue[500]}
+                />
+                
+                {/* color palette icon indicator */}
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: -8,
+                    left: -4,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
+                    backgroundColor: themeColors.background.overlay(),
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons
+                    name="color-palette"
+                    size={12}
+                    color={themeColors.text.primary()}
+                  />
+                </View>
+              </Pressable>
+              
+              {/* title input takes remaining space on the RIGHT */}
+              <TextInput
+                value={values.title || ''}
+                onChangeText={(t) => onChange('title', t)}
+                onBlur={() => onBlur('title')}
+                placeholder="Task title"
+                placeholderTextColor={themeColors.background.lightOverlay()}
+                selectionColor={values.color 
+                  ? TaskCategoryColors[values.color][500]
+                  : TaskCategoryColors.blue[500]}
+                style={{
+                  ...getTextStyle('heading-2'),
+                  color: themeColors.text.primary(),
+                  paddingVertical: 0,
+                  paddingHorizontal: 0,
+                  flex: 1,
+                }}
+                autoFocus={true}
+                returnKeyType="next"
+              />
+            </View>
+          </View>
+
+          {/* Task Description Section */}
+          <View style={{ paddingTop: 12 }}>
+            <TaskDescription
+              description={values.description || ''}
+              onDescriptionChange={(description) => onChange('description', description)}
+              isEditing={true}
+            />
+          </View>
+
+          {/* Subtask Section */}
+          <View>
+            <SubtaskSection
+              onAddSubtask={() => {
+                console.log('Add subtask clicked - placeholder functionality');
+              }}
+            />
+          </View>
+
+          {/* form fields section */}
+          <View 
+            style={{ 
+              paddingTop: 8,
+              paddingBottom: 16,
+              
+            }}
+          >
+            {/* horizontal scrollable picker buttons */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="always"
+              contentContainerStyle={{
+                paddingRight: 16,
+                gap: 16,
+              }}
+            >
+              {pickerButtons.map((button) => {
+                const displayInfo = button.id === 'date' 
+                  ? getDatePickerDisplay(values.dueDate, colors, themeColors)
+                  : button.id === 'time' 
+                  ? getTimeDurationPickerDisplay(values.time, values.duration, themeColors)
+                  : button.id === 'alerts'
+                  ? getAlertsPickerDisplay(values.alerts?.length || 0, themeColors)
+                  : null;
+                
+                const iconColor = displayInfo ? displayInfo.iconColor : themeColors.text.secondary();
+                const textColor = displayInfo ? displayInfo.color : themeColors.text.secondary();
+                const displayText = displayInfo ? displayInfo.text : button.label;
+
+                const animatedValue = button.id === 'date' 
+                  ? dateButtonHighlightOpacity 
+                  : button.id === 'time' 
+                  ? timeButtonHighlightOpacity 
+                  : alertsButtonHighlightOpacity;
+
+                return (
+                  <View key={button.id} style={{ left: 16 }}>
+                    <FormPickerButton
+                      icon={button.icon}
+                      defaultText={button.label}
+                      displayText={displayText}
+                      textColor={textColor}
+                      iconColor={iconColor}
+                      onPress={button.onPress}
+                      highlightOpacity={animatedValue}
+                    />
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </ScrollView>
+        <View style={{
+            borderTopWidth: 2,
+            borderTopColor: themeColors.border.secondary(),
+            paddingVertical: BOTTOM_SECTION_PADDING_VERTICAL,
+            paddingHorizontal: 16,
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+        }}>
+          {/* Circular create button anchored to the right */}
+          <Pressable
+            onPress={() => console.log('Create button tapped')}
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 28,
+              backgroundColor: values.color 
+                ? TaskCategoryColors[values.color][500]
+                : TaskCategoryColors.blue[500],
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Ionicons
+              name="arrow-up"
+              size={28}
+              color={themeColors.text.invertedPrimary()}
+            />
+          </Pressable>
+        </View>
+      </KeyboardModal>
+      
+      {/* date picker modal */}
+      <DatePickerModal
+        visible={isDatePickerVisible}
+        selectedDate={values.dueDate || new Date().toISOString()}
+        onClose={handleDatePickerClose}
+        onSelectDate={handleDateSelect}
+        title="Date"
+      />
+      
+      {/* color and icon picker modal */}
+      <TaskIconColorModal
+        visible={isColorPickerVisible}
+        selectedColor={(values.color as TaskColor) || 'blue'}
+        selectedIcon={values.icon}
+        onClose={handleColorPickerClose}
+        onSelectColor={handleColorSelect}
+        onSelectIcon={handleIconSelect}
+      />
+      
+      {/* time/duration picker modal */}
+      <TaskTimeDurationModal
+        visible={isTimeDurationPickerVisible}
+        selectedTime={values.time}
+        selectedDuration={values.duration}
+        onClose={handleTimeDurationPickerClose}
+        onSelectTime={handleTimeSelect}
+        onSelectDuration={handleDurationSelect}
+      />
+      
+      {/* alerts picker modal */}
+      <TaskAlertModal
+        visible={isAlertsPickerVisible}
+        selectedAlerts={values.alerts || []}
+        onClose={handleAlertsPickerClose}
+        onApplyAlerts={handleAlertsApply}
+      />
+    </>
+  );
+};
+
+export default TaskCreationContent;
+
