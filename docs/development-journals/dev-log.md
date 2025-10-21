@@ -716,4 +716,25 @@ Updated User app, models, serializers, views and urls
 - Implement better duration slider style
 - Add relevant haptic feedback to buttons
 - Change task color palette to be more aesthetic
+---
+## [20/10/2025] - [Monday]
+
+### Today's Goals
+- [X] Implemented a new keyboard layout modal
+- [X] Fied Modal backdrop issues
+- [X] seerated subtasks from Task Description as its own component
+- [X] Begun new task creation modal refactoring
+
+### Plans For Future
+- Fix form picker buttons not opening modals
+- Fix slide animations for other modals
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure23
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
 
