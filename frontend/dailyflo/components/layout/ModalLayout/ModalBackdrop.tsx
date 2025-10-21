@@ -11,6 +11,8 @@
  */
 
 import React, { useEffect } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -33,6 +35,11 @@ export interface ModalBackdropProps {
   // z-index for the backdrop
   // @default 50
   zIndex?: number;
+  
+  // callback when backdrop is tapped
+  // when provided, backdrop becomes tappable
+  // typically used to close modals when tapping outside
+  onPress?: () => void;
 }
 
 export function ModalBackdrop({
@@ -40,7 +47,11 @@ export function ModalBackdrop({
   backgroundColor = 'rgba(0, 0, 0, 0.5)',
   duration = 250,
   zIndex = 50,
+  onPress,
 }: ModalBackdropProps) {
+  // get safe area insets to extend backdrop into safe areas
+  const insets = useSafeAreaInsets();
+  
   // shared value for backdrop opacity animation
   // backdrop fades in when any modal opens, fades out when all modals close
   const backdropOpacity = useSharedValue(0);
@@ -63,21 +74,27 @@ export function ModalBackdrop({
     opacity: backdropOpacity.value,
   }));
 
+  // create animated pressable component
+  // this allows the backdrop to be tappable while maintaining animations
+  const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
   return (
-    <Animated.View
+    <AnimatedPressable
       style={[
+        StyleSheet.absoluteFillObject,
         {
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          // Use negative margins to extend into safe areas
+          marginTop: -Math.max(insets.top, 100),
+          marginLeft: -Math.max(insets.left, 100),
+          marginRight: -Math.max(insets.right, 100),
+          marginBottom: -Math.max(insets.bottom, 100),
           backgroundColor,
           zIndex,
         },
         backdropAnimatedStyle,
       ]}
-      pointerEvents="none"
+      pointerEvents={onPress && isVisible ? 'auto' : 'none'}
+      onPress={onPress}
     />
   );
 }
