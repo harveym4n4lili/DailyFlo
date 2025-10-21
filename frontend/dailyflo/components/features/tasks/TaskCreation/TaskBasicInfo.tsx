@@ -437,10 +437,7 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
           <TaskDescription
             description={values.description || ''}
             onDescriptionChange={(description) => onChange('description', description)}
-            onAddSubtask={() => {
-              // TODO: Implement subtask addition logic
-              console.log('Add subtask clicked - placeholder functionality');
-            }}
+          
             isEditing={true}
           />
           </View>
