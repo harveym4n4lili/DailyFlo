@@ -1,7 +1,8 @@
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, RefreshControl, View, Text, Alert, Modal } from 'react-native';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { StyleSheet, RefreshControl, View, Text, Alert, Modal, TouchableOpacity, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 
 // import our custom layout components
 import { ScreenContainer, SafeAreaWrapper } from '@/components';
@@ -44,6 +45,18 @@ export default function TodayScreen() {
   // TASK DETAIL MODAL STATE
   const [isTaskDetailModalVisible, setIsTaskDetailModalVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  
+  // DROPDOWN STATE - Controls the visibility of the dropdown menu
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  
+  // TITLE STATE - Controls the visibility of the title header
+  const [showTitle, setShowTitle] = useState(false);
+  
+  // Animated value for title fade effect
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Ref to track if animation is currently running
+  const isAnimatingRef = useRef(false);
   
   // COLOR PALETTE USAGE - Getting theme-aware colors
   // useThemeColors: Hook that provides theme-aware colors (background, text, borders, etc.)
@@ -114,6 +127,42 @@ export default function TodayScreen() {
   // the grouping logic is handled internally by the listcard component
 
   // STORE USAGE - Dispatching actions to fetch data
+  // SCROLL DETECTION EFFECT
+  // Monitor scroll position and show title when screen title is covered
+  useEffect(() => {
+    const handleScrollChange = (scrollY: number) => {
+      const titleThreshold = insets.top - 30;
+      
+      if (scrollY >= titleThreshold && !showTitle && !isAnimatingRef.current) {
+        setShowTitle(true);
+        isAnimatingRef.current = true;
+        Animated.timing(titleOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          isAnimatingRef.current = false;
+        });
+      } else if (scrollY < titleThreshold && showTitle && !isAnimatingRef.current) {
+        isAnimatingRef.current = true;
+        Animated.timing(titleOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          setShowTitle(false);
+          isAnimatingRef.current = false;
+        });
+      }
+    };
+
+    (global as any).trackScrollToTodayLayout = handleScrollChange;
+
+    return () => {
+      delete (global as any).trackScrollToTodayLayout;
+    };
+  }, [insets.top, showTitle, titleOpacity]);
+
   // Fetch tasks when component mounts
   // useEffect runs after the component renders for the first time
   useEffect(() => {
@@ -250,6 +299,17 @@ export default function TodayScreen() {
     );
   };
 
+  // DROPDOWN HANDLERS
+  const handleEllipsePress = () => {
+    setIsDropdownVisible(!isDropdownVisible);
+  };
+
+  const handleSelectAll = () => {
+    console.log('📋 Select all tasks requested');
+    // TODO: Implement select all functionality
+    setIsDropdownVisible(false);
+  };
+
   // render loading state when no tasks are loaded yet
   if (isLoading && tasks.length === 0) {
     return (
@@ -273,10 +333,63 @@ export default function TodayScreen() {
 
   // render main content with today's tasks
   return (
-    <ScreenContainer 
-      scrollable={false}
-      paddingHorizontal={0}
-     >
+    <View style={{ flex: 1 }}>
+      {/* Fixed top section with title and ellipse button - stays at top */}
+      <View style={styles.fixedTopSection}>
+        <View style={styles.titleContainer}>
+          {showTitle && (
+            <Animated.View style={{ opacity: titleOpacity }}>
+              <Text style={styles.titleHeader}>Today</Text>
+            </Animated.View>
+          )}
+        </View>
+        <TouchableOpacity
+          style={styles.ellipseButton}
+          onPress={handleEllipsePress}
+          activeOpacity={0.7}
+        >
+          <Ionicons 
+            name="ellipsis-horizontal" 
+            size={32} 
+            color={themeColors.text.primary()} 
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* dropdown menu modal */}
+      <Modal
+        visible={isDropdownVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsDropdownVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.dropdownOverlay}
+          activeOpacity={1}
+          onPress={() => setIsDropdownVisible(false)}
+        >
+          <View style={styles.dropdownMenu}>
+            <TouchableOpacity
+              style={styles.dropdownItem}
+              onPress={handleSelectAll}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.dropdownText}>Select All</Text>
+              <Ionicons 
+                name="checkmark-circle-outline" 
+                size={20} 
+                color={themeColors.text.primary()} 
+                style={styles.dropdownIcon}
+              />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <ScreenContainer 
+        scrollable={false}
+        paddingHorizontal={0}
+      >
       {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
       {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
       <ListCard
@@ -328,55 +441,10 @@ export default function TodayScreen() {
         presentationStyle="pageSheet"
         onRequestClose={handleTaskDetailModalClose}
       >
-        <ModalContainer
-          presentationStyle="pageSheet"
-          title={selectedTask?.title || "Task Details"}
-          onClose={handleTaskDetailModalClose}
-          showCloseButton={true}
-          showHeader={true}
-        >
-          {selectedTask && (
-            <View style={styles.taskDetailContent}>
-              <Text style={styles.taskDetailTitle}>{selectedTask.title}</Text>
-              
-              {selectedTask.description && (
-                <View style={styles.taskDetailSection}>
-                  <Text style={styles.taskDetailSectionTitle}>Description</Text>
-                  <Text style={styles.taskDetailDescription}>{selectedTask.description}</Text>
-                </View>
-              )}
-              
-              <View style={styles.taskDetailSection}>
-                <Text style={styles.taskDetailSectionTitle}>Due Date</Text>
-                <Text style={styles.taskDetailValue}>
-                  {selectedTask.dueDate 
-                    ? new Date(selectedTask.dueDate).toLocaleDateString()
-                    : 'No due date'
-                  }
-                </Text>
-              </View>
-              
-              <View style={styles.taskDetailSection}>
-                <Text style={styles.taskDetailSectionTitle}>Priority</Text>
-                <Text style={styles.taskDetailValue}>
-                  {selectedTask.priorityLevel === 5 ? 'Critical' :
-                   selectedTask.priorityLevel === 4 ? 'High' :
-                   selectedTask.priorityLevel === 3 ? 'Medium' :
-                   selectedTask.priorityLevel === 2 ? 'Low' : 'Minimal'}
-                </Text>
-              </View>
-              
-              <View style={styles.taskDetailSection}>
-                <Text style={styles.taskDetailSectionTitle}>Status</Text>
-                <Text style={[styles.taskDetailValue, { color: selectedTask.isCompleted ? semanticColors.success() : themeColors.text.secondary() }]}>
-                  {selectedTask.isCompleted ? 'Completed' : 'In Progress'}
-                </Text>
-              </View>
-            </View>
-          )}
-        </ModalContainer>
+       
       </Modal>
-    </ScreenContainer>
+      </ScreenContainer>
+    </View>
   );
 }
 
@@ -388,7 +456,83 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
+  // fixed top section with ellipse button - stays at top of screen
+  fixedTopSection: {
+    position: 'absolute',
+    top: insets.top,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    paddingHorizontal: 20,
+    height: insets.top + 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: themeColors.background.primary(),
+    borderBottomWidth: 1,
+    borderBottomColor: themeColors.border.primary(),
+  },
 
+  // title container - ensures consistent layout structure
+  titleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // title header styling
+  titleHeader: {
+    ...typography.getTextStyle('heading-2'),
+    color: themeColors.text.primary(),
+    fontWeight: '600',
+  },
+
+  // ellipse button styling
+  ellipseButton: {
+    position: 'absolute',
+    right: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // dropdown overlay for modal background
+  dropdownOverlay: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: insets.top + 72,
+    paddingRight: 20,
+  },
+
+  // dropdown menu container
+  dropdownMenu: {
+    backgroundColor: themeColors.background.tertiary(),
+    borderRadius: 12,
+    minWidth: 150,
+  },
+
+  // dropdown menu item
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+
+  // dropdown icon styling
+  dropdownIcon: {
+    // no margin needed
+  },
+
+  // dropdown text styling
+  dropdownText: {
+    ...typography.getTextStyle('body-large'),
+    color: themeColors.text.primary(),
+    fontWeight: '500',
+  },
   
   // loading text styling for initial load state
   // using typography system for consistent text styling
