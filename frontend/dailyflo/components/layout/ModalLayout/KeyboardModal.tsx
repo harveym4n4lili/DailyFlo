@@ -15,7 +15,7 @@
 
 // REACT IMPORTS
 // react: core react library for building components
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 // REACT NATIVE IMPORTS
 // these are the building blocks from react native that we use to create the modal
@@ -26,7 +26,27 @@ import {
   StyleSheet,   // utility for creating optimized stylesheets
   ViewStyle,    // typescript type for view/container styles
   DimensionValue, // typescript type for height values
+  Animated,     // animated api for creating performant animations
+  Keyboard,     // keyboard api for detecting keyboard show/hide events
+  KeyboardEvent, // typescript type for keyboard events
+  Platform,     // platform detection for ios/android specific behavior
+  useWindowDimensions, // hook to get screen dimensions
+  LayoutAnimation, // layout animation api that syncs perfectly with keyboard
+  UIManager,    // native UI manager for enabling layout animations on Android
 } from 'react-native';
+
+// enable LayoutAnimation on Android
+// this is required for LayoutAnimation to work on Android devices
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+// REACT NATIVE SAFE AREA IMPORTS
+// useSafeAreaInsets: provides safe area insets for extending modal to bottom
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // CUSTOM HOOKS IMPORTS
 // useThemeColors: hook that provides theme-aware colors
@@ -101,6 +121,22 @@ export interface KeyboardModalProps {
    */
   // showBackdrop: whether to show the dark overlay behind modal
   showBackdrop?: boolean;
+  
+  /**
+   * Whether to position modal bottom edge on keyboard top
+   * When true, modal auto-sizes to content and sits directly on keyboard
+   * Modal height = content height (flexible), Modal bottom = keyboard top
+   * @default false
+   */
+  // dynamicKeyboardHeight: whether to position modal on keyboard
+  dynamicKeyboardHeight?: boolean;
+  
+  /**
+   * Height of bottom section to subtract from keyboard padding
+   * Use this when you have a fixed bottom section (like action buttons)
+   * @default 0
+   */
+  bottomSectionHeight?: number;
 }
 
 /**
@@ -120,16 +156,107 @@ export const KeyboardModal: React.FC<KeyboardModalProps> = ({
   visible,
   onClose,
   children,
-  borderRadius = 20,
+  borderRadius = 16,
   height,
   backdropDismiss = true,
   backgroundColor,
   showBackdrop = true,
+  dynamicKeyboardHeight = false,
+  bottomSectionHeight = 0,
 }) => {
   // COLOR PALETTE USAGE
   // get theme-aware colors from the design system
   // this provides consistent colors that work with both light and dark modes
   const themeColors = useThemeColors();
+  const insets = useSafeAreaInsets();
+  
+  // SCREEN DIMENSIONS
+  // get screen dimensions to calculate available space
+  const { height: screenHeight } = useWindowDimensions();
+  
+  // KEYBOARD HEIGHT STATE
+  // track the current keyboard height
+  // this updates when keyboard shows/hides and triggers layout animation
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  
+  // KEYBOARD EVENT LISTENERS
+  // set up listeners for keyboard show/hide events
+  // uses LayoutAnimation for perfect sync with keyboard
+  // this makes the modal appear "glued" to the keyboard
+  // IMPORTANT: runs on ALL keyboard changes, including when Alert dialogs show/hide
+  useEffect(() => {
+    if (!dynamicKeyboardHeight) return; // only listen if dynamicKeyboardHeight is enabled
+    
+    // keyboard show listener
+    // this runs when the keyboard appears on screen
+    // flow: keyboard appears → trigger LayoutAnimation → update state → modal animates perfectly with keyboard
+    const keyboardWillShowListener = Keyboard.addListener(
+      // use keyboardWillShow on iOS for smoother animation, keyboardDidShow on Android
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (event: KeyboardEvent) => {
+        // get the keyboard height and duration from the event
+        const height = event.endCoordinates.height;
+        const duration = event.duration || 250;
+        
+        console.log('Keyboard showing - height:', height, 'duration:', duration);
+        
+        // ALWAYS configure LayoutAnimation, even if triggered by Alert dialog
+        // this prevents the modal from teleporting when Alert appears
+        // the animation will play smoothly regardless of what triggered the keyboard change
+        LayoutAnimation.configureNext({
+          duration: duration,
+          update: {
+            type: LayoutAnimation.Types.keyboard, // use keyboard animation curve
+            property: LayoutAnimation.Properties.opacity,
+          },
+          create: {
+            type: LayoutAnimation.Types.keyboard,
+            property: LayoutAnimation.Properties.opacity,
+          },
+        });
+        
+        // update state - LayoutAnimation handles the animation automatically
+        setKeyboardHeight(height);
+      }
+    );
+    
+    // keyboard hide listener
+    // this runs when the keyboard disappears from screen
+    // flow: keyboard dismisses → trigger LayoutAnimation → update state → modal animates down with keyboard
+    const keyboardWillHideListener = Keyboard.addListener(
+      // use keyboardWillHide on iOS for smoother animation, keyboardDidHide on Android
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      (event: KeyboardEvent) => {
+        const duration = event.duration || 250;
+        
+        console.log('Keyboard hiding - duration:', duration);
+        
+        // ALWAYS configure LayoutAnimation, even if triggered by Alert dialog dismissal
+        // this prevents the modal from teleporting when Alert dismisses
+        LayoutAnimation.configureNext({
+          duration: duration,
+          update: {
+            type: LayoutAnimation.Types.keyboard, // use keyboard animation curve
+            property: LayoutAnimation.Properties.opacity,
+          },
+          delete: {
+            type: LayoutAnimation.Types.keyboard,
+            property: LayoutAnimation.Properties.opacity,
+          },
+        });
+        
+        // update state - LayoutAnimation handles the animation automatically
+        setKeyboardHeight(0);
+      }
+    );
+    
+    // cleanup function
+    // this removes the listeners when component unmounts to prevent memory leaks
+    return () => {
+      keyboardWillShowListener.remove();
+      keyboardWillHideListener.remove();
+    };
+  }, [dynamicKeyboardHeight]); // dependency array: re-run effect if dynamicKeyboardHeight changes
   
   /**
    * Handle backdrop press
@@ -166,30 +293,56 @@ export const KeyboardModal: React.FC<KeyboardModalProps> = ({
       
       {/* modal positioning container */}
       {/* centers modal horizontally and positions at bottom of screen */}
+      {/* higher z-index than backdrop ensures modal appears on top */}
       <View
-        style={styles.modalContainer}
+        style={[styles.modalContainer, { zIndex: 10001 }]}
         pointerEvents="box-none" // allow touches to pass through transparent areas
       >
-        {/* modal content container with rounded top corners */}
-        {/* this has the same styling as DraggableModal */}
+        {/* wrapper for keyboard-aware positioning */}
+        {/* modal is always anchored to screen bottom (bottom: 0) */}
+        {/* internal padding adjusts for keyboard to keep content visible */}
+        {/* uses LayoutAnimation for perfect sync with keyboard animation */}
         <View
           style={[
-            styles.contentContainer,
             {
-              // theme colors for modal background
-              backgroundColor: backgroundColor || themeColors.background.elevated(),
-              // rounded top corners (same as DraggableModal)
-              borderTopLeftRadius: borderRadius,
-              borderTopRightRadius: borderRadius,
-              // custom height if provided, otherwise auto-size to content
-              height: height,
+              width: '100%',
+              position: 'absolute',
+              // always anchored to screen bottom
+              bottom: 0,
             },
           ]}
         >
-          {/* main modal content */}
-          {/* no KeyboardAvoidingView - content does not adjust for keyboard */}
-          {/* no header, no close buttons - just the content */}
-          {children}
+          {/* modal content container with rounded top corners */}
+          {/* this has the same styling as DraggableModal */}
+          {/* height is flexible - auto-sizes to content */}
+          {/* paddingBottom creates whitespace equal to keyboard height */}
+          {/* this keeps content visible above keyboard while modal stretches to screen bottom */}
+          <View
+            style={[
+              styles.contentContainer,
+              {
+                // theme colors for modal background
+                backgroundColor: backgroundColor || themeColors.background.elevated(),
+                // rounded top corners (same as DraggableModal)
+                borderTopLeftRadius: borderRadius,
+                borderTopRightRadius: borderRadius,
+                // use provided height or auto-size to content (no height = auto)
+                // when dynamicKeyboardHeight=true, typically leave height undefined for auto-sizing
+                height: height,
+                // paddingBottom creates whitespace for keyboard + safe area
+                // subtract bottomSectionHeight to account for fixed bottom sections
+                // content stays above keyboard, background extends to screen bottom
+                paddingBottom: dynamicKeyboardHeight 
+                  ? keyboardHeight + insets.bottom - bottomSectionHeight
+                  : insets.bottom,
+              },
+            ]}
+          >
+            {/* main modal content */}
+            {/* no KeyboardAvoidingView - content does not adjust for keyboard */}
+            {/* no header, no close buttons - just the content */}
+            {children}
+          </View>
         </View>
       </View>
     </Modal>
@@ -212,7 +365,7 @@ export const KeyboardModal: React.FC<KeyboardModalProps> = ({
 // flow: component renders → styles are referenced → react native applies them to elements
 const styles = StyleSheet.create({
   // BACKDROP STYLES
-  // dark overlay behind the modal
+  // invisible overlay behind the modal - catches taps but doesn't show visually
   // tapping this can dismiss the modal
   backdrop: {
     // absolute positioning to cover entire screen
@@ -221,8 +374,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    // dark semi-transparent background (same as other modals)
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    // transparent background - invisible but still tappable
+    backgroundColor: 'transparent',
+    // high z-index to ensure it covers everything including headers
+    zIndex: 10000,
   },
   
   // MODAL CONTAINER STYLES
@@ -255,8 +410,8 @@ const styles = StyleSheet.create({
     // overflow hidden to respect border radius
     overflow: 'hidden',
     
-    // height is set dynamically via props
-    // if not provided, modal auto-sizes to content
+    // height is flexible - auto-sizes to content when not provided
+    // if height prop is provided, uses that instead
     // height is applied inline in the component
   },
 });
