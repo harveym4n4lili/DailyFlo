@@ -96,7 +96,7 @@ export const SubtaskSection: React.FC<SubtaskSectionProps> = ({
   // this is what gets displayed on screen
   // flow: parent renders component → this JSX is rendered → user sees add subtask button
   return (
-    <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
+    <View style={styles.container}>
       {/* Header Button - "Add Subtask" - clickable area */}
       {/* this button allows users to add subtasks to the current task */}
       {/* flow: user taps → handleAddSubtask → parent handles adding subtask */}
