@@ -25,7 +25,7 @@
  */
 
 import React from 'react';
-import { Pressable, Text, Animated } from 'react-native';
+import { TouchableOpacity, Text, Animated, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
@@ -43,8 +43,9 @@ export interface FormPickerButtonProps {
   /**
    * Default text to display when no value is selected
    * Example: 'No Date', 'No Time', 'No Alerts'
+   * Optional - if not provided, no text will be shown when no value is selected
    */
-  defaultText: string;
+  defaultText?: string;
   
   /**
    * Current display text (overrides defaultText when provided)
@@ -98,6 +99,12 @@ export interface FormPickerButtonProps {
    * Allows overriding default styles while maintaining base functionality
    */
   containerStyle?: any;
+  
+  /**
+   * Overlay icon to display at bottom-left of the button (optional)
+   * Example: 'color-palette' for color selection indicators
+   */
+  overlayIcon?: string;
 }
 
 /**
@@ -116,6 +123,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   highlightOpacity,
   disabled = false,
   containerStyle,
+  overlayIcon,
 }) => {
   // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
@@ -124,17 +132,20 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   const finalTextColor = textColor || themeColors.text.secondary();
   const finalIconColor = iconColor || finalTextColor;
   
-  // determine final display text (use displayText if provided, otherwise defaultText)
-  const finalDisplayText = displayText || defaultText;
+  // determine final display text (use displayText if provided, or empty string if not)
+  const finalDisplayText = displayText || '';
+  
+  // determine if button has a value set (affects styling and animation)
+  const hasValue = !!finalDisplayText;
   
   // create animated container if highlightOpacity is provided
   // this allows the button to have a subtle highlight animation when pressed
   // flow: user taps button → parent triggers animation → background color smoothly transitions
   const AnimatedContainer = highlightOpacity ? Animated.View : React.Fragment;
   
-  // get animated styles if highlightOpacity is provided
+  // get animated styles if highlightOpacity is provided and has value
   // interpolates the animated value to smoothly transition background color
-  const animatedStyle = highlightOpacity ? {
+  const animatedStyle = (highlightOpacity && hasValue) ? {
     backgroundColor: highlightOpacity.interpolate({
       inputRange: [0, 1],
       outputRange: [
@@ -142,8 +153,8 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
         themeColors.background.quaternary(), // highlighted state
       ],
     }),
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingVertical: 0, // Icons have their own padding container
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: themeColors.border.primary(),
@@ -151,52 +162,108 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
     ...containerStyle,
   } : {};
   
-  // static styles when no animation is needed
-  const staticStyle = !highlightOpacity ? {
-    backgroundColor: themeColors.background.primary(),
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: themeColors.border.primary(),
+  // static styles when no animation is needed or no value is set
+  const staticStyle = !highlightOpacity || !hasValue ? {
+    backgroundColor: hasValue ? themeColors.background.primary() : 'transparent',
+    borderRadius: hasValue ? 16 : 0,
+    paddingVertical: hasValue ? 0 : 8, // Default state has vertical padding, selected state has no vertical padding
+    paddingHorizontal: hasValue ? 12 : 0, // Default state has no horizontal padding, selected state has horizontal padding
+    borderWidth: hasValue ? 1 : 0,
+    borderColor: hasValue ? themeColors.border.primary() : 'transparent',
     alignSelf: 'flex-start' as const,
     ...containerStyle,
   } : {};
 
+  // handle press with debugging
+  const handlePress = () => {
+    console.log('🟢 FormPickerButton: Tapped!', icon);
+    onPress();
+  };
+
   return (
     <AnimatedContainer style={highlightOpacity ? animatedStyle : staticStyle}>
-      {/* pressable inner content with icon and text */}
-      <Pressable
-        onPress={onPress}
+      {/* touchable inner content with icon and text */}
+      {/* uses TouchableOpacity to prevent keyboard dismissal (same as SubtaskSection) */}
+      {/* flow: user taps button → onPress callback → picker modal opens → keyboard stays open */}
+      <TouchableOpacity
+        onPress={handlePress}
         disabled={disabled}
+        activeOpacity={0.7}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 8,
+          gap: hasValue && finalDisplayText ? 8 : 0,
           // reduce opacity when disabled for visual feedback
           opacity: disabled ? 0.5 : 1,
         }}
       >
         {/* icon on the left */}
-        <Ionicons
-          name={icon as any}
-          size={16}
-          color={finalIconColor}
-        />
+        <View style={{
+          paddingVertical: 8, // Always add vertical padding for consistent icon spacing
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          {hasValue ? (
+            <Ionicons
+              name={icon as any}
+              size={24}
+              color={finalIconColor}
+            />
+          ) : (
+            <Animated.View style={{
+              opacity: highlightOpacity ? highlightOpacity.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 0.6],
+              }) : 1,
+            }}>
+              <Ionicons
+                name={icon as any}
+                size={24}
+                color={finalIconColor}
+              />
+            </Animated.View>
+          )}
+        </View>
         
-        {/* label text on the right */}
-        <Text
+        {/* label text on the right - only render if there's text to display and has value */}
+        {hasValue && finalDisplayText ? (
+          <Text
+            style={{
+              ...getTextStyle('body-large'),
+              color: finalTextColor,
+              textAlignVertical: 'center',
+              includeFontPadding: false,
+            }}
+          >
+            {finalDisplayText}
+          </Text>
+        ) : null}
+      </TouchableOpacity>
+      
+      {/* overlay icon at bottom-left - only render if provided */}
+      {overlayIcon ? (
+        <View
+          pointerEvents="none"
           style={{
-            ...getTextStyle('body-large'),
-            color: finalTextColor,
-            textAlignVertical: 'center',
-            includeFontPadding: false,
+            position: 'absolute',
+            bottom: -8,
+            left: -8,
+            width: 24,
+            height: 24,
+            borderRadius: 12,
+            backgroundColor: themeColors.background.overlay(),
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          {finalDisplayText}
-        </Text>
-      </Pressable>
+          <Ionicons
+            name={overlayIcon as any}
+            size={12}
+            color={themeColors.text.primary()}
+          />
+        </View>
+      ) : null}
     </AnimatedContainer>
   );
 };
