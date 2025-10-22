@@ -217,6 +217,44 @@ export function getAlertsPickerDisplay(
 }
 
 /**
+ * Get icon and color display information
+ * 
+ * Returns appropriate text for icon/color selection:
+ * - "No Icon" when no icon is selected
+ * - "Icon Selected" when an icon is selected
+ * 
+ * Uses the selected color for both text and icon colors when available
+ * 
+ * @param icon - Selected icon name or undefined
+ * @param color - Selected color or undefined
+ * @param colors - Color palette object from useColorPalette()
+ * @param themeColors - Theme colors object from useThemeColors()
+ * @returns Display information with text and colors
+ */
+export function getIconPickerDisplay(
+  icon: string | undefined,
+  color: string | undefined,
+  colors: ColorPaletteReturn,
+  themeColors: ReturnType<typeof import('@/hooks/useColorPalette').useThemeColors>
+): PickerButtonDisplay {
+  if (!icon) {
+    return {
+      text: 'No Icon',
+      color: themeColors.text.secondary(),
+      iconColor: themeColors.text.secondary(),
+    };
+  } else {
+    // Use the selected color if available, otherwise use secondary
+    const selectedColor = color ? colors.getTaskCategoryColor(color) : themeColors.text.secondary();
+    return {
+      text: 'Icon Selected',
+      color: selectedColor,
+      iconColor: selectedColor,
+    };
+  }
+}
+
+/**
  * Calculate relative date message (Today, Tomorrow, In X days)
  * Helper function for displaying relative dates in different contexts
  * 
