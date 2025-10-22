@@ -31,9 +31,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 // LAYOUT COMPONENTS IMPORTS
-// KeyboardModal: bottom sheet modal that appears with keyboard, no keyboard avoiding
-// ModalBackdrop: reusable backdrop component that fades in/out
-import { KeyboardModal, ModalBackdrop } from '@/components/layout/ModalLayout';
+// (removed KeyboardModal and ModalBackdrop - now handled at TaskCreationModal level)
 
 // UI COMPONENTS IMPORTS
 // button components for the form
@@ -91,7 +89,6 @@ export interface TaskCreationContentProps {
 // CONSTANTS
 // padding for the bottom action section (with create button)
 const BOTTOM_SECTION_PADDING_VERTICAL = 16;
-const BOTTOM_SECTION_TOTAL_PADDING = BOTTOM_SECTION_PADDING_VERTICAL * 2; // top + bottom = 32px
 
 /**
  * TaskCreationContent Component
@@ -286,7 +283,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
     {
       id: 'icon',
       icon: (values.icon as any) || 'star-outline',
-      label: 'No Icon',
+      label: '', // empty label since there's always a default and we don't want to show text
       onPress: handleShowColorPicker,
     },
     {
@@ -311,174 +308,169 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
 
   return (
     <>
-      {/* Visual backdrop - non-tappable, just for darkening effect */}
-      {/* showsonly when task modal is visible, NOT when picker modals are open */}
-      {/* KeyboardModal's transparent backdrop handles taps */}
-      <ModalBackdrop 
-        isVisible={visible}
-        zIndex={9999}
-      />
-
-      {/* KeyboardModal - bottom sheet modal that appears with keyboard */}
-      {/* showBackdrop=true: uses transparent backdrop to catch taps */}
-      {/* backdropDismiss=true: tapping backdrop triggers handleClose */}
-      {/* bottomSectionHeight: accounts for bottom action section padding (32px) */}
-      <KeyboardModal
-        visible={visible}
-        onClose={handleClose}
-        backgroundColor={themeColors.background.primary()}
-        dynamicKeyboardHeight={true}
-        showBackdrop={true}
-        backdropDismiss={true}
-        bottomSectionHeight={BOTTOM_SECTION_TOTAL_PADDING}
+      {/* main scrollable content wrapper */}
+      <ScrollView 
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="always"
+        contentContainerStyle={{ paddingBottom: 0 }}
       >
-        {/* main scrollable content wrapper */}
-        <ScrollView 
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="always"
-          contentContainerStyle={{ paddingBottom: 0 }}
+        {/* header with icon display and title input - now inside ScrollView */}
+        <View
+          style={{
+            paddingTop: 24,
+            paddingBottom: 0,
+            paddingHorizontal: 20,
+          }}
         >
-          {/* header with icon display and title input - now inside ScrollView */}
-          <View
+          {/* title input takes full width */}
+          <TextInput
+            value={values.title || ''}
+            onChangeText={(t) => onChange('title', t)}
+            onBlur={() => onBlur('title')}
+            placeholder="e.g., Answering emails"
+            placeholderTextColor={themeColors.background.lightOverlay()}
+            selectionColor={values.color 
+              ? TaskCategoryColors[values.color][500]
+              : TaskCategoryColors.blue[500]}
             style={{
-              paddingTop: 24,
-              paddingBottom: 0,
-              paddingHorizontal: 20,
+              ...getTextStyle('heading-2'),
+              color: themeColors.text.primary(),
+              paddingVertical: 0,
+              paddingHorizontal: 0,
             }}
-          >
-            {/* title input takes full width */}
-            <TextInput
-              value={values.title || ''}
-              onChangeText={(t) => onChange('title', t)}
-              onBlur={() => onBlur('title')}
-              placeholder="Task title"
-              placeholderTextColor={themeColors.background.lightOverlay()}
-              selectionColor={values.color 
-                ? TaskCategoryColors[values.color][500]
-                : TaskCategoryColors.blue[500]}
-              style={{
-                ...getTextStyle('heading-2'),
-                color: themeColors.text.primary(),
-                paddingVertical: 0,
-                paddingHorizontal: 0,
-              }}
-              autoFocus={true}
-              returnKeyType="next"
-            />
-          </View>
-
-          {/* Task Description Section */}
-          <View style={{ paddingTop: 8 }}>
-            <TaskDescription
-              description={values.description || ''}
-              onDescriptionChange={(description) => onChange('description', description)}
-              isEditing={true}
-            />
-          </View>
-
-          {/* Subtask Section */}
-          <View>
-            <SubtaskSection
-              onAddSubtask={() => {
-                console.log('Add subtask clicked - placeholder functionality');
-              }}
-            />
-          </View>
-
-          {/* form fields section */}
-          <View 
-            style={{ 
-              paddingTop: 24,
-              paddingBottom: 16,
-              
-            }}
-          >
-            {/* horizontal scrollable picker buttons */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="always"
-              contentContainerStyle={{
-                paddingRight: 16,
-                gap: 16,
-              }}
-            >
-              {pickerButtons.map((button) => {
-                const displayInfo = button.id === 'icon'
-                  ? getIconPickerDisplay(values.icon, values.color, colors, themeColors)
-                  : button.id === 'date' 
-                  ? getDatePickerDisplay(values.dueDate, colors, themeColors)
-                  : button.id === 'time' 
-                  ? getTimeDurationPickerDisplay(values.time, values.duration, themeColors)
-                  : button.id === 'alerts'
-                  ? getAlertsPickerDisplay(values.alerts?.length || 0, themeColors)
-                  : null;
-                
-                const iconColor = displayInfo ? displayInfo.iconColor : themeColors.text.secondary();
-                const textColor = displayInfo ? displayInfo.color : themeColors.text.secondary();
-                
-                // Only show display text if there's actually a value selected (not default "No X" text)
-                const displayText = displayInfo && !displayInfo.text.startsWith('No ') 
-                  ? displayInfo.text 
-                  : '';
-
-                const animatedValue = button.id === 'icon'
-                  ? iconButtonHighlightOpacity
-                  : button.id === 'date' 
-                  ? dateButtonHighlightOpacity 
-                  : button.id === 'time' 
-                  ? timeButtonHighlightOpacity 
-                  : alertsButtonHighlightOpacity;
-
-                return (
-                  <View key={button.id} style={{ left: 16 }}>
-                    <FormPickerButton
-                      icon={button.icon}
-                      defaultText={button.label}
-                      displayText={displayText}
-                      textColor={textColor}
-                      iconColor={iconColor}
-                      onPress={button.onPress}
-                      highlightOpacity={animatedValue}
-                    />
-                  </View>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </ScrollView>
-        <View style={{
-            borderTopWidth: 2,
-            borderTopColor: themeColors.border.secondary(),
-            paddingVertical: BOTTOM_SECTION_PADDING_VERTICAL,
-            paddingHorizontal: 16,
-            flexDirection: 'row',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-        }}>
-          {/* Circular create button anchored to the right */}
-          <Pressable
-            onPress={() => console.log('Create button tapped')}
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 28,
-              backgroundColor: values.color 
-                ? TaskCategoryColors[values.color][500]
-                : TaskCategoryColors.blue[500],
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <Ionicons
-              name="arrow-up"
-              size={28}
-              color={themeColors.text.invertedPrimary()}
-            />
-          </Pressable>
+            autoFocus={true}
+            returnKeyType="next"
+          />
         </View>
-      </KeyboardModal>
+
+        {/* Task Description Section */}
+        <View style={{ paddingTop: 8 }}>
+          <TaskDescription
+            description={values.description || ''}
+            onDescriptionChange={(description) => onChange('description', description)}
+            isEditing={true}
+          />
+        </View>
+
+        {/* Subtask Section */}
+        <View>
+          <SubtaskSection
+            onAddSubtask={() => {
+              console.log('Add subtask clicked - placeholder functionality');
+            }}
+          />
+        </View>
+
+        {/* form fields section */}
+        <View 
+          style={{ 
+            paddingTop: 24,
+            paddingBottom: 16,
+            
+          }}
+        >
+          {/* horizontal scrollable picker buttons */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="always"
+            contentContainerStyle={{
+              paddingRight: 16,
+              gap: 16,
+            }}
+          >
+            {pickerButtons.map((button) => {
+              const displayInfo = button.id === 'icon'
+                ? getIconPickerDisplay(values.icon, values.color, colors, themeColors)
+                : button.id === 'date' 
+                ? getDatePickerDisplay(values.dueDate, colors, themeColors)
+                : button.id === 'time' 
+                ? getTimeDurationPickerDisplay(values.time, values.duration, themeColors)
+                : button.id === 'alerts'
+                ? getAlertsPickerDisplay(values.alerts?.length || 0, themeColors)
+                : null;
+              
+              const iconColor = displayInfo ? displayInfo.iconColor : themeColors.text.secondary();
+              const textColor = displayInfo ? displayInfo.color : themeColors.text.secondary();
+              
+               // Only show display text if there's actually a value selected (not default "No X" text)
+               const displayText = displayInfo && !displayInfo.text.startsWith('No ') 
+                 ? displayInfo.text 
+                 : '';
+
+              const animatedValue = button.id === 'icon'
+                ? iconButtonHighlightOpacity
+                : button.id === 'date' 
+                ? dateButtonHighlightOpacity 
+                : button.id === 'time' 
+                ? timeButtonHighlightOpacity 
+                : alertsButtonHighlightOpacity;
+
+              return (
+                 <View key={button.id} style={{ left: 16 }}>
+                   <FormPickerButton
+                     icon={button.icon}
+                     defaultText={button.label}
+                     displayText={displayText}
+                     textColor={textColor}
+                     iconColor={iconColor}
+                     onPress={button.onPress}
+                     highlightOpacity={animatedValue}
+                     forceSelected={button.id === 'icon'} // force selected state for icon picker
+                     rightContainer={button.id === 'icon' ? (
+                       <View style={{
+                         width: 24,
+                         height: 24,
+                         borderRadius: 12,
+                         backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                         alignItems: 'center',
+                         justifyContent: 'center',
+                       }}>
+                         <Ionicons
+                           name="color-palette"
+                           size={24}
+                           color={themeColors.text.secondary()}
+                         />
+                       </View>
+                     ) : undefined}
+                   />
+                 </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </ScrollView>
+      <View style={{
+          borderTopWidth: 2,
+          borderTopColor: themeColors.border.secondary(),
+          paddingVertical: BOTTOM_SECTION_PADDING_VERTICAL,
+          paddingHorizontal: 16,
+          flexDirection: 'row',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+      }}>
+        {/* Circular create button anchored to the right */}
+        <Pressable
+          onPress={() => console.log('Create button tapped')}
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 28,
+            backgroundColor: values.color 
+              ? TaskCategoryColors[values.color][500]
+              : TaskCategoryColors.blue[500],
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Ionicons
+            name="arrow-up"
+            size={28}
+            color={themeColors.text.invertedPrimary()}
+          />
+        </Pressable>
+      </View>
       
       {/* date picker modal */}
       <DatePickerModal

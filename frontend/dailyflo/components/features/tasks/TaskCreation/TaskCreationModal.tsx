@@ -10,6 +10,15 @@
 // react: core react library for building components
 import React, { useState, useMemo } from 'react';
 
+// LAYOUT COMPONENTS IMPORTS
+// KeyboardModal: bottom sheet modal that appears with keyboard, no keyboard avoiding
+// ModalBackdrop: reusable backdrop component that fades in/out
+import { KeyboardModal, ModalBackdrop } from '@/components/layout/ModalLayout';
+
+// CUSTOM HOOKS IMPORTS
+// hooks for accessing design system and theme
+import { useThemeColors } from '@/hooks/useColorPalette';
+
 // FEATURE COMPONENTS IMPORTS
 // TaskCreationContent: the actual content and UI for task creation
 import { TaskCreationContent } from './TaskCreationContent';
@@ -47,10 +56,16 @@ const DEFAULTS: TaskFormValues = {
   dueDate: new Date().toISOString(),
   priorityLevel: 3 as PriorityLevel,
   color: 'blue',
+  icon: 'star-outline', // default icon so there's always a selected value
   routineType: 'once' as RoutineType,
   listId: undefined,
   alerts: [],
 };
+
+// CONSTANTS
+// padding for the bottom action section (with create button)
+const BOTTOM_SECTION_PADDING_VERTICAL = 16;
+const BOTTOM_SECTION_TOTAL_PADDING = BOTTOM_SECTION_PADDING_VERTICAL * 2; // top + bottom = 32px
 
 /**
  * TaskCreationModal Component
@@ -63,6 +78,9 @@ export function TaskCreationModal({
   onClose,
   initialValues,
 }: TaskCreationModalProps) {
+  // HOOKS
+  const themeColors = useThemeColors();
+  
   // REDUX
   const dispatch = useAppDispatch();
   const { isCreating } = useTasks();
@@ -88,7 +106,7 @@ export function TaskCreationModal({
       values.description?.trim() !== '' ||
       values.dueDate !== DEFAULTS.dueDate ||
       values.color !== DEFAULTS.color ||
-      values.icon !== undefined ||
+      values.icon !== DEFAULTS.icon ||
       (values.alerts && values.alerts.length > 0) ||
       values.time !== undefined ||
       values.duration !== undefined
@@ -96,15 +114,39 @@ export function TaskCreationModal({
   }, [values]);
 
   // COMPONENT RENDER
-  // delegates everything to TaskCreationContent
+  // now includes KeyboardModal wrapper at this level
   return (
-    <TaskCreationContent
-      visible={visible}
-      values={values}
-      onChange={onChange}
-      onClose={onClose}
-      hasChanges={hasChanges}
-    />
+    <>
+      {/* Visual backdrop - non-tappable, just for darkening effect */}
+      {/* shows only when task modal is visible, NOT when picker modals are open */}
+      {/* KeyboardModal's transparent backdrop handles taps */}
+      <ModalBackdrop 
+        isVisible={visible}
+        zIndex={9999}
+      />
+
+      {/* KeyboardModal - bottom sheet modal that appears with keyboard */}
+      {/* showBackdrop=true: uses transparent backdrop to catch taps */}
+      {/* backdropDismiss=true: tapping backdrop triggers onClose */}
+      {/* bottomSectionHeight: accounts for bottom action section padding (32px) */}
+      <KeyboardModal
+        visible={visible}
+        onClose={onClose}
+        backgroundColor={themeColors.background.primary()}
+        dynamicKeyboardHeight={true}
+        showBackdrop={true}
+        backdropDismiss={true}
+        bottomSectionHeight={BOTTOM_SECTION_TOTAL_PADDING}
+      >
+        <TaskCreationContent
+          visible={visible}
+          values={values}
+          onChange={onChange}
+          onClose={onClose}
+          hasChanges={hasChanges}
+        />
+      </KeyboardModal>
+    </>
   );
 }
 
