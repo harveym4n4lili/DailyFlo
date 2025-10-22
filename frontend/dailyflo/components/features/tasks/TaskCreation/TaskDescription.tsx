@@ -80,7 +80,7 @@ export const TaskDescription: React.FC<TaskDescriptionProps> = ({
         ]}
         value={localDescription}
         onChangeText={handleDescriptionChange}
-        placeholder="Add additional notes, phone numbers or links..."
+        placeholder="Description"
         placeholderTextColor={colors.text.tertiary}
         multiline
         textAlignVertical="top"
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     // platform-specific font family
     fontFamily: getFontFamily('ios'),
     // spacing around text
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 4,
     paddingBottom: 12,
     // align text to top of input for multiline

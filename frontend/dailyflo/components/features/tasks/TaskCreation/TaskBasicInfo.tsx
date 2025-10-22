@@ -327,6 +327,7 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
                     shadowRadius: 4,
                     elevation: 3,
                   }}
+                
                 >
                   {/* palette icon to indicate this is for color selection */}
                   <Ionicons
