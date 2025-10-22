@@ -105,6 +105,19 @@ export interface FormPickerButtonProps {
    * Example: 'color-palette' for color selection indicators
    */
   overlayIcon?: string;
+  
+  /**
+   * Force the button to show selected state styling even without displayText
+   * Useful for cases where there's always a default value (like icon picker)
+   * @default false
+   */
+  forceSelected?: boolean;
+  
+  /**
+   * Custom container to render on the right side of the icon
+   * Allows for custom styling and content (like color palette icon)
+   */
+  rightContainer?: React.ReactNode;
 }
 
 /**
@@ -124,6 +137,8 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   disabled = false,
   containerStyle,
   overlayIcon,
+  forceSelected = false,
+  rightContainer,
 }) => {
   // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
@@ -136,7 +151,8 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   const finalDisplayText = displayText || '';
   
   // determine if button has a value set (affects styling and animation)
-  const hasValue = !!finalDisplayText;
+  // use forceSelected to override the hasValue logic for cases like icon picker
+  const hasValue = forceSelected || !!finalDisplayText;
   
   // create animated container if highlightOpacity is provided
   // this allows the button to have a subtle highlight animation when pressed
@@ -226,8 +242,20 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
           )}
         </View>
         
+        {/* custom right container - only render if provided */}
+        {rightContainer ? (
+          <View style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft: 8, // spacing from the main icon
+          }}>
+            {rightContainer}
+          </View>
+        ) : null}
+        
         {/* label text on the right - only render if there's text to display and has value */}
-        {hasValue && finalDisplayText ? (
+        {/* For forceSelected buttons, don't show text even if hasValue is true */}
+        {hasValue && finalDisplayText && !forceSelected ? (
           <Text
             style={{
               ...getTextStyle('body-large'),
@@ -241,18 +269,18 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
         ) : null}
       </TouchableOpacity>
       
-      {/* overlay icon at bottom-left - only render if provided */}
+      {/* overlay icon - only render if provided */}
       {overlayIcon ? (
         <View
           pointerEvents="none"
           style={{
             position: 'absolute',
-            bottom: -8,
-            left: -8,
-            width: 24,
-            height: 24,
-            borderRadius: 12,
-            backgroundColor: themeColors.background.overlay(),
+            right: 8,
+            top: 8,
+            width: 20,
+            height: 20,
+            borderRadius: 10,
+            backgroundColor: 'rgba(0, 0, 0, 0.1)', // subtle background for contrast
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -260,7 +288,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
           <Ionicons
             name={overlayIcon as any}
             size={12}
-            color={themeColors.text.primary()}
+            color="white" // white color as requested
           />
         </View>
       ) : null}
