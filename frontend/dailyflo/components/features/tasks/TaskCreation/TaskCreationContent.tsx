@@ -42,6 +42,7 @@ import {
   getDatePickerDisplay, 
   getTimeDurationPickerDisplay,
   getAlertsPickerDisplay,
+  getIconPickerDisplay,
 } from '@/components/ui/Button';
 
 // FEATURE COMPONENTS IMPORTS
@@ -119,6 +120,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   const [isAlertsPickerVisible, setIsAlertsPickerVisible] = useState(false);
 
   // ANIMATION STATE
+  const iconButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
   const dateButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
   const timeButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
   const alertsButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
@@ -183,8 +185,10 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
 
   // COLOR PICKER HANDLERS
   const handleShowColorPicker = () => {
-    console.log('Opening color picker modal');
+    console.log('🔵 ICON PICKER: Button tapped - opening modal');
+    triggerButtonHighlight(iconButtonHighlightOpacity);
     setIsColorPickerVisible(true);
+    console.log('🔵 ICON PICKER: State set to true');
   };
   
   const handleColorSelect = (color: TaskColor) => {
@@ -280,6 +284,12 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   // PICKER BUTTONS CONFIGURATION
   const pickerButtons = [
     {
+      id: 'icon',
+      icon: (values.icon as any) || 'star-outline',
+      label: 'No Icon',
+      onPress: handleShowColorPicker,
+    },
+    {
       id: 'date',
       icon: 'calendar-outline',
       label: 'No Date',
@@ -332,81 +342,34 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
           {/* header with icon display and title input - now inside ScrollView */}
           <View
             style={{
-              paddingTop: 12,
+              paddingTop: 24,
               paddingBottom: 0,
-              paddingHorizontal: 16,
+              paddingHorizontal: 20,
             }}
           >
-            {/* flex row to align icon and title side by side */}
-            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 16 }}>
-              {/* icon display area - positioned on LEFT */}
-              <Pressable
-                onPress={handleShowColorPicker}
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
-                }}
-              >
-                {/* icon display */}
-                <Ionicons
-                  name={(values.icon as any) || 'star'}
-                  size={28}
-                  color={values.color 
-                    ? TaskCategoryColors[values.color][500] 
-                    : TaskCategoryColors.blue[500]}
-                />
-                
-                {/* color palette icon indicator */}
-                <View
-                  style={{
-                    position: 'absolute',
-                    bottom: -8,
-                    left: -4,
-                    width: 24,
-                    height: 24,
-                    borderRadius: 12,
-                    backgroundColor: themeColors.background.overlay(),
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Ionicons
-                    name="color-palette"
-                    size={12}
-                    color={themeColors.text.primary()}
-                  />
-                </View>
-              </Pressable>
-              
-              {/* title input takes remaining space on the RIGHT */}
-              <TextInput
-                value={values.title || ''}
-                onChangeText={(t) => onChange('title', t)}
-                onBlur={() => onBlur('title')}
-                placeholder="Task title"
-                placeholderTextColor={themeColors.background.lightOverlay()}
-                selectionColor={values.color 
-                  ? TaskCategoryColors[values.color][500]
-                  : TaskCategoryColors.blue[500]}
-                style={{
-                  ...getTextStyle('heading-2'),
-                  color: themeColors.text.primary(),
-                  paddingVertical: 0,
-                  paddingHorizontal: 0,
-                  flex: 1,
-                }}
-                autoFocus={true}
-                returnKeyType="next"
-              />
-            </View>
+            {/* title input takes full width */}
+            <TextInput
+              value={values.title || ''}
+              onChangeText={(t) => onChange('title', t)}
+              onBlur={() => onBlur('title')}
+              placeholder="Task title"
+              placeholderTextColor={themeColors.background.lightOverlay()}
+              selectionColor={values.color 
+                ? TaskCategoryColors[values.color][500]
+                : TaskCategoryColors.blue[500]}
+              style={{
+                ...getTextStyle('heading-2'),
+                color: themeColors.text.primary(),
+                paddingVertical: 0,
+                paddingHorizontal: 0,
+              }}
+              autoFocus={true}
+              returnKeyType="next"
+            />
           </View>
 
           {/* Task Description Section */}
-          <View style={{ paddingTop: 12 }}>
+          <View style={{ paddingTop: 8 }}>
             <TaskDescription
               description={values.description || ''}
               onDescriptionChange={(description) => onChange('description', description)}
@@ -426,7 +389,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
           {/* form fields section */}
           <View 
             style={{ 
-              paddingTop: 8,
+              paddingTop: 24,
               paddingBottom: 16,
               
             }}
@@ -442,7 +405,9 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
               }}
             >
               {pickerButtons.map((button) => {
-                const displayInfo = button.id === 'date' 
+                const displayInfo = button.id === 'icon'
+                  ? getIconPickerDisplay(values.icon, values.color, colors, themeColors)
+                  : button.id === 'date' 
                   ? getDatePickerDisplay(values.dueDate, colors, themeColors)
                   : button.id === 'time' 
                   ? getTimeDurationPickerDisplay(values.time, values.duration, themeColors)
@@ -452,9 +417,15 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
                 
                 const iconColor = displayInfo ? displayInfo.iconColor : themeColors.text.secondary();
                 const textColor = displayInfo ? displayInfo.color : themeColors.text.secondary();
-                const displayText = displayInfo ? displayInfo.text : button.label;
+                
+                // Only show display text if there's actually a value selected (not default "No X" text)
+                const displayText = displayInfo && !displayInfo.text.startsWith('No ') 
+                  ? displayInfo.text 
+                  : '';
 
-                const animatedValue = button.id === 'date' 
+                const animatedValue = button.id === 'icon'
+                  ? iconButtonHighlightOpacity
+                  : button.id === 'date' 
                   ? dateButtonHighlightOpacity 
                   : button.id === 'time' 
                   ? timeButtonHighlightOpacity 

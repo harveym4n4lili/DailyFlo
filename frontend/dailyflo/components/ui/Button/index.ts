@@ -17,6 +17,7 @@ export {
   getDatePickerDisplay,
   getTimeDurationPickerDisplay,
   getAlertsPickerDisplay,
+  getIconPickerDisplay,
   getRelativeDateMessage,
 } from './FormPickerButton';
 export type { PickerButtonDisplay } from './FormPickerButton';

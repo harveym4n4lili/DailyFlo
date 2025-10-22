@@ -112,7 +112,7 @@ export const SubtaskSection: React.FC<SubtaskSectionProps> = ({
           name="add"
           size={20}
           color={colors.text.secondary}
-          style={{ marginRight: 12 }}
+          style={{ marginRight: 6 }}
         />
         
         {/* Header Text - "Add Subtask" label */}
@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     paddingTop: 0,
     paddingBottom: 0,
+
   },
 
   // HEADER BUTTON STYLES
@@ -163,7 +164,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start', // align content to the left
     
     // SPACING
-    paddingHorizontal: 12, // horizontal padding for touch area
+    paddingHorizontal: 20, // horizontal padding for touch area
     paddingVertical: 12,   // vertical padding for touch area (min 44px touch target)
     
     // BORDER

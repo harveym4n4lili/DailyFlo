@@ -13,6 +13,7 @@ export {
   getDatePickerDisplay,
   getTimeDurationPickerDisplay,
   getAlertsPickerDisplay,
+  getIconPickerDisplay,
   getRelativeDateMessage,
 } from './formPickerUtils';
 
