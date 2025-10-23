@@ -91,6 +91,9 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   onSelectDate,
   title = 'Select Date',
 }) => {
+  // CONSOLE DEBUGGING
+  console.log('📅 DatePickerModal - visible:', visible);
+  
   // get theme-aware colors for styling
   const themeColors = useThemeColors();
   const taskColors = useTaskColors();

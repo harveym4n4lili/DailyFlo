@@ -48,6 +48,9 @@ export function TaskTimeDurationModal({
   onSelectTime,
   onSelectDuration,
 }: TaskTimeDurationModalProps) {
+  // CONSOLE DEBUGGING
+  console.log('⏰ TaskTimeDurationModal - visible:', visible);
+  
   // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();

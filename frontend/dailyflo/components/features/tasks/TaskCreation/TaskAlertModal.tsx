@@ -54,6 +54,9 @@ export function TaskAlertModal({
   selectedAlerts,
   onApplyAlerts,
 }: TaskAlertModalProps) {
+  // CONSOLE DEBUGGING
+  console.log('🔔 TaskAlertModal - visible:', visible);
+  
   // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();

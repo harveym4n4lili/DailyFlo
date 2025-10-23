@@ -12,7 +12,8 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
-  withSpring, 
+  withSpring,
+  withTiming,
   runOnJS 
 } from 'react-native-reanimated';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -57,10 +58,11 @@ export function DraggableModal({
   children,
   snapPoints,
   initialSnapPoint = 1,
-  borderRadius = 20,
+  borderRadius = 16,
   stickyFooter,
   stickyHeader,
 }: DraggableModalProps) {
+  
   const { height: screenHeight } = useWindowDimensions();
   const themeColors = useThemeColors();
   
@@ -90,12 +92,23 @@ export function DraggableModal({
   // this allows us to apply the drag relative to where we started
   const startY = useSharedValue(0);
   
-  // reset modal position when it becomes visible
+  // reset modal position and animate in when it becomes visible
+  // duration: 300ms to match KeyboardModal
   useEffect(() => {
     if (visible) {
-      translateY.value = initialPosition;
+      // start from bottom (off screen)
+      translateY.value = maxHeight;
+      // animate to initial position
+      translateY.value = withTiming(initialPosition, {
+        duration: 300,
+      });
+    } else {
+      // animate out to bottom when closing
+      translateY.value = withTiming(maxHeight, {
+        duration: 300,
+      });
     }
-  }, [visible, initialPosition]);
+  }, [visible, initialPosition, maxHeight]);
 
   // pan gesture handler for dragging the modal
   const panGesture = Gesture.Pan()
@@ -178,10 +191,13 @@ export function DraggableModal({
     });
 
   // animated style that applies the translateY value to move the modal
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
 
+  
   return (
     <Modal
       visible={visible}
@@ -189,6 +205,7 @@ export function DraggableModal({
       presentationStyle="overFullScreen"
       onRequestClose={onClose}
       transparent={true}
+      statusBarTranslucent={true}
     >
       {/* transparent backdrop - kept for tap-to-dismiss functionality */}
       {/* the darker overlay is handled by the parent component */}
@@ -201,7 +218,10 @@ export function DraggableModal({
           bottom: 0,
           backgroundColor: 'transparent',
         }}
-        onPress={onClose}
+        onPress={() => {
+          console.log('🟢 DraggableModal backdrop pressed');
+          onClose();
+        }}
       />
       
       {/* transparent layout container for modal positioning */}
@@ -234,6 +254,7 @@ export function DraggableModal({
               {stickyHeader}
               
               {/* main modal content */}
+        
               {children}
             </View>
           </Animated.View>

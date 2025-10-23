@@ -78,6 +78,9 @@ export function TaskCreationModal({
   onClose,
   initialValues,
 }: TaskCreationModalProps) {
+  // CONSOLE DEBUGGING
+  console.log('🔍 TaskCreationModal - visible:', visible);
+  
   // HOOKS
   const themeColors = useThemeColors();
   
@@ -91,6 +94,10 @@ export function TaskCreationModal({
     ...DEFAULTS, 
     ...initialValues 
   });
+
+  // FORM PICKER MODAL STATE
+  // track when form picker modals are open to hide backdrop for smooth transitions
+  const [isFormPickerOpen, setIsFormPickerOpen] = useState(false);
 
   // FORM CHANGE HANDLER
   // generic change handler for all form fields
@@ -118,10 +125,10 @@ export function TaskCreationModal({
   return (
     <>
       {/* Visual backdrop - non-tappable, just for darkening effect */}
-      {/* shows only when task modal is visible, NOT when picker modals are open */}
-      {/* KeyboardModal's transparent backdrop handles taps */}
+      {/* shows only when task modal is visible AND no form picker modals are open */}
+      {/* this prevents backdrop conflicts that cause jarring transitions */}
       <ModalBackdrop 
-        isVisible={visible}
+        isVisible={visible && !isFormPickerOpen}
         zIndex={9999}
       />
 
@@ -144,6 +151,7 @@ export function TaskCreationModal({
           onChange={onChange}
           onClose={onClose}
           hasChanges={hasChanges}
+          onFormPickerModalChange={setIsFormPickerOpen}
         />
       </KeyboardModal>
     </>

@@ -127,7 +127,6 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   // date picker handlers
   // this opens the date picker modal when user taps the date button
   const handleShowDatePicker = () => {
-    console.log('Opening date picker modal');
     triggerButtonHighlight(dateButtonHighlightOpacity);
     setIsDatePickerVisible(true);
   };
@@ -135,33 +134,28 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   // this handles when user selects a date from the picker
   // flow: user picks date in modal → onSelectDate callback → this function → onChange updates form state
   const handleDateSelect = (date: string) => {
-    console.log('Date selected:', date);
     onChange('dueDate', date);
   };
   
   // this handles when user closes the date picker modal
   const handleDatePickerClose = () => {
-    console.log('Date picker modal closed');
     setIsDatePickerVisible(false);
   };
 
   // color picker handlers
   // this opens the color picker modal when user taps the color icon
   const handleShowColorPicker = () => {
-    console.log('Opening color picker modal');
     setIsColorPickerVisible(true);
   };
   
   // this handles when user selects a color from the picker
   // flow: user picks color in modal → onSelectColor callback → this function → onChange updates form state
   const handleColorSelect = (color: TaskColor) => {
-    console.log('Color selected:', color);
     onChange('color', color);
   };
   
   // this handles when user closes the color picker modal
   const handleColorPickerClose = () => {
-    console.log('Color picker modal closed');
     setIsColorPickerVisible(false);
   };
 
@@ -169,58 +163,48 @@ export const TaskBasicInfo: React.FC<TaskBasicInfoProps> = ({
   // this handles when user selects an icon from the picker
   // flow: user picks icon in modal → onSelectIcon callback → this function → onChange updates form state
   const handleIconSelect = (icon: string) => {
-    console.log('Icon selected:', icon);
     onChange('icon', icon);
   };
 
   // time/duration picker handlers
   // this opens the time/duration picker modal when user taps the time/duration button
   const handleShowTimeDurationPicker = () => {
-    console.log('🔵 Opening time/duration picker modal');
-    console.log('🔵 Current state before:', isTimeDurationPickerVisible);
     triggerButtonHighlight(timeButtonHighlightOpacity);
     setIsTimeDurationPickerVisible(true);
-    console.log('🔵 Set state to TRUE');
   };
   
   // this handles when user selects a time from the picker
   // flow: user picks time in modal → onSelectTime callback → this function → onChange updates form state
   const handleTimeSelect = (time: string | undefined) => {
-    console.log('Time selected:', time);
     onChange('time', time);
   };
   
   // this handles when user selects a duration from the picker
   // flow: user picks duration in modal → onSelectDuration callback → this function → onChange updates form state
   const handleDurationSelect = (duration: number | undefined) => {
-    console.log('Duration selected:', duration);
     onChange('duration', duration);
   };
   
   // this handles when user closes the time/duration picker modal
   const handleTimeDurationPickerClose = () => {
-    console.log('Time/duration picker modal closed');
     setIsTimeDurationPickerVisible(false);
   };
 
   // alerts picker handlers
   // this opens the alerts picker modal when user taps the alerts button
   const handleShowAlertsPicker = () => {
-    console.log('Opening alerts picker modal');
     triggerButtonHighlight(alertsButtonHighlightOpacity);
     setIsAlertsPickerVisible(true);
   };
   
   // this handles when user closes the alerts picker modal
   const handleAlertsPickerClose = () => {
-    console.log('Alerts picker modal closed');
     setIsAlertsPickerVisible(false);
   };
   
   // this handles when user applies alert changes (presses Done button)
   // flow: user selects alerts in modal → presses done → this function → onChange updates form state
   const handleAlertsApply = (alertIds: string[]) => {
-    console.log('Alerts applied:', alertIds);
     onChange('alerts', alertIds);
   };
 
