@@ -86,6 +86,9 @@ export function TaskIconColorModal({
   selectedIcon,
   onSelectIcon,
 }: TaskIconColorModalProps) {
+  // CONSOLE DEBUGGING
+  console.log('🎨 TaskIconColorModal - visible:', visible);
+  
   // get theme-aware colors from the color palette system
   const colors = useColorPalette();
   const themeColors = useThemeColors();

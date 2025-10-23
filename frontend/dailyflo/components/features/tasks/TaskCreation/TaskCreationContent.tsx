@@ -84,11 +84,14 @@ export interface TaskCreationContentProps {
   
   /** Whether form has unsaved changes */
   hasChanges: boolean;
+  
+  /** Callback to notify parent when form picker modals open/close */
+  onFormPickerModalChange?: (isAnyPickerOpen: boolean) => void;
 }
 
 // CONSTANTS
 // padding for the bottom action section (with create button)
-const BOTTOM_SECTION_PADDING_VERTICAL = 16;
+const BOTTOM_SECTION_PADDING_VERTICAL = 12;
 
 /**
  * TaskCreationContent Component
@@ -101,7 +104,10 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   onChange,
   onClose,
   hasChanges,
+  onFormPickerModalChange,
 }) => {
+  // CONSOLE DEBUGGING - removed for cleaner logs
+  
   // HOOKS
   const colors = useColorPalette();
   const themeColors = useThemeColors();
@@ -142,9 +148,28 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
     setPreviousDueDate(values.dueDate);
   }, [values.dueDate, previousDueDate, dateButtonHighlightOpacity]);
 
+  // MODAL VISIBILITY DEBUGGING - removed for cleaner logs
+
+  // NOTIFY PARENT WHEN FORM PICKER MODALS CHANGE
+  // this allows the parent to hide its backdrop when form picker modals are open
+  useEffect(() => {
+    const isAnyPickerOpen = isDatePickerVisible || isColorPickerVisible || 
+                           isTimeDurationPickerVisible || isAlertsPickerVisible;
+    onFormPickerModalChange?.(isAnyPickerOpen);
+  }, [isDatePickerVisible, isColorPickerVisible, isTimeDurationPickerVisible, isAlertsPickerVisible, onFormPickerModalChange]);
+
   // FORM HANDLERS
   const onBlur = (key: keyof TaskFormValues) => {
     setTouched((prev) => ({ ...prev, [key]: true }));
+  };
+
+  // HELPER FUNCTION: Close all modals except the one being opened
+  // this ensures seamless transitions by preventing multiple modals from being open
+  const closeAllModalsExcept = (modalToKeep: string) => {
+    if (modalToKeep !== 'date') setIsDatePickerVisible(false);
+    if (modalToKeep !== 'color') setIsColorPickerVisible(false);
+    if (modalToKeep !== 'time') setIsTimeDurationPickerVisible(false);
+    if (modalToKeep !== 'alerts') setIsAlertsPickerVisible(false);
   };
 
   const triggerButtonHighlight = (animatedValue: Animated.Value) => {
@@ -164,10 +189,9 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
 
   // DATE PICKER HANDLERS
   const handleShowDatePicker = () => {
-    console.log('🔵 DATE PICKER: Button tapped - opening modal');
+    closeAllModalsExcept('date');
     triggerButtonHighlight(dateButtonHighlightOpacity);
     setIsDatePickerVisible(true);
-    console.log('🔵 DATE PICKER: State set to true');
   };
   
   const handleDateSelect = (date: string) => {
@@ -176,16 +200,14 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   };
   
   const handleDatePickerClose = () => {
-    console.log('Date picker modal closed');
     setIsDatePickerVisible(false);
   };
 
   // COLOR PICKER HANDLERS
   const handleShowColorPicker = () => {
-    console.log('🔵 ICON PICKER: Button tapped - opening modal');
+    closeAllModalsExcept('color');
     triggerButtonHighlight(iconButtonHighlightOpacity);
     setIsColorPickerVisible(true);
-    console.log('🔵 ICON PICKER: State set to true');
   };
   
   const handleColorSelect = (color: TaskColor) => {
@@ -194,7 +216,6 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   };
   
   const handleColorPickerClose = () => {
-    console.log('Color picker modal closed');
     setIsColorPickerVisible(false);
   };
 
@@ -206,10 +227,9 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
 
   // TIME/DURATION PICKER HANDLERS
   const handleShowTimeDurationPicker = () => {
-    console.log('🔵 TIME PICKER: Button tapped - opening modal');
+    closeAllModalsExcept('time');
     triggerButtonHighlight(timeButtonHighlightOpacity);
     setIsTimeDurationPickerVisible(true);
-    console.log('🔵 TIME PICKER: State set to true');
   };
   
   const handleTimeSelect = (time: string | undefined) => {
@@ -223,20 +243,17 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   };
   
   const handleTimeDurationPickerClose = () => {
-    console.log('Time/duration picker modal closed');
     setIsTimeDurationPickerVisible(false);
   };
 
   // ALERTS PICKER HANDLERS
   const handleShowAlertsPicker = () => {
-    console.log('🔵 ALERTS PICKER: Button tapped - opening modal');
+    closeAllModalsExcept('alerts');
     triggerButtonHighlight(alertsButtonHighlightOpacity);
     setIsAlertsPickerVisible(true);
-    console.log('🔵 ALERTS PICKER: State set to true');
   };
   
   const handleAlertsPickerClose = () => {
-    console.log('Alerts picker modal closed');
     setIsAlertsPickerVisible(false);
   };
   
@@ -442,7 +459,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         </View>
       </ScrollView>
       <View style={{
-          borderTopWidth: 2,
+          borderTopWidth: 1,
           borderTopColor: themeColors.border.secondary(),
           paddingVertical: BOTTOM_SECTION_PADDING_VERTICAL,
           paddingHorizontal: 16,
@@ -454,8 +471,8 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         <Pressable
           onPress={() => console.log('Create button tapped')}
           style={{
-            width: 48,
-            height: 48,
+            width: 42,
+            height: 42,
             borderRadius: 28,
             backgroundColor: values.color 
               ? TaskCategoryColors[values.color][500]
@@ -466,8 +483,8 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         >
           <Ionicons
             name="arrow-up"
-            size={28}
-            color={themeColors.text.invertedPrimary()}
+            size={20}
+            color={'#FFFFFF'}
           />
         </Pressable>
       </View>

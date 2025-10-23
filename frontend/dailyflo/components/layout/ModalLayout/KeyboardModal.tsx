@@ -164,6 +164,9 @@ export const KeyboardModal: React.FC<KeyboardModalProps> = ({
   dynamicKeyboardHeight = false,
   bottomSectionHeight = 0,
 }) => {
+  // CONSOLE DEBUGGING
+  console.log('🔍 KeyboardModal - visible:', visible);
+  
   // COLOR PALETTE USAGE
   // get theme-aware colors from the design system
   // this provides consistent colors that work with both light and dark modes
@@ -198,7 +201,6 @@ export const KeyboardModal: React.FC<KeyboardModalProps> = ({
         const height = event.endCoordinates.height;
         const duration = event.duration || 250;
         
-        console.log('Keyboard showing - height:', height, 'duration:', duration);
         
         // ALWAYS configure LayoutAnimation, even if triggered by Alert dialog
         // this prevents the modal from teleporting when Alert appears
@@ -229,7 +231,6 @@ export const KeyboardModal: React.FC<KeyboardModalProps> = ({
       (event: KeyboardEvent) => {
         const duration = event.duration || 250;
         
-        console.log('Keyboard hiding - duration:', duration);
         
         // ALWAYS configure LayoutAnimation, even if triggered by Alert dialog dismissal
         // this prevents the modal from teleporting when Alert dismisses
@@ -266,6 +267,7 @@ export const KeyboardModal: React.FC<KeyboardModalProps> = ({
   // this function runs when the user taps the backdrop (area outside modal)
   // flow: user taps backdrop → this function checks backdropDismiss → calls onClose if allowed
   const handleBackdropPress = () => {
+    console.log('🟢 Modal backdrop pressed');
     if (backdropDismiss) {
       onClose();
     }
