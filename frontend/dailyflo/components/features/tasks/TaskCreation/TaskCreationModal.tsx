@@ -31,7 +31,11 @@ import { useTasks } from '@/store/hooks';
 // TYPES IMPORTS
 // typescript types for type safety
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
-import type { PriorityLevel, RoutineType } from '@/types';
+import type { PriorityLevel, RoutineType, CreateTaskInput } from '@/types';
+
+// VALIDATION IMPORTS
+// validateAll: function to validate all form fields and return errors
+import { validateAll } from '@/components/forms/TaskForm/TaskValidation';
 
 /**
  * Props for the TaskCreationModal component
@@ -54,8 +58,8 @@ const DEFAULTS: TaskFormValues = {
   description: '',
   dueDate: new Date().toISOString(),
   priorityLevel: 3 as PriorityLevel,
-  color: 'blue',
-  icon: 'star-outline', // default icon so there's always a selected value
+  color: 'red',
+  icon: 'code-slash', // default icon so there's always a selected value
   routineType: 'once' as RoutineType,
   listId: undefined,
   alerts: [],
@@ -78,14 +82,14 @@ export function TaskCreationModal({
   initialValues,
 }: TaskCreationModalProps) {
   // CONSOLE DEBUGGING
-  console.log('🔍 TaskCreationModal - visible:', visible);
+  // console.log('🔍 TaskCreationModal - visible:', visible);
   
   // HOOKS
   const themeColors = useThemeColors();
   
   // REDUX
   const dispatch = useAppDispatch();
-  const { isCreating } = useTasks();
+  const { isCreating, createError } = useTasks();
   
   // FORM STATE
   // main form state that holds all task data
@@ -119,6 +123,70 @@ export function TaskCreationModal({
     );
   }, [values]);
 
+  // CREATE TASK HANDLER
+  // this function is called when user presses the create button
+  // flow: validate form → transform to CreateTaskInput → dispatch createTask → handle success/error
+  const handleCreate = async () => {
+    // Step 1: Validate the form
+    // validateAll checks all fields and returns an object with any errors
+    const errors = validateAll(values as TaskFormValues);
+    
+    // If there are validation errors, don't proceed
+    // The form should show these errors to the user
+    if (Object.keys(errors).length > 0) {
+      // console.log('Form validation errors:', errors);
+      // TODO: Show validation errors to user (could use Alert or error state)
+      return;
+    }
+
+    // Step 2: Transform form values to CreateTaskInput format
+    // CreateTaskInput is the type expected by the Redux createTask action
+    const taskData: CreateTaskInput = {
+      title: values.title!.trim(), // title is required, so we know it exists after validation
+      description: values.description?.trim() || undefined,
+      icon: values.icon || undefined,
+      time: values.time || undefined,
+      duration: values.duration || undefined,
+      dueDate: values.dueDate || undefined,
+      priorityLevel: values.priorityLevel || 3,
+      color: values.color || 'red',
+      routineType: values.routineType || 'once',
+      listId: values.listId || undefined,
+   
+      // For now, we'll handle alerts/reminders separately if needed
+      // The backend might need reminders created separately via a different endpoint
+      metadata: {
+        subtasks: [],
+        reminders: [],
+        notes: values.description?.trim() || undefined,
+        tags: [],
+      },
+    };
+
+    try {
+      // Step 3: Dispatch the createTask action
+      // This is a Redux async thunk that makes an API call and updates the store
+      const result = await dispatch(createTask(taskData));
+      
+      // Step 4: Handle the result
+      // createTask.fulfilled means the task was created successfully
+      if (createTask.fulfilled.match(result)) {
+        // console.log('Task created successfully:', result.payload);
+        // Close the modal on success
+        onClose();
+        // Reset form to defaults for next time
+        setValues({ ...DEFAULTS });
+      } else {
+        // createTask.rejected means there was an error
+        console.error('Failed to create task:', result.payload);
+        // Error is already stored in createError from Redux state
+      }
+    } catch (error) {
+      // Catch any unexpected errors
+      console.error('Unexpected error creating task:', error);
+    }
+  };
+
   // COMPONENT RENDER
   // now includes KeyboardModal wrapper at this level
   return (
@@ -143,6 +211,9 @@ export function TaskCreationModal({
           onClose={onClose}
           hasChanges={hasChanges}
           onPickerVisibilityChange={setIsAnyPickerVisible}
+          onCreate={handleCreate}
+          isCreating={isCreating}
+          createError={createError}
         />
       </KeyboardModal>
     </>

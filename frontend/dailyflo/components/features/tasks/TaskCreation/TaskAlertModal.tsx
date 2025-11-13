@@ -61,7 +61,7 @@ export function TaskAlertModal({
   taskCategoryColor,
 }: TaskAlertModalProps) {
   // CONSOLE DEBUGGING
-  console.log('🔔 TaskAlertModal - visible:', visible);
+  // console.log('🔔 TaskAlertModal - visible:', visible);
   
   // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
@@ -92,7 +92,7 @@ export function TaskAlertModal({
   // handle toggling an alert option
   // flow: user taps option → check if already selected → add or remove from array → update temp state
   const handleToggleAlert = (alertId: string) => {
-    console.log('Toggle alert:', alertId);
+    // console.log('Toggle alert:', alertId);
     setTempSelectedAlerts((prev) => {
       // if already selected, remove it from the array
       if (prev.includes(alertId)) {
@@ -108,7 +108,7 @@ export function TaskAlertModal({
   // handle cancel button press
   // flow: user presses cancel → reset temp state to original → close modal
   const handleCancel = () => {
-    console.log('Cancel alert changes');
+    // console.log('Cancel alert changes');
     setTempSelectedAlerts(selectedAlerts); // reset to original values
     setHasChanges(false);
     onClose();
@@ -117,7 +117,7 @@ export function TaskAlertModal({
   // handle done button press
   // flow: user presses done → apply changes via callback → close modal
   const handleDone = () => {
-    console.log('Apply alert changes:', tempSelectedAlerts);
+    // console.log('Apply alert changes:', tempSelectedAlerts);
     onApplyAlerts(tempSelectedAlerts); // send changes to parent
     setHasChanges(false);
     onClose();

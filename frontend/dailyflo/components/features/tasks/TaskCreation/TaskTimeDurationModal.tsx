@@ -53,7 +53,7 @@ export function TaskTimeDurationModal({
   taskCategoryColor,
 }: TaskTimeDurationModalProps) {
   // CONSOLE DEBUGGING
-  console.log('⏰ TaskTimeDurationModal - visible:', visible);
+  // console.log('⏰ TaskTimeDurationModal - visible:', visible);
   
   // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
@@ -109,7 +109,7 @@ export function TaskTimeDurationModal({
   // flow: user drags slider or taps → snaps to nearest preset → updates working state only
   // accepts undefined for "None" option to clear duration
   const handleDurationSelect = (duration: number | undefined) => {
-    console.log('Duration selected:', duration);
+    // console.log('Duration selected:', duration);
     setWorkingDuration(duration); // update working state only, not parent
   };
 

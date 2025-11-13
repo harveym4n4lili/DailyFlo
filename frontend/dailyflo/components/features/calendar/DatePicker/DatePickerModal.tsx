@@ -98,7 +98,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   taskCategoryColor,
 }) => {
   // CONSOLE DEBUGGING
-  console.log('📅 DatePickerModal - visible:', visible);
+  // console.log('📅 DatePickerModal - visible:', visible);
   
   // get theme-aware colors for styling
   const themeColors = useThemeColors();
@@ -141,7 +141,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   // when user picks a quick option (Today, Tomorrow, etc), we apply it immediately
   // flow: user taps quick option → applies date to parent → modal closes
   const handleQuickDateSelect = (date: string, optionName: string) => {
-    console.log(`Quick date selected: ${optionName}`);
+    // console.log(`Quick date selected: ${optionName}`);
     onSelectDate(date); // apply date to parent immediately
     onClose(); // close modal immediately
   };
@@ -153,7 +153,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   // when user picks a specific date from the calendar, we update working date
   // flow: user taps calendar date → updates working date → modal stays open
   const handleCalendarDateSelect = (date: string) => {
-    console.log(`Calendar date selected: ${date}`);
+    // console.log(`Calendar date selected: ${date}`);
     setWorkingDate(date); // update internal working date only
     // don't notify parent - changes applied on "Done"
   };

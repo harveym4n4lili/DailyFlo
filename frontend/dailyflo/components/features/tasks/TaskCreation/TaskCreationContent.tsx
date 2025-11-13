@@ -89,6 +89,18 @@ export interface TaskCreationContentProps {
   /** Callback to notify parent when any picker modal visibility changes */
   /** Used to coordinate backdrop visibility between KeyboardModal and DraggableModal */
   onPickerVisibilityChange?: (isAnyPickerVisible: boolean) => void;
+  
+  /** Callback when create button is pressed */
+  /** This function handles validating the form and creating the task */
+  onCreate: () => void;
+  
+  /** Whether a task is currently being created (loading state) */
+  /** Used to disable the create button and show loading indicator */
+  isCreating?: boolean;
+  
+  /** Error message if task creation failed */
+  /** Can be displayed to the user */
+  createError?: string | null;
 }
 
 // CONSTANTS
@@ -107,6 +119,9 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   onClose,
   hasChanges,
   onPickerVisibilityChange,
+  onCreate,
+  isCreating = false,
+  createError,
 }) => {
   // CONSOLE DEBUGGING - removed for cleaner logs
   
@@ -117,6 +132,13 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   
   // FORM STATE
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  
+  // CHECK IF CREATE BUTTON SHOULD BE ACTIVE
+  // button is active when required fields are filled (title is required)
+  // trim() removes whitespace to check if title actually has content
+  const isCreateButtonActive = useMemo(() => {
+    return !!(values.title && values.title.trim().length > 0);
+  }, [values.title]);
   
   // PICKER MODAL VISIBILITY STATE
   // track visibility of all form picker modals to coordinate backdrop systems
@@ -209,7 +231,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   };
   
   const handleDateSelect = (date: string) => {
-    console.log('Date selected:', date);
+    // console.log('Date selected:', date);
     onChange('dueDate', date);
     // when date is selected via quick option, modal closes automatically
     // focus title input to open keyboard immediately after selection
@@ -231,7 +253,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   };
   
   const handleColorSelect = (color: TaskColor) => {
-    console.log('Color selected:', color);
+    // console.log('Color selected:', color);
     onChange('color', color);
   };
   
@@ -243,7 +265,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
 
   // ICON SELECTION HANDLER
   const handleIconSelect = (icon: string) => {
-    console.log('Icon selected:', icon);
+    // console.log('Icon selected:', icon);
     onChange('icon', icon);
   };
 
@@ -256,12 +278,12 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   };
   
   const handleTimeSelect = (time: string | undefined) => {
-    console.log('Time selected:', time);
+    // console.log('Time selected:', time);
     onChange('time', time);
   };
   
   const handleDurationSelect = (duration: number | undefined) => {
-    console.log('Duration selected:', duration);
+    // console.log('Duration selected:', duration);
     onChange('duration', duration);
   };
   
@@ -286,7 +308,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   };
   
   const handleAlertsApply = (alertIds: string[]) => {
-    console.log('Alerts applied:', alertIds);
+    // console.log('Alerts applied:', alertIds);
     onChange('alerts', alertIds);
   };
 
@@ -318,7 +340,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
     //     { cancelable: true }
     //   );
     // } else {
-      console.log('Closing modal');
+      // console.log('Closing modal');
       Keyboard.dismiss();
       onClose();
     // }
@@ -433,7 +455,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         <View>
           <SubtaskSection
             onAddSubtask={() => {
-              console.log('Add subtask clicked - placeholder functionality');
+              // console.log('Add subtask clicked - placeholder functionality');
             }}
           />
         </View>
@@ -536,8 +558,11 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
       }}>
         {/* Circular create button anchored to the right */}
         {/* background uses task category color */}
+        {/* disabled when isCreating is true OR when required fields are not filled */}
+        {/* inactive state shows lower opacity when title is empty */}
         <Pressable
-          onPress={() => console.log('Create button tapped')}
+          onPress={onCreate}
+          disabled={isCreating || !isCreateButtonActive}
           style={{
             width: 42,
             height: 42,
@@ -547,15 +572,43 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
               : TaskCategoryColors.blue[500],
             justifyContent: 'center',
             alignItems: 'center',
+            // reduce opacity when disabled/loading OR when inactive (title not filled)
+            // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
+            opacity: !isCreateButtonActive ? 0.4 : isCreating ? 0.6 : 1,
           }}
         >
           <Ionicons
-            name="arrow-up"
+            name={isCreating ? "hourglass-outline" : "arrow-up"}
             size={20}
             // use white icon for contrast on colored backgrounds
             color="#FFFFFF"
           />
         </Pressable>
+        
+        {/* Error message display */}
+        {/* shows error if task creation failed */}
+        {createError && (
+          <View style={{
+            position: 'absolute',
+            bottom: -30,
+            left: 16,
+            right: 16,
+            padding: 8,
+            backgroundColor: themeColors.background.elevated(),
+            borderRadius: 8,
+            borderWidth: 1,
+            // use semantic error color from color palette
+            borderColor: colors.getSemanticColor('error', 500),
+          }}>
+            <Text style={{
+              ...getTextStyle('body-small'),
+              // use semantic error color from color palette
+              color: colors.getSemanticColor('error', 500),
+            }}>
+              {createError}
+            </Text>
+          </View>
+        )}
       </View>
       
       

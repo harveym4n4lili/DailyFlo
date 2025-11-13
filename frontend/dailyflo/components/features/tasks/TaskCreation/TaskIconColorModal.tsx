@@ -89,7 +89,7 @@ export function TaskIconColorModal({
   taskCategoryColor,
 }: TaskIconColorModalProps) {
   // CONSOLE DEBUGGING
-  console.log('🎨 TaskIconColorModal - visible:', visible);
+  // console.log('🎨 TaskIconColorModal - visible:', visible);
   
   // get theme-aware colors from the color palette system
   const colors = useColorPalette();
@@ -138,7 +138,7 @@ export function TaskIconColorModal({
   // flow: user taps a color → update temp color state
   // changes are only applied when user taps Done button
   const handleColorSelect = (color: TaskColor) => {
-    console.log('Color selected:', color);
+    // console.log('Color selected:', color);
     setTempColor(color);
   };
 
@@ -146,7 +146,7 @@ export function TaskIconColorModal({
   // flow: user taps an icon → update temp icon state
   // changes are only applied when user taps Done button
   const handleIconSelect = (iconName: string) => {
-    console.log('Icon selected:', iconName);
+    // console.log('Icon selected:', iconName);
     setTempIcon(iconName);
   };
 

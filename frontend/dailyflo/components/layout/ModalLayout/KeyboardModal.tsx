@@ -165,7 +165,7 @@ export const KeyboardModal: React.FC<KeyboardModalProps> = ({
   bottomSectionHeight = 0,
 }) => {
   // CONSOLE DEBUGGING
-  console.log('🔍 KeyboardModal - visible:', visible);
+  // console.log('🔍 KeyboardModal - visible:', visible);
   
   // COLOR PALETTE USAGE
   // get theme-aware colors from the design system
@@ -331,7 +331,7 @@ export const KeyboardModal: React.FC<KeyboardModalProps> = ({
   // this function runs when the user taps the backdrop (area outside modal)
   // flow: user taps backdrop → this function checks backdropDismiss → calls onClose if allowed
   const handleBackdropPress = () => {
-    console.log('🟢 Modal backdrop pressed');
+    // console.log('🟢 Modal backdrop pressed');
     if (backdropDismiss) {
       onClose();
     }
