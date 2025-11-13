@@ -88,7 +88,7 @@ export const SubtaskSection: React.FC<SubtaskSectionProps> = ({
   // this function runs when the user taps the "Add Subtask" button
   // flow: user taps button → this function is called → parent's onAddSubtask is called
   const handleAddSubtask = () => {
-    console.log('Add Subtask button pressed');
+    // console.log('Add Subtask button pressed');
     onAddSubtask?.();
   };
 

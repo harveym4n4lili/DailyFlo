@@ -17,6 +17,11 @@ import { Task, CreateTaskInput, UpdateTaskInput, TaskFilters, TaskSortOptions } 
 // TaskFilters: Interface for filtering tasks (from types/common/Task.ts)
 // TaskSortOptions: Interface for sorting tasks (from types/common/Task.ts)
 
+// ASYNC STORAGE IMPORTS
+// AsyncStorage: React Native's local storage for storing data offline
+// this is used temporarily to store tasks locally without API calls
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 /**
  * Define the shape of the tasks state
  * 
@@ -434,27 +439,36 @@ export const fetchTasks = createAsyncThunk(
   }
 );
 
-// Create a new task
+// TEMPORARY LOCAL STORAGE KEY
+// This key is used to store tasks in AsyncStorage
+// This is a temporary solution until API integration is ready
+const TASKS_STORAGE_KEY = '@DailyFlo:tasks';
+
+// Helper function to generate a unique ID for tasks
+// This creates a simple timestamp-based ID for local storage
+function generateTaskId(): string {
+  return `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Create a new task (TEMPORARY - uses local storage instead of API)
+// This is an async thunk - a Redux Toolkit function that handles async operations
+// It dispatches actions automatically: pending (loading), fulfilled (success), rejected (error)
+// For now, this stores tasks in AsyncStorage instead of making API calls
 export const createTask = createAsyncThunk(
   'tasks/createTask',
-  async (taskData: CreateTaskInput, { rejectWithValue }) => {
+  async (taskData: CreateTaskInput, { rejectWithValue, getState }) => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.createTask(taskData);
-      // return response.data;
-      
-      // For now, create a mock task
-      // this creates a new task object with all required fields
-      // CreateTaskInput from API is transformed into a full Task object
+      // Create a new task object with all required fields
+      // This transforms CreateTaskInput into a full Task object
       const newTask: Task = {
-        id: Date.now().toString(), // Simple ID generation
-        userId: 'user1',
+        id: generateTaskId(), // Generate a unique ID for local storage
+        userId: 'local_user', // Temporary user ID for local storage
         listId: taskData.listId || null,
         title: taskData.title,
         description: taskData.description || '',
-        icon: taskData.icon,                // icon field - optional icon name from user input
-        time: taskData.time,                // time field - optional time in HH:MM format from user input
-        duration: taskData.duration || 0,   // duration field - minutes for task (defaults to 0 if not specified)
+        icon: taskData.icon,
+        time: taskData.time,
+        duration: taskData.duration || 0,
         dueDate: taskData.dueDate || null,
         isCompleted: false,
         completedAt: null,
@@ -473,9 +487,26 @@ export const createTask = createAsyncThunk(
         updatedAt: new Date().toISOString(),
       };
       
+      // Get current tasks from Redux state
+      const state = getState() as any;
+      const currentTasks = state.tasks?.tasks || [];
+      
+      // Add the new task to the list
+      const updatedTasks = [...currentTasks, newTask];
+      
+      // Store tasks in AsyncStorage
+      // AsyncStorage stores data as strings, so we need to JSON.stringify
+      await AsyncStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(updatedTasks));
+      
+      console.log('Task created and stored locally:', newTask.id);
+      
+      // Return the new task so it gets added to Redux state
       return newTask;
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to create task');
+      // If storage fails, return an error message
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create task';
+      console.error('Create task error:', error);
+      return rejectWithValue(errorMessage);
     }
   }
 );

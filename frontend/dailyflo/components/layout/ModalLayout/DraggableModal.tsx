@@ -229,7 +229,7 @@ export function DraggableModal({
     
     // create back handler function
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      console.log('🔙 Android back button pressed - closing DraggableModal');
+      // console.log('🔙 Android back button pressed - closing DraggableModal');
       onClose();
       return true; // prevent default back behavior
     });
@@ -373,7 +373,7 @@ export function DraggableModal({
           <Pressable
             style={StyleSheet.absoluteFillObject}
             onPress={() => {
-              console.log('🟢 DraggableModal backdrop pressed');
+              // console.log('🟢 DraggableModal backdrop pressed');
               onClose();
             }}
           />

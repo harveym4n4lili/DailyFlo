@@ -165,7 +165,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   // the highlight is a separate overlay that fades in/out smoothly
   const animatedStyle = (highlightOpacity && hasValue) ? {
     backgroundColor: themeColors.background.primary(), // static background color
-    borderRadius: 16,
+    borderRadius: 20,
     paddingVertical: 0, // Icons have their own padding container
     paddingHorizontal: 12,
     borderWidth: 1,
@@ -178,7 +178,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   // static styles when no animation is needed or no value is set
   const staticStyle = !highlightOpacity || !hasValue ? {
     backgroundColor: hasValue ? themeColors.background.primary() : 'transparent',
-    borderRadius: hasValue ? 16 : 0,
+    borderRadius: hasValue ? 20 : 0,
     paddingVertical: hasValue ? 0 : 8, // Default state has vertical padding, selected state has no vertical padding
     paddingHorizontal: hasValue ? 12 : 0, // Default state has no horizontal padding, selected state has horizontal padding
     borderWidth: hasValue ? 1 : 0,
@@ -189,7 +189,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
 
   // handle press with debugging
   const handlePress = () => {
-    console.log('🟢 FormPickerButton: Tapped!', icon);
+    // console.log('🟢 FormPickerButton: Tapped!', icon);
     onPress();
   };
 
@@ -208,7 +208,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
             bottom: 0,
             backgroundColor: themeColors.background.quaternary(),
             opacity: highlightOpacity,
-            borderRadius: 16,
+            borderRadius: 20,
           }}
           pointerEvents="none" // don't intercept touches
         />
