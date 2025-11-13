@@ -54,18 +54,27 @@ export function ModalBackdrop({
   
   // shared value for backdrop opacity animation
   // backdrop fades in when any modal opens, fades out when all modals close
-  const backdropOpacity = useSharedValue(0);
+  // initialize based on isVisible to prevent flash on first render
+  const backdropOpacity = useSharedValue(isVisible ? 1 : 0);
 
   // watch for visibility changes and animate the backdrop accordingly
   // this creates a darker backdrop that fades behind modals
+  // ensures smooth transitions without flashing by animating from current opacity
+  // only animate if the visibility state actually changed to prevent unnecessary animations
   useEffect(() => {
-    if (isVisible) {
-      // fade in the backdrop
+    // get current opacity value to check if we need to animate
+    const currentOpacity = backdropOpacity.value;
+    
+    if (isVisible && currentOpacity !== 1) {
+      // fade in the backdrop from current opacity to fully visible (1)
+      // only animate if not already at target value
       backdropOpacity.value = withTiming(1, { duration });
-    } else {
-      // fade out the backdrop
+    } else if (!isVisible && currentOpacity !== 0) {
+      // fade out the backdrop from current opacity to invisible (0)
+      // only animate if not already at target value
       backdropOpacity.value = withTiming(0, { duration });
     }
+    // if already at target opacity, don't animate (prevents flash when form picker closes)
   }, [isVisible, duration]);
 
   // animated style for the backdrop

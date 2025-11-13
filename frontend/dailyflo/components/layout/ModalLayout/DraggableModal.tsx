@@ -6,15 +6,16 @@
  * Can be used by any modal that needs draggable functionality.
  */
 
-import React, { useEffect } from 'react';
-import { Modal, View, Pressable, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Pressable, useWindowDimensions, StyleSheet, BackHandler } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
   withSpring,
   withTiming,
-  runOnJS 
+  runOnJS,
+  Easing,
 } from 'react-native-reanimated';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
@@ -50,6 +51,16 @@ export interface DraggableModalProps {
   // useful for toolbars, filters, or controls that should always be visible while content scrolls
   // will be rendered inside the draggable content with absolute positioning
   stickyHeader?: React.ReactNode;
+  
+  // z-index for modal stacking
+  // higher z-index modals appear on top of lower z-index modals
+  // @default 10001 (higher than KeyboardModal's default 10000)
+  zIndex?: number;
+  
+  // whether to show the backdrop overlay
+  // when false, backdrop is hidden (useful when stacked on another modal with its own backdrop)
+  // @default true
+  showBackdrop?: boolean;
 }
 
 export function DraggableModal({
@@ -58,13 +69,22 @@ export function DraggableModal({
   children,
   snapPoints,
   initialSnapPoint = 1,
-  borderRadius = 16,
+  borderRadius = 12,
   stickyFooter,
   stickyHeader,
+  zIndex = 10001, // default higher than KeyboardModal for stacking
+  showBackdrop = true, // default to showing backdrop
 }: DraggableModalProps) {
   
   const { height: screenHeight } = useWindowDimensions();
   const themeColors = useThemeColors();
+  
+  // backdrop opacity for fade in/out animation
+  // coordinates with modal slide animation for polished transitions
+  // initialize based on visible state to prevent flash on first render
+  // if modal is initially visible, backdrop should start at full opacity (1)
+  // if modal is initially hidden, backdrop should start invisible (0)
+  const backdropOpacity = useSharedValue(visible ? 1 : 0);
   
   // validate snap points
   if (snapPoints.length < 2) {
@@ -85,30 +105,138 @@ export function DraggableModal({
   const initialPosition = maxHeight - snapHeights[Math.min(initialSnapPoint, snapHeights.length - 1)];
   
   // shared value to track the current vertical offset of the modal
-  // starts at initial position
-  const translateY = useSharedValue(initialPosition);
+  // starts off-screen (maxHeight) so modal can slide up when opening
+  // this ensures the modal starts hidden and animates in smoothly
+  const translateY = useSharedValue(maxHeight);
   
   // store the starting position when gesture begins
   // this allows us to apply the drag relative to where we started
   const startY = useSharedValue(0);
   
-  // reset modal position and animate in when it becomes visible
-  // duration: 300ms to match KeyboardModal
+  // track if modal is animating out to handle cleanup
+  // we need to keep rendering during animation so it can complete smoothly
+  const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+  
+  // track previous visible value to detect transitions synchronously
+  // this allows us to keep component mounted when visible becomes false
+  // preventing the flash that occurs when cancel button is tapped
+  const prevVisibleRef = useRef(visible);
+  
+  // track backdrop visibility state using ref to avoid bridge calls
+  // this prevents flash by avoiding synchronous shared value reads
+  // ref tracks the expected backdrop state without requiring bridge communication
+  const backdropVisibleRef = useRef(visible);
+  
+  // synchronously detect when visible changes from true to false
+  // this must happen during render, not in useEffect, to prevent flash
+  // when cancel button is tapped, visible becomes false immediately
+  // we use a ref to track this transition so early return can check it
+  const isTransitioningOut = prevVisibleRef.current && !visible;
+  
+  // update ref for next render (after checking transition)
+  prevVisibleRef.current = visible;
+  
+  // MODAL SLIDE ANIMATION EFFECT
+  // replicates iOS's native slide animation using Reanimated
+  // iOS slide animation: 300ms duration, cubic bezier easing (0.42, 0, 0.58, 1)
+  // this creates the exact same smoothness as iOS's built-in slide animation
+  // when opening: animate from off-screen (maxHeight) to initial snap position
+  // when closing: animate to off-screen (maxHeight)
+  // drag gestures work after modal is open (no conflict with slide animation)
   useEffect(() => {
     if (visible) {
-      // start from bottom (off screen)
+      // update ref to track that backdrop should be visible
+      backdropVisibleRef.current = true;
+      
+      // immediately set initial position off-screen before animating
+      // this prevents the modal from flashing in its final position
       translateY.value = maxHeight;
-      // animate to initial position
-      translateY.value = withTiming(initialPosition, {
-        duration: 300,
+      backdropOpacity.value = 0;
+      
+      // use requestAnimationFrame to ensure the initial position is set before animation starts
+      // this prevents the janky flash where modal appears in final position before sliding
+      requestAnimationFrame(() => {
+        // slide up from bottom - replicate iOS native slide animation
+        // start from off-screen (maxHeight) and animate to initial snap position
+        translateY.value = withTiming(initialPosition, {
+          duration: 300, // matches iOS native slide animation duration
+          easing: Easing.bezier(0.42, 0, 0.58, 1), // iOS native slide easing curve
+        });
+        
+        // fade in backdrop simultaneously for coordinated transition
+        backdropOpacity.value = withTiming(1, {
+          duration: 300, // matches modal slide duration for coordination
+          easing: Easing.bezier(0.42, 0, 0.58, 1), // same easing for consistency
+        });
       });
+      
+      setIsAnimatingOut(false);
     } else {
-      // animate out to bottom when closing
-      translateY.value = withTiming(maxHeight, {
-        duration: 300,
+      // when closing, ensure smooth fade-out and slide-down animation
+      // matches the smoothness of time/duration modal by ensuring proper synchronization
+      // check ref instead of reading shared value to avoid bridge call
+      // this prevents flash by avoiding synchronous shared value reads
+      if (!backdropVisibleRef.current) {
+        // backdrop already invisible, skip animation (already closed)
+        setIsAnimatingOut(false);
+        return;
+      }
+      
+      // IMPORTANT: set isAnimatingOut to true IMMEDIATELY before any async operations
+      // this prevents the early return from unmounting the component before animation starts
+      // if we set it after requestAnimationFrame, the component will flash/disappear
+      setIsAnimatingOut(true);
+      
+      // update ref to track that backdrop should be invisible
+      backdropVisibleRef.current = false;
+      
+      // use requestAnimationFrame to prevent flash when closing
+      // ensures animation starts in the same frame without any intermediate state
+      // prevents the flash that occurs when backdrop opacity is checked synchronously
+      requestAnimationFrame(() => {
+        // animate backdrop directly from current opacity to 0 without resetting first
+        // this prevents flash by avoiding any intermediate opacity changes
+        // backdrop should be at 1 (fully visible) when modal is open, so it animates smoothly from 1 to 0
+        backdropOpacity.value = withTiming(0, {
+          duration: 300, // matches modal slide duration for coordination
+          easing: Easing.bezier(0.42, 0, 0.58, 1), // same easing for consistency
+        });
+        
+        // start slide-down animation simultaneously
+        // slide down to bottom - replicate iOS native slide-down animation
+        translateY.value = withTiming(maxHeight, {
+          duration: 300, // matches iOS native slide animation duration
+          easing: Easing.bezier(0.42, 0, 0.58, 1), // iOS native slide easing curve
+        });
       });
+      
+      // reset after animation completes (300ms)
+      const timer = setTimeout(() => {
+        setIsAnimatingOut(false);
+        // ensure values are reset after animation completes
+        translateY.value = maxHeight;
+        backdropOpacity.value = 0;
+      }, 300);
+      return () => clearTimeout(timer);
     }
   }, [visible, initialPosition, maxHeight]);
+  
+  // ANDROID BACK BUTTON HANDLER
+  // handles Android back button press to close modal
+  // this replicates Modal's onRequestClose functionality
+  useEffect(() => {
+    if (!visible) return;
+    
+    // create back handler function
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      console.log('🔙 Android back button pressed - closing DraggableModal');
+      onClose();
+      return true; // prevent default back behavior
+    });
+    
+    // cleanup: remove listener when modal closes or component unmounts
+    return () => backHandler.remove();
+  }, [visible, onClose]);
 
   // pan gesture handler for dragging the modal
   const panGesture = Gesture.Pan()
@@ -190,54 +318,82 @@ export function DraggableModal({
       }
     });
 
-  // animated style that applies the translateY value to move the modal
-  const animatedStyle = useAnimatedStyle(() => {
+  // animated styles for smooth transitions
+  // these styles are applied using Reanimated for 60fps performance
+  // modalSlideStyle: animates the modal sliding up/down and dragging
+  // backdropStyle: animates the backdrop fading in/out
+  const modalSlideStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateY: translateY.value }],
     };
   });
-
+  
+  const backdropStyle = useAnimatedStyle(() => {
+    return {
+      opacity: backdropOpacity.value,
+    };
+  });
+  
+  // don't render if not visible and not animating (optimization)
+  // this prevents unnecessary rendering when modal is fully closed
+  // during closing animation, we keep rendering to ensure smooth transition
+  // also check isTransitioningOut to prevent flash when cancel button is tapped
+  // isTransitioningOut is detected synchronously during render, before useEffect runs
+  if (!visible && !isAnimatingOut && !isTransitioningOut) {
+    return null;
+  }
+  
+  // keep sticky elements visible during closing animation to prevent visual jumps
+  // hide them only after animation completes (when component unmounts)
+  // this ensures smooth animation without layout shifts
+  const shouldShowStickyElements = visible || isAnimatingOut;
   
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="overFullScreen"
-      onRequestClose={onClose}
-      transparent={true}
-      statusBarTranslucent={true}
+    <View
+      style={[
+        StyleSheet.absoluteFillObject,
+        { zIndex: zIndex },
+        styles.rootContainer,
+      ]}
+      pointerEvents={visible ? 'auto' : 'none'} // disable touches when hidden
     >
-      {/* transparent backdrop - kept for tap-to-dismiss functionality */}
-      {/* the darker overlay is handled by the parent component */}
-      <Pressable
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'transparent',
-        }}
-        onPress={() => {
-          console.log('🟢 DraggableModal backdrop pressed');
-          onClose();
-        }}
-      />
+      {/* animated backdrop - dark overlay behind modal */}
+      {/* fades in/out in sync with modal slide animation */}
+      {/* tapping this area dismisses the modal */}
+      {/* only render if showBackdrop is true (allows stacking without duplicate backdrops) */}
+      {showBackdrop && (
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFillObject,
+            styles.backdrop,
+            backdropStyle,
+          ]}
+          pointerEvents={visible ? 'auto' : 'none'}
+        >
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => {
+              console.log('🟢 DraggableModal backdrop pressed');
+              onClose();
+            }}
+          />
+        </Animated.View>
+      )}
       
       {/* transparent layout container for modal positioning */}
       <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          backgroundColor: 'transparent',
-        }}
-        pointerEvents="box-none"
+        style={[
+          styles.modalContainer,
+          { zIndex: zIndex + 1 },
+        ]}
+        pointerEvents="box-none" // allow touches to pass through transparent areas
       >
         {/* GestureDetector wraps the modal to enable drag gestures */}
         <GestureDetector gesture={panGesture}>
           {/* Animated.View applies the translateY style to move the modal */}
-          <Animated.View style={[{ width: '100%' }, animatedStyle]}>
+          {/* replicates iOS native slide animation when opening/closing */}
+          {/* handles drag gestures and snap points when modal is open */}
+          <Animated.View style={[{ width: '100%' }, modalSlideStyle]}>
             {/* Modal container with maximum height and rounded top corners */}
             <View
               style={{
@@ -251,7 +407,8 @@ export function DraggableModal({
             >
               {/* sticky header that moves with modal but stays fixed over scrolling content */}
               {/* positioned absolutely within the modal so it moves with modal drag */}
-              {stickyHeader}
+              {/* hide during closing animation to prevent layout recalculations */}
+              {shouldShowStickyElements && stickyHeader}
               
               {/* main modal content */}
         
@@ -263,11 +420,57 @@ export function DraggableModal({
         {/* sticky footer rendered outside draggable content */}
         {/* stays locked to screen position while modal slides up/down */}
         {/* can contain FABs, action buttons, or any custom content */}
-        {stickyFooter}
+        {/* hide during closing animation to prevent layout recalculations */}
+        {shouldShowStickyElements && stickyFooter}
       </View>
-    </Modal>
+    </View>
   );
 }
+
+/**
+ * Styles for the DraggableModal component
+ * 
+ * Uses absolute positioning for true modal stacking support
+ */
+const styles = StyleSheet.create({
+  // ROOT CONTAINER STYLES
+  // absolute positioned container that covers entire screen
+  // allows modal to stack on top of other content
+  rootContainer: {
+    // absolute positioning covers entire screen
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    // transparent background - doesn't block content behind
+    backgroundColor: 'transparent',
+  },
+  
+  // BACKDROP STYLES
+  // dark overlay behind the modal - fades in/out with animation
+  backdrop: {
+    // absolute positioning to cover entire screen
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    // dark semi-transparent background for dimming effect
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  
+  // MODAL CONTAINER STYLES
+  // positions the modal at the bottom of the screen
+  modalContainer: {
+    // flex container to position modal at bottom
+    flex: 1,
+    alignItems: 'center',      // center horizontally
+    justifyContent: 'flex-end', // position at bottom
+    // transparent background so backdrop is visible
+    backgroundColor: 'transparent',
+  },
+});
 
 export default DraggableModal;
 

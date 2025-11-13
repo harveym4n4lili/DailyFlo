@@ -17,6 +17,8 @@ import { ModalHeader, DraggableModal } from '@/components/layout/ModalLayout';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from 'react-native-reanimated';
 
+import type { TaskColor } from '@/types';
+
 export interface TaskTimeDurationModalProps {
   visible: boolean;
   onClose: () => void;
@@ -24,6 +26,7 @@ export interface TaskTimeDurationModalProps {
   selectedDuration?: number;
   onSelectTime: (time: string | undefined) => void;
   onSelectDuration: (duration: number | undefined) => void;
+  taskCategoryColor?: TaskColor;
 }
 
 // preset duration options in minutes
@@ -47,6 +50,7 @@ export function TaskTimeDurationModal({
   selectedDuration,
   onSelectTime,
   onSelectDuration,
+  taskCategoryColor,
 }: TaskTimeDurationModalProps) {
   // CONSOLE DEBUGGING
   console.log('⏰ TaskTimeDurationModal - visible:', visible);
@@ -189,14 +193,15 @@ export function TaskTimeDurationModal({
   return (
     <>
     <DraggableModal
-        visible={visible}
-        onClose={onClose}
+      visible={visible}
+      onClose={onClose}
         // snap points: close at 30%, initial at 55%, expanded at 90%
         // lowest snap point (30%) will dismiss the modal
         snapPoints={[0.3, 0.5, 0.9]}
         // start at the middle snap point (55%)
         initialSnapPoint={1}
-        borderRadius={16}
+        // showBackdrop=true: DraggableModal handles its own backdrop
+        showBackdrop={true}
       >
       {/* modal header with action buttons */}
       {/* showActionButtons enables Cancel/Done buttons */}
@@ -209,6 +214,7 @@ export function TaskTimeDurationModal({
         onDone={handleDone}
         showDragIndicator={true}
         showBorder={true}
+        taskCategoryColor={taskCategoryColor}
       />
 
       {/* scrollable content area */}

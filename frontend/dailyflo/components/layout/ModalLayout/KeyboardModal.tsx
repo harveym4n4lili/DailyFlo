@@ -182,6 +182,70 @@ export const KeyboardModal: React.FC<KeyboardModalProps> = ({
   // this updates when keyboard shows/hides and triggers layout animation
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   
+  // BACKDROP OPACITY ANIMATION
+  // animate backdrop fade-in/out to prevent flash when showBackdrop changes
+  // this ensures smooth transitions when form picker modals open/close
+  // initialize at 0 so backdrop always fades in when modal opens
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  
+  // track previous visible and showBackdrop values to detect changes
+  const prevVisibleRef = useRef(visible);
+  const prevShowBackdrop = useRef(showBackdrop);
+  
+  // animate backdrop opacity when modal opens/closes or showBackdrop changes
+  // prevents flash by smoothly fading in/out instead of appearing/disappearing instantly
+  useEffect(() => {
+    // when modal opens and showBackdrop is true, fade in backdrop
+    if (visible && !prevVisibleRef.current && showBackdrop) {
+      // modal just opened - fade in backdrop from 0 to 1
+      Animated.timing(backdropOpacity, {
+        toValue: 1,
+        duration: 300, // matches modal slide animation duration
+        useNativeDriver: true, // use native driver for smooth 60fps animation
+      }).start();
+    } else if (!visible && prevVisibleRef.current) {
+      // modal just closed - fade out backdrop from current opacity to 0
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 300, // matches modal slide animation duration
+        useNativeDriver: true, // use native driver for smooth 60fps animation
+      }).start();
+    } else if (showBackdrop && !prevShowBackdrop.current) {
+      // showBackdrop changed from false to true (form picker just closed)
+      // ensure backdrop starts at 0 before fading in to prevent flash
+      prevShowBackdrop.current = showBackdrop;
+      
+      // use requestAnimationFrame to ensure backdrop is set to 0 before animation starts
+      requestAnimationFrame(() => {
+        // immediately set to 0 to ensure smooth fade-in without flash
+        backdropOpacity.setValue(0);
+        
+        // start fade-in animation after backdrop is set to 0
+        Animated.timing(backdropOpacity, {
+          toValue: 1,
+          duration: 300, // matches DraggableModal animation duration for coordination
+          useNativeDriver: true, // use native driver for smooth 60fps animation
+        }).start();
+      });
+    } else if (!showBackdrop && prevShowBackdrop.current) {
+      // showBackdrop changed from true to false (form picker just opened)
+      // fade out backdrop
+      prevShowBackdrop.current = showBackdrop;
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 300, // matches DraggableModal animation duration for coordination
+        useNativeDriver: true, // use native driver for smooth 60fps animation
+      }).start();
+    }
+    
+    // update refs for next comparison
+    prevVisibleRef.current = visible;
+    if (showBackdrop === prevShowBackdrop.current) {
+      // only update if showBackdrop hasn't changed (to avoid double updates)
+      prevShowBackdrop.current = showBackdrop;
+    }
+  }, [visible, showBackdrop, backdropOpacity]);
+  
   // KEYBOARD EVENT LISTENERS
   // set up listeners for keyboard show/hide events
   // uses LayoutAnimation for perfect sync with keyboard
@@ -286,12 +350,27 @@ export const KeyboardModal: React.FC<KeyboardModalProps> = ({
     >
       {/* backdrop - dark overlay behind modal */}
       {/* tapping this area can dismiss the modal if backdropDismiss is true */}
-      {showBackdrop && (
+      {/* always render backdrop but animate opacity to prevent flash */}
+      {/* opacity animation ensures smooth fade-in when form picker closes */}
+      {/* use opacity from animated value and pointerEvents to control visibility */}
+      <Animated.View
+        style={[
+          styles.backdrop,
+          {
+            opacity: backdropOpacity,
+            // disable touches when backdrop is invisible (opacity 0)
+            // this prevents interaction when backdrop is fading in/out
+            pointerEvents: showBackdrop ? 'auto' : 'none',
+          },
+        ]}
+        pointerEvents={showBackdrop ? 'auto' : 'none'}
+      >
         <Pressable
-          style={styles.backdrop}
+          style={StyleSheet.absoluteFillObject}
           onPress={handleBackdropPress}
+          disabled={!showBackdrop} // disable press when backdrop is hidden
         />
-      )}
+      </Animated.View>
       
       {/* modal positioning container */}
       {/* centers modal horizontally and positions at bottom of screen */}
@@ -302,38 +381,44 @@ export const KeyboardModal: React.FC<KeyboardModalProps> = ({
       >
         {/* wrapper for keyboard-aware positioning */}
         {/* modal is always anchored to screen bottom (bottom: 0) */}
-        {/* internal padding adjusts for keyboard to keep content visible */}
+        {/* full screen height (invisible) to prevent cutting off DraggableModal content */}
         {/* uses LayoutAnimation for perfect sync with keyboard animation */}
         <View
           style={[
+            styles.contentContainer,
             {
-              width: '100%',
+              // full screen height to prevent cutting off DraggableModal content
+              height: screenHeight,
+              // transparent background - modal is full screen but invisible
+              backgroundColor: 'transparent',
+              // position at bottom
               position: 'absolute',
-              // always anchored to screen bottom
               bottom: 0,
+              // use flex to position visible content wrapper at bottom
+              justifyContent: 'flex-end',
             },
           ]}
         >
-          {/* modal content container with rounded top corners */}
-          {/* this has the same styling as DraggableModal */}
-          {/* height is flexible - auto-sizes to content */}
-          {/* paddingBottom creates whitespace equal to keyboard height */}
-          {/* this keeps content visible above keyboard while modal stretches to screen bottom */}
+          {/* visible content wrapper with background color and border radius */}
+          {/* this is the actual visible modal - auto-sizes to content height */}
+          {/* positioned at bottom via parent's justifyContent: 'flex-end' */}
+          {/* only fills the content, not full screen height */}
           <View
             style={[
-              styles.contentContainer,
+              styles.visibleContentWrapper,
               {
-                // theme colors for modal background
-                backgroundColor: backgroundColor || themeColors.background.elevated(),
+                // use primary background color from theme
+                // backgroundColor prop can override if provided, otherwise use theme primary
+                backgroundColor: backgroundColor || themeColors.background.primary(),
                 // rounded top corners (same as DraggableModal)
                 borderTopLeftRadius: borderRadius,
                 borderTopRightRadius: borderRadius,
-                // use provided height or auto-size to content (no height = auto)
-                // when dynamicKeyboardHeight=true, typically leave height undefined for auto-sizing
-                height: height,
+                // use provided height if specified, otherwise use full screen height for flex to work
+                // content inside uses flex: 1, so wrapper needs a defined height
+                height: height || screenHeight,
                 // paddingBottom creates whitespace for keyboard + safe area
                 // subtract bottomSectionHeight to account for fixed bottom sections
-                // content stays above keyboard, background extends to screen bottom
+                // content stays above keyboard, background only fills content
                 paddingBottom: dynamicKeyboardHeight 
                   ? keyboardHeight + insets.bottom - bottomSectionHeight
                   : insets.bottom,
@@ -394,9 +479,21 @@ const styles = StyleSheet.create({
   },
   
   // CONTENT CONTAINER STYLES
-  // the actual modal content with rounded top corners
-  // follows DraggableModal styling
+  // full screen invisible wrapper to prevent cutting off DraggableModal content
+  // transparent background, full height, positioned at bottom
   contentContainer: {
+    // full width and height
+    width: '100%',
+    // height is set inline to screenHeight for full screen coverage
+    // transparent background - invisible but allows children to extend
+    // position and justifyContent are set inline
+  },
+  
+  // VISIBLE CONTENT WRAPPER STYLES
+  // the actual visible modal with background color and border radius
+  // auto-sizes to content, positioned at bottom via parent's justifyContent
+  // only fills the content height, not full screen
+  visibleContentWrapper: {
     // full width like bottom sheet
     width: '100%',
     // background color is set dynamically in the component using themeColors
@@ -415,6 +512,14 @@ const styles = StyleSheet.create({
     // height is flexible - auto-sizes to content when not provided
     // if height prop is provided, uses that instead
     // height is applied inline in the component
+    
+    // use flex layout to position children in column
+    // content takes available space, bottom section sits below it
+    flexDirection: 'column',
+    
+    // ensure wrapper can shrink and grow to fit content
+    // when height is undefined, this allows auto-sizing
+    flexShrink: 0,
   },
 });
 

@@ -8,12 +8,11 @@
 
 // REACT IMPORTS
 // react: core react library for building components
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 // LAYOUT COMPONENTS IMPORTS
 // KeyboardModal: bottom sheet modal that appears with keyboard, no keyboard avoiding
-// ModalBackdrop: reusable backdrop component that fades in/out
-import { KeyboardModal, ModalBackdrop } from '@/components/layout/ModalLayout';
+import { KeyboardModal } from '@/components/layout/ModalLayout';
 
 // CUSTOM HOOKS IMPORTS
 // hooks for accessing design system and theme
@@ -94,10 +93,10 @@ export function TaskCreationModal({
     ...DEFAULTS, 
     ...initialValues 
   });
-
-  // FORM PICKER MODAL STATE
-  // track when form picker modals are open to hide backdrop for smooth transitions
-  const [isFormPickerOpen, setIsFormPickerOpen] = useState(false);
+  
+  // PICKER VISIBILITY STATE
+  // track if any form picker modal is visible for custom backdrop in TaskCreationContent
+  const [isAnyPickerVisible, setIsAnyPickerVisible] = useState(false);
 
   // FORM CHANGE HANDLER
   // generic change handler for all form fields
@@ -124,16 +123,8 @@ export function TaskCreationModal({
   // now includes KeyboardModal wrapper at this level
   return (
     <>
-      {/* Visual backdrop - non-tappable, just for darkening effect */}
-      {/* shows only when task modal is visible AND no form picker modals are open */}
-      {/* this prevents backdrop conflicts that cause jarring transitions */}
-      <ModalBackdrop 
-        isVisible={visible && !isFormPickerOpen}
-        zIndex={9999}
-      />
-
       {/* KeyboardModal - bottom sheet modal that appears with keyboard */}
-      {/* showBackdrop=true: uses transparent backdrop to catch taps */}
+      {/* showBackdrop=true: shows backdrop on today screen */}
       {/* backdropDismiss=true: tapping backdrop triggers onClose */}
       {/* bottomSectionHeight: accounts for bottom action section padding (32px) */}
       <KeyboardModal
@@ -151,7 +142,7 @@ export function TaskCreationModal({
           onChange={onChange}
           onClose={onClose}
           hasChanges={hasChanges}
-          onFormPickerModalChange={setIsFormPickerOpen}
+          onPickerVisibilityChange={setIsAnyPickerVisible}
         />
       </KeyboardModal>
     </>

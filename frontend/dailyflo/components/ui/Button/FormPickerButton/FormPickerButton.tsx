@@ -160,21 +160,18 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   const AnimatedContainer = highlightOpacity ? Animated.View : React.Fragment;
   
   // get animated styles if highlightOpacity is provided and has value
-  // interpolates the animated value to smoothly transition background color
+  // use opacity-based highlight overlay instead of backgroundColor interpolation
+  // this allows useNativeDriver to work properly and prevents jankiness
+  // the highlight is a separate overlay that fades in/out smoothly
   const animatedStyle = (highlightOpacity && hasValue) ? {
-    backgroundColor: highlightOpacity.interpolate({
-      inputRange: [0, 1],
-      outputRange: [
-        themeColors.background.primary(), // normal state
-        themeColors.background.quaternary(), // highlighted state
-      ],
-    }),
+    backgroundColor: themeColors.background.primary(), // static background color
     borderRadius: 16,
     paddingVertical: 0, // Icons have their own padding container
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: themeColors.border.primary(),
     alignSelf: 'flex-start' as const,
+    overflow: 'hidden', // ensure highlight overlay respects border radius
     ...containerStyle,
   } : {};
   
@@ -198,6 +195,25 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
 
   return (
     <AnimatedContainer style={highlightOpacity ? animatedStyle : staticStyle}>
+      {/* highlight overlay - only shown when button has value and highlightOpacity is provided */}
+      {/* uses opacity animation which can use native driver for smooth performance */}
+      {/* positioned absolutely to overlay the button without affecting layout */}
+      {highlightOpacity && hasValue ? (
+        <Animated.View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: themeColors.background.quaternary(),
+            opacity: highlightOpacity,
+            borderRadius: 16,
+          }}
+          pointerEvents="none" // don't intercept touches
+        />
+      ) : null}
+      
       {/* touchable inner content with icon and text */}
       {/* uses TouchableOpacity to prevent keyboard dismissal (same as SubtaskSection) */}
       {/* flow: user taps button → onPress callback → picker modal opens → keyboard stays open */}
@@ -212,6 +228,8 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
           gap: hasValue && finalDisplayText ? 8 : 0,
           // reduce opacity when disabled for visual feedback
           opacity: disabled ? 0.5 : 1,
+          // ensure content is above highlight overlay
+          zIndex: 1,
         }}
       >
         {/* icon on the left */}

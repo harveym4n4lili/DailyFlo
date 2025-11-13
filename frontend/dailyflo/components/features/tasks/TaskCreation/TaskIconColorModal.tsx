@@ -6,7 +6,7 @@
  * Uses DraggableModal component for drag-to-dismiss and snap point functionality.
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +23,7 @@ export interface TaskIconColorModalProps {
   onSelectColor: (color: TaskColor) => void;
   selectedIcon?: string;
   onSelectIcon?: (icon: string) => void;
+  taskCategoryColor?: TaskColor;
 }
 
 // available task colors that match our color palette system
@@ -85,6 +86,7 @@ export function TaskIconColorModal({
   onSelectColor,
   selectedIcon,
   onSelectIcon,
+  taskCategoryColor,
 }: TaskIconColorModalProps) {
   // CONSOLE DEBUGGING
   console.log('🎨 TaskIconColorModal - visible:', visible);
@@ -94,110 +96,154 @@ export function TaskIconColorModal({
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
 
+  // track temporary selections while modal is open
+  // these are only applied when user taps Done button
+  const [tempColor, setTempColor] = useState<TaskColor>(selectedColor);
+  const [tempIcon, setTempIcon] = useState<string | undefined>(selectedIcon);
+
+  // reset temp values when modal opens/closes or initial values change
+  // this ensures modal always starts with the current selected values
+  useEffect(() => {
+    if (visible) {
+      setTempColor(selectedColor);
+      setTempIcon(selectedIcon);
+    }
+  }, [visible, selectedColor, selectedIcon]);
+
+  // check if there are any changes from initial values
+  // hasChanges is true if color or icon differs from initial selection
+  const hasChanges = tempColor !== selectedColor || tempIcon !== selectedIcon;
+
+  // handle cancel button press
+  // reset temp values to initial values and close modal without applying changes
+  const handleCancel = () => {
+    setTempColor(selectedColor);
+    setTempIcon(selectedIcon);
+    onClose();
+  };
+
+  // handle done button press
+  // apply temp selections to actual form state and close modal
+  const handleDone = () => {
+    if (tempColor !== selectedColor) {
+      onSelectColor(tempColor);
+    }
+    if (tempIcon !== selectedIcon && tempIcon !== undefined) {
+      onSelectIcon?.(tempIcon);
+    }
+    onClose();
+  };
+
   // handle color selection
-  // flow: user taps a color → this function updates the form state
-  // modal stays open so user can continue browsing colors or dismiss manually
+  // flow: user taps a color → update temp color state
+  // changes are only applied when user taps Done button
   const handleColorSelect = (color: TaskColor) => {
     console.log('Color selected:', color);
-    onSelectColor(color);
+    setTempColor(color);
   };
 
   // handle icon selection
-  // flow: user taps an icon → this function updates the form state
-  // modal stays open so user can continue browsing or dismiss manually
+  // flow: user taps an icon → update temp icon state
+  // changes are only applied when user taps Done button
   const handleIconSelect = (iconName: string) => {
     console.log('Icon selected:', iconName);
-    onSelectIcon?.(iconName);
+    setTempIcon(iconName);
   };
 
   return (
-    <DraggableModal
-      visible={visible}
-      onClose={onClose}
-      // snap points: close at 30%, initial at 60%, expanded at 93%
-      // lowest snap point (30%) will dismiss the modal
-      snapPoints={[0.3, 0.6, 0.93]}
-      // start at the middle snap point (60%)
-      initialSnapPoint={1}
-      borderRadius={16}
-      // sticky header that moves with modal drag but floats over scrolling content
-      stickyHeader={
-        // color slider positioned absolutely to float over icon grid
-        <View
-          style={{
-            position: 'absolute',
-            top: 76, // position below the header
-            left: 0,
-            right: 0,
-            zIndex: 10, // ensure it floats above scrolling content
-            paddingHorizontal: 20,
-          }}
-        >
-          <View>
-            {/* horizontal color slider */}
-            <View
-              style={{
-                backgroundColor: themeColors.background.quaternary(),
-                paddingVertical: 8,
-                paddingHorizontal: 8,
-                borderRadius: 29,
-              }}
-            >
-              {/* horizontal scrollable row of color circles */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{
-                  gap: 16,
-                  alignItems: 'center',
+    <>
+      <DraggableModal
+        visible={visible}
+        onClose={onClose}
+        // snap points: close at 30%, initial at 60%, expanded at 93%
+        // lowest snap point (30%) will dismiss the modal
+        snapPoints={[0.3, 0.6, 0.93]}
+        // start at the middle snap point (60%)
+        initialSnapPoint={1}
+        // showBackdrop=true: DraggableModal handles its own backdrop
+        showBackdrop={true}
+        // sticky header that moves with modal drag but floats over scrolling content
+        stickyHeader={
+          // color slider positioned absolutely to float over icon grid
+          <View
+            style={{
+              position: 'absolute',
+              top: 76, // position below the header
+              left: 0,
+              right: 0,
+              zIndex: 10, // ensure it floats above scrolling content
+              paddingHorizontal: 20,
+            }}
+          >
+            <View>
+              {/* horizontal color slider */}
+              <View
+                style={{
+                  backgroundColor: themeColors.background.quaternary(),
+                  paddingVertical: 8,
+                  paddingHorizontal: 8,
+                  borderRadius: 29,
                 }}
               >
-                {/* map through available colors and display them as circular swatches */}
-                {AVAILABLE_COLORS.map((color) => {
-                  // check if this color is currently selected
-                  const isSelected = color === selectedColor;
-                  
-                  // get the color value from our color palette system
-                  // using shade 500 for the main color display
-                  const colorValue = TaskCategoryColors[color][500];
+                {/* horizontal scrollable row of color circles */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{
+                    gap: 16,
+                    alignItems: 'center',
+                  }}
+                >
+                  {/* map through available colors and display them as circular swatches */}
+                  {AVAILABLE_COLORS.map((color) => {
+                    // check if this color is currently selected (use tempColor for visual feedback)
+                    const isSelected = color === tempColor;
+                    
+                    // get the color value from our color palette system
+                    // using shade 500 for the main color display
+                    const colorValue = TaskCategoryColors[color][500];
 
-                  return (
-                    <Pressable
-                      key={color}
-                      onPress={() => handleColorSelect(color)}
-                      style={{
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {/* color circle swatch */}
-                      <View
+                    return (
+                      <Pressable
+                        key={color}
+                        onPress={() => handleColorSelect(color)}
                         style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 25,
-                          backgroundColor: colorValue,
-                          borderWidth: isSelected ? 2 : 0,
-                          borderColor: themeColors.border.invertedPrimary(),
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
-                      />
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
+                      >
+                        {/* color circle swatch */}
+                        <View
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 25,
+                            backgroundColor: colorValue,
+                            borderWidth: isSelected ? 2 : 0,
+                            borderColor: themeColors.border.invertedPrimary(),
+                          }}
+                        />
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
             </View>
           </View>
-        </View>
-      }
-    >
-              {/* modal header with drag indicator and title */}
-              {/* showDragIndicator displays the small rounded bar at the top */}
-              {/* showCloseButton is false since we dismiss by dragging or tapping backdrop */}
+        }
+      >
+              {/* modal header with action buttons */}
+              {/* showActionButtons enables Cancel/Done buttons */}
+              {/* Done button only appears when hasChanges is true */}
               <ModalHeader
                 title="Icon & Color"
-                showCloseButton={false}
+                showActionButtons={true}
+                hasChanges={hasChanges}
+                onCancel={handleCancel}
+                onDone={handleDone}
                 showDragIndicator={true}
                 showBorder={true}
+                taskCategoryColor={taskCategoryColor}
               />
 
               {/* scrollable icon grid area */}
@@ -227,8 +273,8 @@ export function TaskIconColorModal({
                     }}
                   >
                     {AVAILABLE_ICONS.map((icon) => {
-                      // check if this icon is currently selected
-                      const isSelected = icon.name === selectedIcon;
+                      // check if this icon is currently selected (use tempIcon for visual feedback)
+                      const isSelected = icon.name === tempIcon;
                       
                       return (
                         <Pressable
@@ -270,6 +316,7 @@ export function TaskIconColorModal({
 
               </ScrollView>
     </DraggableModal>
+    </>
   );
 }
 

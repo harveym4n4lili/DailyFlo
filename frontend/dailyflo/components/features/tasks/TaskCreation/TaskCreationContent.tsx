@@ -14,10 +14,11 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 // these are the building blocks from react native that we use to create the content
 import {
   View,                      // basic container component
+  Text,                      // text component for displaying text
   TextInput,                 // text input component for task title
   Pressable,                 // pressable component for interactive elements
   ScrollView,                // scrollable container for long content
-  Animated,                  // animated api for animations
+  Animated,                  // animated api for button highlight animations
   Alert,                     // alert dialog for confirmation prompts
   Keyboard,                  // keyboard api for dismissing keyboard
 } from 'react-native';
@@ -85,8 +86,9 @@ export interface TaskCreationContentProps {
   /** Whether form has unsaved changes */
   hasChanges: boolean;
   
-  /** Callback to notify parent when form picker modals open/close */
-  onFormPickerModalChange?: (isAnyPickerOpen: boolean) => void;
+  /** Callback to notify parent when any picker modal visibility changes */
+  /** Used to coordinate backdrop visibility between KeyboardModal and DraggableModal */
+  onPickerVisibilityChange?: (isAnyPickerVisible: boolean) => void;
 }
 
 // CONSTANTS
@@ -104,7 +106,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   onChange,
   onClose,
   hasChanges,
-  onFormPickerModalChange,
+  onPickerVisibilityChange,
 }) => {
   // CONSOLE DEBUGGING - removed for cleaner logs
   
@@ -117,10 +119,27 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   
   // PICKER MODAL VISIBILITY STATE
+  // track visibility of all form picker modals to coordinate backdrop systems
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [isColorPickerVisible, setIsColorPickerVisible] = useState(false);
   const [isTimeDurationPickerVisible, setIsTimeDurationPickerVisible] = useState(false);
   const [isAlertsPickerVisible, setIsAlertsPickerVisible] = useState(false);
+  
+  // check if any picker modal is currently visible
+  // used to hide KeyboardModal backdrop when form picker modals are open
+  // this prevents double backdrop layers and janky animations
+  const isAnyPickerVisible = isDatePickerVisible || isColorPickerVisible || 
+    isTimeDurationPickerVisible || isAlertsPickerVisible;
+  
+  // notify parent when picker visibility changes
+  // allows KeyboardModal to hide its backdrop when form pickers are open
+  useEffect(() => {
+    onPickerVisibilityChange?.(isAnyPickerVisible);
+  }, [isAnyPickerVisible, onPickerVisibilityChange]);
+  
+  // REF FOR TITLE TEXTINPUT
+  // used to focus the input and open keyboard after closing form picker modals
+  const titleInputRef = useRef<TextInput>(null);
 
   // ANIMATION STATE
   const iconButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
@@ -152,12 +171,6 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
 
   // NOTIFY PARENT WHEN FORM PICKER MODALS CHANGE
   // this allows the parent to hide its backdrop when form picker modals are open
-  useEffect(() => {
-    const isAnyPickerOpen = isDatePickerVisible || isColorPickerVisible || 
-                           isTimeDurationPickerVisible || isAlertsPickerVisible;
-    onFormPickerModalChange?.(isAnyPickerOpen);
-  }, [isDatePickerVisible, isColorPickerVisible, isTimeDurationPickerVisible, isAlertsPickerVisible, onFormPickerModalChange]);
-
   // FORM HANDLERS
   const onBlur = (key: keyof TaskFormValues) => {
     setTouched((prev) => ({ ...prev, [key]: true }));
@@ -189,6 +202,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
 
   // DATE PICKER HANDLERS
   const handleShowDatePicker = () => {
+    Keyboard.dismiss(); // close keyboard when opening date picker
     closeAllModalsExcept('date');
     triggerButtonHighlight(dateButtonHighlightOpacity);
     setIsDatePickerVisible(true);
@@ -197,14 +211,20 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   const handleDateSelect = (date: string) => {
     console.log('Date selected:', date);
     onChange('dueDate', date);
+    // when date is selected via quick option, modal closes automatically
+    // focus title input to open keyboard immediately after selection
+    titleInputRef.current?.focus();
   };
   
   const handleDatePickerClose = () => {
     setIsDatePickerVisible(false);
+    // focus title input to open keyboard immediately after closing date picker
+    titleInputRef.current?.focus();
   };
 
   // COLOR PICKER HANDLERS
   const handleShowColorPicker = () => {
+    Keyboard.dismiss(); // close keyboard when opening color picker
     closeAllModalsExcept('color');
     triggerButtonHighlight(iconButtonHighlightOpacity);
     setIsColorPickerVisible(true);
@@ -217,6 +237,8 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   
   const handleColorPickerClose = () => {
     setIsColorPickerVisible(false);
+    // focus title input to open keyboard immediately after closing color picker
+    titleInputRef.current?.focus();
   };
 
   // ICON SELECTION HANDLER
@@ -227,6 +249,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
 
   // TIME/DURATION PICKER HANDLERS
   const handleShowTimeDurationPicker = () => {
+    Keyboard.dismiss(); // close keyboard when opening time/duration picker
     closeAllModalsExcept('time');
     triggerButtonHighlight(timeButtonHighlightOpacity);
     setIsTimeDurationPickerVisible(true);
@@ -244,10 +267,13 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   
   const handleTimeDurationPickerClose = () => {
     setIsTimeDurationPickerVisible(false);
+    // focus title input to open keyboard immediately after closing time/duration picker
+    titleInputRef.current?.focus();
   };
 
   // ALERTS PICKER HANDLERS
   const handleShowAlertsPicker = () => {
+    Keyboard.dismiss(); // close keyboard when opening alerts picker
     closeAllModalsExcept('alerts');
     triggerButtonHighlight(alertsButtonHighlightOpacity);
     setIsAlertsPickerVisible(true);
@@ -255,6 +281,8 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   
   const handleAlertsPickerClose = () => {
     setIsAlertsPickerVisible(false);
+    // focus title input to open keyboard immediately after closing alerts picker
+    titleInputRef.current?.focus();
   };
   
   const handleAlertsApply = (alertIds: string[]) => {
@@ -264,35 +292,36 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
 
   // CLOSE HANDLER WITH CHANGE DETECTION
   const handleClose = () => {
-    if (hasChanges) {
-      Alert.alert(
-        'Discard Changes?',
-        'You have unsaved changes. Are you sure you want to discard them?',
-        [
-          {
-            text: 'Continue Editing',
-            style: 'cancel',
-            onPress: () => {
-              console.log('User chose to continue editing');
-            },
-          },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => {
-              console.log('User chose to discard changes');
-              Keyboard.dismiss();
-              onClose();
-            },
-          },
-        ],
-        { cancelable: true }
-      );
-    } else {
-      console.log('No changes, closing modal');
+    // discard message commented out - directly close modal
+    // if (hasChanges) {
+    //   Alert.alert(
+    //     'Discard Changes?',
+    //     'You have unsaved changes. Are you sure you want to discard them?',
+    //     [
+    //       {
+    //         text: 'Continue Editing',
+    //         style: 'cancel',
+    //         onPress: () => {
+    //           console.log('User chose to continue editing');
+    //         },
+    //       },
+    //       {
+    //         text: 'Discard',
+    //         style: 'destructive',
+    //         onPress: () => {
+    //           console.log('User chose to discard changes');
+    //           Keyboard.dismiss();
+    //           onClose();
+    //         },
+    //       },
+    //     ],
+    //     { cancelable: true }
+    //   );
+    // } else {
+      console.log('Closing modal');
       Keyboard.dismiss();
       onClose();
-    }
+    // }
   };
 
   // PICKER BUTTONS CONFIGURATION
@@ -325,6 +354,33 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
 
   return (
     <>
+      {/* cancel button - absolutely positioned at top left */}
+      {/* top position accounts for safe area inset */}
+      {/* background uses task category color */}
+      <Pressable
+        onPress={handleClose}
+        style={{
+          position: 'absolute',
+          top: 20 + insets.top, // add safe area top inset
+          left: 16,
+          zIndex: 10,
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          borderRadius: 20,
+          backgroundColor: values.color 
+            ? TaskCategoryColors[values.color][500]
+            : TaskCategoryColors.blue[500],
+        }}
+      >
+        <Text style={{
+          ...getTextStyle('button-secondary'),
+          // use white text for contrast on colored backgrounds
+          color: '#FFFFFF',
+        }}>
+          Cancel
+        </Text>
+      </Pressable>
+      
       {/* main scrollable content wrapper */}
       <ScrollView 
         style={{ flex: 1 }}
@@ -332,16 +388,19 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         keyboardShouldPersistTaps="always"
         contentContainerStyle={{ paddingBottom: 0 }}
       >
-        {/* header with icon display and title input - now inside ScrollView */}
+        {/* header with icon display and title input */}
+        {/* extra top padding to make room for absolutely positioned cancel button */}
+        {/* padding accounts for safe area top inset */}
         <View
           style={{
-            paddingTop: 24,
+            paddingTop: 80 + insets.top, // extra space for cancel button + safe area
             paddingBottom: 0,
             paddingHorizontal: 20,
           }}
         >
           {/* title input takes full width */}
           <TextInput
+            ref={titleInputRef}
             value={values.title || ''}
             onChangeText={(t) => onChange('title', t)}
             onBlur={() => onBlur('title')}
@@ -379,22 +438,27 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
           />
         </View>
 
-        {/* form fields section */}
-        <View 
-          style={{ 
-            paddingTop: 24,
-            paddingBottom: 16,
-            
-          }}
-        >
+      
+      </ScrollView>
+       {/* bottom action section */}
+       <View style={{
+           paddingVertical: BOTTOM_SECTION_PADDING_VERTICAL,
+           flexDirection: 'row',
+       }}>
+          {/* form fields section */}
+          <View 
+            style={{ 
+             paddingBottom: 8,
+            }}
+          >
           {/* horizontal scrollable picker buttons */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             keyboardShouldPersistTaps="always"
             contentContainerStyle={{
-              paddingRight: 16,
-              gap: 16,
+              width: '100%',
+              gap: 16
             }}
           >
             {pickerButtons.map((button) => {
@@ -457,7 +521,9 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
             })}
           </ScrollView>
         </View>
-      </ScrollView>
+      </View>
+      
+      {/* bottom action section */}
       <View style={{
           borderTopWidth: 1,
           borderTopColor: themeColors.border.secondary(),
@@ -466,8 +532,10 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
           flexDirection: 'row',
           justifyContent: 'flex-end',
           alignItems: 'center',
+          backgroundColor: themeColors.background.primary(),
       }}>
         {/* Circular create button anchored to the right */}
+        {/* background uses task category color */}
         <Pressable
           onPress={() => console.log('Create button tapped')}
           style={{
@@ -484,10 +552,12 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
           <Ionicons
             name="arrow-up"
             size={20}
-            color={'#FFFFFF'}
+            // use white icon for contrast on colored backgrounds
+            color="#FFFFFF"
           />
         </Pressable>
       </View>
+      
       
       {/* date picker modal */}
       <DatePickerModal
@@ -496,6 +566,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         onClose={handleDatePickerClose}
         onSelectDate={handleDateSelect}
         title="Date"
+        taskCategoryColor={(values.color as TaskColor) || 'blue'}
       />
       
       {/* color and icon picker modal */}
@@ -506,6 +577,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         onClose={handleColorPickerClose}
         onSelectColor={handleColorSelect}
         onSelectIcon={handleIconSelect}
+        taskCategoryColor={(values.color as TaskColor) || 'blue'}
       />
       
       {/* time/duration picker modal */}
@@ -516,6 +588,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         onClose={handleTimeDurationPickerClose}
         onSelectTime={handleTimeSelect}
         onSelectDuration={handleDurationSelect}
+        taskCategoryColor={(values.color as TaskColor) || 'blue'}
       />
       
       {/* alerts picker modal */}
@@ -524,6 +597,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         selectedAlerts={values.alerts || []}
         onClose={handleAlertsPickerClose}
         onApplyAlerts={handleAlertsApply}
+        taskCategoryColor={(values.color as TaskColor) || 'blue'}
       />
     </>
   );
