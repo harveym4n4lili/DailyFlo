@@ -77,6 +77,11 @@ export interface DatePickerModalProps {
    * @default "Select Date"
    */
   title?: string;
+  
+  /**
+   * Task category color for button styling
+   */
+  taskCategoryColor?: TaskColor;
 }
 
 /**
@@ -90,6 +95,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   onClose,
   onSelectDate,
   title = 'Select Date',
+  taskCategoryColor,
 }) => {
   // CONSOLE DEBUGGING
   console.log('📅 DatePickerModal - visible:', visible);
@@ -231,49 +237,53 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   );
   
   return (
-    <DraggableModal
-      visible={visible}
-      onClose={handleModalClose}
-      // snap points: close at 30%, initial at 60%, expanded at 95%
-      // lowest snap point (30%) will dismiss the modal
-      snapPoints={[0.3, 0.6, 0.95]}
-      // start at the middle snap point (60%)
-      initialSnapPoint={1}
-      borderRadius={16}
-      // pass the repeating container as sticky footer - stays fixed at bottom while modal drags
-      stickyFooter={repeatingContainer}
-    >
-      {/* custom header for date picker modal with action buttons */}
-      <ModalHeader
-        title={title}
-        showActionButtons={true}
-        hasChanges={hasChanges}
-        onCancel={handleCancel}
-        onDone={handleDone}
-        showDragIndicator={true}
-        showBorder={true}
-      />
-        
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* quick date options */}
-          <QuickDateOptions
-            selectedDate={workingDate || ''}
-            onSelectDate={handleQuickDateSelect}
-          />
+    <>
+      <DraggableModal
+        visible={visible}
+        onClose={handleModalClose}
+        // snap points: close at 30%, initial at 60%, expanded at 95%
+        // lowest snap point (30%) will dismiss the modal
+        snapPoints={[0.3, 0.6, 0.95]}
+        // start at the middle snap point (60%)
+        initialSnapPoint={1}
+        // pass the repeating container as sticky footer - stays fixed at bottom while modal drags
+        stickyFooter={repeatingContainer}
+        // showBackdrop=true: DraggableModal handles its own backdrop
+        showBackdrop={true}
+      >
+        {/* custom header for date picker modal with action buttons */}
+        <ModalHeader
+          title={title}
+          showActionButtons={true}
+          hasChanges={hasChanges}
+          onCancel={handleCancel}
+          onDone={handleDone}
+          showDragIndicator={true}
+          showBorder={true}
+          taskCategoryColor={taskCategoryColor}
+        />
           
-          {/* calendar view for specific date selection */}
-          <CalendarView
-            selectedDate={workingDate || ''}
-            onSelectDate={handleCalendarDateSelect}
-            initialMonth={workingDate ? new Date(workingDate) : undefined}
-          />
-        
-        </ScrollView>
-    </DraggableModal>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* quick date options */}
+            <QuickDateOptions
+              selectedDate={workingDate || ''}
+              onSelectDate={handleQuickDateSelect}
+            />
+            
+            {/* calendar view for specific date selection */}
+            <CalendarView
+              selectedDate={workingDate || ''}
+              onSelectDate={handleCalendarDateSelect}
+              initialMonth={workingDate ? new Date(workingDate) : undefined}
+            />
+          
+          </ScrollView>
+      </DraggableModal>
+    </>
   );
 };
 

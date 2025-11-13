@@ -13,6 +13,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
+
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -39,6 +40,8 @@ const ALERT_OPTIONS: AlertOption[] = [
   { id: '15-min', label: '15 minutes before', value: 15, icon: 'alarm-outline' },
 ];
 
+import type { TaskColor } from '@/types';
+
 export interface TaskAlertModalProps {
   visible: boolean;
   onClose: () => void;
@@ -46,6 +49,8 @@ export interface TaskAlertModalProps {
   selectedAlerts: string[];
   // callback when user applies changes (presses Done button)
   onApplyAlerts: (alertIds: string[]) => void;
+  // task category color for button styling
+  taskCategoryColor?: TaskColor;
 }
 
 export function TaskAlertModal({
@@ -53,6 +58,7 @@ export function TaskAlertModal({
   onClose,
   selectedAlerts,
   onApplyAlerts,
+  taskCategoryColor,
 }: TaskAlertModalProps) {
   // CONSOLE DEBUGGING
   console.log('🔔 TaskAlertModal - visible:', visible);
@@ -118,114 +124,119 @@ export function TaskAlertModal({
   };
 
   return (
-    <DraggableModal
-      visible={visible}
-      onClose={onClose}
-      // snap points: close at 20%, initial at 50%, expanded at 85%
-      // lowest snap point (20%) will dismiss the modal when dragged down
-      snapPoints={[0.2, 0.5, 0.85]}
-      // start at the middle snap point (50%)
-      initialSnapPoint={1}
-      borderRadius={16}
-    >
-      {/* modal header with action buttons */}
-      {/* showActionButtons enables Cancel/Done buttons */}
-      {/* Done button only appears when hasChanges is true */}
-      <ModalHeader
-        title="Alerts"
-        showActionButtons={true}
-        hasChanges={hasChanges}
-        onCancel={handleCancel}
-        onDone={handleDone}
-        showDragIndicator={true}
-        showBorder={true}
-      />
-
-      {/* scrollable alert options */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          paddingHorizontal: 0,
-          paddingBottom: insets.bottom + 20,
-        }}
-        showsVerticalScrollIndicator={false}
+    <>
+      <DraggableModal
+        visible={visible}
+        onClose={onClose}
+        // snap points: close at 20%, initial at 50%, expanded at 85%
+        // lowest snap point (20%) will dismiss the modal when dragged down
+        snapPoints={[0.3, 0.5, 0.9]}
+        // start at the middle snap point (50%)
+        initialSnapPoint={1}
+        // showBackdrop=true: DraggableModal handles its own backdrop
+        showBackdrop={true}
       >
-        {/* map through available alert options and render as selectable items */}
-        {/* styling matches QuickDateOptions for consistency */}
-        {ALERT_OPTIONS.map((alert) => {
-          // check if this alert is currently selected in temp state
-          const isSelected = tempSelectedAlerts.includes(alert.id);
+        {/* modal header with action buttons */}
+        {/* showActionButtons enables Cancel/Done buttons */}
+        {/* Done button only appears when hasChanges is true */}
+        <ModalHeader
+          title="Alerts"
+          showActionButtons={true}
+          hasChanges={hasChanges}
+          onCancel={handleCancel}
+          onDone={handleDone}
+          showDragIndicator={true}
+          showBorder={true}
+          taskCategoryColor={taskCategoryColor}
+        />
 
-          return (
-            <Pressable
-              key={alert.id}
-              onPress={() => handleToggleAlert(alert.id)}
-              style={({ pressed }) => ({
-                // full width to touch edges (matches quick date options)
-                width: '100%',
-                // border only on bottom (matches quick date options)
-                borderBottomWidth: 1,
-                borderBottomColor: themeColors.border.primary(),
-                // horizontal layout for icon + label on left
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                // consistent padding (matches quick date options)
-                paddingVertical: 12,
-                paddingHorizontal: 16,
-                height: 48,
-                // highlight background when selected OR when pressing
-                // selected items stay highlighted with tertiary background
-                backgroundColor: isSelected
-                  ? themeColors.background.tertiary()
-                  : pressed
-                  ? themeColors.background.tertiary()
-                  : themeColors.background.elevated(),
-              })}
-              accessibilityRole="button"
-              accessibilityLabel={`${isSelected ? 'Deselect' : 'Select'} ${alert.label}`}
-              accessibilityState={{ selected: isSelected }}
-            >
-              {/* left side: icon and label */}
-              <View style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                flex: 1, // take up available space
-              }}>
-                {/* alert icon container - fixed width for alignment */}
-                <View
-                  style={{
-                    width: 20, // fixed width to align icons consistently (matches quick date options)
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 12, // space between icon and label
-                  }}
-                >
-                  <Ionicons
-                    name={alert.icon as any}
-                    size={20}
-                    color={isSelected 
-                      ? themeColors.interactive.primary()
-                      : themeColors.text.secondary()}
-                  />
+        {/* scrollable alert options */}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingHorizontal: 0,
+            paddingBottom: insets.bottom + 24,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* map through available alert options and render as selectable items */}
+          {/* styling matches QuickDateOptions for consistency */}
+          {ALERT_OPTIONS.map((alert) => {
+            // check if this alert is currently selected in temp state
+            const isSelected = tempSelectedAlerts.includes(alert.id);
+
+            return (
+              <Pressable
+                key={alert.id}
+                onPress={() => handleToggleAlert(alert.id)}
+                style={({ pressed }) => ({
+                  // full width to touch edges (matches quick date options)
+                  width: '100%',
+                  // border only on bottom (matches quick date options)
+                  borderBottomWidth: 1,
+                  borderBottomColor: themeColors.border.primary(),
+                  // horizontal layout for icon + label on left
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  // consistent padding (matches quick date options)
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  height: 48,
+                  // highlight background when selected OR when pressing
+                  // selected items stay highlighted with tertiary background
+                  backgroundColor: isSelected
+                    ? themeColors.background.tertiary()
+                    : pressed
+                    ? themeColors.background.tertiary()
+                    : themeColors.background.elevated(),
+                })}
+                accessibilityRole="button"
+                accessibilityLabel={`${isSelected ? 'Deselect' : 'Select'} ${alert.label}`}
+                accessibilityState={{ selected: isSelected }}
+              >
+                {/* left side: icon and label */}
+                <View style={{ 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  flex: 1, // take up available space
+                }}>
+                  {/* alert icon container - fixed width for alignment */}
+                  <View
+                    style={{
+                      width: 20, // fixed width to align icons consistently (matches quick date options)
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 12, // space between icon and label
+                    }}
+                  >
+                    <Ionicons
+                      name={alert.icon as any}
+                      size={20}
+                      color={isSelected 
+                        ? themeColors.interactive.primary()
+                        : themeColors.text.secondary()}
+                    />
+                  </View>
+                  
+                  {/* alert label */}
+                  <Text
+                    style={{
+                      ...getTextStyle('body-large'),
+                      color: themeColors.text.primary(),
+                      fontWeight: '700', // bold for emphasis (matches quick date options)
+                    }}
+                  >
+                    {alert.label}
+                  </Text>
                 </View>
-                
-                {/* alert label */}
-                <Text
-                  style={{
-                    ...getTextStyle('body-large'),
-                    color: themeColors.text.primary(),
-                    fontWeight: '700', // bold for emphasis (matches quick date options)
-                  }}
-                >
-                  {alert.label}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-    </DraggableModal>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+      </DraggableModal>
+    </>
   );
 }
 

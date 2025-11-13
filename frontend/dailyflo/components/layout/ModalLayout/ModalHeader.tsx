@@ -16,6 +16,8 @@ import { View, Text, TouchableOpacity, StyleSheet, ViewStyle, TextStyle } from '
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { TaskCategoryColors } from '@/constants/ColorPalette';
+import type { TaskColor } from '@/types';
 
 /**
  * Props for ModalHeader component
@@ -113,6 +115,13 @@ export interface ModalHeaderProps {
    * @default "Done"
    */
   doneText?: string;
+  
+  /**
+   * Task category color for button styling
+   * When provided, Cancel/Done buttons use this color
+   * When task color is white, button text uses FAB icon color for contrast
+   */
+  taskCategoryColor?: TaskColor;
 }
 
 /**
@@ -138,12 +147,23 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   onDone,
   cancelText = 'Cancel',
   doneText = 'Done',
+  taskCategoryColor,
 }) => {
   // get theme-aware colors
   const colors = useThemeColors();
   
   // get typography system
   const typography = useTypography();
+  
+  // determine button text color based on task category color
+  // always use task category color, including white case
+  const getButtonTextColor = () => {
+    if (taskCategoryColor) {
+      // use task category color directly - white case uses white color
+      return TaskCategoryColors[taskCategoryColor][500]; // task category color
+    }
+    return '#007AFF'; // default iOS blue if no task color provided
+  };
   
   // handle cancel button press without confirmation
   const handleCancelPress = () => {
@@ -156,7 +176,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   // header container style
   const headerStyle: ViewStyle = {
     minHeight: 48,
-    height: 52,
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -181,7 +201,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     // add top padding to lower the text slightly
-    paddingTop: 8,
+    paddingTop: 4,
   };
   
   // title text style
@@ -215,7 +235,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
           <View
             style={{
               position: 'absolute',
-              top: 8,
+              top: 6,
               left: 0,
               right: 0,
               alignItems: 'center',
@@ -224,10 +244,10 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
           >
             <View
               style={{
-                width: 36,
-                height: 5,
+                width: 42,
+                height: 6,
                 borderRadius: 3,
-                backgroundColor: colors.border.primary(),
+                backgroundColor: colors.interactive.tertiary(),
               }}
             />
           </View>
@@ -260,7 +280,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
                 <Text
                   style={{
                     ...typography.getTextStyle('body-large'),
-                    color: '#007AFF', // ios blue
+                    color: getButtonTextColor(), // task category color, or FAB icon color when white
                     fontSize: 17,
                   }}
                 >
@@ -288,7 +308,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
                 <Text
                   style={{
                     ...typography.getTextStyle('body-large'),
-                    color: '#007AFF', // ios blue
+                    color: getButtonTextColor(), // task category color, or FAB icon color when white
                     fontSize: 17,
                     fontWeight: '900', // done button is bold
                   }}
