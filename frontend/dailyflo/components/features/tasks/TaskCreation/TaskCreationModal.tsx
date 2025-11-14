@@ -17,6 +17,8 @@ import { KeyboardModal } from '@/components/layout/ModalLayout';
 // CUSTOM HOOKS IMPORTS
 // hooks for accessing design system and theme
 import { useThemeColors } from '@/hooks/useColorPalette';
+// useThemeColor: hook that provides the global theme color selected by the user
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // FEATURE COMPONENTS IMPORTS
 // TaskCreationContent: the actual content and UI for task creation
@@ -31,7 +33,7 @@ import { useTasks } from '@/store/hooks';
 // TYPES IMPORTS
 // typescript types for type safety
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
-import type { PriorityLevel, RoutineType, CreateTaskInput } from '@/types';
+import type { PriorityLevel, RoutineType, CreateTaskInput, TaskColor } from '@/types';
 
 // VALIDATION IMPORTS
 // validateAll: function to validate all form fields and return errors
@@ -53,17 +55,19 @@ export interface TaskCreationModalProps {
 
 // DEFAULT FORM VALUES
 // these are the default values for a new task
-const DEFAULTS: TaskFormValues = {
+// Note: color defaults to 'red' (theme color), but will be set dynamically in component
+// TODO: Backend implementation - default task color will sync with theme color from user preferences
+const getDefaults = (themeColor: TaskColor = 'red'): TaskFormValues => ({
   title: '',
   description: '',
   dueDate: new Date().toISOString(),
   priorityLevel: 3 as PriorityLevel,
-  color: 'red',
+  color: themeColor, // default to theme color (red by default)
   icon: 'code-slash', // default icon so there's always a selected value
   routineType: 'once' as RoutineType,
   listId: undefined,
   alerts: [],
-};
+});
 
 // CONSTANTS
 // padding for the bottom action section (with create button)
@@ -86,6 +90,9 @@ export function TaskCreationModal({
   
   // HOOKS
   const themeColors = useThemeColors();
+  // get the global theme color selected by the user (default: red)
+  // this is used as the default task color
+  const { themeColor } = useThemeColor();
   
   // REDUX
   const dispatch = useAppDispatch();
@@ -93,8 +100,9 @@ export function TaskCreationModal({
   
   // FORM STATE
   // main form state that holds all task data
+  // default task color is set to theme color (red by default)
   const [values, setValues] = useState<Partial<TaskFormValues>>({ 
-    ...DEFAULTS, 
+    ...getDefaults(themeColor), 
     ...initialValues 
   });
   
@@ -114,14 +122,14 @@ export function TaskCreationModal({
     return (
       values.title?.trim() !== '' ||
       values.description?.trim() !== '' ||
-      values.dueDate !== DEFAULTS.dueDate ||
-      values.color !== DEFAULTS.color ||
-      values.icon !== DEFAULTS.icon ||
+      values.dueDate !== getDefaults(themeColor).dueDate ||
+      values.color !== getDefaults(themeColor).color ||
+      values.icon !== getDefaults(themeColor).icon ||
       (values.alerts && values.alerts.length > 0) ||
       values.time !== undefined ||
       values.duration !== undefined
     );
-  }, [values]);
+  }, [values, themeColor]);
 
   // CREATE TASK HANDLER
   // this function is called when user presses the create button
@@ -149,7 +157,7 @@ export function TaskCreationModal({
       duration: values.duration || undefined,
       dueDate: values.dueDate || undefined,
       priorityLevel: values.priorityLevel || 3,
-      color: values.color || 'red',
+      color: values.color || themeColor, // default to theme color if not specified
       routineType: values.routineType || 'once',
       listId: values.listId || undefined,
    
@@ -175,7 +183,7 @@ export function TaskCreationModal({
         // Close the modal on success
         onClose();
         // Reset form to defaults for next time
-        setValues({ ...DEFAULTS });
+            setValues({ ...getDefaults(themeColor) });
       } else {
         // createTask.rejected means there was an error
         console.error('Failed to create task:', result.payload);

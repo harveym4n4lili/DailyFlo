@@ -560,10 +560,11 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         {/* background uses task category color */}
         {/* disabled when isCreating is true OR when required fields are not filled */}
         {/* inactive state shows lower opacity when title is empty */}
+        {/* when pressed, uses inactive state styling (0.4 opacity) with no animations */}
         <Pressable
           onPress={onCreate}
           disabled={isCreating || !isCreateButtonActive}
-          style={{
+          style={({ pressed }) => ({
             width: 42,
             height: 42,
             borderRadius: 28,
@@ -572,10 +573,10 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
               : TaskCategoryColors.blue[500],
             justifyContent: 'center',
             alignItems: 'center',
-            // reduce opacity when disabled/loading OR when inactive (title not filled)
+            // when pressed: use inactive state opacity (0.4), no animations
             // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
-            opacity: !isCreateButtonActive ? 0.4 : isCreating ? 0.6 : 1,
-          }}
+            opacity: pressed ? 0.4 : (!isCreateButtonActive ? 0.4 : isCreating ? 0.6 : 1),
+          })}
         >
           <Ionicons
             name={isCreating ? "hourglass-outline" : "arrow-up"}

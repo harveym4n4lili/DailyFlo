@@ -316,7 +316,10 @@ export default function ListCard({
           groupKey = `Priority ${task.priorityLevel}`;
           break;
         case 'dueDate':
-          if (!task.dueDate) {
+          // completed tasks go into a separate "Completed" group
+          if (task.isCompleted) {
+            groupKey = 'Completed';
+          } else if (!task.dueDate) {
             groupKey = 'No Due Date';
           } else {
             const dueDate = new Date(task.dueDate);
@@ -348,6 +351,24 @@ export default function ListCard({
       }
       groups[groupKey].push(task);
     });
+    
+    // sort tasks within "Today" group by time
+    // Today group uses formatted date like "24 Sep, Wednesday", so we need to find it
+    const today = new Date();
+    const todayGroupKey = formatDateForGroup(today);
+    if (groups[todayGroupKey]) {
+      groups[todayGroupKey].sort((a, b) => {
+        // if both have time, sort by time (ascending - earlier times first)
+        if (a.time && b.time) {
+          return a.time.localeCompare(b.time);
+        }
+        // tasks with time come before tasks without time
+        if (a.time && !b.time) return -1;
+        if (!a.time && b.time) return 1;
+        // if neither has time, maintain original order
+        return 0;
+      });
+    }
     
     return groups;
   }, [processedTasks, groupBy]);
@@ -398,7 +419,8 @@ export default function ListCard({
         {/* group title and count container */}
         <View style={styles.groupTitleContainer}>
           <Text style={styles.groupTitle}>{title}</Text>
-          <Text style={styles.groupCount}>({count})</Text>
+          {/* show count only when group is collapsed */}
+          {isCollapsed && <Text style={styles.groupCount}>({count})</Text>}
         </View>
         
         {/* dropdown arrow icon with smooth rotation animation - positioned on the right */}
@@ -495,10 +517,34 @@ export default function ListCard({
     );
   } else {
     // render grouped list
+    // sort groups: Today first, then Overdue, then others, Completed last
+    const sortedGroupEntries = useMemo(() => {
+      const entries = Object.entries(groupedTasks);
+      const today = new Date();
+      const todayGroupKey = formatDateForGroup(today);
+      
+      return entries.sort(([titleA], [titleB]) => {
+        // Completed group always goes last
+        if (titleA === 'Completed') return 1;
+        if (titleB === 'Completed') return -1;
+        
+        // Today group goes first (before Overdue)
+        if (titleA === todayGroupKey) return -1;
+        if (titleB === todayGroupKey) return 1;
+        
+        // Overdue group goes after Today
+        if (titleA === 'Overdue') return 1;
+        if (titleB === 'Overdue') return -1;
+        
+        // Otherwise maintain original order
+        return 0;
+      });
+    }, [groupedTasks]);
+    
     return (
       <View style={styles.container}>
         <FlatList
-          data={Object.entries(groupedTasks)}
+          data={sortedGroupEntries}
           renderItem={({ item: [groupTitle, groupTasks] }) => {
             const isCollapsed = collapsedGroups.has(groupTitle);
             
@@ -568,12 +614,19 @@ const createStyles = (
   // main container
   container: {
     flex: 1, // take up available space
+    // ensure container extends all the way to bottom of screen
+    // this allows scroll view to stretch fully and show all tasks above navbar
   },
   
   // list container for proper spacing
+  // extra bottom padding to allow scrolling tasks above the FAB
+  // FAB height (58px) + FAB bottom position (80px navbar + 16px spacing) + safe area bottom + extra space (40px)
+  // navbar height removed since navbar is invisible
   listContainer: {
-    paddingBottom: 20, // bottom padding for better scrolling
+    paddingBottom: 58 + 80 + 16 + insets.bottom + 40, // FAB height (58px) + navbar height (80px) + spacing (16px) + safe area bottom + extra space (40px)
     paddingHorizontal: 20, // horizontal padding for task cards
+    // ensure content can scroll all the way to bottom of screen
+    flexGrow: 1, // allow content to grow and fill available space
   },
   
   // group container for grouped lists
