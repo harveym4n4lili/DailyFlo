@@ -5,15 +5,21 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+// useThemeColor: hook that provides the global theme color selected by the user
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function TabLayout() {
   const themeColors = useThemeColors();
   const typography = useTypography();
+  // get the global theme color selected by the user (default: red)
+  const { getThemeColorValue } = useThemeColor();
+  const themeColor = getThemeColorValue(500); // use shade 500 for active tab color
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: themeColors.interactive.primary(),
+        tabBarActiveTintColor: themeColor, // use global theme color for active tabs
+        tabBarInactiveTintColor: themeColors.text.secondary(), // secondary text color for inactive tabs
         headerShown: false,
         
         // configure tab bar label style using typography system
@@ -24,9 +30,9 @@ export default function TabLayout() {
       
         tabBarStyle: Platform.select({
           ios: {
-            // Use a transparent background on iOS to show the blur effect
+            // Use elevated background to match task card colors
             position: 'absolute',
-            backgroundColor: themeColors.background.primary(),
+            backgroundColor: themeColors.background.elevated(),
             borderTopColor: themeColors.border.primary(),
           },
           default: {

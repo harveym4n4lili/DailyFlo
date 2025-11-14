@@ -18,6 +18,9 @@ import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
 
+// useThemeColor: hook that provides the global theme color selected by the user
+import { useThemeColor } from '@/hooks/useThemeColor';
+
 // STORE FOLDER IMPORTS - Redux state management
 // The store folder contains all Redux-related code for managing app state
 import { useTasks } from '@/store/hooks';
@@ -69,6 +72,12 @@ export default function TodayScreen() {
   // This gives us access to predefined text styles and satoshi font family
   const typography = useTypography();
   
+  // THEME COLOR USAGE
+  // get the global theme color selected by the user (default: red)
+  // this is used for interactive elements like the ellipse button
+  const { getThemeColorValue } = useThemeColor();
+  const themeColor = getThemeColorValue(500); // use shade 500 for ellipse button color
+  
   // SAFE AREA INSETS - Get safe area insets for proper positioning
   const insets = useSafeAreaInsets();
   
@@ -94,18 +103,21 @@ export default function TodayScreen() {
   // useTasks: Custom hook that provides typed access to the tasks slice state
   // This is defined in store/hooks.ts and wraps Redux's useSelector
 
-  // filter tasks to show only today's and overdue tasks (including completed tasks)
+  // filter tasks to show today's, overdue, and completed tasks
   // useMemo ensures this calculation only runs when tasks change
   const todaysTasks = useMemo(() => {
     const today = new Date();
     const todayString = today.toDateString(); // get date in "Mon Jan 15 2024" format
     
     const filtered = tasks.filter(task => {
-      // include tasks that are due today or overdue (including completed tasks)
+      // include completed tasks (they'll be grouped separately)
+      if (task.isCompleted) return true;
+      
+      // include tasks that are due today or overdue
       if (task.dueDate) {
         const taskDate = new Date(task.dueDate);
         const isToday = taskDate.toDateString() === todayString;
-        // include overdue tasks (due before today, including completed ones)
+        // include overdue tasks (due before today)
         const isOverdue = taskDate < today;
         return isToday || isOverdue;
       }
@@ -114,8 +126,10 @@ export default function TodayScreen() {
     return filtered;
   }, [tasks]);
 
-  // calculate total task count for header display
-  const totalTaskCount = todaysTasks.length;
+  // calculate total task count for header display (only incomplete tasks)
+  const totalTaskCount = useMemo(() => {
+    return todaysTasks.filter(task => !task.isCompleted).length;
+  }, [todaysTasks]);
 
   // grouping explanation:
   // the listcard component will automatically group tasks by due date when groupBy="dueDate" is set
@@ -245,31 +259,11 @@ export default function TodayScreen() {
   // SWIPE GESTURE HANDLERS - Functions that handle swipe gestures on task cards
   // these demonstrate how to use the new swipe functionality in TaskCard
   
-  // handle swipe left gesture - shows confirmation dialog before editing task
+  // handle swipe left gesture - completes task directly (no confirmation)
   const handleTaskSwipeLeft = (task: Task) => {
-    console.log('Swiped left on task:', task.title);
-    
-    // show confirmation dialog before editing task
-    Alert.alert(
-      'Edit Task', // dialog title
-      `Do you want to edit "${task.title}"?`, // dialog message with task title
-      [
-        {
-          text: 'Cancel', // cancel button
-          style: 'cancel', // styled as cancel button (appears on left on iOS)
-        },
-        {
-          text: 'Edit', // confirm button
-          style: 'default', // styled as default action
-          onPress: () => {
-            // actually edit the task when user confirms
-            console.log('✏️ User confirmed editing of task:', task.title);
-            handleTaskEdit(task);
-          },
-        },
-      ],
-      { cancelable: true } // allow dismissing dialog by tapping outside
-    );
+    console.log('Swiped left on task to complete:', task.title);
+    // complete the task directly without confirmation
+    handleTaskComplete(task);
   };
   
   // handle swipe right gesture - shows confirmation dialog before deleting task
@@ -335,7 +329,30 @@ export default function TodayScreen() {
   return (
     <View style={{ flex: 1 }}>
       {/* Fixed top section with title and ellipse button - stays at top */}
+      {/* background and border fade in with title animation */}
       <View style={styles.fixedTopSection}>
+        {/* animated background that fades in */}
+        <Animated.View 
+          style={[
+            styles.fixedTopSectionBackground,
+            {
+              opacity: titleOpacity,
+              backgroundColor: themeColors.background.elevated(),
+            }
+          ]}
+        />
+        {/* animated border that fades in */}
+        {/* border matches navbar styling: same color and width, but at bottom of section */}
+        <Animated.View 
+          style={[
+            styles.fixedTopSectionBorder,
+            {
+              opacity: titleOpacity,
+              borderBottomColor: themeColors.border.primary(), // same color as navbar borderTopColor
+              borderBottomWidth: 1, // match navbar border width
+            }
+          ]}
+        />
         <View style={styles.titleContainer}>
           {showTitle && (
             <Animated.View style={{ opacity: titleOpacity }}>
@@ -351,7 +368,7 @@ export default function TodayScreen() {
           <Ionicons 
             name="ellipsis-horizontal" 
             size={32} 
-            color={themeColors.text.primary()} 
+            color={themeColor} 
           />
         </TouchableOpacity>
       </View>
@@ -389,6 +406,8 @@ export default function TodayScreen() {
       <ScreenContainer 
         scrollable={false}
         paddingHorizontal={0}
+        safeAreaBottom={false}
+        paddingVertical={0}
       >
       {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
       {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
@@ -417,13 +436,7 @@ export default function TodayScreen() {
         }}
         scrollEventThrottle={16}
         headerTitle="Today"
-        headerSubtitle={
-          totalTaskCount === 0 
-            ? "No tasks for today" 
-            : `${totalTaskCount} task${totalTaskCount === 1 ? '' : 's'} for today`
-        }
       />
-      
       {/* Floating Action Button for quick task creation */}
       <FloatingActionButton
         onPress={() => {
@@ -457,6 +470,7 @@ const createStyles = (
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
   // fixed top section with ellipse button - stays at top of screen
+  // background and border are animated (start transparent, fade in with title)
   fixedTopSection: {
     position: 'absolute',
     top: insets.top,
@@ -468,9 +482,30 @@ const createStyles = (
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: themeColors.background.primary(),
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border.primary(),
+    // overflow removed to allow background to extend upward to cover insets
+  },
+  
+  // animated background layer that fades in
+  // extends upward to cover safe area insets
+  fixedTopSectionBackground: {
+    position: 'absolute',
+    top: -insets.top, // extend upward to cover safe area insets
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: insets.top + insets.top + 10, // cover insets + section height
+    zIndex: -1, // behind content
+  },
+  
+  // animated border layer that fades in
+  // matches navbar border styling: borderTopColor with borderTopWidth
+  fixedTopSectionBorder: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    // borderTopWidth and borderTopColor are set dynamically in component
+    zIndex: -1, // behind content
   },
 
   // title container - ensures consistent layout structure

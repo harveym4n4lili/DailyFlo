@@ -40,6 +40,8 @@ import * as Haptics from 'expo-haptics';
 // this allows the FAB to adapt to theme changes and use design system colors
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+// useThemeColor: hook that provides the global theme color selected by the user
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // TASK CREATION MODAL IMPORT
 // TaskCreationModal: full-screen modal for creating new tasks
@@ -122,6 +124,12 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   // get theme-aware colors from the design system
   // this provides consistent colors that work with both light and dark modes
   const themeColors = useThemeColors();
+  
+  // THEME COLOR USAGE
+  // get the global theme color selected by the user (default: red)
+  // this is used for interactive elements like the FAB
+  const { getThemeColorValue } = useThemeColor();
+  const themeColor = getThemeColorValue(500); // use shade 500 for FAB background
   
   // TYPOGRAPHY USAGE
   // get typography system for consistent text styling
@@ -236,7 +244,9 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
           styles.fabContainer,
           {
             // dynamic positioning based on safe area insets
-            bottom: 20 + insets.bottom,
+            // space between navbar and FAB = space between FAB and right edge (16px)
+            // navbar height (~80px) + spacing (16px) + safe area bottom
+            bottom: 48 + 16 + insets.bottom,
             right: 16 + insets.right,
           },
         ]}
@@ -254,7 +264,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
                   scale: pulseScale.interpolate({ inputRange: [0, 1], outputRange: [1, 2.4] }),
                 },
               ],
-              backgroundColor: themeColors.interactive.primary(),
+              backgroundColor: themeColor, // use global theme color
             },
           ]}
         />
@@ -264,8 +274,8 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
           style={[
             styles.fab,
             {
-              // theme colors
-              backgroundColor: themeColors.interactive.primary(),
+              // use global theme color for FAB background
+              backgroundColor: themeColor,
             },
             style, // allow parent to override size/shape while we keep content centered
           ]}
@@ -278,10 +288,12 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
           accessibilityState={{ disabled }}
         >
           {/* plus icon */}
+          {/* icon size 28px for better visibility on 58px FAB */}
+          {/* icon color is white (#FFFFFF) - whitest color from palette */}
           <Ionicons
             name="add"
-            size={32}
-            color={themeColors.interactive.tertiary()}
+            size={28}
+            color="#FFFFFF"
             style={styles.fabIcon}
           />
         </TouchableOpacity>
@@ -324,9 +336,9 @@ const styles = StyleSheet.create({
   // base fab styles
   fab: {
     // SIZE AND SHAPE
-    // default size can be overridden via style prop; keep content centered regardless of size
-    width: 64,
-    height: 64,
+    // size is 58px (larger than create button size 42px, smaller than original 64px)
+    width: 58,
+    height: 58,
     borderRadius: 999, // large radius keeps fully rounded corners for any size
     
     // BACKGROUND COLOR
@@ -362,7 +374,7 @@ const styles = StyleSheet.create({
   // currently the icon size and color are set directly on the Ionicons component
   fabIcon: {
     // icon styling is mostly handled by Ionicons component props:
-    // - size is set via the size prop (24px)
+    // - size is set via the size prop (28px)
     // - color is set via the color prop (#FFFFFF white)
     // this style object is here for future customization if needed
   },

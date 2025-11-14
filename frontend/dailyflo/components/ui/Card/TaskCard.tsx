@@ -110,19 +110,46 @@ export default function TaskCard({
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
+    // set time to start of day for accurate comparison
+    today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+    
     // format date based on how close it is
     if (date.toDateString() === today.toDateString()) {
       return 'Today';
     } else if (date.toDateString() === tomorrow.toDateString()) {
       return 'Tomorrow';
     } else if (date < today) {
-      return `Overdue (${date.toLocaleDateString()})`;
+      // calculate days ago for overdue tasks
+      const daysDiff = Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      return `${daysDiff} day${daysDiff === 1 ? '' : 's'} ago`;
     } else {
       return date.toLocaleDateString();
     }
   };
 
+  // helper function to format date with time and duration tags
+  // format: "Today • XX:XX • XX min" or variations based on what's available
+  const formatDateWithTags = (dueDate: string | null, time?: string, duration?: number): string => {
+    const dateText = formatDueDate(dueDate);
+    const parts: string[] = [dateText];
+    
+    // add time if available (format: XX:XX)
+    if (time) {
+      parts.push(time);
+    }
+    
+    // add duration if available (format: XX min)
+    if (duration && duration > 0) {
+      parts.push(`${duration} min`);
+    }
+    
+    // join parts with bullet points
+    return parts.join(' • ');
+  };
+
   // helper function to get due date text color based on urgency
+  // tertiary color for all dates except overdue (which is red)
   const getDueDateColor = (dueDate: string | null): string => {
     if (!dueDate) return themeColors.text.tertiary();
     
@@ -135,10 +162,8 @@ export default function TaskCard({
     
     if (date < today) {
       return semanticColors.error(); // red for overdue
-    } else if (date.getTime() === today.getTime()) {
-      return '#FF6B35'; // orange for today
     } else {
-      return themeColors.text.tertiary(); // gray for future dates
+      return themeColors.text.tertiary(); // tertiary color for all other dates (today, tomorrow, future)
     }
   };
   
@@ -170,18 +195,12 @@ export default function TaskCard({
 
   // TOUCH-BASED ANIMATIONS - Create animated values for visual feedback when user touches the card
   // colorIndicatorBackground: changes background color of the color indicator when touched
-  // checkboxBorderColor: changes border color of the checkbox when touched
   const colorIndicatorBackground = isPressed.interpolate({
     inputRange: [0, 1], // touch state (0 = not touched, 1 = touched)
     outputRange: [taskColor, themeColors.background.elevated()], // normal color to card background when touched
     extrapolate: 'clamp', // prevent values outside the input range
   });
   
-  const checkboxBorderColor = isPressed.interpolate({
-    inputRange: [0, 1], // touch state (0 = not touched, 1 = touched)
-    outputRange: [themeColors.border.primary(), themeColors.background.elevated()], // normal border to card background when touched
-    extrapolate: 'clamp', // prevent values outside the input range
-  });
 
   // SWIPE GESTURE HANDLERS - Functions that handle swipe gesture events and touch state
   // onGestureEvent: called continuously during the swipe gesture
@@ -213,7 +232,7 @@ export default function TaskCard({
       
       // determine if swipe threshold was met and in which direction
       if (Math.abs(translationX) > swipeThreshold) {
-        // swipe left (negative translationX) - call onSwipeLeft callback
+        // swipe left (negative translationX) - complete task directly (no confirmation)
         if (translationX < 0 && onSwipeLeft) {
           onSwipeLeft(task);
         }
@@ -254,7 +273,7 @@ export default function TaskCard({
 
   return (
     <View style={styles.cardContainer}>
-       {/* blue background that appears when swiping left for edit */}
+       {/* green background that appears when swiping left for complete */}
        <Animated.View
          style={[
            styles.swipeBackgroundLeft,
@@ -267,10 +286,10 @@ export default function TaskCard({
            },
          ]}
        >
-        {/* edit icon that stretches across the swipe area */}
+        {/* checkmark icon that stretches across the swipe area */}
         <Animated.View
           style={[
-            styles.editIconContainer,
+            styles.completeIconContainer,
              {
                opacity: translateX.interpolate({
                  inputRange: [-100, -5, 0, 100],
@@ -290,7 +309,7 @@ export default function TaskCard({
           ]}
         >
           <Ionicons 
-            name="create-outline" 
+            name="checkmark" 
             size={24} 
             color="white" 
           />
@@ -353,15 +372,6 @@ export default function TaskCard({
             { transform: [{ translateX }] } // applies horizontal translation based on swipe
           ]}
         >
-          {/* colored rectangle indicator on the left - uses taskColor from getTaskColor helper */}
-          <Animated.View 
-            style={[
-              styles.colorIndicator, 
-              { 
-                backgroundColor: colorIndicatorBackground // animated background color based on swipe distance
-              }
-            ]} 
-          />
           {/* main card touchable area - applies conditional styles based on compact and completion state */}
           <TouchableOpacity
             style={[
@@ -380,9 +390,22 @@ export default function TaskCard({
           ]}
           onPress={() => onPress?.(task)}
         >
-          {/* main content area containing all text elements */}
+          {/* task icon on the left - no circle, just icon in task color stroke */}
+          {task.icon && (
+            <View style={styles.iconContainer}>
+              <Ionicons 
+                name={task.icon as any} 
+                size={24} 
+                color={taskColor} 
+                style={styles.taskIcon}
+              />
+            </View>
+          )}
+          
+          {/* main content area containing title and metadata */}
           <View style={styles.content}>
             {/* task title - conditionally applies strikethrough styling when completed */}
+            {/* single line with ellipsis if it reaches second line */}
             <Text
               style={[
                 styles.title,
@@ -394,24 +417,13 @@ export default function TaskCard({
               {task.title}
             </Text>
             
-            {/* task description - conditionally rendered only if description exists and not in compact mode */}
-            {task.description && !compact && (
-              <Text 
-                style={styles.description} 
-                numberOfLines={2} // limits description to two lines
-                ellipsizeMode="tail" // adds ellipsis at end if text overflows
-              >
-                {task.description}
-              </Text>
-            )}
-            
             {/* task metadata container - holds category and due date information */}
             <View style={styles.metadata}>
               {/* category section - conditionally rendered only if showCategory prop is true */}
               {showCategory && (
                 <View style={styles.metadataItem}>
                   <Text style={styles.metadataLabel}>List:</Text>
-                  <Text style={styles.metadataValue}>
+                  <Text style={[styles.metadataValue, { color: themeColors.text.tertiary() }]}>
                     {task.listId ? 'In List' : 'Inbox'} {/* conditionally shows 'In List' or 'Inbox' based on listId */}
                   </Text>
                 </View>
@@ -420,16 +432,19 @@ export default function TaskCard({
               {/* due date section - always rendered */}
               <View style={styles.bottomMetadata}>
                 <View style={styles.metadataItem}>
-                  {/* calendar icon with dynamic color based on due date urgency */}
-                  <Ionicons 
-                    name="calendar-outline" 
-                    size={12} 
-                    color={themeColors.text.tertiary()} 
-                    style={[styles.metadataIcon, { color: getDueDateColor(task.dueDate) }]} // conditionally applies urgency color to icon
-                  />
-                  {/* due date text with dynamic color based on urgency */}
-                  <Text style={[styles.metadataValue, { color: getDueDateColor(task.dueDate) }]}>
-                    {formatDueDate(task.dueDate)} {/* formats due date using helper function */}
+                  {/* due date text with time and duration tags - gray for all dates except overdue (red) */}
+                  {/* format: "Today • XX:XX • XX min" or variations */}
+                  {/* gray color for completed tasks, otherwise use getDueDateColor */}
+                  <Text style={[
+                    styles.metadataValue, 
+                    { 
+                      // use secondary text color for date/time/duration tags, but red if overdue
+                      color: task.isCompleted 
+                        ? themeColors.text.tertiary() 
+                        : getDueDateColor(task.dueDate) // red if overdue, secondary otherwise
+                    }
+                  ]}>
+                    {formatDateWithTags(task.dueDate, task.time, task.duration)} {/* formats date with time and duration tags */}
                   </Text>
                 </View>
               </View>
@@ -438,24 +453,19 @@ export default function TaskCard({
         </Pressable>
           </TouchableOpacity>
           
-          {/* checkbox positioned absolutely in top-right corner - conditionally styled based on completion state */}
-          <Animated.View
-            style={[
-              styles.checkbox,
-              task.isCompleted && styles.completedCheckbox, // conditionally applies green background when completed
-              { borderColor: checkboxBorderColor } // animated border color based on swipe distance
-            ]}
-          >
-            <TouchableOpacity
-              style={styles.checkboxTouchable}
-              onPress={() => onComplete?.(task)} // calls onComplete callback with task data when tapped
-            >
-              {/* checkmark - conditionally rendered only when task is completed */}
-              {task.isCompleted && <Text style={styles.checkmark}>✓</Text>}
-            </TouchableOpacity>
-          </Animated.View>
+          {/* completion indicator container - shows green tick icon when completed */}
+          {task.isCompleted && (
+            <View style={styles.completionIndicator}>
+              <Ionicons 
+                name="checkmark" 
+                size={20} 
+                color={semanticColors.success()} 
+              />
+            </View>
+          )}
           
           {/* bottom indicators container - positioned absolutely in bottom-right corner */}
+          {/* transparent background for all tasks, fully transparent for completed tasks */}
           <View style={styles.bottomIndicators}>
         {/* repeating indicator - conditionally rendered only when routine type is not 'once' */}
         {task.routineType !== 'once' && (
@@ -506,19 +516,19 @@ const createStyles = (
   // card container with color indicator
   cardContainer: {
     flexDirection: 'row',
-    marginBottom: 12, // spacing between cards
+    marginBottom: 20, // spacing between cards
     position: 'relative', // needed for absolute positioning of background
   },
 
-  // blue background that appears when swiping left for edit
+  // green background that appears when swiping left for complete
   swipeBackgroundLeft: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#007AFF', // iOS blue color
-    borderRadius: 16, // match card border radius
+    backgroundColor: '#34C759', // iOS green color for completion
+    borderRadius: 20, // match card border radius
     justifyContent: 'center',
     alignItems: 'flex-end', // align to right side
     zIndex: 0, // behind the card content
@@ -532,14 +542,14 @@ const createStyles = (
     right: 0,
     bottom: 0,
     backgroundColor: '#FF3B30', // iOS red color
-    borderRadius: 16, // match card border radius
+    borderRadius: 20, // match card border radius
     justifyContent: 'center',
     alignItems: 'flex-start', // align to left side
     zIndex: 0, // behind the card content
   },
 
-  // container for the edit icon
-  editIconContainer: {
+  // container for the complete icon
+  completeIconContainer: {
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -553,41 +563,45 @@ const createStyles = (
   // swipe container for animated swipe gestures
   swipeContainer: {
     flex: 1, // takes up remaining space in the row
-    flexDirection: 'row', // horizontal layout for color indicator and card
+    flexDirection: 'row', // horizontal layout for card
     position: 'relative', // needed for absolute positioning of checkbox and indicators
     zIndex: 1, // above the background
-  },
-
-  // colored rectangle indicator on the left
-  colorIndicator: {
-    width: 4,
-    backgroundColor: 'transparent', // will be overridden by task color
-    borderTopLeftRadius: 16,
-    borderBottomLeftRadius: 16,
   },
 
   // main card container
   card: {
     flex: 1,
     backgroundColor: themeColors.background.elevated(), // use theme-aware elevated background
-    borderTopRightRadius: 12, // rounded corners for modern card appearance
-    borderBottomRightRadius: 12,
+    borderRadius: 20, // border radius of 20 for modern card appearance
     padding: 16,
     paddingRight: 56, // add right padding to avoid overlap with checkbox (24px checkbox + 16px margin + 16px spacing)
     position: 'relative', // needed for absolute positioning of checkbox
   },
 
 
-  // Row layout for left column and content
+  // Row layout for icon and content
   row: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center', // center align icon and title vertically
+  },
+  
+  // icon container on the left
+  iconContainer: {
+    marginRight: 16, // spacing between icon and title
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  // task icon styling - no circle, just icon in task color stroke
+  taskIcon: {
+    // icon color is set via color prop in Ionicons component
   },
 
 
-  // Content area (all text and controls)
+  // Content area (title only)
   content: {
     flex: 1,
+    justifyContent: 'center', // center title vertically
   },
   
   // compact version for smaller displays
@@ -599,7 +613,7 @@ const createStyles = (
   
   // completed task styling
   completedCard: {
-    backgroundColor: 'rgba(0,0,0,0)', // fully transparent background
+    backgroundColor: themeColors.background.primary(), // use primary background color (same as today screen)
   },
   
   // task title text styling
@@ -609,7 +623,7 @@ const createStyles = (
     ...typography.getTextStyle('heading-4'),
     // use theme-aware primary text color from color system
     color: themeColors.text.primary(),
-    marginBottom: 4,
+    marginBottom: 2, // spacing between title and metadata (reduced for closer spacing)
   },
   
   // completed title styling
@@ -618,39 +632,16 @@ const createStyles = (
     color: themeColors.text.secondary(), // dimmed color for completed
   },
   
-  // completion checkbox - positioned absolutely in top-right corner
-  checkbox: {
+  // completion indicator container - positioned absolutely in top-right corner
+  // shows green tick icon when task is completed
+  completionIndicator: {
     position: 'absolute',
     top: 16,
     right: 16,
     width: 24,
     height: 24,
-    borderRadius: 12, // circular checkbox
-    borderWidth: 2,
-    borderColor: themeColors.border.primary(), // theme-aware border color
-    backgroundColor: 'transparent',
-  },
-  
-  // touchable area inside the checkbox for tap handling
-  checkboxTouchable: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12, // circular touchable area
-    justifyContent: 'center', // center checkmark
-    alignItems: 'center', // center checkmark
-  },
-  
-  // completed checkbox styling
-  completedCheckbox: {
-    backgroundColor: semanticColors.success(), // green background for completed
-    borderColor: semanticColors.success(), // green border for completed
-  },
-  
-  // checkmark styling
-  checkmark: {
-    color: 'white', // white checkmark
-    fontSize: 12,
-    fontWeight: 'bold',
+    justifyContent: 'center', // center checkmark icon
+    alignItems: 'center', // center checkmark icon
   },
 
   
@@ -667,7 +658,7 @@ const createStyles = (
   // metadata container
   metadata: {
     flexDirection: 'column', // vertical layout for category and bottom metadata
-    marginTop: 8,
+    marginTop: 4, // spacing from title (reduced for closer spacing)
   },
   
   // individual metadata item
@@ -678,12 +669,12 @@ const createStyles = (
   
   // metadata label styling
   metadataLabel: {
-    // use the body-medium text style from typography system (12px, regular, satoshi font)
-    ...typography.getTextStyle('body-medium'),
+    // use the body-large text style from typography system (14px, regular, satoshi font)
+    ...typography.getTextStyle('body-large'),
     // use theme-aware tertiary text color from color system
     color: themeColors.text.tertiary(),
     marginRight: 4,
-    fontWeight: '500',
+    fontWeight: '900',
   },
   
   // metadata icon styling
@@ -697,6 +688,7 @@ const createStyles = (
     ...typography.getTextStyle('body-medium'),
     // use theme-aware secondary text color from color system
     color: themeColors.text.secondary(),
+    fontWeight: '900', // bold weight for heavier tags
   },
   
   // bottom metadata container (due date only)
@@ -719,10 +711,11 @@ const createStyles = (
   indicator: {
     flexDirection: 'row', // horizontal layout for icon and text
     alignItems: 'center',
-    backgroundColor: themeColors.background.elevated(), // match card background
+    backgroundColor: 'transparent', // transparent background for all indicators
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
+  
   
   // indicator icon styling
   indicatorIcon: {
@@ -732,10 +725,12 @@ const createStyles = (
   // indicator text styling
   indicatorText: {
     // use the body-medium text style from typography system (12px, regular, satoshi font)
+    // match metadataValue styling exactly: same typography, font weight, and size
     ...typography.getTextStyle('body-medium'),
-    // use theme-aware tertiary text color from color system
+    // use tertiary text color for bottom right tags (Inbox, Weekly, etc.) - matches icon color
     color: themeColors.text.tertiary(),
-    fontSize: 11, // slightly smaller than metadata value
+    fontWeight: '900', // match metadataValue font weight
+    // fontSize removed to match metadataValue (uses body-medium default size)
   },
   
 });
