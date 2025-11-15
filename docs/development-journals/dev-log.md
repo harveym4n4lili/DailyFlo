@@ -732,9 +732,118 @@ Updated User app, models, serializers, views and urls
 ### Notes
 - After task creation is fully implemented, check how current structure follows the planned file architecture
 ### TODO POSSIBLE REFINING
-- Implement custom task creation modal structure23
+- Implement custom task creation modal structure
 - Implement better time picker style
 - Implement better duration slider style
 - Add relevant haptic feedback to buttons
 - Change task color palette to be more aesthetic
+---
+## [21/10/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Conducted archirectural restructuring such as top section container
+- [X] Changed taskBasicInfo to taskCreationContent
+- [X] Styling Changes
+
+### Plans For Future
+- Continue to improve form picker button and modal UX
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [22/10/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Created new util methods for formpicker button functionality
+- [X] Begun to implement a dynamic message feature on the form picker buttons
+
+### Plans For Future
+- Fix smoothness, and add a seamless feel to transitioning
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [23/10/2025] - [Thursday]
+
+### Today's Goals
+- [X] Begun to implement basic transitioning between task creation modal and form picker modals
+
+### Plans For Future
+- Aim for more seamless transitioning
+- Find alternative to stacked modals, as expo ios does not allow this.
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [13/11/2025] - [Thursday]
+
+### Today's Goals
+- [X] Transformed draggable modals (form picker modals) to be absolute views
+- [X] Implemented create task button functionality
+
+### Plans For Future
+- Begin to address refining points
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [14/11/2025] - [Friday]
+
+### Today's Goals
+- [X] Styling changes
+
+### Plans For Future
+- Begin to check and restructure component hierarchy, especially with task creation modal, task card components
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [15/11/2025] - [Saturday]
+
+### Today's Goals
+- [X] 
+
+### Plans For Future
+- 
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+
+
 
