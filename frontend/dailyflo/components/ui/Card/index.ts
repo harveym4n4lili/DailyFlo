@@ -5,7 +5,7 @@
  * It follows the barrel export pattern for better organization.
  */
 
-export { default as TaskCard } from './TaskCard';
-export type { TaskCardProps } from './TaskCard';
-export { default as ListCard } from './ListCard';
-export type { ListCardProps } from './ListCard';
+export { TaskCard } from './TaskCard';
+export type { TaskCardProps } from './TaskCard/TaskCard';
+export { ListCard } from './ListCard';
+export type { ListCardProps } from './ListCard/ListCard';
