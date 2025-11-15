@@ -54,17 +54,72 @@ export function getDatePickerDisplay(
     };
   }
 
+  // create date objects and normalize to start of day for accurate comparison
+  // this ensures we're comparing dates without time or timezone issues
   const selectedDate = new Date(dateString);
   const today = new Date();
+  
+  // normalize both dates to start of day (midnight) in local timezone
+  // this prevents timezone and time-of-day issues when comparing
   today.setHours(0, 0, 0, 0);
+  selectedDate.setHours(0, 0, 0, 0);
   
-  const dueDate = new Date(selectedDate);
-  dueDate.setHours(0, 0, 0, 0);
+  // calculate difference in days using date-only comparison
+  // use Math.floor for accurate day calculation (handles partial days correctly)
+  const diffTime = selectedDate.getTime() - today.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   
-  const diffTime = dueDate.getTime() - today.getTime();
-  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  // alternative comparison using date strings for absolute accuracy
+  // compare year-month-day strings to avoid any timezone or rounding issues
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const selectedStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+  
+  // use string comparison for exact date matching (more reliable than time diff)
+  const isToday = todayStr === selectedStr;
+  const isTomorrow = (() => {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+    return tomorrowStr === selectedStr;
+  })();
+  const isYesterday = (() => {
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    return yesterdayStr === selectedStr;
+  })();
 
-  // check for weekend dates (Saturday or Sunday within next 7 days)
+  // check for quick options FIRST (Today, Tomorrow, Yesterday, Next Week)
+  // these take priority over weekend check to avoid showing "This Weekend" when it's actually "Today"
+  // use string comparison for exact matches (more reliable)
+  if (isToday) {
+    return {
+      text: 'Today',
+      color: colors.getSemanticColor('success'),
+      iconColor: colors.getSemanticColor('success'),
+    };
+  } else if (isTomorrow) {
+    return {
+      text: 'Tomorrow',
+      color: colors.getSemanticColor('warning'),
+      iconColor: colors.getSemanticColor('warning'),
+    };
+  } else if (isYesterday) {
+    return {
+      text: 'Yesterday',
+      color: colors.getSemanticColor('error'),
+      iconColor: colors.getSemanticColor('error'),
+    };
+  } else if (diffDays === 7) {
+    return {
+      text: 'Next Week',
+      color: colors.getTaskCategoryColor('purple'),
+      iconColor: colors.getTaskCategoryColor('purple'),
+    };
+  }
+
+  // check for weekend dates AFTER checking Today/Tomorrow/Yesterday
+  // only show "This Weekend" if it's not already covered by the above checks
   const selectedDayOfWeek = selectedDate.getDay(); // 0 = Sunday, 6 = Saturday
   
   if ((selectedDayOfWeek === 6 || selectedDayOfWeek === 0) && diffDays >= 0 && diffDays <= 6) {
@@ -75,32 +130,8 @@ export function getDatePickerDisplay(
     };
   }
 
-  // check for quick options (Today, Tomorrow, Yesterday, Next Week)
-  if (diffDays === 0) {
-    return {
-      text: 'Today',
-      color: colors.getSemanticColor('success'),
-      iconColor: colors.getSemanticColor('success'),
-    };
-  } else if (diffDays === 1) {
-    return {
-      text: 'Tomorrow',
-      color: colors.getSemanticColor('warning'),
-      iconColor: colors.getSemanticColor('warning'),
-    };
-  } else if (diffDays === 7) {
-    return {
-      text: 'Next Week',
-      color: colors.getTaskCategoryColor('purple'),
-      iconColor: colors.getTaskCategoryColor('purple'),
-    };
-  } else if (diffDays === -1) {
-    return {
-      text: 'Yesterday',
-      color: colors.getSemanticColor('error'),
-      iconColor: colors.getSemanticColor('error'),
-    };
-  } else if (diffDays < 0) {
+  // check for past dates
+  if (diffDays < 0) {
     // past date - show "X days ago"
     return {
       text: `${Math.abs(diffDays)} days ago`,
