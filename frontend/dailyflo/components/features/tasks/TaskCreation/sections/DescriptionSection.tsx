@@ -1,5 +1,5 @@
 /**
- * TaskDescription Component
+ * DescriptionSection Component
  * 
  * This component provides a text area for task description/notes.
  * Separated from subtask functionality for better component organization.
@@ -23,9 +23,9 @@ import { ThemeColors } from '@/constants/ColorPalette';
 import { getTextStyle, getFontFamily } from '@/constants/Typography';
 
 /**
- * Props interface for TaskDescription component
+ * Props interface for DescriptionSection component
  */
-interface TaskDescriptionProps {
+export interface DescriptionSectionProps {
   /** Current description text */
   description?: string;
   /** Callback when description changes */
@@ -35,14 +35,14 @@ interface TaskDescriptionProps {
 }
 
 /**
- * TaskDescription Component
+ * DescriptionSection Component
  * 
  * Renders a task description text area with:
  * - Multiline text input for additional notes
  * - Theme-aware styling matching the design system
  * - Character limit for description
  */
-export const TaskDescription: React.FC<TaskDescriptionProps> = ({
+export const DescriptionSection: React.FC<DescriptionSectionProps> = ({
   description = '',
   onDescriptionChange,
   isEditing = false,
@@ -92,7 +92,7 @@ export const TaskDescription: React.FC<TaskDescriptionProps> = ({
 };
 
 /**
- * Styles for TaskDescription component
+ * Styles for DescriptionSection component
  * 
  * These styles create the appearance matching the design system:
  * - Description text area with proper spacing
@@ -125,4 +125,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TaskDescription;
+export default DescriptionSection;

@@ -35,23 +35,13 @@ import { Ionicons } from '@expo/vector-icons';
 // (removed KeyboardModal and ModalBackdrop - now handled at TaskCreationModal level)
 
 // UI COMPONENTS IMPORTS
-// button components for the form
-import { 
-  FormPickerButton, 
-  getDatePickerDisplay, 
-  getTimeDurationPickerDisplay,
-  getAlertsPickerDisplay,
-  getIconPickerDisplay,
-} from '@/components/ui/Button';
+// button components for the form (no longer needed here, moved to PickerButtonsSection)
 
 // FEATURE COMPONENTS IMPORTS
 // task creation sub-components and modals
 import { DatePickerModal } from '@/components/features/calendar';
-import { TaskIconColorModal } from './TaskIconColorModal';
-import { TaskTimeDurationModal } from './TaskTimeDurationModal';
-import { TaskAlertModal } from './TaskAlertModal';
-import { TaskDescription } from './TaskDescription';
-import { SubtaskSection } from './SubtaskSection';
+import { IconColorModal, TimeDurationModal, AlertModal } from './modals';
+import { PickerButtonsSection, DescriptionSection, SubtaskSection } from './sections';
 
 // CONSTANTS IMPORTS
 // design system constants for styling
@@ -346,33 +336,6 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
     // }
   };
 
-  // PICKER BUTTONS CONFIGURATION
-  const pickerButtons = [
-    {
-      id: 'icon',
-      icon: (values.icon as any) || 'star-outline',
-      label: '', // empty label since there's always a default and we don't want to show text
-      onPress: handleShowColorPicker,
-    },
-    {
-      id: 'date',
-      icon: 'calendar-outline',
-      label: 'No Date',
-      onPress: handleShowDatePicker,
-    },
-    {
-      id: 'time',
-      icon: 'time-outline', 
-      label: 'No Time or Duration',
-      onPress: handleShowTimeDurationPicker,
-    },
-    {
-      id: 'alerts',
-      icon: 'notifications-outline',
-      label: 'No Alerts',
-      onPress: handleShowAlertsPicker,
-    },
-  ];
 
   return (
     <>
@@ -444,7 +407,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
 
         {/* Task Description Section */}
         <View style={{ paddingTop: 8 }}>
-          <TaskDescription
+          <DescriptionSection
             description={values.description || ''}
             onDescriptionChange={(description) => onChange('description', description)}
             isEditing={true}
@@ -467,82 +430,18 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
            paddingVertical: BOTTOM_SECTION_PADDING_VERTICAL,
            flexDirection: 'row',
        }}>
-          {/* form fields section */}
-          <View 
-            style={{ 
-             paddingBottom: 8,
-            }}
-          >
-          {/* horizontal scrollable picker buttons */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyboardShouldPersistTaps="always"
-            contentContainerStyle={{
-              width: '100%',
-              gap: 16
-            }}
-          >
-            {pickerButtons.map((button) => {
-              const displayInfo = button.id === 'icon'
-                ? getIconPickerDisplay(values.icon, values.color, colors, themeColors)
-                : button.id === 'date' 
-                ? getDatePickerDisplay(values.dueDate, colors, themeColors)
-                : button.id === 'time' 
-                ? getTimeDurationPickerDisplay(values.time, values.duration, themeColors)
-                : button.id === 'alerts'
-                ? getAlertsPickerDisplay(values.alerts?.length || 0, themeColors)
-                : null;
-              
-              const iconColor = displayInfo ? displayInfo.iconColor : themeColors.text.secondary();
-              const textColor = displayInfo ? displayInfo.color : themeColors.text.secondary();
-              
-               // Only show display text if there's actually a value selected (not default "No X" text)
-               const displayText = displayInfo && !displayInfo.text.startsWith('No ') 
-                 ? displayInfo.text 
-                 : '';
-
-              const animatedValue = button.id === 'icon'
-                ? iconButtonHighlightOpacity
-                : button.id === 'date' 
-                ? dateButtonHighlightOpacity 
-                : button.id === 'time' 
-                ? timeButtonHighlightOpacity 
-                : alertsButtonHighlightOpacity;
-
-              return (
-                 <View key={button.id} style={{ left: 16 }}>
-                   <FormPickerButton
-                     icon={button.icon}
-                     defaultText={button.label}
-                     displayText={displayText}
-                     textColor={textColor}
-                     iconColor={iconColor}
-                     onPress={button.onPress}
-                     highlightOpacity={animatedValue}
-                     forceSelected={button.id === 'icon'} // force selected state for icon picker
-                     rightContainer={button.id === 'icon' ? (
-                       <View style={{
-                         width: 24,
-                         height: 24,
-                         borderRadius: 12,
-                         backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                         alignItems: 'center',
-                         justifyContent: 'center',
-                       }}>
-                         <Ionicons
-                           name="color-palette"
-                           size={24}
-                           color={themeColors.text.secondary()}
-                         />
-                       </View>
-                     ) : undefined}
-                   />
-                 </View>
-              );
-            })}
-          </ScrollView>
-        </View>
+          {/* Picker Buttons Section */}
+          <PickerButtonsSection
+            values={values}
+            iconButtonHighlightOpacity={iconButtonHighlightOpacity}
+            dateButtonHighlightOpacity={dateButtonHighlightOpacity}
+            timeButtonHighlightOpacity={timeButtonHighlightOpacity}
+            alertsButtonHighlightOpacity={alertsButtonHighlightOpacity}
+            onShowIconColorPicker={handleShowColorPicker}
+            onShowDatePicker={handleShowDatePicker}
+            onShowTimeDurationPicker={handleShowTimeDurationPicker}
+            onShowAlertsPicker={handleShowAlertsPicker}
+          />
       </View>
       
       {/* bottom action section */}
@@ -624,7 +523,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
       />
       
       {/* color and icon picker modal */}
-      <TaskIconColorModal
+      <IconColorModal
         visible={isColorPickerVisible}
         selectedColor={(values.color as TaskColor) || 'blue'}
         selectedIcon={values.icon}
@@ -635,7 +534,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
       />
       
       {/* time/duration picker modal */}
-      <TaskTimeDurationModal
+      <TimeDurationModal
         visible={isTimeDurationPickerVisible}
         selectedTime={values.time}
         selectedDuration={values.duration}
@@ -646,7 +545,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
       />
       
       {/* alerts picker modal */}
-      <TaskAlertModal
+      <AlertModal
         visible={isAlertsPickerVisible}
         selectedAlerts={values.alerts || []}
         onClose={handleAlertsPickerClose}

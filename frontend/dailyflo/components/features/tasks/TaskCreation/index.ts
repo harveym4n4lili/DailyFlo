@@ -8,12 +8,10 @@ export * from './TaskCreationModal';
 export { default as TaskCreationModal } from './TaskCreationModal';
 export * from './TaskCreationContent';
 export { default as TaskCreationContent } from './TaskCreationContent';
-export * from './TaskBasicInfo';
-export * from './TaskIconColorModal';
-export * from './TaskTimeDurationModal';
-export * from './TaskAlertModal';
-export * from './TaskDescription';
-export { default as TaskDescription } from './TaskDescription';
-export * from './SubtaskSection';
-export { default as SubtaskSection } from './SubtaskSection';
+
+// Export modals from modals folder
+export * from './modals';
+
+// Export sections from sections folder
+export * from './sections';
 

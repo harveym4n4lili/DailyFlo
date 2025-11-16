@@ -1,5 +1,5 @@
 /**
- * TaskIconColorModal
+ * IconColorModal
  * 
  * Modal for selecting task icon and color.
  * Shows color selection at the top and icon selection grid below.
@@ -16,7 +16,7 @@ import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
 import { ModalHeader, DraggableModal } from '@/components/layout/ModalLayout';
 
-export interface TaskIconColorModalProps {
+export interface IconColorModalProps {
   visible: boolean;
   onClose: () => void;
   selectedColor: TaskColor;
@@ -79,7 +79,7 @@ const AVAILABLE_ICONS = [
   { name: 'document-text', label: 'Doc' },
 ];
 
-export function TaskIconColorModal({
+export function IconColorModal({
   visible,
   onClose,
   selectedColor,
@@ -87,9 +87,9 @@ export function TaskIconColorModal({
   selectedIcon,
   onSelectIcon,
   taskCategoryColor,
-}: TaskIconColorModalProps) {
+}: IconColorModalProps) {
   // CONSOLE DEBUGGING
-  // console.log('🎨 TaskIconColorModal - visible:', visible);
+  // console.log('🎨 IconColorModal - visible:', visible);
   
   // get theme-aware colors from the color palette system
   const colors = useColorPalette();
@@ -320,5 +320,5 @@ export function TaskIconColorModal({
   );
 }
 
-export default TaskIconColorModal;
+export default IconColorModal;
 

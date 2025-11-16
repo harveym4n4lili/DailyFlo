@@ -68,7 +68,7 @@ export function getDatePickerDisplay(
   // use Math.floor for accurate day calculation (handles partial days correctly)
   const diffTime = selectedDate.getTime() - today.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
+
   // alternative comparison using date strings for absolute accuracy
   // compare year-month-day strings to avoid any timezone or rounding issues
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
