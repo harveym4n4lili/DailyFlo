@@ -164,7 +164,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   // this allows useNativeDriver to work properly and prevents jankiness
   // the highlight is a separate overlay that fades in/out smoothly
   const animatedStyle = (highlightOpacity && hasValue) ? {
-    backgroundColor: themeColors.background.primary(), // static background color
+    backgroundColor: themeColors.background.elevated(), // static background color
     borderRadius: 20,
     paddingVertical: 0, // Icons have their own padding container
     paddingHorizontal: 12,
@@ -177,7 +177,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   
   // static styles when no animation is needed or no value is set
   const staticStyle = !highlightOpacity || !hasValue ? {
-    backgroundColor: hasValue ? themeColors.background.primary() : 'transparent',
+    backgroundColor: hasValue ? themeColors.background.elevated() : 'transparent',
     borderRadius: hasValue ? 20 : 0,
     paddingVertical: hasValue ? 0 : 8, // Default state has vertical padding, selected state has no vertical padding
     paddingHorizontal: hasValue ? 12 : 0, // Default state has no horizontal padding, selected state has horizontal padding

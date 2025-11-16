@@ -427,6 +427,8 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
       </ScrollView>
        {/* bottom action section */}
        <View style={{
+           borderTopWidth: 1,
+           borderTopColor: themeColors.border.secondary(),
            paddingVertical: BOTTOM_SECTION_PADDING_VERTICAL,
            flexDirection: 'row',
        }}>
@@ -453,7 +455,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
           flexDirection: 'row',
           justifyContent: 'flex-end',
           alignItems: 'center',
-          backgroundColor: themeColors.background.primary(),
+          backgroundColor: themeColors.background.elevated(),
       }}>
         {/* Circular create button anchored to the right */}
         {/* background uses task category color */}
