@@ -849,12 +849,16 @@ Updated User app, models, serializers, views and urls
 ## [16/11/2025] - [Sunday]
 
 ### Today's Goals
-- [X]
+- [X] Added haptic feed back
+- [X] Styling changes to task creation modal
 
 ### Plans For Future
-- 
+- Plan how to implement task view
 
 ### Notes
-- 
-
+- Consider file structure after task view implementation
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
 
