@@ -1,5 +1,5 @@
 /**
- * TaskTimeDurationModal
+ * TimeDurationModal
  * 
  * Modal for selecting task time and duration.
  * Shows time picker and duration options.
@@ -19,7 +19,7 @@ import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from 'react-nativ
 
 import type { TaskColor } from '@/types';
 
-export interface TaskTimeDurationModalProps {
+export interface TimeDurationModalProps {
   visible: boolean;
   onClose: () => void;
   selectedTime?: string;
@@ -43,7 +43,7 @@ const DURATION_PRESETS = [
 ];
 
 
-export function TaskTimeDurationModal({
+export function TimeDurationModal({
   visible,
   onClose,
   selectedTime,
@@ -51,9 +51,9 @@ export function TaskTimeDurationModal({
   onSelectTime,
   onSelectDuration,
   taskCategoryColor,
-}: TaskTimeDurationModalProps) {
+}: TimeDurationModalProps) {
   // CONSOLE DEBUGGING
-  // console.log('⏰ TaskTimeDurationModal - visible:', visible);
+  // console.log('⏰ TimeDurationModal - visible:', visible);
   
   // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
@@ -479,6 +479,6 @@ export function TaskTimeDurationModal({
   );
 }
 
-export default TaskTimeDurationModal;
+export default TimeDurationModal;
 
 

@@ -1,5 +1,5 @@
 /**
- * TaskAlertModal Component
+ * AlertModal Component
  * 
  * Modal for selecting task alerts/reminders with multi-select functionality.
  * Features a draggable modal with cancel/done buttons that appear when changes are made.
@@ -42,7 +42,7 @@ const ALERT_OPTIONS: AlertOption[] = [
 
 import type { TaskColor } from '@/types';
 
-export interface TaskAlertModalProps {
+export interface AlertModalProps {
   visible: boolean;
   onClose: () => void;
   // array of alert IDs that are currently selected
@@ -53,15 +53,15 @@ export interface TaskAlertModalProps {
   taskCategoryColor?: TaskColor;
 }
 
-export function TaskAlertModal({
+export function AlertModal({
   visible,
   onClose,
   selectedAlerts,
   onApplyAlerts,
   taskCategoryColor,
-}: TaskAlertModalProps) {
+}: AlertModalProps) {
   // CONSOLE DEBUGGING
-  // console.log('🔔 TaskAlertModal - visible:', visible);
+  // console.log('🔔 AlertModal - visible:', visible);
   
   // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
@@ -240,5 +240,5 @@ export function TaskAlertModal({
   );
 }
 
-export default TaskAlertModal;
+export default AlertModal;
 
