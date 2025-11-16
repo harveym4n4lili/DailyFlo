@@ -20,6 +20,10 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 // useThemeColor: hook that provides the global theme color selected by the user
 import { useThemeColor } from '@/hooks/useThemeColor';
 
+// EXPO HAPTICS IMPORT
+// provides haptic feedback for better user experience
+import * as Haptics from 'expo-haptics';
+
 // FEATURE COMPONENTS IMPORTS
 // TaskCreationContent: the actual content and UI for task creation
 import { TaskCreationContent } from './TaskCreationContent';
@@ -180,6 +184,8 @@ export function TaskCreationModal({
       // createTask.fulfilled means the task was created successfully
       if (createTask.fulfilled.match(result)) {
         // console.log('Task created successfully:', result.payload);
+        // Provide haptic feedback on successful task creation
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
         // Close the modal on success
         onClose();
         // Reset form to defaults for next time
@@ -206,7 +212,7 @@ export function TaskCreationModal({
       <KeyboardModal
         visible={visible}
         onClose={onClose}
-        backgroundColor={themeColors.background.primary()}
+        backgroundColor={themeColors.background.elevated()}
         dynamicKeyboardHeight={true}
         showBackdrop={true}
         backdropDismiss={true}

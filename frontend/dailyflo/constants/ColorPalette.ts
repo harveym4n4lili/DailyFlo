@@ -35,10 +35,10 @@ export const PrimaryColors = {
   },
   dark: {
     // dark mode primary colors (from design system specs)
-    50: '#080808',   // pure white - light backgrounds, modal surfaces
-    100: '#0e0e0e',  // subtle off-white - page backgrounds, settings panels
-    200: '#1C1C1C',  // light neutral - secondary backgrounds
-    300: '#3D3D3D',  // medium neutral - secondary buttons, inactive elements
+    50: '#0f0f0f',   // pure white - light backgrounds, modal surfaces
+    100: '#1a1a1a',  // subtle off-white - page backgrounds, settings panels
+    200: '#303030',  // light neutral - secondary backgrounds
+    300: '#4d4d4d',  // medium neutral - secondary buttons, inactive elements
     400: '#9BA2B1',  // dark neutral - secondary text, labels
     500: '#ADBBD5',  // base brand color - primary text, headings
     600: '#BFCBE3',  // darker brand - primary buttons, active states
