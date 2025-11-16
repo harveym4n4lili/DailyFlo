@@ -831,19 +831,30 @@ Updated User app, models, serializers, views and urls
 ## [15/11/2025] - [Saturday]
 
 ### Today's Goals
-- [X] 
+- [X] Restructed Taskcard, Listcard, task creation modal component architecture
 
 ### Plans For Future
-- 
+- Consider fulfilling refine plans
+- Plan how to implement task view
 
 ### Notes
-- After task creation is fully implemented, check how current structure follows the planned file architecture
+- No notes
 ### TODO POSSIBLE REFINING
 - Implement custom task creation modal structure
 - Implement better time picker style
 - Implement better duration slider style
 - Add relevant haptic feedback to buttons
 - Change task color palette to be more aesthetic
+---
+## [16/11/2025] - [Sunday]
 
+### Today's Goals
+- [X]
+
+### Plans For Future
+- 
+
+### Notes
+- 
 
 
