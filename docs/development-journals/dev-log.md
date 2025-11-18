@@ -861,4 +861,21 @@ Updated User app, models, serializers, views and urls
 - Implement better time picker style
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
+---
+## [18/11/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Planned Implemenation on task view screen
+- [X] Also planned file architecture
+
+### Plans For Future
+- 
+
+### Notes
+- 
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+
 
