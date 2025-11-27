@@ -869,10 +869,26 @@ Updated User app, models, serializers, views and urls
 - [X] Also planned file architecture
 
 ### Plans For Future
-- 
+- Consider refining responsivenes for description input, box expansion
 
 ### Notes
-- 
+- consider implementing own text input component
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+---
+## [25/11/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Implemented my own ios version of a text input box
+
+### Plans For Future
+- Plan to implement task detail view
+- Find a way to preserve keyboard modal current styling, but remove max height to allow for full description expansion
+
+### Notes
+- no notes
 ### TODO POSSIBLE REFINING
 - Implement better time picker style
 - Implement better duration slider style
