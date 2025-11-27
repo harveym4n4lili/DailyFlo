@@ -371,7 +371,8 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="always"
-        contentContainerStyle={{ paddingBottom: 0 }}
+        contentContainerStyle={{ paddingBottom: 0, flexGrow: 1 }}
+        nestedScrollEnabled={true}
       >
         {/* header with icon display and title input */}
         {/* extra top padding to make room for absolutely positioned cancel button */}
@@ -406,11 +407,17 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         </View>
 
         {/* Task Description Section */}
-        <View style={{ paddingTop: 8 }}>
+        <View style={{ 
+          paddingTop: 8,
+          // allow this section to expand beyond container constraints
+          flexShrink: 0,
+          flexGrow: 1,
+        }}>
           <DescriptionSection
             description={values.description || ''}
             onDescriptionChange={(description) => onChange('description', description)}
             isEditing={true}
+            taskColor={(values.color as TaskColor) || 'blue'}
           />
         </View>
 
@@ -423,16 +430,10 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
           />
         </View>
 
-      
-      </ScrollView>
-       {/* bottom action section */}
-       <View style={{
-           borderTopWidth: 1,
-           borderTopColor: themeColors.border.secondary(),
-           paddingVertical: BOTTOM_SECTION_PADDING_VERTICAL,
-           flexDirection: 'row',
-       }}>
-          {/* Picker Buttons Section */}
+        {/* Picker Buttons Section */}
+        {/* moved below subtask section for better user flow */}
+        {/* contains color, date, time, and alerts picker buttons */}
+        <View style={{ paddingTop: 16, paddingBottom: 8 }}>
           <PickerButtonsSection
             values={values}
             iconButtonHighlightOpacity={iconButtonHighlightOpacity}
@@ -444,12 +445,17 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
             onShowTimeDurationPicker={handleShowTimeDurationPicker}
             onShowAlertsPicker={handleShowAlertsPicker}
           />
-      </View>
+        </View>
+
       
-      {/* bottom action section */}
+      </ScrollView>
+      {/* Create Button Section */}
+      {/* bottom action section with top border for visual separation */}
+      {/* border color matches the picker button selected state border */}
+      {/* contains the circular create button anchored to the right */}
       <View style={{
           borderTopWidth: 1,
-          borderTopColor: themeColors.border.secondary(),
+          borderTopColor: themeColors.border.primary(),
           paddingVertical: BOTTOM_SECTION_PADDING_VERTICAL,
           paddingHorizontal: 16,
           flexDirection: 'row',

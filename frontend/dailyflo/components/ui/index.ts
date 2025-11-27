@@ -27,3 +27,7 @@ export type { TaskCardProps } from './Card';
 
 export { ListCard } from './Card';
 export type {ListCardProps } from './Card';
+
+// export text input components
+export { CustomTextInput } from './TextInput';
+export type { CustomTextInputProps } from './TextInput';
