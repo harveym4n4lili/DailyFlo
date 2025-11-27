@@ -13,14 +13,14 @@
 import React, { useState } from 'react';
 import {
   View,
-  TextInput,
   StyleSheet,
 } from 'react-native';
-import { useColorScheme } from 'react-native';
 
-// import design system constants
-import { ThemeColors } from '@/constants/ColorPalette';
-import { getTextStyle, getFontFamily } from '@/constants/Typography';
+// import custom components
+import { CustomTextInput } from '@/components/ui/TextInput';
+
+// import types
+import type { TaskColor } from '@/types';
 
 /**
  * Props interface for DescriptionSection component
@@ -32,6 +32,8 @@ export interface DescriptionSectionProps {
   onDescriptionChange?: (description: string) => void;
   /** Whether the component is in edit mode */
   isEditing?: boolean;
+  /** Task color for styling the text input cursor/stylus */
+  taskColor?: TaskColor;
 }
 
 /**
@@ -46,10 +48,8 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = ({
   description = '',
   onDescriptionChange,
   isEditing = false,
+  taskColor = 'blue',
 }) => {
-  // get current color scheme (light/dark mode)
-  const colorScheme = useColorScheme() || 'dark';
-  
   // local state for description text
   const [localDescription, setLocalDescription] = useState(description);
 
@@ -62,30 +62,21 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = ({
     onDescriptionChange?.(text);
   };
 
-  // get theme colors based on current color scheme
-  const colors = ThemeColors[colorScheme];
-
   return (
     <View style={styles.container}>
-      {/* Description Text Area */}
-      {/* multiline text input for users to add additional task notes */}
+      {/* Custom Description Text Input */}
+      {/* uses our custom iOS-style text input with full control over behavior */}
+      {/* automatically handles keyboard visibility and cursor positioning */}
       {/* flow: user types → handleDescriptionChange updates state → parent callback is called */}
-      <TextInput
-        style={[
-          styles.descriptionInput,
-          {
-            color: colors.text.primary,
-            borderColor: colors.border.primary,
-          }
-        ]}
+      <CustomTextInput
         value={localDescription}
         onChangeText={handleDescriptionChange}
         placeholder="Description"
-        placeholderTextColor={colors.text.tertiary}
-        multiline
-        textAlignVertical="top"
         editable={isEditing}
         maxLength={500}
+        taskColor={taskColor}
+        multiline={true}
+        containerStyle={styles.textInputContainer}
       />
     </View>
   );
@@ -95,12 +86,11 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = ({
  * Styles for DescriptionSection component
  * 
  * These styles create the appearance matching the design system:
- * - Description text area with proper spacing
- * - Typography and font styling
- * - Theme-aware colors applied dynamically
+ * - Custom text input container with proper spacing
+ * - Uses our custom iOS-style text input component
  */
 const styles = StyleSheet.create({
-  // main container - holds the description text input
+  // main container - holds the custom text input
   container: {
     // no flex: 1 to prevent layout issues
     // component sizes naturally to its content
@@ -109,19 +99,10 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
 
-  // description input - multiline text area for additional notes
-  // uses heading-4 style for better readability
-  descriptionInput: {
-    // design system text style
-    ...getTextStyle('heading-4'),
-    // platform-specific font family
-    fontFamily: getFontFamily('ios'),
-    // spacing around text
-    paddingHorizontal: 20,
-    paddingTop: 4,
-    paddingBottom: 12,
-    // align text to top of input for multiline
-    textAlignVertical: 'top',
+  // container style for the custom text input
+  textInputContainer: {
+    // additional styling can be added here if needed
+    // the CustomTextInput handles most of its own styling
   },
 });
 
