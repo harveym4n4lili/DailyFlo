@@ -367,11 +367,13 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
       </Pressable>
       
       {/* main scrollable content wrapper */}
+      {/* flex: 1 allows ScrollView to take available space in KeyboardModal */}
+      {/* contentContainerStyle without flexGrow allows content to expand naturally */}
       <ScrollView 
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="always"
-        contentContainerStyle={{ paddingBottom: 0, flexGrow: 1 }}
+        contentContainerStyle={{ paddingBottom: 0 }}
         nestedScrollEnabled={true}
       >
         {/* header with icon display and title input */}
@@ -409,9 +411,9 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         {/* Task Description Section */}
         <View style={{ 
           paddingTop: 8,
-          // allow this section to expand beyond container constraints
+          // allow this section to expand naturally based on content
+          // flexShrink: 0 prevents shrinking, no flexGrow to allow natural expansion
           flexShrink: 0,
-          flexGrow: 1,
         }}>
           <DescriptionSection
             description={values.description || ''}
