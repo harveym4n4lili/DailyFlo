@@ -244,11 +244,14 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   const linesCount = lines?.length || 1;
   const contentHeight = Math.max(linesCount * lineHeight + paddingVertical, minHeight);
   
-  // calculate maximum height when keyboard is visible
-  const maxHeight = keyboardVisible ? screenHeight * 0.3 : undefined;
+  // removed maxHeight constraint to allow infinite expansion
+  // the parent ScrollView in TaskCreationContent will handle scrolling
+  // this allows the description input to expand as much as needed
+  const maxHeight = undefined; // no max height - allow infinite expansion
   
-  // determine final height: use content height, but respect max height when keyboard is visible
-  const finalHeight = maxHeight ? Math.min(contentHeight, maxHeight) : contentHeight;
+  // use content height directly without max height constraint
+  // content can expand infinitely, parent ScrollView handles scrolling
+  const finalHeight = contentHeight;
   
   // calculate cursor line and position within line for multiline support
   const textBeforeCursor = safeText.substring(0, cursorPosition);
@@ -327,28 +330,23 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
           styles.visibleTextArea,
           {
             borderColor: isFocused ? stylusColor : colors.border.primary,
-            // only set height constraints when keyboard is visible
-            ...(keyboardVisible ? {
-              height: finalHeight,
-              maxHeight: maxHeight,
-            } : {
-              minHeight: minHeight, // allow natural expansion when keyboard is hidden
-              // when keyboard is hidden, let content expand naturally
-              flexShrink: 0, // prevent shrinking
-            })
+            // always allow natural expansion - no height constraints
+            // parent ScrollView in TaskCreationContent handles scrolling
+            minHeight: minHeight, // minimum height for empty content
+            flexShrink: 0, // prevent shrinking to allow expansion
+            // use content height to size the container naturally
+            height: finalHeight,
           }
         ]}
       >
         <ScrollView
           ref={scrollViewRef}
-          showsVerticalScrollIndicator={keyboardVisible && contentHeight > finalHeight}
-          scrollEnabled={keyboardVisible && contentHeight > finalHeight}
-          style={[
-            styles.textScrollView,
-            // when keyboard is hidden, allow scroll view to expand naturally
-            !keyboardVisible && { flexGrow: 1, flexShrink: 0 }
-          ]}
-          contentContainerStyle={keyboardVisible ? styles.scrollContent : styles.scrollContentExpanded}
+          // disable internal scrolling since parent ScrollView handles it
+          // this allows the text area to expand naturally without internal scroll constraints
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={false}
+          style={styles.textScrollView}
+          contentContainerStyle={styles.scrollContentExpanded}
           keyboardShouldPersistTaps="always"
           keyboardDismissMode="none"
         >
