@@ -34,6 +34,10 @@ export interface DescriptionSectionProps {
   isEditing?: boolean;
   /** Task color for styling the text input cursor/stylus */
   taskColor?: TaskColor;
+  /** Callback when description input is focused */
+  onFocus?: () => void;
+  /** Callback when description input is blurred */
+  onBlur?: () => void;
 }
 
 /**
@@ -49,6 +53,8 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = ({
   onDescriptionChange,
   isEditing = false,
   taskColor = 'blue',
+  onFocus,
+  onBlur,
 }) => {
   // local state for description text
   const [localDescription, setLocalDescription] = useState(description);
@@ -77,6 +83,8 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = ({
         taskColor={taskColor}
         multiline={true}
         containerStyle={styles.textInputContainer}
+        onFocus={onFocus}
+        onBlur={onBlur}
       />
     </View>
   );

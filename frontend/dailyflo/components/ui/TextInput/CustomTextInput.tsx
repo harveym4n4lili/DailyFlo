@@ -52,6 +52,10 @@ export interface CustomTextInputProps {
   multiline?: boolean;
   /** Custom style for the container */
   containerStyle?: any;
+  /** Callback when input is focused */
+  onFocus?: () => void;
+  /** Callback when input is blurred */
+  onBlur?: () => void;
 }
 
 /**
@@ -69,6 +73,8 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   taskColor = 'blue',
   multiline = true,
   containerStyle,
+  onFocus: onFocusProp,
+  onBlur: onBlurProp,
 }) => {
   // get current color scheme (light/dark mode)
   const colorScheme = useColorScheme() || 'dark';
@@ -189,6 +195,8 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
     setIsFocused(true);
     // focus the hidden input to show keyboard
     hiddenInputRef.current?.focus();
+    // call parent onFocus callback if provided
+    onFocusProp?.();
   };
   
   /**
@@ -201,6 +209,8 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
       // only blur if the hidden input is actually not focused
       if (!hiddenInputRef.current?.isFocused()) {
         setIsFocused(false);
+        // call parent onBlur callback if provided
+        onBlurProp?.();
       }
     }, 50);
   };
