@@ -21,6 +21,7 @@ import {
   Animated,                  // animated api for button highlight animations
   Alert,                     // alert dialog for confirmation prompts
   Keyboard,                  // keyboard api for dismissing keyboard
+  useWindowDimensions,       // hook to get screen dimensions for scroll calculations
 } from 'react-native';
 
 // REACT NATIVE SAFE AREA CONTEXT IMPORT
@@ -119,6 +120,14 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   const colors = useColorPalette();
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const { height: screenHeight } = useWindowDimensions();
+  
+  // STATE FOR AUTO-SCROLL
+  // track description section position and height for auto-scrolling
+  const [descriptionSectionY, setDescriptionSectionY] = useState(0);
+  const [descriptionSectionHeight, setDescriptionSectionHeight] = useState(0);
+  // track if description is being actively edited (for auto-scroll)
+  const [isDescriptionFocused, setIsDescriptionFocused] = useState(false);
   
   // FORM STATE
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -152,6 +161,14 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   // REF FOR TITLE TEXTINPUT
   // used to focus the input and open keyboard after closing form picker modals
   const titleInputRef = useRef<TextInput>(null);
+  
+  // REF FOR MAIN SCROLLVIEW
+  // used to auto-scroll when description input expands to keep typing position visible
+  const mainScrollViewRef = useRef<ScrollView>(null);
+  
+  // REF FOR DESCRIPTION SECTION WRAPPER
+  // used to measure position for auto-scrolling
+  const descriptionSectionRef = useRef<View>(null);
 
   // ANIMATION STATE
   const iconButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
@@ -370,11 +387,42 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
       {/* flex: 1 allows ScrollView to take available space in KeyboardModal */}
       {/* contentContainerStyle without flexGrow allows content to expand naturally */}
       <ScrollView 
+        ref={mainScrollViewRef}
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="always"
         contentContainerStyle={{ paddingBottom: 0 }}
         nestedScrollEnabled={true}
+        onContentSizeChange={(contentWidth, contentHeight) => {
+          // auto-scroll when content expands and description is being edited
+          // this ensures typing position stays visible as description grows
+          if (isDescriptionFocused && mainScrollViewRef.current && descriptionSectionHeight > 0) {
+            setTimeout(() => {
+              if (mainScrollViewRef.current) {
+                // calculate scroll position to keep the bottom of description input visible
+                // account for keyboard height (approximately 300px) and bottom section (create button)
+                const keyboardHeight = 300; // approximate keyboard height when visible
+                const bottomSectionHeight = (BOTTOM_SECTION_PADDING_VERTICAL * 2) + 42; // padding + button height
+                const visibleArea = screenHeight - keyboardHeight - bottomSectionHeight;
+                
+                // calculate where the bottom of the description section is
+                const descriptionBottom = descriptionSectionY + descriptionSectionHeight;
+                
+                // calculate how much we need to scroll to keep description visible
+                // add some padding (80px) to keep input comfortably visible above keyboard
+                const scrollPosition = descriptionBottom - visibleArea + 80;
+                
+                // only scroll if description extends below visible area
+                if (scrollPosition > 0) {
+                  mainScrollViewRef.current.scrollTo({
+                    y: scrollPosition,
+                    animated: true,
+                  });
+                }
+              }
+            }, 50); // short delay to ensure layout has updated
+          }
+        }}
       >
         {/* header with icon display and title input */}
         {/* extra top padding to make room for absolutely positioned cancel button */}
@@ -409,15 +457,29 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         </View>
 
         {/* Task Description Section */}
-        <View style={{ 
-          paddingTop: 8,
-          // allow this section to expand naturally based on content
-          // flexShrink: 0 prevents shrinking, no flexGrow to allow natural expansion
-          flexShrink: 0,
-        }}>
+        <View 
+          ref={descriptionSectionRef}
+          onLayout={(event) => {
+            // track description section position and height for auto-scrolling
+            const { y, height } = event.nativeEvent.layout;
+            setDescriptionSectionY(y);
+            setDescriptionSectionHeight(height);
+          }}
+          style={{ 
+            paddingTop: 8,
+            // allow this section to expand naturally based on content
+            // flexShrink: 0 prevents shrinking, no flexGrow to allow natural expansion
+            flexShrink: 0,
+          }}
+        >
           <DescriptionSection
             description={values.description || ''}
-            onDescriptionChange={(description) => onChange('description', description)}
+            onDescriptionChange={(description) => {
+              onChange('description', description);
+              // onContentSizeChange will handle auto-scrolling when content expands
+            }}
+            onFocus={() => setIsDescriptionFocused(true)}
+            onBlur={() => setIsDescriptionFocused(false)}
             isEditing={true}
             taskColor={(values.color as TaskColor) || 'blue'}
           />
