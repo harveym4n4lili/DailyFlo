@@ -893,5 +893,21 @@ Updated User app, models, serializers, views and urls
 - Implement better time picker style
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
+---
+## [04/12/2025] - [Thursday]
 
+### Today's Goals
+- [X] remove height constraint for infinite description expansion
+- [X] added auto scroll
+- [X] set conditional scroll in task creation modal
 
+### Plans For Future
+- Plan to implement task detail view
+
+### Notes
+- no notes
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+- Improve text input component
