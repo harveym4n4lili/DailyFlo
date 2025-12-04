@@ -339,7 +339,7 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
         style={[
           styles.visibleTextArea,
           {
-            borderColor: isFocused ? stylusColor : colors.border.primary,
+            // border removed - no border around description input
             // always allow natural expansion - no height constraints
             // parent ScrollView in TaskCreationContent handles scrolling
             minHeight: minHeight, // minimum height for empty content
@@ -461,8 +461,9 @@ const styles = StyleSheet.create({
   
   // visible text display area
   visibleTextArea: {
-    borderWidth: 1,
-    borderRadius: 8,
+    // border removed - no border around description input
+    borderWidth: 0,
+    borderRadius: 0,
     paddingHorizontal: 20,
     paddingVertical: 12,
     minHeight: 40,

@@ -129,6 +129,53 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   // track if description is being actively edited (for auto-scroll)
   const [isDescriptionFocused, setIsDescriptionFocused] = useState(false);
   
+  // STATE FOR SCROLL LOCKING
+  // track picker buttons section position to determine when scrolling should be enabled
+  const [pickerButtonsSectionY, setPickerButtonsSectionY] = useState(0);
+  const [pickerButtonsSectionHeight, setPickerButtonsSectionHeight] = useState(0);
+  // track keyboard height for scroll calculations
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  // determine if scrolling should be enabled (only when picker buttons would be covered)
+  const [isScrollingEnabled, setIsScrollingEnabled] = useState(false);
+  
+  // REF FOR PICKER BUTTONS SECTION
+  // used to measure position for scroll locking
+  const pickerButtonsSectionRef = useRef<View>(null);
+  
+  // KEYBOARD HEIGHT TRACKING
+  // listen for keyboard show/hide to track keyboard height
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    
+    return () => {
+      keyboardDidShowListener?.remove();
+      keyboardDidHideListener?.remove();
+    };
+  }, []);
+  
+  // CALCULATE SCROLL ENABLED STATE
+  // enable scrolling only when picker buttons section would be covered by create button section
+  useEffect(() => {
+    if (pickerButtonsSectionHeight > 0) {
+      // calculate visible area: screen height minus keyboard and bottom section (create button)
+      const bottomSectionHeight = (BOTTOM_SECTION_PADDING_VERTICAL * 2) + 42; // padding + button height
+      const visibleArea = screenHeight - keyboardHeight - bottomSectionHeight;
+      
+      // check if picker buttons section extends below visible area
+      // if it does, enable scrolling
+      const pickerButtonsBottom = pickerButtonsSectionY + pickerButtonsSectionHeight;
+      const shouldEnableScrolling = pickerButtonsBottom > visibleArea;
+      
+      setIsScrollingEnabled(shouldEnableScrolling);
+    }
+  }, [pickerButtonsSectionY, pickerButtonsSectionHeight, keyboardHeight, screenHeight]);
+  
   // FORM STATE
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   
@@ -393,15 +440,16 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         keyboardShouldPersistTaps="always"
         contentContainerStyle={{ paddingBottom: 0 }}
         nestedScrollEnabled={true}
+        // disable scrolling until picker buttons section would be covered
+        scrollEnabled={isScrollingEnabled}
         onContentSizeChange={(contentWidth, contentHeight) => {
           // auto-scroll when content expands and description is being edited
-          // this ensures typing position stays visible as description grows
-          if (isDescriptionFocused && mainScrollViewRef.current && descriptionSectionHeight > 0) {
+          // only if scrolling is enabled (picker buttons would be covered)
+          if (isScrollingEnabled && isDescriptionFocused && mainScrollViewRef.current && descriptionSectionHeight > 0) {
             setTimeout(() => {
               if (mainScrollViewRef.current) {
                 // calculate scroll position to keep the bottom of description input visible
-                // account for keyboard height (approximately 300px) and bottom section (create button)
-                const keyboardHeight = 300; // approximate keyboard height when visible
+                // account for keyboard height and bottom section (create button)
                 const bottomSectionHeight = (BOTTOM_SECTION_PADDING_VERTICAL * 2) + 42; // padding + button height
                 const visibleArea = screenHeight - keyboardHeight - bottomSectionHeight;
                 
@@ -497,7 +545,16 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         {/* Picker Buttons Section */}
         {/* moved below subtask section for better user flow */}
         {/* contains color, date, time, and alerts picker buttons */}
-        <View style={{ paddingTop: 16, paddingBottom: 8 }}>
+        <View 
+          ref={pickerButtonsSectionRef}
+          onLayout={(event) => {
+            // track picker buttons section position and height for scroll locking
+            const { y, height } = event.nativeEvent.layout;
+            setPickerButtonsSectionY(y);
+            setPickerButtonsSectionHeight(height);
+          }}
+          style={{ paddingTop: 16, paddingBottom: 8 }}
+        >
           <PickerButtonsSection
             values={values}
             iconButtonHighlightOpacity={iconButtonHighlightOpacity}
