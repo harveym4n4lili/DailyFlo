@@ -14,7 +14,7 @@ import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
-import { ModalHeader, DraggableModal } from '@/components/layout/ModalLayout';
+import { ModalHeader, DraggableModal, LockableScrollView } from '@/components/layout/ModalLayout';
 
 export interface IconColorModalProps {
   visible: boolean;
@@ -247,7 +247,8 @@ export function IconColorModal({
               />
 
               {/* scrollable icon grid area */}
-              <ScrollView
+              {/* LockableScrollView automatically locks scrolling when modal is not at top anchor */}
+              <LockableScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{
                   paddingTop: 80, // padding to account for floating color slider above
@@ -314,7 +315,7 @@ export function IconColorModal({
                 </View>
 
 
-              </ScrollView>
+              </LockableScrollView>
     </DraggableModal>
     </>
   );

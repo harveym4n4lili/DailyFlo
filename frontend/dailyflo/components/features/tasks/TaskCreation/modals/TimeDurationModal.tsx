@@ -7,13 +7,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
-import { ModalHeader, DraggableModal } from '@/components/layout/ModalLayout';
+import { ModalHeader, DraggableModal, LockableScrollView } from '@/components/layout/ModalLayout';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from 'react-native-reanimated';
 
@@ -218,7 +218,8 @@ export function TimeDurationModal({
       />
 
       {/* scrollable content area */}
-      <ScrollView
+      {/* LockableScrollView automatically locks scrolling when modal is not at top anchor */}
+      <LockableScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
           flexGrow: 1,
@@ -459,7 +460,7 @@ export function TimeDurationModal({
           </View>
         </View>
 
-      </ScrollView>
+      </LockableScrollView>
 
       {/* modal time picker - rendered inside draggable modal to fix hierarchy */}
       <DateTimePickerModal
