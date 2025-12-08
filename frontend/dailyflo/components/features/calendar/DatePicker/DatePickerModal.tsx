@@ -17,7 +17,6 @@ import React, { useState, useEffect } from 'react';
 
 // react native components for the UI
 import {
-  ScrollView,
   View,
   Text,
   Pressable,
@@ -29,7 +28,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // modal layout components
-import { DraggableModal, ModalHeader } from '@/components/layout/ModalLayout';
+import { DraggableModal, ModalHeader, LockableScrollView } from '@/components/layout/ModalLayout';
 
 // quick date options component
 import { QuickDateOptions } from './QuickDateOptions';
@@ -263,7 +262,8 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
           taskCategoryColor={taskCategoryColor}
         />
           
-          <ScrollView
+          {/* LockableScrollView automatically locks scrolling when modal is not at top anchor */}
+          <LockableScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator={false}
@@ -281,7 +281,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
               initialMonth={workingDate ? new Date(workingDate) : undefined}
             />
           
-          </ScrollView>
+          </LockableScrollView>
       </DraggableModal>
     </>
   );

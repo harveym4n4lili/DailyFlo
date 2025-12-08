@@ -12,13 +12,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
-import { DraggableModal, ModalHeader } from '@/components/layout/ModalLayout';
+import { DraggableModal, ModalHeader, LockableScrollView } from '@/components/layout/ModalLayout';
 
 /**
  * Available alert options
@@ -151,7 +151,8 @@ export function AlertModal({
         />
 
         {/* scrollable alert options */}
-        <ScrollView
+        {/* LockableScrollView automatically locks scrolling when modal is not at top anchor */}
+        <LockableScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{
             paddingHorizontal: 0,
@@ -233,7 +234,7 @@ export function AlertModal({
               </Pressable>
             );
           })}
-        </ScrollView>
+        </LockableScrollView>
 
       </DraggableModal>
     </>

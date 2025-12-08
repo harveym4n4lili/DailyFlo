@@ -6,8 +6,8 @@
  * Can be used by any modal that needs draggable functionality.
  */
 
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Pressable, useWindowDimensions, StyleSheet, BackHandler, Platform } from 'react-native';
+import React, { useEffect, useState, useRef, createContext, useContext } from 'react';
+import { View, Pressable, useWindowDimensions, StyleSheet, BackHandler, Platform, ScrollView, ScrollViewProps } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { 
   useSharedValue, 
@@ -16,8 +16,39 @@ import Animated, {
   withTiming,
   runOnJS,
   Easing,
+  useDerivedValue,
 } from 'react-native-reanimated';
 import { useThemeColors } from '@/hooks/useColorPalette';
+
+// Context to provide scroll lock state to children
+interface ScrollLockContextType {
+  isScrollLocked: boolean;
+}
+
+const ScrollLockContext = createContext<ScrollLockContextType>({ isScrollLocked: true });
+
+/**
+ * Hook for children to access scroll lock state
+ * 
+ * Returns `{ isScrollLocked: boolean }` indicating whether scrolling is currently locked.
+ * 
+ * @returns {ScrollLockContextType} Object with `isScrollLocked` boolean property
+ * 
+ * @example
+ * ```tsx
+ * const { isScrollLocked } = useScrollLock();
+ * // Use isScrollLocked to conditionally enable/disable scrolling
+ * ```
+ * 
+ * @throws {Error} If used outside of DraggableModal context
+ */
+export const useScrollLock = () => {
+  const context = useContext(ScrollLockContext);
+  if (context === undefined) {
+    throw new Error('useScrollLock must be used within a DraggableModal');
+  }
+  return context;
+};
 
 export interface DraggableModalProps {
   // whether the modal is visible
@@ -157,6 +188,26 @@ export function DraggableModal({
   // store the starting position when gesture begins
   // this allows us to apply the drag relative to where we started
   const startY = useSharedValue(0);
+  
+  // track if modal is at top anchor (highest snap point)
+  // when at top, scroll views should be enabled
+  // when not at top, scroll views should be locked and swipes should drag modal
+  const topAnchorTranslateY = 0; // fully expanded = translateY of 0
+  const [isAtTopAnchor, setIsAtTopAnchor] = useState(false);
+  
+  // function to update scroll lock state (called from worklet)
+  const updateScrollLock = (atTop: boolean) => {
+    setIsAtTopAnchor(atTop);
+  };
+  
+  // derived value to check if modal is at top anchor (within 5px threshold)
+  // this allows for slight floating point differences
+  // updates scroll lock state when position changes
+  useDerivedValue(() => {
+    const atTop = Math.abs(translateY.value - topAnchorTranslateY) < 5;
+    runOnJS(updateScrollLock)(atTop);
+    return atTop;
+  }, []);
   
   // track if modal is animating out to handle cleanup
   // we need to keep rendering during animation so it can complete smoothly
@@ -311,12 +362,22 @@ export function DraggableModal({
       // calculate translateY values for each snap point
       const snapTranslateYs = snapHeights.map(height => maxHeight - height);
       
+      // check if modal is currently at top anchor
+      const currentlyAtTop = Math.abs(translateY.value - topAnchorTranslateY) < 5;
+      
       // check for strong velocity first
       if (Math.abs(event.velocityY) > 500) {
         // fast swipe up → go to more expanded snap point
+        // if not at top and swiping up, always go to top anchor
         if (event.velocityY < 0) {
-          targetSnapIndex = snapTranslateYs.findIndex(y => y < translateY.value);
-          if (targetSnapIndex === -1) targetSnapIndex = 0;
+          if (!currentlyAtTop) {
+            // not at top and swiping up → go to top anchor (highest snap point)
+            targetSnapIndex = snapTranslateYs.length - 1;
+          } else {
+            // already at top, find next expanded point (should stay at top)
+            targetSnapIndex = snapTranslateYs.findIndex(y => y < translateY.value);
+            if (targetSnapIndex === -1) targetSnapIndex = snapTranslateYs.length - 1;
+          }
         } 
         // fast swipe down → go to more collapsed snap point or close
         else {
@@ -329,13 +390,20 @@ export function DraggableModal({
         }
       } else {
         // slow drag → snap to nearest point based on current position
-        snapTranslateYs.forEach((snapY, index) => {
-          const distance = Math.abs(translateY.value - snapY);
-          if (distance < minDistance) {
-            minDistance = distance;
-            targetSnapIndex = index;
-          }
-        });
+        // but if swiping up and not at top, prefer going to top
+        if (event.translationY < -10 && !currentlyAtTop) {
+          // swiping up and not at top → go to top anchor
+          targetSnapIndex = snapTranslateYs.length - 1;
+        } else {
+          // normal snap to nearest point
+          snapTranslateYs.forEach((snapY, index) => {
+            const distance = Math.abs(translateY.value - snapY);
+            if (distance < minDistance) {
+              minDistance = distance;
+              targetSnapIndex = index;
+            }
+          });
+        }
       }
       
       const targetPosition = snapTranslateYs[targetSnapIndex];
@@ -459,8 +527,10 @@ export function DraggableModal({
               {shouldShowStickyElements && stickyHeader}
               
               {/* main modal content */}
-        
-              {children}
+              {/* wrap children with ScrollLockContext to provide scroll lock state */}
+              <ScrollLockContext.Provider value={{ isScrollLocked: !isAtTopAnchor }}>
+                {children}
+              </ScrollLockContext.Provider>
             </View>
           </Animated.View>
         </GestureDetector>
@@ -519,6 +589,47 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
 });
+
+/**
+ * LockableScrollView
+ * 
+ * A ScrollView wrapper that automatically locks scrolling when the modal is not at the top anchor.
+ * When scroll is locked, swipes on the content will drag the modal instead of scrolling.
+ * Taps still work when scroll is locked.
+ * 
+ * Features:
+ * - Automatically locks scrolling when modal is partially visible (not at top anchor)
+ * - Unlocks scrolling when modal reaches top anchor (fully expanded)
+ * - Allows modal dragging when scroll is locked
+ * - Preserves all ScrollView props and behavior
+ * 
+ * Usage:
+ * Simply replace ScrollView with LockableScrollView inside any DraggableModal.
+ * 
+ * Example:
+ * <DraggableModal visible={visible} onClose={onClose} snapPoints={[0.3, 0.6, 0.9]}>
+ *   <ModalHeader title="My Modal" />
+ *   <LockableScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+ *     <View>Your scrollable content</View>
+ *   </LockableScrollView>
+ * </DraggableModal>
+ * 
+ * Props:
+ * Accepts all standard ScrollView props. The scrollEnabled prop will be automatically
+ * overridden based on modal position, but you can still pass it for conditional control.
+ */
+export function LockableScrollView({ 
+  scrollEnabled: propScrollEnabled = true, 
+  ...props 
+}: ScrollViewProps) {
+  const { isScrollLocked } = useScrollLock();
+  
+  // when scroll is locked, disable scrolling (allows pan gesture to drag modal)
+  // when scroll is unlocked (at top), enable scrolling if prop allows it
+  const scrollEnabled = !isScrollLocked && propScrollEnabled;
+  
+  return <ScrollView {...props} scrollEnabled={scrollEnabled} />;
+}
 
 export default DraggableModal;
 
