@@ -45,6 +45,9 @@ import { getTextStyle } from '@/constants/Typography';
 // hooks for theme-aware colors
 import { useThemeColors, useTaskColors } from '@/hooks/useColorPalette';
 
+// types for type safety
+import type { TaskColor } from '@/types';
+
 /**
  * Props for DatePickerModal component
  */
