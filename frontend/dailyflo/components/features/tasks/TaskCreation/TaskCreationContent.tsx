@@ -2,7 +2,7 @@
  * TaskCreationContent Component
  * 
  * The content and logic for the task creation modal.
- * Contains the KeyboardModal, form UI, and all picker modals.
+ * Contains the form UI and all picker modals.
  * Separated from TaskCreationModal for better organization.
  */
 
@@ -33,7 +33,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 // LAYOUT COMPONENTS IMPORTS
-// (removed KeyboardModal and ModalBackdrop - now handled at TaskCreationModal level)
+// KeyboardAnchoredContainer: composable component for keyboard-aware positioning
+// useKeyboardHeight: hook to track keyboard height for scroll calculations
+import { KeyboardAnchoredContainer, useKeyboardHeight } from '@/components/layout/ScreenLayout';
 
 // UI COMPONENTS IMPORTS
 // button components for the form (no longer needed here, moved to PickerButtonsSection)
@@ -78,7 +80,7 @@ export interface TaskCreationContentProps {
   hasChanges: boolean;
   
   /** Callback to notify parent when any picker modal visibility changes */
-  /** Used to coordinate backdrop visibility between KeyboardModal and DraggableModal */
+  /** Used to coordinate backdrop visibility between FullScreenModal and DraggableModal */
   onPickerVisibilityChange?: (isAnyPickerVisible: boolean) => void;
   
   /** Callback when create button is pressed */
@@ -133,31 +135,14 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   // track picker buttons section position to determine when scrolling should be enabled
   const [pickerButtonsSectionY, setPickerButtonsSectionY] = useState(0);
   const [pickerButtonsSectionHeight, setPickerButtonsSectionHeight] = useState(0);
-  // track keyboard height for scroll calculations
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  // track keyboard height for scroll calculations using composable hook
+  const keyboardHeight = useKeyboardHeight();
   // determine if scrolling should be enabled (only when picker buttons would be covered)
   const [isScrollingEnabled, setIsScrollingEnabled] = useState(false);
   
   // REF FOR PICKER BUTTONS SECTION
   // used to measure position for scroll locking
   const pickerButtonsSectionRef = useRef<View>(null);
-  
-  // KEYBOARD HEIGHT TRACKING
-  // listen for keyboard show/hide to track keyboard height
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (event) => {
-      setKeyboardHeight(event.endCoordinates.height);
-    });
-    
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardHeight(0);
-    });
-    
-    return () => {
-      keyboardDidShowListener?.remove();
-      keyboardDidHideListener?.remove();
-    };
-  }, []);
   
   // CALCULATE SCROLL ENABLED STATE
   // enable scrolling only when picker buttons section would be covered by create button section
@@ -194,13 +179,13 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   const [isAlertsPickerVisible, setIsAlertsPickerVisible] = useState(false);
   
   // check if any picker modal is currently visible
-  // used to hide KeyboardModal backdrop when form picker modals are open
+  // used to coordinate backdrop visibility between FullScreenModal and DraggableModal
   // this prevents double backdrop layers and janky animations
   const isAnyPickerVisible = isDatePickerVisible || isColorPickerVisible || 
     isTimeDurationPickerVisible || isAlertsPickerVisible;
   
   // notify parent when picker visibility changes
-  // allows KeyboardModal to hide its backdrop when form pickers are open
+  // allows parent to coordinate backdrop visibility when form pickers are open
   useEffect(() => {
     onPickerVisibilityChange?.(isAnyPickerVisible);
   }, [isAnyPickerVisible, onPickerVisibilityChange]);
@@ -403,37 +388,40 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
 
   return (
     <>
-      {/* cancel button - absolutely positioned at top left */}
-      {/* top position accounts for safe area inset */}
-      {/* background uses task category color */}
-      <Pressable
-        onPress={handleClose}
-        style={{
-          position: 'absolute',
-          top: 20 + insets.top, // add safe area top inset
-          left: 16,
-          zIndex: 10,
-          paddingHorizontal: 12,
-          paddingVertical: 8,
-          borderRadius: 20,
-          backgroundColor: values.color 
-            ? TaskCategoryColors[values.color][500]
-            : TaskCategoryColors.blue[500],
-        }}
-      >
-        <Text style={{
-          ...getTextStyle('button-secondary'),
-          // use white text for contrast on colored backgrounds
-          color: '#FFFFFF',
-        }}>
-          Cancel
-        </Text>
-      </Pressable>
-      
-      {/* main scrollable content wrapper */}
-      {/* flex: 1 allows ScrollView to take available space in KeyboardModal */}
-      {/* contentContainerStyle without flexGrow allows content to expand naturally */}
-      <ScrollView 
+      {/* main content container with flex layout */}
+      {/* allows ScrollView to take available space and bottom section to be keyboard-anchored */}
+      <View style={{ flex: 1 }}>
+        {/* cancel button - absolutely positioned at top left */}
+        {/* top position accounts for safe area inset */}
+        {/* background uses task category color */}
+        <Pressable
+          onPress={handleClose}
+          style={{
+            position: 'absolute',
+            top: 20 + insets.top, // add safe area top inset
+            left: 16,
+            zIndex: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 20,
+            backgroundColor: values.color 
+              ? TaskCategoryColors[values.color][500]
+              : TaskCategoryColors.blue[500],
+          }}
+        >
+          <Text style={{
+            ...getTextStyle('button-secondary'),
+            // use white text for contrast on colored backgrounds
+            color: '#FFFFFF',
+          }}>
+            Cancel
+          </Text>
+        </Pressable>
+        
+        {/* main scrollable content wrapper */}
+        {/* flex: 1 allows ScrollView to take available space above keyboard-anchored bottom section */}
+        {/* contentContainerStyle without flexGrow allows content to expand naturally */}
+        <ScrollView 
         ref={mainScrollViewRef}
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
@@ -571,75 +559,78 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
       
       </ScrollView>
       {/* Create Button Section */}
-      {/* bottom action section with top border for visual separation */}
+      {/* bottom action section anchored to keyboard using composable approach */}
+      {/* KeyboardAnchoredContainer positions this section above the keyboard */}
       {/* border color matches the picker button selected state border */}
       {/* contains the circular create button anchored to the right */}
-      <View style={{
-          borderTopWidth: 1,
-          borderTopColor: themeColors.border.primary(),
-          paddingVertical: BOTTOM_SECTION_PADDING_VERTICAL,
-          paddingHorizontal: 16,
-          flexDirection: 'row',
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          backgroundColor: themeColors.background.elevated(),
-      }}>
-        {/* Circular create button anchored to the right */}
-        {/* background uses task category color */}
-        {/* disabled when isCreating is true OR when required fields are not filled */}
-        {/* inactive state shows lower opacity when title is empty */}
-        {/* when pressed, uses inactive state styling (0.4 opacity) with no animations */}
-        <Pressable
-          onPress={onCreate}
-          disabled={isCreating || !isCreateButtonActive}
-          style={({ pressed }) => ({
-            width: 42,
-            height: 42,
-            borderRadius: 28,
-            backgroundColor: values.color 
-              ? TaskCategoryColors[values.color][500]
-              : TaskCategoryColors.blue[500],
-            justifyContent: 'center',
+      <KeyboardAnchoredContainer offset={64}>
+        <View style={{
+            borderTopWidth: 1,
+            borderTopColor: themeColors.border.primary(),
+            paddingVertical: BOTTOM_SECTION_PADDING_VERTICAL,
+            paddingHorizontal: 16,
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
             alignItems: 'center',
-            // when pressed: use inactive state opacity (0.4), no animations
-            // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
-            opacity: pressed ? 0.4 : (!isCreateButtonActive ? 0.4 : isCreating ? 0.6 : 1),
-          })}
-        >
-          <Ionicons
-            name={isCreating ? "hourglass-outline" : "arrow-up"}
-            size={20}
-            // use white icon for contrast on colored backgrounds
-            color="#FFFFFF"
-          />
-        </Pressable>
-        
-        {/* Error message display */}
-        {/* shows error if task creation failed */}
-        {createError && (
-          <View style={{
-            position: 'absolute',
-            bottom: -30,
-            left: 16,
-            right: 16,
-            padding: 8,
             backgroundColor: themeColors.background.elevated(),
-            borderRadius: 8,
-            borderWidth: 1,
-            // use semantic error color from color palette
-            borderColor: colors.getSemanticColor('error', 500),
-          }}>
-            <Text style={{
-              ...getTextStyle('body-small'),
+        }}>
+          {/* Circular create button anchored to the right */}
+          {/* background uses task category color */}
+          {/* disabled when isCreating is true OR when required fields are not filled */}
+          {/* inactive state shows lower opacity when title is empty */}
+          {/* when pressed, uses inactive state styling (0.4 opacity) with no animations */}
+          <Pressable
+            onPress={onCreate}
+            disabled={isCreating || !isCreateButtonActive}
+            style={({ pressed }) => ({
+              width: 44,
+              height: 44,
+              borderRadius: 28,
+              backgroundColor: values.color 
+                ? TaskCategoryColors[values.color][500]
+                : TaskCategoryColors.blue[500],
+              justifyContent: 'center',
+              alignItems: 'center',
+              // when pressed: use inactive state opacity (0.4), no animations
+              // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
+              opacity: pressed ? 0.4 : (!isCreateButtonActive ? 0.4 : isCreating ? 0.6 : 1),
+            })}
+          >
+            <Ionicons
+              name={isCreating ? "hourglass-outline" : "arrow-up"}
+              size={20}
+              // use white icon for contrast on colored backgrounds
+              color="#FFFFFF"
+            />
+          </Pressable>
+          
+          {/* Error message display */}
+          {/* shows error if task creation failed */}
+          {createError && (
+            <View style={{
+              position: 'absolute',
+              bottom: -30,
+              left: 16,
+              right: 16,
+              padding: 8,
+              backgroundColor: themeColors.background.elevated(),
+              borderRadius: 8,
+              borderWidth: 1,
               // use semantic error color from color palette
-              color: colors.getSemanticColor('error', 500),
+              borderColor: colors.getSemanticColor('error', 500),
             }}>
-              {createError}
-            </Text>
-          </View>
-        )}
+              <Text style={{
+                ...getTextStyle('body-small'),
+                // use semantic error color from color palette
+                color: colors.getSemanticColor('error', 500),
+              }}>
+                {createError}
+              </Text>
+            </View>
+          )}
+        </View>
+      </KeyboardAnchoredContainer>
       </View>
-      
       
       {/* date picker modal */}
       <DatePickerModal

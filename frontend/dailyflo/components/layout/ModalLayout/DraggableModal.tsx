@@ -85,7 +85,7 @@ export interface DraggableModalProps {
   
   // z-index for modal stacking
   // higher z-index modals appear on top of lower z-index modals
-  // @default 10001 (higher than KeyboardModal's default 10000)
+  // @default 10001 (higher than FullScreenModal's default 10000)
   zIndex?: number;
   
   // whether to show the backdrop overlay
@@ -103,7 +103,7 @@ export function DraggableModal({
   borderRadius = 12,
   stickyFooter,
   stickyHeader,
-  zIndex = 10001, // default higher than KeyboardModal for stacking
+  zIndex = 10001, // default higher than FullScreenModal for stacking
   showBackdrop = true, // default to showing backdrop
 }: DraggableModalProps) {
   
@@ -111,7 +111,7 @@ export function DraggableModal({
   const themeColors = useThemeColors();
   
   /**
-   * Get iOS version number for conditional styling
+   * Get iOS ve1rsion number for conditional styling
    * iOS 15+ introduced the glass UI design with larger border radius
    * Returns the major version number (e.g., 14, 15, 16, 17)
    */

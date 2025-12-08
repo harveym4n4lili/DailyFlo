@@ -11,8 +11,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 
 // LAYOUT COMPONENTS IMPORTS
-// KeyboardModal: bottom sheet modal that appears with keyboard, no keyboard avoiding
-import { KeyboardModal } from '@/components/layout/ModalLayout';
+// Modal components: using composable approach with FullScreenModal
+import { FullScreenModal } from '@/components/layout/ModalLayout';
 
 // CUSTOM HOOKS IMPORTS
 // hooks for accessing design system and theme
@@ -73,10 +73,6 @@ const getDefaults = (themeColor: TaskColor = 'red'): TaskFormValues => ({
   alerts: [],
 });
 
-// CONSTANTS
-// padding for the bottom action section (with create button)
-const BOTTOM_SECTION_PADDING_VERTICAL = 16;
-const BOTTOM_SECTION_TOTAL_PADDING = BOTTOM_SECTION_PADDING_VERTICAL * 2; // top + bottom = 32px
 
 /**
  * TaskCreationModal Component
@@ -202,35 +198,27 @@ export function TaskCreationModal({
   };
 
   // COMPONENT RENDER
-  // now includes KeyboardModal wrapper at this level
+  // using composable approach: FullScreenModal with keyboard-aware content
   return (
-    <>
-      {/* KeyboardModal - bottom sheet modal that appears with keyboard */}
-      {/* showBackdrop=true: shows backdrop on today screen */}
-      {/* backdropDismiss=true: tapping backdrop triggers onClose */}
-      {/* bottomSectionHeight: accounts for bottom action section padding (32px) */}
-      <KeyboardModal
+    <FullScreenModal
+      visible={visible}
+      onClose={onClose}
+      backgroundColor={themeColors.background.elevated()}
+      showBackdrop={true}
+      backdropDismiss={true}
+    >
+      <TaskCreationContent
         visible={visible}
+        values={values}
+        onChange={onChange}
         onClose={onClose}
-        backgroundColor={themeColors.background.elevated()}
-        dynamicKeyboardHeight={true}
-        showBackdrop={true}
-        backdropDismiss={true}
-        bottomSectionHeight={BOTTOM_SECTION_TOTAL_PADDING}
-      >
-        <TaskCreationContent
-          visible={visible}
-          values={values}
-          onChange={onChange}
-          onClose={onClose}
-          hasChanges={hasChanges}
-          onPickerVisibilityChange={setIsAnyPickerVisible}
-          onCreate={handleCreate}
-          isCreating={isCreating}
-          createError={createError}
-        />
-      </KeyboardModal>
-    </>
+        hasChanges={hasChanges}
+        onPickerVisibilityChange={setIsAnyPickerVisible}
+        onCreate={handleCreate}
+        isCreating={isCreating}
+        createError={createError}
+      />
+    </FullScreenModal>
   );
 }
 
