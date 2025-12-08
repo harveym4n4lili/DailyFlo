@@ -157,7 +157,7 @@ export function IconColorModal({
         onClose={onClose}
         // snap points: close at 30%, initial at 60%, expanded at 93%
         // lowest snap point (30%) will dismiss the modal
-        snapPoints={[0.3, 0.6, 0.93]}
+        snapPoints={[0.3, 0.5, 0.9]}
         // start at the middle snap point (60%)
         initialSnapPoint={1}
         // showBackdrop=true: DraggableModal handles its own backdrop

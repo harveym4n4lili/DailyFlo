@@ -7,7 +7,7 @@
 export * from './ModalContainer';
 export * from './ModalHeader';
 export * from './DraggableModal';
-export * from './KeyboardModal';
+export * from './FullScreenModal';
 export * from './ModalBackdrop';
 
 

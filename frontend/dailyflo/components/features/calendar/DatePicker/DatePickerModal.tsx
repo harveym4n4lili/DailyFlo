@@ -242,7 +242,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
         onClose={handleModalClose}
         // snap points: close at 30%, initial at 60%, expanded at 95%
         // lowest snap point (30%) will dismiss the modal
-        snapPoints={[0.3, 0.6, 0.95]}
+        snapPoints={[0.3, 0.6, 0.9]}
         // start at the middle snap point (60%)
         initialSnapPoint={1}
         // pass the repeating container as sticky footer - stays fixed at bottom while modal drags
