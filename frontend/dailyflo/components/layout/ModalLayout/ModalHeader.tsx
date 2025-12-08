@@ -12,7 +12,7 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ViewStyle, TextStyle, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -155,6 +155,25 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   // get typography system
   const typography = useTypography();
   
+  /**
+   * Get iOS version number for conditional styling
+   * iOS 15+ introduced the glass UI design with updated header styling
+   * Returns the major version number (e.g., 14, 15, 16, 17)
+   */
+  const getIOSVersion = (): number => {
+    if (Platform.OS !== 'ios') return 0;
+    const version = Platform.Version as string;
+    // Platform.Version can be a string like "15.0" or number like 15
+    // parse it to get the major version number
+    const majorVersion = typeof version === 'string' 
+      ? parseInt(version.split('.')[0], 10) 
+      : Math.floor(version as number);
+    return majorVersion;
+  };
+  
+  // check if running on iOS 15+ (newer glass UI design)
+  const isNewerIOS = getIOSVersion() >= 15;
+  
   // determine button text color based on task category color
   // always use task category color, including white case
   const getButtonTextColor = () => {
@@ -174,17 +193,21 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   };
   
   // header container style
+  // iOS 15+ (newer): slightly bigger height for glass UI design with equal spacing
+  // iOS < 15 (older): current height stays the same
+  // For iOS 15+: buttons are 16px from top, 38px tall, need 16px from bottom = 70px total height
   const headerStyle: ViewStyle = {
-    minHeight: 48,
-    height: 56,
+    minHeight: isNewerIOS ? 52 : 48, // iOS 15+: 52px, iOS < 15: 48px
+    height: isNewerIOS ? 70 : 56, // iOS 15+: 70px (16px top + 38px button + 16px bottom), iOS < 15: 56px
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
     paddingHorizontal,
-    // remove vertical padding so the title is mathematically centered in the 60px header
+    // iOS 15+ (newer): add bottom padding to match top spacing (16px from top = 16px from bottom)
+    // iOS < 15 (older): no vertical padding (title is mathematically centered)
     paddingVertical: 0,
-    paddingBottom: 0,
+    paddingBottom: isNewerIOS ? paddingHorizontal : 0, // iOS 15+: 16px bottom padding, iOS < 15: 0
     paddingTop: 0,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.primary(),
@@ -193,6 +216,8 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   };
   
   // title container style
+  // iOS 15+ (newer): remove top padding to properly center title vertically
+  // iOS < 15 (older): keep top padding to maintain current appearance
   const titleContainerStyle: ViewStyle = {
     flex: 1,
     // occupy full height to center perfectly
@@ -200,8 +225,9 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
     // center title both vertically and horizontally; close button is absolute
     alignItems: 'center',
     justifyContent: 'center',
-    // add top padding to lower the text slightly
-    paddingTop: 4,
+    // iOS 15+: no top padding for proper vertical centering
+    // iOS < 15: add top padding to lower the text slightly (current style)
+    paddingTop: isNewerIOS ? 16 : 4,
   };
   
   // title text style
@@ -213,10 +239,18 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   };
   
   // close button style
+  // iOS 15+ (newer): equal spacing from top and right edges
+  // iOS < 15 (older): current positioning stays
+  // for iOS 15+: ensure equal spacing from both top and right edges
+  // header height is 60px, button is 30px, so (60 - 30) / 2 = 15px for perfect centering
+  // but we use 16px to ensure visible spacing and match the paddingHorizontal default
+  const closeButtonSpacing = isNewerIOS ? 16 : 15; // iOS 15+: 16px (equal spacing), iOS < 15: 15px (current)
   const closeButtonStyle: ViewStyle = {
     position: 'absolute',
-    top: 15,
-    right: 15,
+    // iOS 15+: equal spacing (16px from top and right) ensures proper visual spacing
+    // iOS < 15: current spacing (15px from top and right) - maintains current appearance
+    top: closeButtonSpacing, // equal spacing from top edge
+    right: closeButtonSpacing, // equal spacing from right edge
     width: 30,
     height: 30,
     borderRadius: 16,
@@ -244,10 +278,15 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
           >
             <View
               style={{
-                width: 42,
-                height: 6,
-                borderRadius: 3,
+                // iOS 15+ (newer): reduced width for draggable indicator
+                // iOS < 15 (older): current width stays
+                width: isNewerIOS ? 36 : 42, // iOS 15+: 36px (reduced from 42px), iOS < 15: 42px
+                // iOS 15+ (newer): thinner draggable indicator line
+                // iOS < 15 (older): current thickness stays
+                height: isNewerIOS ? 5 : 6, // iOS 15+: 4px, iOS < 15: 6px
+                borderRadius: isNewerIOS ? 2 : 3, // iOS 15+: 2px, iOS < 15: 3px
                 backgroundColor: colors.interactive.tertiary(),
+
               }}
             />
           </View>
@@ -266,26 +305,51 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
               <TouchableOpacity
                 style={{
                   position: 'absolute',
-                  left: paddingHorizontal,
-                  top: 0,
-                  bottom: 0,
-                  justifyContent: 'center',
-                  paddingVertical: 8,
+                  // iOS 15+ (newer): equal spacing from top and left edges (16px each)
+                  // iOS < 15 (older): current positioning (centered vertically, 16px from left)
+                  left: paddingHorizontal, // 16px from left edge
+                  ...(isNewerIOS ? {
+                    // iOS 15+: equal spacing from top and left (16px each)
+                    top: paddingHorizontal, // 16px from top edge to match left spacing
+                    width: 38,
+                    height: 38,
+                    borderRadius: 19,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.background.tertiary(),
+
+                  } : {
+                    // iOS < 15: current style (centered vertically)
+                    top: 0,
+                    bottom: 0,
+                    justifyContent: 'center',
+                    paddingVertical: 8,
+                  }),
                 }}
                 onPress={handleCancelPress}
                 activeOpacity={0.6}
                 accessibilityRole="button"
                 accessibilityLabel="Cancel"
               >
-                <Text
-                  style={{
-                    ...typography.getTextStyle('body-large'),
-                    color: getButtonTextColor(), // task category color, or FAB icon color when white
-                    fontSize: 17,
-                  }}
-                >
-                  {cancelText}
-                </Text>
+                {isNewerIOS ? (
+                  // iOS 15+ (newer): X close icon button
+                  <Ionicons
+                    name="close"
+                    size={32}
+                    color={getButtonTextColor()}
+                  />
+                ) : (
+                  // iOS < 15 (older): text button (current style)
+                  <Text
+                    style={{
+                      ...typography.getTextStyle('body-large'),
+                      color: getButtonTextColor(), // task category color, or FAB icon color when white
+                      fontSize: 17,
+                    }}
+                  >
+                    {cancelText}
+                  </Text>
+                )}
               </TouchableOpacity>
             )}
             
@@ -294,27 +358,52 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
               <TouchableOpacity
                 style={{
                   position: 'absolute',
-                  right: paddingHorizontal,
-                  top: 0,
-                  bottom: 0,
-                  justifyContent: 'center',
-                  paddingVertical: 8,
+                  // iOS 15+ (newer): equal spacing from top and right edges (16px each)
+                  // iOS < 15 (older): current positioning (centered vertically, 16px from right)
+                  right: paddingHorizontal, // 16px from right edge
+                  ...(isNewerIOS ? {
+                    // iOS 15+: equal spacing from top and right (16px each)
+                    top: paddingHorizontal, // 16px from top edge to match right spacing
+                    width: 38,
+                    height: 38,
+                    borderRadius: 19,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.background.tertiary(),
+
+                  } : {
+                    // iOS < 15: current style (centered vertically)
+                    top: 0,
+                    bottom: 0,
+                    justifyContent: 'center',
+                    paddingVertical: 8,
+                  }),
                 }}
                 onPress={onDone}
                 activeOpacity={0.6}
                 accessibilityRole="button"
                 accessibilityLabel="Done"
               >
-                <Text
-                  style={{
-                    ...typography.getTextStyle('body-large'),
-                    color: getButtonTextColor(), // task category color, or FAB icon color when white
-                    fontSize: 17,
-                    fontWeight: '900', // done button is bold
-                  }}
-                >
-                  {doneText}
-                </Text>
+                {isNewerIOS ? (
+                  // iOS 15+ (newer): tick/checkmark icon button
+                  <Ionicons
+                    name="checkmark"
+                    size={28}
+                    color={getButtonTextColor()}
+                  />
+                ) : (
+                  // iOS < 15 (older): text button (current style)
+                  <Text
+                    style={{
+                      ...typography.getTextStyle('body-large'),
+                      color: getButtonTextColor(), // task category color, or FAB icon color when white
+                      fontSize: 17,
+                      fontWeight: '900', // done button is bold
+                    }}
+                  >
+                    {doneText}
+                  </Text>
+                )}
               </TouchableOpacity>
             )}
           </>

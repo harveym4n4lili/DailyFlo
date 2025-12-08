@@ -7,7 +7,7 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Pressable, useWindowDimensions, StyleSheet, BackHandler } from 'react-native';
+import { View, Pressable, useWindowDimensions, StyleSheet, BackHandler, Platform } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { 
   useSharedValue, 
@@ -78,6 +78,51 @@ export function DraggableModal({
   
   const { height: screenHeight } = useWindowDimensions();
   const themeColors = useThemeColors();
+  
+  /**
+   * Get iOS version number for conditional styling
+   * iOS 15+ introduced the glass UI design with larger border radius
+   * Returns the major version number (e.g., 14, 15, 16, 17)
+   */
+  const getIOSVersion = (): number => {
+    if (Platform.OS !== 'ios') return 0;
+    const version = Platform.Version as string;
+    // Platform.Version can be a string like "15.0" or number like 15
+    // parse it to get the major version number
+    const majorVersion = typeof version === 'string' 
+      ? parseInt(version.split('.')[0], 10) 
+      : Math.floor(version as number);
+    return majorVersion;
+  };
+  
+  /**
+   * Calculate border radius based on iOS version
+   * iOS 15+ (glass UI): uses larger, rounder border radius (28px)
+   * iOS < 15 (pre-glass UI): uses smaller border radius (20px)
+   * if borderRadius prop is provided, use that instead (allows override)
+   */
+  const getBorderRadius = (): number => {
+    // if borderRadius is explicitly provided, use that (allows override)
+    if (borderRadius !== 12) {
+      return borderRadius;
+    }
+    
+    // otherwise, use iOS version-based styling
+    const iosVersion = getIOSVersion();
+    if (iosVersion >= 15) {
+      // iOS 15+ glass UI design - larger, rounder corners (increased from 20px to 28px)
+      return 36;
+    } else if (iosVersion > 0) {
+      // iOS < 15 - pre-glass UI design - smaller corners (increased from 12px to 20px)
+      return 20;
+    } else {
+      // not iOS (Android, web, etc.) - use default
+      return borderRadius;
+    }
+  };
+  
+  // calculate the border radius to use based on iOS version
+  const calculatedBorderRadius = getBorderRadius();
   
   // backdrop opacity for fade in/out animation
   // coordinates with modal slide animation for polished transitions
@@ -400,8 +445,11 @@ export function DraggableModal({
                 width: '100%',
                 height: maxHeight,
                 backgroundColor: themeColors.background.elevated(),
-                borderTopLeftRadius: borderRadius,
-                borderTopRightRadius: borderRadius,
+                // use calculated border radius based on iOS version
+                // iOS 15+ (glass UI): 28px for rounder corners (increased from 20px)
+                // iOS < 15 (pre-glass UI): 20px for smaller corners (increased from 12px)
+                borderTopLeftRadius: calculatedBorderRadius,
+                borderTopRightRadius: calculatedBorderRadius,
                 overflow: 'hidden',
               }}
             >
