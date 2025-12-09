@@ -911,3 +911,22 @@ Updated User app, models, serializers, views and urls
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
 - Improve text input component
+---
+## [08/12/2025] - [Monday]
+
+### Today's Goals
+- [X] Added conditional IOS styling to modal
+- [X] Added inter-content scroll lock for conditional, full modal dragging (for form picker modals)
+- [X] Decomposed keyboard modal to fullscreen modal and keyboard anchored container for modularity (preparation for task detail view reusable components)
+
+### Plans For Future
+- Plan to implement task detail view
+
+### Notes
+- consider keyboard anchored section in task detail to be initially hidden
+- consider primary buttons and styling
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+- Improve text input component
