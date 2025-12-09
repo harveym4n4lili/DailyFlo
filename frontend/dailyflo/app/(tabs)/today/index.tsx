@@ -11,6 +11,7 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 import { ListCard } from '@/components/ui/Card';
 import { FloatingActionButton } from '@/components/ui/Button';
 import { ModalContainer } from '@/components/layout/ModalLayout';
+import { TaskViewModal } from '@/components/features/tasks';
 
 // import color palette system for consistent theming
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
@@ -38,7 +39,7 @@ import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSl
 
 // TYPES FOLDER IMPORTS - TypeScript type definitions
 // The types folder contains all TypeScript interfaces and type definitions
-import { Task } from '@/types';
+import { Task, TaskColor } from '@/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TodayScreen() {
@@ -48,6 +49,8 @@ export default function TodayScreen() {
   // TASK DETAIL MODAL STATE
   const [isTaskDetailModalVisible, setIsTaskDetailModalVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  // Store task color separately to maintain it during modal close animation
+  const [selectedTaskColor, setSelectedTaskColor] = useState<TaskColor>('blue');
   
   // DROPDOWN STATE - Controls the visibility of the dropdown menu
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
@@ -211,14 +214,20 @@ export default function TodayScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     // show task detail modal
+    // store both task and color separately to maintain color during close animation
     setSelectedTask(task);
+    setSelectedTaskColor(task.color);
     setIsTaskDetailModalVisible(true);
   };
   
   // handle task detail modal close
   const handleTaskDetailModalClose = () => {
     setIsTaskDetailModalVisible(false);
-    setSelectedTask(null);
+    // delay clearing task to allow modal animation to complete
+    // this ensures task color persists during slide-down animation
+    setTimeout(() => {
+      setSelectedTask(null);
+    }, 350); // slightly longer than modal animation duration (300ms)
   };
   
   // handle task completion toggle
@@ -447,15 +456,14 @@ export default function TodayScreen() {
         accessibilityHint="Double tap to create a new task"
       />
       
-      {/* Task Detail Modal - pageSheet style modal for viewing task details */}
-      <Modal
+      {/* Task Detail Modal - displays task details using TaskViewModal */}
+      <TaskViewModal
         visible={isTaskDetailModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={handleTaskDetailModalClose}
-      >
-       
-      </Modal>
+        onClose={handleTaskDetailModalClose}
+        taskColor={selectedTaskColor}
+        taskId={selectedTask?.id}
+        task={selectedTask || undefined}
+      />
       </ScreenContainer>
     </View>
   );
