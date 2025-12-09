@@ -32,7 +32,9 @@ import {
   Animated,
   Platform,
   useWindowDimensions,
+  useColorScheme,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
@@ -135,6 +137,8 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
+  // get color scheme for theme-aware blur tint
+  const colorScheme = useColorScheme();
 
   // Backdrop opacity animation
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -191,6 +195,8 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
   };
 
   const calculatedBorderRadius = getBorderRadius(borderRadius);
+  // check if running on iOS 15+ for glassy edge effect
+  const isNewerIOS = getIOSVersion() >= 15;
 
   return (
     <Modal
@@ -248,6 +254,23 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
               },
             ]}
           >
+            {/* glassy top edge border for iOS 15+ (glass UI design) */}
+            {/* creates a frosted glass effect at the top border */}
+            {/* only visible on newer iOS versions */}
+            {/* tint adapts to theme (light or dark) */}
+            {isNewerIOS && (
+              <BlurView
+                intensity={20}
+                tint='light'
+                style={[
+                  styles.glassTopEdge,
+                  {
+                    borderTopLeftRadius: calculatedBorderRadius,
+                    borderTopRightRadius: calculatedBorderRadius,
+                  },
+                ]}
+              />
+            )}
             {children}
           </View>
         </View>
@@ -280,6 +303,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     flexDirection: 'column',
     flexShrink: 0,
+    position: 'relative',
+  },
+  // glassy top edge border for iOS 15+ (glass UI design)
+  // creates a frosted glass blur effect at the top border of the modal
+  // positioned absolutely at the top with a thin height to create edge effect
+  glassTopEdge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2, // thin blur strip at the very top edge (2px for visible glass effect)
+    zIndex: 1, // above content but below interactive elements
+    overflow: 'hidden',
   },
 });
 

@@ -5,6 +5,7 @@
  */
 
 export * from './TaskCreation';
+export * from './TaskView';
 
 
 
