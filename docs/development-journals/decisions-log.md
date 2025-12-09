@@ -108,3 +108,14 @@ Added time, duration and icon fields to the Task model.
 
 ### Notes
 - No notes
+---
+## [08/12/2025] - [Monday]
+### Decision 1
+Decided to go through with IOS-version conditional styling
+#### Decision Goal
+> Allow for adaptable, device fitting styling for better UX
+#### Decision Context
+* Recently upgraded my phone for testing, realised that I should ensure the styling should fit for more devices.
+
+### Notes
+- No notes
