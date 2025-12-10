@@ -96,58 +96,22 @@ export function IconColorModal({
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
 
-  // track temporary selections while modal is open
-  // these are only applied when user taps Done button
-  const [tempColor, setTempColor] = useState<TaskColor>(selectedColor);
-  const [tempIcon, setTempIcon] = useState<string | undefined>(selectedIcon);
-
-  // reset temp values when modal opens/closes or initial values change
-  // this ensures modal always starts with the current selected values
-  useEffect(() => {
-    if (visible) {
-      setTempColor(selectedColor);
-      setTempIcon(selectedIcon);
-    }
-  }, [visible, selectedColor, selectedIcon]);
-
-  // check if there are any changes from initial values
-  // hasChanges is true if color or icon differs from initial selection
-  const hasChanges = tempColor !== selectedColor || tempIcon !== selectedIcon;
-
-  // handle cancel button press
-  // reset temp values to initial values and close modal without applying changes
-  const handleCancel = () => {
-    setTempColor(selectedColor);
-    setTempIcon(selectedIcon);
-    onClose();
-  };
-
-  // handle done button press
-  // apply temp selections to actual form state and close modal
-  const handleDone = () => {
-    if (tempColor !== selectedColor) {
-      onSelectColor(tempColor);
-    }
-    if (tempIcon !== selectedIcon && tempIcon !== undefined) {
-      onSelectIcon?.(tempIcon);
-    }
-    onClose();
-  };
+  // changes are now applied instantly - no temporary state needed
 
   // handle color selection
-  // flow: user taps a color → update temp color state
-  // changes are only applied when user taps Done button
+  // flow: user taps a color → apply color immediately
+  // changes are applied instantly - no save button needed
   const handleColorSelect = (color: TaskColor) => {
     // console.log('Color selected:', color);
-    setTempColor(color);
+    onSelectColor(color); // apply color immediately
   };
 
   // handle icon selection
-  // flow: user taps an icon → update temp icon state
-  // changes are only applied when user taps Done button
+  // flow: user taps an icon → apply icon immediately
+  // changes are applied instantly - no save button needed
   const handleIconSelect = (iconName: string) => {
     // console.log('Icon selected:', iconName);
-    setTempIcon(iconName);
+    onSelectIcon?.(iconName); // apply icon immediately
   };
 
   return (
@@ -196,8 +160,8 @@ export function IconColorModal({
                 >
                   {/* map through available colors and display them as circular swatches */}
                   {AVAILABLE_COLORS.map((color) => {
-                    // check if this color is currently selected (use tempColor for visual feedback)
-                    const isSelected = color === tempColor;
+                    // check if this color is currently selected
+                    const isSelected = color === selectedColor;
                     
                     // get the color value from our color palette system
                     // using shade 500 for the main color display
@@ -233,14 +197,12 @@ export function IconColorModal({
         }
       >
               {/* modal header with action buttons */}
-              {/* showActionButtons enables Cancel/Done buttons */}
-              {/* Done button only appears when hasChanges is true */}
+              {/* no action buttons needed - changes apply instantly */}
               <ModalHeader
                 title="Icon & Color"
-                showActionButtons={true}
-                hasChanges={hasChanges}
-                onCancel={handleCancel}
-                onDone={handleDone}
+                showActionButtons={false}
+                showCloseButton={true}
+                onClose={onClose}
                 showDragIndicator={true}
                 showBorder={true}
                 taskCategoryColor={taskCategoryColor}
@@ -274,8 +236,8 @@ export function IconColorModal({
                     }}
                   >
                     {AVAILABLE_ICONS.map((icon) => {
-                      // check if this icon is currently selected (use tempIcon for visual feedback)
-                      const isSelected = icon.name === tempIcon;
+                      // check if this icon is currently selected
+                      const isSelected = icon.name === selectedIcon;
                       
                       return (
                         <Pressable

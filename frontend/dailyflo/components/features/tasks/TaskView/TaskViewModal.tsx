@@ -67,7 +67,7 @@ export function TaskViewModal({
     <FullScreenModal
       visible={visible}
       onClose={onClose}
-      backgroundColor={themeColors.background.primary()}
+      backgroundColor={themeColors.background.elevated()}
       showBackdrop={true}
       backdropDismiss={true}
     >

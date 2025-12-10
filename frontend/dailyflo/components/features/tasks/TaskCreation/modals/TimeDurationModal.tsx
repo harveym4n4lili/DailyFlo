@@ -67,36 +67,11 @@ export function TimeDurationModal({
   const [showTimePicker, setShowTimePicker] = useState(false); // controls when the time picker wheel is visible
   const [isNoTimeMode, setIsNoTimeMode] = useState(false); // tracks if we're in "No Time" mode (wheel visible)
   
-  // internal working state (not applied until "Done")
-  const [workingTime, setWorkingTime] = useState<string | undefined>(selectedTime);
-  const [workingDuration, setWorkingDuration] = useState<number | undefined>(selectedDuration);
-  
-  // track initial/committed values
-  const [initialTime, setInitialTime] = useState<string | undefined>(selectedTime);
-  const [initialDuration, setInitialDuration] = useState<number | undefined>(selectedDuration);
-  const [hasChanges, setHasChanges] = useState(false);
-  
-  // when modal opens, sync working values with selected values
-  useEffect(() => {
-    if (visible) {
-      setWorkingTime(selectedTime);
-      setWorkingDuration(selectedDuration);
-      setInitialTime(selectedTime);
-      setInitialDuration(selectedDuration);
-      setHasChanges(false);
-    }
-  }, [visible, selectedTime, selectedDuration]);
-  
-  // detect if working values have changed from initial
-  useEffect(() => {
-    const timeChanged = workingTime !== initialTime;
-    const durationChanged = workingDuration !== initialDuration;
-    setHasChanges(timeChanged || durationChanged);
-  }, [workingTime, workingDuration, initialTime, initialDuration]);
+  // changes are now applied instantly - no temporary state needed
 
-  // find the index of currently working duration in presets
+  // find the index of currently selected duration in presets
   const getCurrentIndex = () => {
-    const index = DURATION_PRESETS.findIndex(p => p.value === workingDuration);
+    const index = DURATION_PRESETS.findIndex(p => p.value === selectedDuration);
     return index >= 0 ? index : 0; // default to first item (None)
   };
 
@@ -106,11 +81,11 @@ export function TimeDurationModal({
   const startPosition = useSharedValue(0);
 
   // handle duration preset selection
-  // flow: user drags slider or taps → snaps to nearest preset → updates working state only
+  // flow: user drags slider or taps → snaps to nearest preset → applies immediately
   // accepts undefined for "None" option to clear duration
   const handleDurationSelect = (duration: number | undefined) => {
     // console.log('Duration selected:', duration);
-    setWorkingDuration(duration); // update working state only, not parent
+    onSelectDuration(duration); // apply duration immediately
   };
 
   // snap to nearest preset based on slider position
@@ -127,8 +102,8 @@ export function TimeDurationModal({
     const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
     const timeString = `${hours}:${minutes}`;
     
-    // update the working time (not applied until "Done")
-    setWorkingTime(timeString);
+    // apply time immediately
+    onSelectTime(timeString);
     setPickerTime(selectedTime); // update internal picker time
     
     // close the time picker modal
@@ -138,9 +113,9 @@ export function TimeDurationModal({
 
   // get the display text for the time button
   const getTimeButtonText = () => {
-    // show working time (not yet applied)
-    if (workingTime) {
-      return workingTime;
+    // show selected time
+    if (selectedTime) {
+      return selectedTime;
     }
     // if no time is set, show "No Time"
     return "No Time";
@@ -158,11 +133,11 @@ export function TimeDurationModal({
     setShowTimePicker(true);
   };
 
-  // handle "No Time" button press in picker - clears working time
+  // handle "No Time" button press in picker - clears time immediately
   const handleClearPress = () => {
     setIsNoTimeMode(false);
     setShowTimePicker(false);
-    setWorkingTime(undefined); // clear working time (not applied until "Done")
+    onSelectTime(undefined); // clear time immediately
   };
 
   // handle backdrop tap - just close without clearing time
@@ -172,23 +147,7 @@ export function TimeDurationModal({
     // don't clear time on backdrop tap
   };
   
-  /**
-   * Handle cancel button - discard changes and close
-   */
-  const handleCancel = () => {
-    setWorkingTime(initialTime); // reset working time to initial
-    setWorkingDuration(initialDuration); // reset working duration to initial
-    onClose();
-  };
-  
-  /**
-   * Handle done button - apply changes to parent and close
-   */
-  const handleDone = () => {
-    onSelectTime(workingTime); // apply working time to parent
-    onSelectDuration(workingDuration); // apply working duration to parent
-    onClose();
-  };
+  // no cancel/done buttons needed - changes apply instantly
 
   return (
     <>
@@ -203,15 +162,12 @@ export function TimeDurationModal({
         // showBackdrop=true: DraggableModal handles its own backdrop
         showBackdrop={true}
       >
-      {/* modal header with action buttons */}
-      {/* showActionButtons enables Cancel/Done buttons */}
-      {/* Done button only appears when hasChanges is true */}
+      {/* modal header - no action buttons needed (changes apply instantly) */}
       <ModalHeader
         title="Time & Duration"
-        showActionButtons={true}
-        hasChanges={hasChanges}
-        onCancel={handleCancel}
-        onDone={handleDone}
+        showActionButtons={false}
+        showCloseButton={true}
+        onClose={onClose}
         showDragIndicator={true}
         showBorder={true}
         taskCategoryColor={taskCategoryColor}
@@ -410,7 +366,7 @@ export function TimeDurationModal({
             }}>
               {DURATION_PRESETS.map((preset, index) => {
                 // check if this is the currently selected preset (using working duration)
-                const isSelected = preset.value === workingDuration;
+                const isSelected = preset.value === selectedDuration;
                 
                 // calculate label position to match snap points
                 // labels are centered on snap points where circle center will be
