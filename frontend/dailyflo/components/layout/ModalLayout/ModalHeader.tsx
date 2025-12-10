@@ -18,6 +18,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
+import { MainCloseButton } from '@/components/ui/Button';
 
 /**
  * Props for ModalHeader component
@@ -128,6 +129,13 @@ export interface ModalHeaderProps {
    * When task color is white, button text uses FAB icon color for contrast
    */
   taskCategoryColor?: TaskColor;
+  
+  /**
+   * Whether to use MainCloseButton instead of default close button
+   * When true, uses the MainCloseButton component with task category color styling
+   * @default false
+   */
+  useMainCloseButton?: boolean;
 }
 
 /**
@@ -155,6 +163,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   cancelText = 'Cancel',
   doneText = 'Done',
   taskCategoryColor,
+  useMainCloseButton = false,
 }) => {
   // get theme-aware colors
   const colors = useThemeColors();
@@ -422,20 +431,34 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
         ) : (
           /* close button section - only show if not using action buttons */
           showCloseButton && onClose && (
-            <TouchableOpacity
-              style={closeButtonStyle}
-              onPress={onClose}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Close modal"
-              accessibilityHint="Double tap to close this modal"
-            >
-              <Ionicons
-                name="close"
-                size={30}
-                color={colors.text.secondary()}
+            useMainCloseButton ? (
+              /* use MainCloseButton component when useMainCloseButton is true */
+              <MainCloseButton
+                onPress={onClose}
+                color={taskCategoryColor || 'blue'}
+                {...(closeButtonPosition === 'left' 
+                  ? { left: closeButtonSpacing }
+                  : { right: closeButtonSpacing }
+                )}
+                top={closeButtonSpacing}
               />
-            </TouchableOpacity>
+            ) : (
+              /* default close button - simple X icon */
+              <TouchableOpacity
+                style={closeButtonStyle}
+                onPress={onClose}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Close modal"
+                accessibilityHint="Double tap to close this modal"
+              >
+                <Ionicons
+                  name="close"
+                  size={30}
+                  color={colors.text.secondary()}
+                />
+              </TouchableOpacity>
+            )
           )
         )}
       </View>

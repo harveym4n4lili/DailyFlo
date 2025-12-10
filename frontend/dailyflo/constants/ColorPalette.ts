@@ -247,7 +247,7 @@ export const ThemeColors = {
       elevated: PrimaryColors.dark[100],     // darker gray - elevated surfaces
       overlay: 'rgba(0, 0, 0, 0.5)',        // black overlay - modal backdrops
       darkOverlay: 'rgba(0, 0, 0, 0.9)',    // darker black overlay - stronger backdrops
-      lightOverlay: 'rgba(255, 255, 255, 0.2)', // white overlay - light backdrops
+      lightOverlay: 'rgba(255, 255, 255, 0.05)', // white overlay - light backdrops
       // inverted colors - light mode colors used in dark theme
       invertedPrimary: PrimaryColors.light[100],     // white - inverted primary
       invertedSecondary: PrimaryColors.light[100],   // light gray - inverted secondary

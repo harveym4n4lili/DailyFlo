@@ -39,7 +39,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAnchoredContainer, useKeyboardHeight } from '@/components/layout/ScreenLayout';
 
 // UI COMPONENTS IMPORTS
-// button components for the form (no longer needed here, moved to PickerButtonsSection)
+// button components for the form
+import { MainCloseButton } from '@/components/ui/Button';
 
 // FEATURE COMPONENTS IMPORTS
 // task creation sub-components and modals
@@ -420,52 +421,10 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         {/* cancel button - absolutely positioned at top left */}
         {/* iOS 15+ (newer): circular close icon button with tertiary background */}
         {/* iOS < 15 (older): text button with task category color background */}
-        {/* top position accounts for safe area inset */}
-        <Pressable
+        <MainCloseButton
           onPress={handleClose}
-          style={{
-            position: 'absolute',
-            left: 16, // 16px from left edge
-            zIndex: 10,
-            ...(isNewerIOS ? {
-              // iOS 15+: equal spacing from top and left (16px each)
-              top: 16 + insets.top, // 16px from top edge to match left spacing
-              width: 42,
-              height: 42,
-              borderRadius: 21,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: themeColors.background.tertiary(),
-            } : {
-              // iOS < 15: current style (text button with colored background)
-              top: 20 + insets.top, // add safe area top inset
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 20,
-              backgroundColor: values.color 
-                ? TaskCategoryColors[values.color][500]
-                : TaskCategoryColors.blue[500],
-            }),
-          }}
-        >
-          {isNewerIOS ? (
-            // iOS 15+ (newer): X close icon button
-            <Ionicons
-              name="close"
-              size={32}
-              color={getButtonTextColor()}
-            />
-          ) : (
-            // iOS < 15 (older): text button (current style)
-            <Text style={{
-              ...getTextStyle('button-secondary'),
-              // use white text for contrast on colored backgrounds
-              color: '#FFFFFF',
-            }}>
-              Cancel
-            </Text>
-          )}
-        </Pressable>
+          color={values.color || 'blue'}
+        />
         
         {/* main scrollable content wrapper */}
         {/* flex: 1 allows ScrollView to take available space above keyboard-anchored bottom section */}
