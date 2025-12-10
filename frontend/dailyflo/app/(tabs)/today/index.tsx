@@ -10,7 +10,7 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 // import our new task components
 import { ListCard } from '@/components/ui/Card';
 import { FloatingActionButton } from '@/components/ui/Button';
-import { ModalContainer } from '@/components/layout/ModalLayout';
+import { ModalContainer, ModalBackdrop } from '@/components/layout/ModalLayout';
 import { TaskViewModal } from '@/components/features/tasks';
 
 // import color palette system for consistent theming
@@ -454,6 +454,14 @@ export default function TodayScreen() {
         }}
         accessibilityLabel="Add new task"
         accessibilityHint="Double tap to create a new task"
+      />
+      
+      {/* separate backdrop that fades in independently behind the modal */}
+      {/* rendered at screen level, behind the modal in z-index */}
+      <ModalBackdrop
+        isVisible={isTaskDetailModalVisible}
+        onPress={handleTaskDetailModalClose}
+        zIndex={10000}
       />
       
       {/* Task Detail Modal - displays task details using TaskViewModal */}

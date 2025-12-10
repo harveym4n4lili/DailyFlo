@@ -468,7 +468,16 @@ export function DraggableModal({
         { zIndex: zIndex },
         styles.rootContainer,
       ]}
-      pointerEvents={visible ? 'auto' : 'none'} // disable touches when hidden
+      // when showBackdrop is false, use box-none to allow parent backdrop to receive touches
+      // when showBackdrop is true, use auto to allow backdrop Pressable to receive touches
+      // when hidden, disable all touches
+      pointerEvents={
+        !visible
+          ? 'none' // disable touches when hidden
+          : showBackdrop
+          ? 'auto' // allow touches when backdrop is shown (backdrop needs to receive taps)
+          : 'box-none' // allow touches to pass through when backdrop is disabled (parent handles backdrop)
+      }
     >
       {/* animated backdrop - dark overlay behind modal */}
       {/* fades in/out in sync with modal slide animation */}
@@ -512,7 +521,7 @@ export function DraggableModal({
               style={{
                 width: '100%',
                 height: maxHeight,
-                backgroundColor: themeColors.background.elevated(),
+                backgroundColor: themeColors.background.primary(),
                 // use calculated border radius based on iOS version
                 // iOS 15+ (glass UI): 28px for rounder corners (increased from 20px)
                 // iOS < 15 (pre-glass UI): 20px for smaller corners (increased from 12px)

@@ -38,8 +38,9 @@ import { useKeyboardHeight } from '@/components/layout/ScreenLayout';
 
 // FEATURE COMPONENTS IMPORTS
 // DescriptionSection: reusable description input component from task creation
-// PickerButtonsSection: form picker buttons section from task creation
-import { DescriptionSection, PickerButtonsSection } from '../TaskCreation/sections';
+// PickerButtonsSection: form picker buttons section from task view sections
+import { DescriptionSection } from '../TaskCreation/sections';
+import { PickerButtonsSection } from './sections/PickerButtonsSection';
 // task creation modals for picking color, date, time, and alerts
 import { DatePickerModal } from '@/components/features/calendar';
 import { IconColorModal, TimeDurationModal, AlertModal } from '../TaskCreation/modals';

@@ -40,6 +40,12 @@ export interface ModalHeaderProps {
   showCloseButton?: boolean;
   
   /**
+   * Position of the close button
+   * @default "right"
+   */
+  closeButtonPosition?: 'left' | 'right';
+  
+  /**
    * Whether to show border at bottom of header
    * @default true
    */
@@ -134,6 +140,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   title,
   onClose,
   showCloseButton = true,
+  closeButtonPosition = 'right',
   showBorder = true,
   showDragIndicator = false,
   titleStyle: customTitleStyle,
@@ -209,9 +216,13 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
     paddingVertical: 0,
     paddingBottom: isNewerIOS ? paddingHorizontal : 0, // iOS 15+: 16px bottom padding, iOS < 15: 0
     paddingTop: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.primary(),
-    backgroundColor: backgroundColor || colors.background.elevated(),
+    // conditionally show bottom border based on showBorder prop
+    ...(showBorder && {
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border.primary(),
+    }),
+    // use provided backgroundColor or transparent to show modal background
+    backgroundColor: backgroundColor || 'transparent',
     ...customContainerStyle,
   };
   
@@ -239,16 +250,20 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   };
   
   // close button style
-  // iOS 15+ (newer): equal spacing from top and right edges
+  // iOS 15+ (newer): equal spacing from top and edges (left or right)
   // iOS < 15 (older): current positioning stays
   // no background circle - just the X icon
   const closeButtonSpacing = isNewerIOS ? 16 : 15; // iOS 15+: 16px (equal spacing), iOS < 15: 15px (current)
   const closeButtonStyle: ViewStyle = {
     position: 'absolute',
-    // iOS 15+: equal spacing (16px from top and right) ensures proper visual spacing
-    // iOS < 15: current spacing (15px from top and right) - maintains current appearance
+    // iOS 15+: equal spacing (16px from top and edge) ensures proper visual spacing
+    // iOS < 15: current spacing (15px from top and edge) - maintains current appearance
     top: closeButtonSpacing, // equal spacing from top edge
-    right: closeButtonSpacing, // equal spacing from right edge
+    // position on left or right based on closeButtonPosition prop
+    ...(closeButtonPosition === 'left' 
+      ? { left: closeButtonSpacing } 
+      : { right: closeButtonSpacing }
+    ),
     // no width/height constraints - icon determines size
     alignItems: 'center',
     justifyContent: 'center',
