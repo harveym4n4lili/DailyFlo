@@ -22,6 +22,7 @@ import {
   Alert,                     // alert dialog for confirmation prompts
   Keyboard,                  // keyboard api for dismissing keyboard
   useWindowDimensions,       // hook to get screen dimensions for scroll calculations
+  Platform,                  // platform detection for iOS version checking
 } from 'react-native';
 
 // REACT NATIVE SAFE AREA CONTEXT IMPORT
@@ -123,6 +124,31 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
+
+  // IOS VERSION DETECTION
+  // get iOS version number for conditional styling
+  // iOS 15+ introduced the glass UI design with updated header styling
+  // returns the major version number (e.g., 14, 15, 16, 17)
+  const getIOSVersion = (): number => {
+    if (Platform.OS !== 'ios') return 0;
+    const version = Platform.Version as string;
+    // Platform.Version can be a string like "15.0" or number like 15
+    // parse it to get the major version number
+    const majorVersion = typeof version === 'string' 
+      ? parseInt(version.split('.')[0], 10) 
+      : Math.floor(version as number);
+    return majorVersion;
+  };
+  
+  // check if running on iOS 15+ (newer glass UI design)
+  const isNewerIOS = getIOSVersion() >= 15;
+  
+  // determine button text/icon color based on task category color
+  // always use task category color, including white case
+  const getButtonTextColor = () => {
+    const taskColor = values.color || 'blue';
+    return TaskCategoryColors[taskColor][500]; // task category color
+  };
   
   // STATE FOR AUTO-SCROLL
   // track description section position and height for auto-scrolling
@@ -392,30 +418,53 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
       {/* allows ScrollView to take available space and bottom section to be keyboard-anchored */}
       <View style={{ flex: 1 }}>
         {/* cancel button - absolutely positioned at top left */}
+        {/* iOS 15+ (newer): circular close icon button with tertiary background */}
+        {/* iOS < 15 (older): text button with task category color background */}
         {/* top position accounts for safe area inset */}
-        {/* background uses task category color */}
         <Pressable
           onPress={handleClose}
           style={{
             position: 'absolute',
-            top: 20 + insets.top, // add safe area top inset
-            left: 16,
+            left: 16, // 16px from left edge
             zIndex: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderRadius: 20,
-            backgroundColor: values.color 
-              ? TaskCategoryColors[values.color][500]
-              : TaskCategoryColors.blue[500],
+            ...(isNewerIOS ? {
+              // iOS 15+: equal spacing from top and left (16px each)
+              top: 16 + insets.top, // 16px from top edge to match left spacing
+              width: 42,
+              height: 42,
+              borderRadius: 21,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: themeColors.background.tertiary(),
+            } : {
+              // iOS < 15: current style (text button with colored background)
+              top: 20 + insets.top, // add safe area top inset
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 20,
+              backgroundColor: values.color 
+                ? TaskCategoryColors[values.color][500]
+                : TaskCategoryColors.blue[500],
+            }),
           }}
         >
-          <Text style={{
-            ...getTextStyle('button-secondary'),
-            // use white text for contrast on colored backgrounds
-            color: '#FFFFFF',
-          }}>
-            Cancel
-          </Text>
+          {isNewerIOS ? (
+            // iOS 15+ (newer): X close icon button
+            <Ionicons
+              name="close"
+              size={32}
+              color={getButtonTextColor()}
+            />
+          ) : (
+            // iOS < 15 (older): text button (current style)
+            <Text style={{
+              ...getTextStyle('button-secondary'),
+              // use white text for contrast on colored backgrounds
+              color: '#FFFFFF',
+            }}>
+              Cancel
+            </Text>
+          )}
         </Pressable>
         
         {/* main scrollable content wrapper */}
@@ -574,8 +623,9 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
             alignItems: 'center',
             backgroundColor: themeColors.background.elevated(),
         }}>
-          {/* Circular create button anchored to the right */}
-          {/* background uses task category color */}
+          {/* Create button anchored to the right */}
+          {/* iOS 15+ (newer): circular checkmark icon button with tertiary background */}
+          {/* iOS < 15 (older): text button with task category color background */}
           {/* disabled when isCreating is true OR when required fields are not filled */}
           {/* inactive state shows lower opacity when title is empty */}
           {/* when pressed, uses inactive state styling (0.4 opacity) with no animations */}
@@ -583,25 +633,51 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
             onPress={onCreate}
             disabled={isCreating || !isCreateButtonActive}
             style={({ pressed }) => ({
-              width: 44,
-              height: 44,
-              borderRadius: 28,
-              backgroundColor: values.color 
-                ? TaskCategoryColors[values.color][500]
-                : TaskCategoryColors.blue[500],
-              justifyContent: 'center',
-              alignItems: 'center',
-              // when pressed: use inactive state opacity (0.4), no animations
-              // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
-              opacity: pressed ? 0.4 : (!isCreateButtonActive ? 0.4 : isCreating ? 0.6 : 1),
+              ...(isNewerIOS ? {
+                // iOS 15+: circular button with tertiary background
+                width: 42,
+                height: 42,
+                borderRadius: 21,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: themeColors.background.tertiary(),
+                // when pressed: use inactive state opacity (0.4), no animations
+                // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
+                opacity: pressed ? 0.4 : (!isCreateButtonActive ? 0.4 : isCreating ? 0.6 : 1),
+              } : {
+                // iOS < 15: text button with colored background
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 20,
+                backgroundColor: values.color 
+                  ? TaskCategoryColors[values.color][500]
+                  : TaskCategoryColors.blue[500],
+                justifyContent: 'center',
+                alignItems: 'center',
+                // when pressed: use inactive state opacity (0.4), no animations
+                // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
+                opacity: pressed ? 0.4 : (!isCreateButtonActive ? 0.4 : isCreating ? 0.6 : 1),
+              }),
             })}
           >
-            <Ionicons
-              name={isCreating ? "hourglass-outline" : "arrow-up"}
-              size={20}
-              // use white icon for contrast on colored backgrounds
-              color="#FFFFFF"
-            />
+            {isNewerIOS ? (
+              // iOS 15+ (newer): paper/document icon button (or hourglass when creating)
+              <Ionicons
+                name={isCreating ? "hourglass-outline" : "document"}
+                size={24}
+                color={getButtonTextColor()}
+              />
+            ) : (
+              // iOS < 15 (older): text button (current style)
+              <Text style={{
+                ...getTextStyle('button-secondary'),
+                // use white text for contrast on colored backgrounds
+                color: '#FFFFFF',
+                fontWeight: '900', // done button is bold
+              }}>
+                {isCreating ? 'Creating...' : 'Create'}
+              </Text>
+            )}
           </Pressable>
           
           {/* Error message display */}

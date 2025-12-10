@@ -67,60 +67,16 @@ export function AlertModal({
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
 
-  // local state to track selected alerts during editing
-  // this allows users to make changes without immediately applying them
-  const [tempSelectedAlerts, setTempSelectedAlerts] = useState<string[]>(selectedAlerts);
-  
-  // track whether changes have been made (to show/hide action buttons)
-  const [hasChanges, setHasChanges] = useState(false);
-
-  // sync local state with prop changes when modal opens
-  // this ensures the modal always starts with the current selection
-  useEffect(() => {
-    if (visible) {
-      setTempSelectedAlerts(selectedAlerts);
-      setHasChanges(false);
-    }
-  }, [visible, selectedAlerts]);
-
-  // check if changes have been made by comparing temp state with original
-  useEffect(() => {
-    const changed = JSON.stringify(tempSelectedAlerts.sort()) !== JSON.stringify(selectedAlerts.sort());
-    setHasChanges(changed);
-  }, [tempSelectedAlerts, selectedAlerts]);
+  // changes are now applied instantly - no temporary state needed
 
   // handle toggling an alert option
-  // flow: user taps option → check if already selected → add or remove from array → update temp state
+  // flow: user taps option → check if already selected → add or remove from array → apply immediately
   const handleToggleAlert = (alertId: string) => {
     // console.log('Toggle alert:', alertId);
-    setTempSelectedAlerts((prev) => {
-      // if already selected, remove it from the array
-      if (prev.includes(alertId)) {
-        return prev.filter((id) => id !== alertId);
-      } 
-      // if not selected, add it to the array
-      else {
-        return [...prev, alertId];
-      }
-    });
-  };
-
-  // handle cancel button press
-  // flow: user presses cancel → reset temp state to original → close modal
-  const handleCancel = () => {
-    // console.log('Cancel alert changes');
-    setTempSelectedAlerts(selectedAlerts); // reset to original values
-    setHasChanges(false);
-    onClose();
-  };
-
-  // handle done button press
-  // flow: user presses done → apply changes via callback → close modal
-  const handleDone = () => {
-    // console.log('Apply alert changes:', tempSelectedAlerts);
-    onApplyAlerts(tempSelectedAlerts); // send changes to parent
-    setHasChanges(false);
-    onClose();
+    const newAlerts = selectedAlerts.includes(alertId)
+      ? selectedAlerts.filter((id) => id !== alertId) // remove if already selected
+      : [...selectedAlerts, alertId]; // add if not selected
+    onApplyAlerts(newAlerts); // apply changes immediately
   };
 
   return (
@@ -136,15 +92,12 @@ export function AlertModal({
         // showBackdrop=true: DraggableModal handles its own backdrop
         showBackdrop={true}
       >
-        {/* modal header with action buttons */}
-        {/* showActionButtons enables Cancel/Done buttons */}
-        {/* Done button only appears when hasChanges is true */}
+        {/* modal header - no action buttons needed (changes apply instantly) */}
         <ModalHeader
           title="Alerts"
-          showActionButtons={true}
-          hasChanges={hasChanges}
-          onCancel={handleCancel}
-          onDone={handleDone}
+          showActionButtons={false}
+          showCloseButton={true}
+          onClose={onClose}
           showDragIndicator={true}
           showBorder={true}
           taskCategoryColor={taskCategoryColor}
@@ -164,7 +117,7 @@ export function AlertModal({
           {/* styling matches QuickDateOptions for consistency */}
           {ALERT_OPTIONS.map((alert) => {
             // check if this alert is currently selected in temp state
-            const isSelected = tempSelectedAlerts.includes(alert.id);
+            const isSelected = selectedAlerts.includes(alert.id);
 
             return (
               <Pressable

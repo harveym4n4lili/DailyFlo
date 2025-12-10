@@ -241,9 +241,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   // close button style
   // iOS 15+ (newer): equal spacing from top and right edges
   // iOS < 15 (older): current positioning stays
-  // for iOS 15+: ensure equal spacing from both top and right edges
-  // header height is 60px, button is 30px, so (60 - 30) / 2 = 15px for perfect centering
-  // but we use 16px to ensure visible spacing and match the paddingHorizontal default
+  // no background circle - just the X icon
   const closeButtonSpacing = isNewerIOS ? 16 : 15; // iOS 15+: 16px (equal spacing), iOS < 15: 15px (current)
   const closeButtonStyle: ViewStyle = {
     position: 'absolute',
@@ -251,12 +249,11 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
     // iOS < 15: current spacing (15px from top and right) - maintains current appearance
     top: closeButtonSpacing, // equal spacing from top edge
     right: closeButtonSpacing, // equal spacing from right edge
-    width: 30,
-    height: 30,
-    borderRadius: 16,
+    // no width/height constraints - icon determines size
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background.tertiary(),
+    // no background color - transparent
+    padding: 4, // add padding for better tap target
   };
 
   return (
@@ -420,8 +417,8 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
             >
               <Ionicons
                 name="close"
-                size={16}
-                color={colors.text.primary()}
+                size={30}
+                color={colors.text.secondary()}
               />
             </TouchableOpacity>
           )

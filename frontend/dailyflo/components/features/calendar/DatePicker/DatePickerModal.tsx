@@ -109,32 +109,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   // get safe area insets to handle devices with notches/home indicators
   const insets = useSafeAreaInsets();
   
-  // internal state for the working date (not applied until "Done")
-  const [workingDate, setWorkingDate] = useState<string | undefined>(selectedDate);
-  
-  // track the initial/committed date
-  const [initialDate, setInitialDate] = useState<string | undefined>(selectedDate);
-  
-  // track if user has made changes
-  const [hasChanges, setHasChanges] = useState(false);
-  
-  // when modal opens, sync working date with selected date
-  useEffect(() => {
-    if (visible) {
-      setWorkingDate(selectedDate);
-      setInitialDate(selectedDate);
-      setHasChanges(false);
-    }
-  }, [visible, selectedDate]);
-  
-  // detect if working date has changed from initial
-  useEffect(() => {
-    if (workingDate !== initialDate) {
-      setHasChanges(true);
-    } else {
-      setHasChanges(false);
-    }
-  }, [workingDate, initialDate]);
+  // changes are now applied instantly - no temporary state needed
   
   /**
    * Handle date selection from quick options
@@ -150,32 +125,13 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   
   /**
    * Handle date selection from calendar view
-   * Updates the working date internally (not applied until "Done")
+   * Applies changes instantly - no save button needed
    */
-  // when user picks a specific date from the calendar, we update working date
-  // flow: user taps calendar date → updates working date → modal stays open
+  // when user picks a specific date from the calendar, we apply it immediately
+  // flow: user taps calendar date → applies date to parent immediately → modal stays open
   const handleCalendarDateSelect = (date: string) => {
     // console.log(`Calendar date selected: ${date}`);
-    setWorkingDate(date); // update internal working date only
-    // don't notify parent - changes applied on "Done"
-  };
-  
-  /**
-   * Handle cancel button - discard changes and close
-   */
-  const handleCancel = () => {
-    setWorkingDate(initialDate); // reset working date to initial
-    onClose();
-  };
-  
-  /**
-   * Handle done button - apply changes and close
-   */
-  const handleDone = () => {
-    if (workingDate) {
-      onSelectDate(workingDate); // apply the working date to parent
-    }
-    onClose();
+    onSelectDate(date); // apply date to parent immediately
   };
   
   /**
@@ -253,13 +209,12 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
         // showBackdrop=true: DraggableModal handles its own backdrop
         showBackdrop={true}
       >
-        {/* custom header for date picker modal with action buttons */}
+        {/* custom header for date picker modal - no action buttons needed (changes apply instantly) */}
         <ModalHeader
           title={title}
-          showActionButtons={true}
-          hasChanges={hasChanges}
-          onCancel={handleCancel}
-          onDone={handleDone}
+          showActionButtons={false}
+          showCloseButton={true}
+          onClose={onClose}
           showDragIndicator={true}
           showBorder={true}
           taskCategoryColor={taskCategoryColor}
@@ -273,15 +228,15 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
           >
             {/* quick date options */}
             <QuickDateOptions
-              selectedDate={workingDate || ''}
+              selectedDate={selectedDate || ''}
               onSelectDate={handleQuickDateSelect}
             />
             
             {/* calendar view for specific date selection */}
             <CalendarView
-              selectedDate={workingDate || ''}
+              selectedDate={selectedDate || ''}
               onSelectDate={handleCalendarDateSelect}
-              initialMonth={workingDate ? new Date(workingDate) : undefined}
+              initialMonth={selectedDate ? new Date(selectedDate) : undefined}
             />
           
           </LockableScrollView>
