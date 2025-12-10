@@ -81,13 +81,15 @@ export function TaskViewModal({
       snapPoints={[0.3, 0.65, 0.9]}
       initialSnapPoint={1}
     >
-      {/* modal header with close button on left and drag indicator */}
+      {/* modal header with MainCloseButton on left and drag indicator */}
       <ModalHeader
         showCloseButton={true}
         closeButtonPosition="left"
         showDragIndicator={true}
         onClose={onClose}
         showBorder={false}
+        useMainCloseButton={true}
+        taskCategoryColor={task?.color || taskColor}
       />
 
       {/* main content area */}
@@ -95,7 +97,10 @@ export function TaskViewModal({
         {/* first section: icon + title, description, and form picker buttons - all contained */}
         <View style={[styles.firstSection, { backgroundColor: themeColors.background.elevated() }]}>
           {/* first section: task icon, title, and description */}
-          <FirstSection task={task} />
+          <FirstSection 
+            task={task} 
+            taskColor={task?.color || taskColor}
+          />
 
           {/* border below description */}
           <View style={[styles.sectionBorder, { borderBottomColor: themeColors.border.primary() }]} />
