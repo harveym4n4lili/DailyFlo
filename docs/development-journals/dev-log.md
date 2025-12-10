@@ -930,3 +930,23 @@ Updated User app, models, serializers, views and urls
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
 - Improve text input component
+---
+## [09/12/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Added conditional IOS styling to modal buttons
+- [X] begun to implement task detail view
+
+### Plans For Future
+- Plan functional buttons for detail view
+- seperate task save button and task create button, consider opacity styling
+- re-style subtask in task creation modal
+- also implement subtask creation
+
+### Notes
+- no notes
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+- Improve text input component
