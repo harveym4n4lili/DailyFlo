@@ -972,3 +972,24 @@ Updated User app, models, serializers, views and urls
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
 - Improve text input component
+---
+## [10/12/2025] - [Wednesday]
+### Today's Goals
+- [X] Researched expo-go and custom native code limitations
+- [X] Researched development build process, apple dev program enrolment
+- [X] Completed functionality fo rtask update
+- [X] Completed further modularisation
+
+### Plans For Future
+- Plan functional buttons for detail view
+- Implement a title, desc and icon edit full screen modal for task view
+- Consider implementing task list association and editing for task create and view
+
+### Notes
+- no notes
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+- Improve text input component
+- Fix scrolling issue with subtasks 
