@@ -63,7 +63,7 @@ export const ListSection: React.FC<ListSectionProps> = ({
       <Text 
         style={[
           styles.listText,
-          { color: themeColors.text.secondary() },
+          { color: themeColors.text.primary() },
           typography.getTextStyle('body-large')
         ]}
       >

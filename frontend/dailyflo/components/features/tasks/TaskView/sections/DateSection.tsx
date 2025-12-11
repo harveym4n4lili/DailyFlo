@@ -61,7 +61,8 @@ export const DateSection: React.FC<DateSectionProps> = ({ dueDate }) => {
         style={[
           styles.dateText,
           { color: displayInfo.color },
-          typography.getTextStyle('heading-4')
+          typography.getTextStyle('heading-4'),
+          { fontWeight: '400' as const } // reduced weight from default heading-4 weight
         ]}
       >
         {displayText}

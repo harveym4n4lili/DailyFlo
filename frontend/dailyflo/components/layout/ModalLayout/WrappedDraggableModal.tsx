@@ -12,9 +12,9 @@
  * Use DraggableModal directly when you want custom animation (like form picker modals).
  */
 
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { Modal, View, Pressable, StyleSheet } from 'react-native';
-import { DraggableModal, DraggableModalProps } from './DraggableModal';
+import { DraggableModal, DraggableModalProps, DraggableModalRef } from './DraggableModal';
 
 export interface WrappedDraggableModalProps extends DraggableModalProps {
   // backdrop is handled separately by ModalBackdrop component
@@ -33,12 +33,12 @@ export interface WrappedDraggableModalProps extends DraggableModalProps {
  * Wraps DraggableModal in Modal component for slide animation.
  * Backdrop should be rendered separately using ModalBackdrop component.
  */
-export function WrappedDraggableModal({
+export const WrappedDraggableModal = forwardRef<DraggableModalRef, WrappedDraggableModalProps>(({
   visible,
   onClose,
   backdropDismiss = true,
   ...draggableModalProps
-}: WrappedDraggableModalProps) {
+}, ref) => {
   const handleBackdropPress = () => {
     if (backdropDismiss) {
       onClose();
@@ -70,6 +70,7 @@ export function WrappedDraggableModal({
       >
         {/* DraggableModal inside Modal wrapper - backdrop always disabled */}
         <DraggableModal
+          ref={ref}
           visible={visible}
           onClose={onClose}
           showBackdrop={false}
@@ -78,7 +79,10 @@ export function WrappedDraggableModal({
       </View>
     </Modal>
   );
-}
+});
+
+// set display name for better debugging
+WrappedDraggableModal.displayName = 'WrappedDraggableModal';
 
 const styles = StyleSheet.create({
   modalContainer: {

@@ -68,17 +68,11 @@ import { updateTask } from '@/store/slices/tasks/tasksSlice';
  * Props for TaskViewContent component
  */
 export interface TaskViewContentProps {
-  /** Whether the content is visible */
-  visible: boolean;
-  
   /** Callback when modal should close */
   onClose: () => void;
   
   /** Task color for styling */
   taskColor: TaskColor;
-  
-  /** Task ID to display */
-  taskId?: string;
   
   /** Task data (optional, if provided will be used for initial values) */
   task?: Task;
@@ -91,10 +85,8 @@ export interface TaskViewContentProps {
  * Structure matches TaskCreationContent exactly, excluding SubtaskSection.
  */
 export const TaskViewContent: React.FC<TaskViewContentProps> = ({
-  visible,
   onClose,
   taskColor,
-  taskId,
   task,
 }) => {
   // HOOKS
@@ -225,8 +217,6 @@ export const TaskViewContent: React.FC<TaskViewContentProps> = ({
   const mainScrollViewRef = useRef<ScrollView>(null);
   // ref for description section wrapper (used to measure position for auto-scrolling)
   const descriptionSectionRef = useRef<View>(null);
-  // ref to debounce task updates when multiple handlers are called (e.g., IconColorModal calls both color and icon handlers)
-  const updateTaskTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // FORM VALUES FOR PICKER BUTTONS
   // construct values object for PickerButtonsSection (same structure as TaskCreation)

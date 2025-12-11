@@ -31,6 +31,8 @@ export interface PickerButtonsSectionProps {
   onShowDatePicker: () => void;
   onShowTimeDurationPicker: () => void;
   onShowAlertsPicker: () => void;
+  /** Optional callback to snap modal to top when button is pressed */
+  onButtonPress?: () => void;
 }
 
 /**
@@ -52,6 +54,7 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
   onShowDatePicker,
   onShowTimeDurationPicker,
   onShowAlertsPicker,
+  onButtonPress,
 }) => {
   const colors = useColorPalette();
   const themeColors = useThemeColors();
@@ -125,7 +128,12 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
                 displayText={displayText}
                 textColor={textColor}
                 iconColor={iconColor}
-                onPress={button.onPress}
+                onPress={() => {
+                  // snap modal to top when button is pressed (if callback provided)
+                  onButtonPress?.();
+                  // then call the original button handler
+                  button.onPress();
+                }}
                 highlightOpacity={animatedValue}
               />
             </View>
