@@ -35,8 +35,8 @@ export const PrimaryColors = {
   },
   dark: {
     // dark mode primary colors (from design system specs)
-    50: '#0f0f0f',   // pure white - light backgrounds, modal surfaces
-    100: '#1a1a1a',  // subtle off-white - page backgrounds, settings panels
+    50: '#171717',   // pure white - light backgrounds, modal surfaces
+    100: '#1f1f1f',  // subtle off-white - page backgrounds, settings panels
     200: '#303030',  // light neutral - secondary backgrounds
     300: '#4d4d4d',  // medium neutral - secondary buttons, inactive elements
     400: '#9BA2B1',  // dark neutral - secondary text, labels

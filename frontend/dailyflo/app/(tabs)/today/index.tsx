@@ -1,6 +1,6 @@
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { StyleSheet, RefreshControl, View, Text, Alert, Modal, TouchableOpacity, Animated } from 'react-native';
+import { StyleSheet, RefreshControl, View, Text, Alert, TouchableOpacity, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -10,6 +10,7 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 // import our new task components
 import { ListCard } from '@/components/ui/Card';
 import { FloatingActionButton } from '@/components/ui/Button';
+import { DropdownList } from '@/components/ui/List';
 import { ModalContainer, ModalBackdrop } from '@/components/layout/ModalLayout';
 import { TaskViewModal } from '@/components/features/tasks';
 
@@ -303,15 +304,28 @@ export default function TodayScreen() {
   };
 
   // DROPDOWN HANDLERS
+  // handle ellipse button press - toggles dropdown menu visibility
   const handleEllipsePress = () => {
     setIsDropdownVisible(!isDropdownVisible);
   };
 
+  // handle select all menu item press
   const handleSelectAll = () => {
     console.log('📋 Select all tasks requested');
     // TODO: Implement select all functionality
     setIsDropdownVisible(false);
   };
+
+  // create dropdown menu items array
+  // each item defines a menu option with label, icon, and action
+  const dropdownMenuItems = [
+    {
+      id: 'select-all',
+      label: 'Select All',
+      icon: 'checkmark-circle-outline',
+      onPress: handleSelectAll,
+    },
+  ];
 
   // render loading state when no tasks are loaded yet
   if (isLoading && tasks.length === 0) {
@@ -382,35 +396,15 @@ export default function TodayScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* dropdown menu modal */}
-      <Modal
+      {/* dropdown list - using reusable DropdownList component */}
+      <DropdownList
         visible={isDropdownVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setIsDropdownVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.dropdownOverlay}
-          activeOpacity={1}
-          onPress={() => setIsDropdownVisible(false)}
-        >
-          <View style={styles.dropdownMenu}>
-            <TouchableOpacity
-              style={styles.dropdownItem}
-              onPress={handleSelectAll}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.dropdownText}>Select All</Text>
-              <Ionicons 
-                name="checkmark-circle-outline" 
-                size={20} 
-                color={themeColors.text.primary()} 
-                style={styles.dropdownIcon}
-              />
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setIsDropdownVisible(false)}
+        items={dropdownMenuItems}
+        anchorPosition="top-right"
+        topOffset={72}
+        rightOffset={20}
+      />
 
       <ScreenContainer 
         scrollable={false}
@@ -548,42 +542,6 @@ const createStyles = (
     alignItems: 'center',
   },
 
-  // dropdown overlay for modal background
-  dropdownOverlay: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'flex-end',
-    paddingTop: insets.top + 72,
-    paddingRight: 20,
-  },
-
-  // dropdown menu container
-  dropdownMenu: {
-    backgroundColor: themeColors.background.tertiary(),
-    borderRadius: 12,
-    minWidth: 150,
-  },
-
-  // dropdown menu item
-  dropdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-
-  // dropdown icon styling
-  dropdownIcon: {
-    // no margin needed
-  },
-
-  // dropdown text styling
-  dropdownText: {
-    ...typography.getTextStyle('body-large'),
-    color: themeColors.text.primary(),
-    fontWeight: '500',
-  },
   
   // loading text styling for initial load state
   // using typography system for consistent text styling
