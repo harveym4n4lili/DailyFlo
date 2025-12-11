@@ -950,3 +950,25 @@ Updated User app, models, serializers, views and urls
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
 - Improve text input component
+---
+## [10/12/2025] - [Wednesday]
+### Today's Goals
+- [X] Re-designed task view to draggable modal
+- [X] Created some new key components
+- [X] Modularised a few other components
+- [X] Implemented a subtask section solution
+
+### Plans For Future
+- Plan functional buttons for detail view
+- seperate task save button and task create button, consider opacity styling
+- Implement subtask functionality
+- ensure clear, reusabke component structure for subtask
+- Fix scrolling issue with subtasks 
+
+### Notes
+- no notes
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+- Improve text input component
