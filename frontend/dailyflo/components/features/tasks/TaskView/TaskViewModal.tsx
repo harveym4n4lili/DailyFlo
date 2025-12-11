@@ -61,7 +61,7 @@ import { useGroupAnimations } from '@/hooks/useGroupAnimations';
 
 // TYPES IMPORTS
 // typescript types for type safety
-import type { TaskColor, Task, UpdateTaskInput, Subtask as TaskSubtask } from '@/types';
+import type { TaskColor, Task, UpdateTaskInput, Subtask as TaskSubtask, TaskReminder } from '@/types';
 import { FontWeight } from '@/constants/Typography';
 
 // STORE IMPORTS
@@ -144,15 +144,68 @@ export function TaskViewModal({
   // convert from Task.Subtask[] format (with sortOrder) to local Subtask format
   const [initialSubtasks, setInitialSubtasks] = useState<Subtask[]>([]);
 
+  // HELPER FUNCTION: Convert TaskReminder[] to alert IDs
+  // TaskReminder has scheduledTime, we need to match it to alert IDs based on time offset
+  const convertRemindersToAlerts = (reminders: TaskReminder[]): string[] => {
+    if (!reminders || reminders.length === 0) return [];
+    
+    // alert option mappings - matches AlertModal ALERT_OPTIONS
+    const alertOptionMap: Record<string, number> = {
+      'start': 0,
+      'end': -1,
+      '15-min': 15,
+    };
+    
+    // get task's base time (dueDate + time)
+    const baseDate = task?.dueDate ? new Date(task.dueDate) : new Date();
+    if (task?.time) {
+      const [hours, minutes] = task.time.split(':').map(Number);
+      baseDate.setHours(hours, minutes, 0, 0);
+    }
+    
+    // match each reminder to an alert ID based on time offset
+    return reminders
+      .filter(reminder => reminder.isEnabled) // only include enabled reminders
+      .map(reminder => {
+        const reminderTime = new Date(reminder.scheduledTime);
+        const timeDiffMinutes = Math.round((reminderTime.getTime() - baseDate.getTime()) / (1000 * 60));
+        
+        // find matching alert ID based on time difference
+        // check for end of task (time diff equals duration)
+        if (task?.duration) {
+          const endTimeDiff = task.duration;
+          if (Math.abs(timeDiffMinutes - endTimeDiff) < 1) {
+            return 'end';
+          }
+        }
+        
+        // check for start (0 minutes difference)
+        if (Math.abs(timeDiffMinutes) < 1) {
+          return 'start';
+        }
+        
+        // check for 15 minutes before
+        if (Math.abs(timeDiffMinutes + 15) < 1) {
+          return '15-min';
+        }
+        
+        return null; // no match found
+      })
+      .filter((alertId): alertId is string => alertId !== null);
+  };
+
   // update form values when task prop changes
   // this ensures the form reflects the latest task data
   React.useEffect(() => {
     if (task) {
+      // convert TaskReminder[] to alert IDs for form state
+      const alertIds = convertRemindersToAlerts(task.metadata?.reminders || []);
+      
       const newValues = {
         dueDate: task.dueDate || undefined,
         time: task.time || undefined,
         duration: task.duration || undefined,
-        alerts: [] as string[], // TODO: convert from TaskReminder[] when alerts are implemented
+        alerts: alertIds, // convert from TaskReminder[] to alert IDs
       };
       setFormValues(newValues);
       setInitialFormValues(newValues);
@@ -460,6 +513,53 @@ export function TaskViewModal({
     setSubtasks(prev => prev.filter(subtask => subtask.id !== subtaskId));
   };
 
+  // HELPER FUNCTION: Convert alert IDs to TaskReminder format
+  // alert IDs are strings like 'start', 'end', '15-min'
+  // TaskReminder requires id, type, scheduledTime, and isEnabled
+  const convertAlertsToReminders = (alertIds: string[]): TaskReminder[] => {
+    // alert option mappings - matches AlertModal ALERT_OPTIONS
+    const alertOptionMap: Record<string, { value: number; label: string }> = {
+      'start': { value: 0, label: 'Start of task' },
+      'end': { value: -1, label: 'End of task' },
+      '15-min': { value: 15, label: '15 minutes before' },
+    };
+    
+    // calculate scheduled time based on task's dueDate and time
+    const baseDate = formValues.dueDate ? new Date(formValues.dueDate) : new Date();
+    
+    // if task has a time, set the hours and minutes
+    if (formValues.time) {
+      const [hours, minutes] = formValues.time.split(':').map(Number);
+      baseDate.setHours(hours, minutes, 0, 0);
+    }
+    
+    // convert each alert ID to a TaskReminder
+    return alertIds.map((alertId) => {
+      const option = alertOptionMap[alertId];
+      if (!option) return null; // skip invalid alert IDs
+      
+      // calculate scheduled time based on alert value
+      // value: 0 = start, -1 = end, positive = minutes before
+      const scheduledTime = new Date(baseDate);
+      if (option.value === -1) {
+        // end of task: add duration if available
+        const durationMinutes = formValues.duration || 0;
+        scheduledTime.setMinutes(scheduledTime.getMinutes() + durationMinutes);
+      } else if (option.value > 0) {
+        // minutes before: subtract from base time
+        scheduledTime.setMinutes(scheduledTime.getMinutes() - option.value);
+      }
+      // value === 0 means start time, which is already set in baseDate
+      
+      return {
+        id: alertId, // use alert ID as reminder ID
+        type: 'due_date' as const, // all alerts are based on due date
+        scheduledTime: scheduledTime,
+        isEnabled: true, // alerts are enabled by default
+      };
+    }).filter((reminder): reminder is TaskReminder => reminder !== null);
+  };
+
   // SAVE HANDLER
   // handle saving changes to the task
   // this function saves the current form values but does not close the modal
@@ -475,17 +575,20 @@ export function TaskViewModal({
       sortOrder: index,
     }));
     
+    // convert alert IDs to TaskReminder format
+    const reminders: TaskReminder[] = convertAlertsToReminders(formValues.alerts || []);
+    
     // prepare update data in UpdateTaskInput format
     const updates: UpdateTaskInput = {
       id: task.id,
       dueDate: formValues.dueDate || null, // convert undefined to null for API
       time: formValues.time,
       duration: formValues.duration,
-      // include subtasks in metadata
+      // include subtasks and reminders in metadata
       metadata: {
         subtasks: taskSubtasks,
+        reminders: reminders, // save converted reminders
         // preserve existing metadata fields
-        reminders: task.metadata?.reminders || [],
         notes: task.metadata?.notes,
         tags: task.metadata?.tags || [],
       },
