@@ -165,6 +165,7 @@ export function useThemeColors() {
     background: {
       primary: () => getThemeColor('background', 'primary'),
       secondary: () => getThemeColor('background', 'secondary'),
+      primarySecondaryBlend: () => getThemeColor('background', 'primarySecondaryBlend'),
       tertiary: () => getThemeColor('background', 'tertiary'),
       quaternary: () => getThemeColor('background', 'quaternary'),
       elevated: () => getThemeColor('background', 'elevated'),

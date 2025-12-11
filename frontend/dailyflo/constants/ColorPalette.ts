@@ -22,7 +22,8 @@
 export const PrimaryColors = {
   light: {
     // light mode primary colors (from design system specs)
-    50: '#FFFFFF',   // pure white - light backgrounds, modal surfaces
+    25: '#FFFFFF',   // pure white - light backgrounds, modal surfaces
+    50: '#FAFCFE',   // between 25 and 100 - very light background
     100: '#F5F7FA',  // subtle off-white - page backgrounds, settings panels
     200: '#ECF0F5',  // light neutral - secondary backgrounds
     300: '#959BA5',  // medium neutral - secondary buttons, inactive elements
@@ -35,7 +36,8 @@ export const PrimaryColors = {
   },
   dark: {
     // dark mode primary colors (from design system specs)
-    50: '#171717',   // pure white - light backgrounds, modal surfaces
+    25: '#171717',   // pure white - light backgrounds, modal surfaces
+    50: '#1B1B1B',   // between 25 and 100 - very dark background
     100: '#1f1f1f',  // subtle off-white - page backgrounds, settings panels
     200: '#303030',  // light neutral - secondary backgrounds
     300: '#4d4d4d',  // medium neutral - secondary buttons, inactive elements
@@ -57,7 +59,7 @@ export const PrimaryColors = {
 export const SemanticColors = {
   // success colors - for completed tasks, success states
   success: {
-    50: '#ECFDF5',   // lightest green - success backgrounds
+    25: '#ECFDF5',   // lightest green - success backgrounds
     100: '#D1FAE5',  // light green - success hover states
     500: '#10B981',  // base green - success text, icons
     600: '#059669',  // darker green - success buttons
@@ -66,7 +68,7 @@ export const SemanticColors = {
   
   // error colors - for overdue tasks, error states
   error: {
-    50: '#FEF2F2',   // lightest red - error backgrounds
+    25: '#FEF2F2',   // lightest red - error backgrounds
     100: '#FEE2E2',  // light red - error hover states
     500: '#EF4444',  // base red - error text, icons
     600: '#DC2626',  // darker red - error buttons
@@ -75,7 +77,7 @@ export const SemanticColors = {
   
   // warning colors - for warning states, caution
   warning: {
-    50: '#FFFBEB',   // lightest amber - warning backgrounds
+    25: '#FFFBEB',   // lightest amber - warning backgrounds
     100: '#FEF3C7',  // light amber - warning hover states
     500: '#F59E0B',  // base amber - warning text, icons
     600: '#D97706',  // darker amber - warning buttons
@@ -84,7 +86,7 @@ export const SemanticColors = {
   
   // info colors - for primary tasks, active states
   info: {
-    50: '#EFF6FF',   // lightest blue - info backgrounds
+    25: '#EFF6FF',   // lightest blue - info backgrounds
     100: '#DBEAFE',  // light blue - info hover states
     500: '#3B82F6',  // base blue - info text, icons
     600: '#2563EB',  // darker blue - info buttons
@@ -101,7 +103,8 @@ export const SemanticColors = {
 export const TaskCategoryColors = {
   // red - overdue tasks, urgent items
   red: {
-    50: '#FEF2F2',   // lightest red - red task backgrounds
+    25: '#FEF2F2',   // lightest red - red task backgrounds
+    50: '#F9E8E8',   // between 25 and 100 - light red
     100: '#FEE2E2',  // light red - red task hover states
     500: '#EF4444',  // base red - red task icons, accents
     600: '#DC2626',  // darker red - red task buttons
@@ -110,7 +113,8 @@ export const TaskCategoryColors = {
   
   // blue - primary tasks, reading category
   blue: {
-    50: '#EFF6FF',   // lightest blue - blue task backgrounds
+    25: '#EFF6FF',   // lightest blue - blue task backgrounds
+    50: '#E5EEFE',   // between 25 and 100 - light blue
     100: '#DBEAFE',  // light blue - blue task hover states
     500: '#3B82F6',  // base blue - blue task icons, accents
     600: '#2563EB',  // darker blue - blue task buttons
@@ -119,7 +123,8 @@ export const TaskCategoryColors = {
   
   // green - completed tasks, lifestyle category
   green: {
-    50: '#ECFDF5',   // lightest green - green task backgrounds
+    25: '#ECFDF5',   // lightest green - green task backgrounds
+    50: '#E2F7EE',   // between 25 and 100 - light green
     100: '#D1FAE5',  // light green - green task hover states
     500: '#10B981',  // base green - green task icons, accents
     600: '#059669',  // darker green - green task buttons
@@ -128,7 +133,8 @@ export const TaskCategoryColors = {
   
   // yellow - secondary tasks, meal prep
   yellow: {
-    50: '#FFFBEB',   // lightest amber - yellow task backgrounds
+    25: '#FFFBEB',   // lightest amber - yellow task backgrounds
+    50: '#FFF5D8',   // between 25 and 100 - light amber
     100: '#FEF3C7',  // light amber - yellow task hover states
     500: '#F59E0B',  // base amber - yellow task icons, accents
     600: '#D97706',  // darker amber - yellow task buttons
@@ -137,7 +143,8 @@ export const TaskCategoryColors = {
   
   // purple - lifestyle category, gym tasks
   purple: {
-    50: '#FAF5FF',   // lightest violet - purple task backgrounds
+    25: '#FAF5FF',   // lightest violet - purple task backgrounds
+    50: '#F3EBFF',   // between 25 and 100 - light violet
     100: '#F3E8FF',  // light violet - purple task hover states
     500: '#8B5CF6',  // base violet - purple task icons, accents
     600: '#7C3AED',  // darker violet - purple task buttons
@@ -146,7 +153,8 @@ export const TaskCategoryColors = {
   
   // teal - additional task categories
   teal: {
-    50: '#F0FDFA',   // lightest teal - teal task backgrounds
+    25: '#F0FDFA',   // lightest teal - teal task backgrounds
+    50: '#E5F7F2',   // between 25 and 100 - light teal
     100: '#CCFBF1',  // light teal - teal task hover states
     500: '#14B8A6',  // base teal - teal task icons, accents
     600: '#0D9488',  // darker teal - teal task buttons
@@ -155,7 +163,8 @@ export const TaskCategoryColors = {
   
   // orange - task color picker option
   orange: {
-    50: '#FFF7ED',   // lightest orange - orange task backgrounds
+    25: '#FFF7ED',   // lightest orange - orange task backgrounds
+    50: '#FFEED8',   // between 25 and 100 - light orange
     100: '#FFEDD5',  // light orange - orange task hover states
     500: '#F97316',  // base orange - orange task icons, accents
     600: '#EA580C',  // darker orange - orange task buttons
@@ -175,14 +184,15 @@ export const ThemeColors = {
     background: {
       primary: PrimaryColors.light[100],      // white - main backgrounds
       secondary: PrimaryColors.light[100],   // light gray - secondary surfaces
+      primarySecondaryBlend: PrimaryColors.light[50], // blend between primary and secondary
       tertiary: PrimaryColors.light[200],    // medium gray - tertiary surfaces
-      quaternary: PrimaryColors.light[50],   // very light - quaternary surfaces
-      elevated: PrimaryColors.light[50],     // white - elevated surfaces (modals, cards)
+      quaternary: PrimaryColors.light[25],   // very light - quaternary surfaces
+      elevated: PrimaryColors.light[25],     // white - elevated surfaces (modals, cards)
       overlay: 'rgba(0, 0, 0, 0.5)',        // black overlay - modal backdrops
       darkOverlay: 'rgba(0, 0, 0, 0.7)',    // darker black overlay - stronger backdrops
       lightOverlay: 'rgba(255, 255, 255, 0.5)', // white overlay - light backdrops
       // inverted colors - dark mode colors used in light theme
-      invertedPrimary: PrimaryColors.dark[50],      // dark - inverted primary
+      invertedPrimary: PrimaryColors.dark[25],      // dark - inverted primary
       invertedSecondary: PrimaryColors.dark[100],   // darker - inverted secondary
       invertedTertiary: PrimaryColors.dark[200],    // medium dark - inverted tertiary
       invertedElevated: PrimaryColors.dark[100],    // darker - inverted elevated
@@ -193,7 +203,7 @@ export const ThemeColors = {
       primary: PrimaryColors.light[900],     // dark gray - primary text
       secondary: PrimaryColors.light[500],   // medium gray - secondary text
       tertiary: PrimaryColors.light[300],    // light gray - tertiary text
-      inverse: PrimaryColors.light[50],      // white - text on dark backgrounds
+      inverse: PrimaryColors.light[25],      // white - text on dark backgrounds
       disabled: PrimaryColors.light[300],    // light gray - disabled text
       // inverted colors - dark mode colors used in light theme
       invertedPrimary: PrimaryColors.dark[900],      // light - inverted primary text
@@ -204,7 +214,7 @@ export const ThemeColors = {
     
     // border colors - dividers and outlines
     border: {
-      primary: PrimaryColors.light[50],     // light gray - primary borders
+      primary: PrimaryColors.light[25],     // light gray - primary borders
       secondary: PrimaryColors.light[100],   // very light gray - secondary borders
       focus: PrimaryColors.light[600],       // dark gray - focused borders
       error: SemanticColors.error[500],      // red - error borders
@@ -240,8 +250,9 @@ export const ThemeColors = {
   dark: {
     // background colors - surfaces and containers
     background: {
-      primary: PrimaryColors.dark[50],       // dark - main backgrounds
+      primary: PrimaryColors.dark[25],       // dark - main backgrounds
       secondary: PrimaryColors.dark[100],    // darker gray - secondary surfaces
+      primarySecondaryBlend: PrimaryColors.dark[50], // blend between primary and secondary
       tertiary: PrimaryColors.dark[200],     // medium gray - tertiary surfaces
       quaternary: PrimaryColors.dark[300],   // darker - quaternary surfaces
       elevated: PrimaryColors.dark[100],     // darker gray - elevated surfaces
@@ -252,7 +263,7 @@ export const ThemeColors = {
       invertedPrimary: PrimaryColors.light[100],     // white - inverted primary
       invertedSecondary: PrimaryColors.light[100],   // light gray - inverted secondary
       invertedTertiary: PrimaryColors.light[200],    // medium light gray - inverted tertiary
-      invertedElevated: PrimaryColors.light[50],     // white - inverted elevated
+      invertedElevated: PrimaryColors.light[25],     // white - inverted elevated
     },
     
     // text colors - typography hierarchy
@@ -278,7 +289,7 @@ export const ThemeColors = {
       error: SemanticColors.error[500],      // red - error borders
       success: SemanticColors.success[500],  // green - success borders
       // inverted colors - light mode colors used in dark theme
-      invertedPrimary: PrimaryColors.light[50],      // light gray - inverted primary border
+      invertedPrimary: PrimaryColors.light[25],      // light gray - inverted primary border
       invertedSecondary: PrimaryColors.light[100],   // very light gray - inverted secondary border
       invertedFocus: PrimaryColors.light[600],       // dark gray - inverted focus border
     },

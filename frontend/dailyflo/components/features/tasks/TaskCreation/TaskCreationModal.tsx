@@ -203,7 +203,7 @@ export function TaskCreationModal({
     <FullScreenModal
       visible={visible}
       onClose={onClose}
-      backgroundColor={themeColors.background.elevated()}
+      backgroundColor={themeColors.background.primarySecondaryBlend()}
       showBackdrop={true}
       backdropDismiss={true}
     >
