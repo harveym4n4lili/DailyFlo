@@ -26,5 +26,9 @@ export type { PickerButtonDisplay } from './FormPickerButton';
 export { MainCloseButton } from './CloseButton';
 export type { MainCloseButtonProps } from './CloseButton';
 
+// Export SaveButton component
+export { SaveButton } from './SaveButton';
+export type { SaveButtonProps } from './SaveButton';
+
 // Default export for convenience (FloatingActionButton)
 export { FloatingActionButton as default } from './FloatingActionButton';

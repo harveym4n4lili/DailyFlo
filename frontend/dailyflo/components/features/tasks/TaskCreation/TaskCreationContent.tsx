@@ -40,7 +40,7 @@ import { KeyboardAnchoredContainer, useKeyboardHeight } from '@/components/layou
 
 // UI COMPONENTS IMPORTS
 // button components for the form
-import { MainCloseButton } from '@/components/ui/Button';
+import { MainCloseButton, SaveButton } from '@/components/ui/Button';
 
 // FEATURE COMPONENTS IMPORTS
 // task creation sub-components and modals
@@ -126,31 +126,6 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
 
-  // IOS VERSION DETECTION
-  // get iOS version number for conditional styling
-  // iOS 15+ introduced the glass UI design with updated header styling
-  // returns the major version number (e.g., 14, 15, 16, 17)
-  const getIOSVersion = (): number => {
-    if (Platform.OS !== 'ios') return 0;
-    const version = Platform.Version as string;
-    // Platform.Version can be a string like "15.0" or number like 15
-    // parse it to get the major version number
-    const majorVersion = typeof version === 'string' 
-      ? parseInt(version.split('.')[0], 10) 
-      : Math.floor(version as number);
-    return majorVersion;
-  };
-  
-  // check if running on iOS 15+ (newer glass UI design)
-  const isNewerIOS = getIOSVersion() >= 15;
-  
-  // determine button text/icon color based on task category color
-  // always use task category color, including white case
-  const getButtonTextColor = () => {
-    const taskColor = values.color || 'blue';
-    return TaskCategoryColors[taskColor][500]; // task category color
-  };
-  
   // STATE FOR AUTO-SCROLL
   // track description section position and height for auto-scrolling
   const [descriptionSectionY, setDescriptionSectionY] = useState(0);
@@ -582,62 +557,17 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
             alignItems: 'center',
             backgroundColor: 'transparent',
         }}>
-          {/* Create button anchored to the right */}
-          {/* iOS 15+ (newer): circular checkmark icon button with tertiary background */}
-          {/* iOS < 15 (older): text button with task category color background */}
+          {/* Save button anchored to the right */}
+          {/* uses SaveButton component with tick/checkmark icon */}
           {/* disabled when isCreating is true OR when required fields are not filled */}
-          {/* inactive state shows lower opacity when title is empty */}
-          {/* when pressed, uses inactive state styling (0.4 opacity) with no animations */}
-          <Pressable
+          <SaveButton
             onPress={onCreate}
-            disabled={isCreating || !isCreateButtonActive}
-            style={({ pressed }) => ({
-              ...(isNewerIOS ? {
-                // iOS 15+: circular button with tertiary background
-                width: 42,
-                height: 42,
-                borderRadius: 21,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: themeColors.background.tertiary(),
-                // when pressed: use inactive state opacity (0.4), no animations
-                // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
-                opacity: pressed ? 0.4 : (!isCreateButtonActive ? 0.4 : isCreating ? 0.6 : 1),
-              } : {
-                // iOS < 15: text button with colored background
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-                borderRadius: 20,
-                backgroundColor: values.color 
-                  ? TaskCategoryColors[values.color][500]
-                  : TaskCategoryColors.blue[500],
-                justifyContent: 'center',
-                alignItems: 'center',
-                // when pressed: use inactive state opacity (0.4), no animations
-                // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
-                opacity: pressed ? 0.4 : (!isCreateButtonActive ? 0.4 : isCreating ? 0.6 : 1),
-              }),
-            })}
-          >
-            {isNewerIOS ? (
-              // iOS 15+ (newer): paper/document icon button (or hourglass when creating)
-              <Ionicons
-                name={isCreating ? "hourglass-outline" : "document"}
-                size={24}
-                color={getButtonTextColor()}
-              />
-            ) : (
-              // iOS < 15 (older): text button (current style)
-              <Text style={{
-                ...getTextStyle('button-secondary'),
-                // use white text for contrast on colored backgrounds
-                color: '#FFFFFF',
-                fontWeight: '900', // done button is bold
-              }}>
-                {isCreating ? 'Creating...' : 'Create'}
-              </Text>
-            )}
-          </Pressable>
+            disabled={!isCreateButtonActive}
+            isLoading={isCreating}
+            taskCategoryColor={(values.color as TaskColor) || 'blue'}
+            text="Create"
+            loadingText="Creating..."
+          />
           
           {/* Error message display */}
           {/* shows error if task creation failed */}
