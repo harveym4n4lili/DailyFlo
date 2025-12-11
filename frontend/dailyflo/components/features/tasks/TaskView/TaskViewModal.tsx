@@ -32,9 +32,11 @@ import type { DraggableModalRef } from '@/components/layout/ModalLayout/Draggabl
 // DateSection: section displaying task due date with dynamic messaging
 // ListSection: section displaying task's associated list name and icon
 // PickerButtonsSection: horizontal scrollable section with form picker buttons
-// CreateSubtaskButton: button component for creating subtasks
-// SubtaskItem: component for displaying individual subtasks with checkboxes
-import { FirstSection, DateSection, ListSection, PickerButtonsSection, CreateSubtaskButton, SubtaskItem } from './sections';
+import { FirstSection, DateSection, ListSection, PickerButtonsSection } from './sections';
+
+// SUBTASKS IMPORTS
+// SubtaskList: component that renders the list of subtasks with create button
+import { SubtaskList } from '@/components/features/subtasks';
 
 // UI COMPONENTS IMPORTS
 // GroupedList: flexible iOS-style grouped list component
@@ -539,25 +541,14 @@ export function TaskViewModal({
           {/* subtask items - shown when subtasks section is expanded */}
           {/* subtasks list with create button always at the bottom */}
           {isSubtasksExpanded && (
-            <GroupedList borderRadius={24}>
-              {/* render all subtasks */}
-              {subtasks.map((subtask) => (
-                <SubtaskItem
-                  key={subtask.id}
-                  id={subtask.id}
-                  title={subtask.title}
-                  isCompleted={subtask.isCompleted}
-                  isEditing={subtask.isEditing}
-                  onPress={() => handleSubtaskToggle(subtask.id)}
-                  onDelete={() => handleSubtaskDelete(subtask.id)}
-                  onTitleChange={(newTitle) => handleSubtaskTitleChange(subtask.id, newTitle)}
-                  onFinishEditing={() => handleSubtaskFinishEditing(subtask.id)}
-                />
-              ))}
-              
-              {/* create subtask button - always at the bottom */}
-              <CreateSubtaskButton onPress={handleCreateSubtask} />
-            </GroupedList>
+            <SubtaskList
+              subtasks={subtasks}
+              onToggle={handleSubtaskToggle}
+              onDelete={handleSubtaskDelete}
+              onTitleChange={handleSubtaskTitleChange}
+              onFinishEditing={handleSubtaskFinishEditing}
+              onCreateSubtask={handleCreateSubtask}
+            />
           )}
         </View>
       </View>
