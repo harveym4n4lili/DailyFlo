@@ -488,7 +488,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
             onChangeText={(t) => onChange('title', t)}
             onBlur={() => onBlur('title')}
             placeholder="e.g., Answering emails"
-            placeholderTextColor={themeColors.background.lightOverlay()}
+            placeholderTextColor={themeColors.text.tertiary()} // matches description placeholder color
             selectionColor={values.color 
               ? TaskCategoryColors[values.color][500]
               : TaskCategoryColors.blue[500]}
@@ -532,22 +532,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
           />
         </View>
 
-        {/* Subtask Section */}
-        {/* uses SubtaskList component to display and manage subtasks */}
-        {/* matches horizontal padding of other sections (20px) */}
-        <View style={{ marginTop: 8, paddingHorizontal: 20 }}>
-          <SubtaskList
-            subtasks={subtasks}
-            onToggle={onSubtaskToggle}
-            onDelete={onSubtaskDelete}
-            onTitleChange={onSubtaskTitleChange}
-            onFinishEditing={onSubtaskFinishEditing}
-            onCreateSubtask={onCreateSubtask}
-          />
-        </View>
-
         {/* Picker Buttons Section */}
-        {/* moved below subtask section for better user flow */}
         {/* contains color, date, time, and alerts picker buttons */}
         <View 
           ref={pickerButtonsSectionRef}
@@ -569,6 +554,25 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
             onShowDatePicker={handleShowDatePicker}
             onShowTimeDurationPicker={handleShowTimeDurationPicker}
             onShowAlertsPicker={handleShowAlertsPicker}
+          />
+        </View>
+
+        {/* Subtask Section */}
+        {/* uses SubtaskList component to display and manage subtasks */}
+        {/* matches horizontal padding of other sections (20px) */}
+        {/* even vertical padding above and below for consistent spacing */}
+        <View style={{ 
+          paddingTop: 16, 
+          paddingBottom: 16, 
+          paddingHorizontal: 20 
+        }}>
+          <SubtaskList
+            subtasks={subtasks}
+            onToggle={onSubtaskToggle}
+            onDelete={onSubtaskDelete}
+            onTitleChange={onSubtaskTitleChange}
+            onFinishEditing={onSubtaskFinishEditing}
+            onCreateSubtask={onCreateSubtask}
           />
         </View>
 
