@@ -27,6 +27,10 @@ import type { DraggableModalRef } from '@/components/layout/ModalLayout/Draggabl
 // PickerButtonsSection: horizontal scrollable section with form picker buttons
 import { FirstSection, DateSection, ListSection, PickerButtonsSection } from './sections';
 
+// UI COMPONENTS IMPORTS
+// GroupedList: flexible iOS-style grouped list component
+import { GroupedList } from '@/components/ui/List/GroupedList';
+
 // FEATURE COMPONENTS IMPORTS
 // modals for date, time/duration, and alerts pickers
 import { DatePickerModal } from '@/components/features/calendar';
@@ -294,8 +298,9 @@ export function TaskViewModal({
 
       {/* main content area */}
       <View style={styles.contentContainer}>
-        {/* elevated container: contains first section, list, date, and picker buttons */}
-        <View style={[styles.firstSection, { backgroundColor: themeColors.background.elevated() }]}>
+        {/* grouped list: contains first section, list section, and date + picker buttons section */}
+        {/* each section is a GroupedList item with automatic border radius and separators */}
+        <GroupedList borderRadius={24}>
           {/* first section: task icon, title, and description */}
           {/* pressable wrapper for darken highlight animation and auto-expand modal */}
           <Pressable
@@ -311,9 +316,6 @@ export function TaskViewModal({
               />
             </Animated.View>
           </Pressable>
-
-          {/* border below description */}
-          <View style={[styles.sectionBorder, { borderBottomColor: themeColors.border.primary() }]} />
 
           {/* list section: displays task's associated list name and icon */}
           {/* pressable wrapper for darken highlight animation and auto-expand modal */}
@@ -332,45 +334,45 @@ export function TaskViewModal({
             </Animated.View>
           </Pressable>
 
-          {/* border below list section */}
-          <View style={[styles.sectionBorder, { borderBottomColor: themeColors.border.primary() }]} />
+          {/* date + form picker button section: combined into one GroupedList item */}
+          <View style={styles.datePickerSection}>
+            {/* date section: displays task due date with dynamic messaging */}
+            {/* pressable wrapper for darken highlight animation and opening date picker */}
+            <Pressable
+              onPressIn={handleDateSectionPressIn}
+              onPressOut={handleDateSectionPressOut}
+              onPress={handleDateSectionPress}
+              style={styles.dateSection}
+            >
+              <Animated.View style={{ opacity: dateSectionOpacity }}>
+                <DateSection dueDate={formValues.dueDate || null} />
+              </Animated.View>
+            </Pressable>
 
-          {/* date section: displays task due date with dynamic messaging */}
-          {/* pressable wrapper for darken highlight animation and opening date picker */}
-          <Pressable
-            onPressIn={handleDateSectionPressIn}
-            onPressOut={handleDateSectionPressOut}
-            onPress={handleDateSectionPress}
-            style={styles.dateSection}
-          >
-            <Animated.View style={{ opacity: dateSectionOpacity }}>
-              <DateSection dueDate={formValues.dueDate || null} />
-            </Animated.View>
-          </Pressable>
-
-          {/* form picker button section */}
-          <View style={styles.pickerButtonsSection}>
-            <PickerButtonsSection
-              values={{
-                icon: task?.icon,
-                color: task?.color || taskColor,
-                dueDate: formValues.dueDate || undefined,
-                time: formValues.time,
-                duration: formValues.duration,
-                alerts: formValues.alerts,
-              }}
-              iconButtonHighlightOpacity={new Animated.Value(0)}
-              dateButtonHighlightOpacity={new Animated.Value(0)}
-              timeButtonHighlightOpacity={new Animated.Value(0)}
-              alertsButtonHighlightOpacity={new Animated.Value(0)}
-              onShowIconColorPicker={() => {}} // icon picker not used in task view
-              onShowDatePicker={handleShowDatePicker}
-              onShowTimeDurationPicker={handleShowTimeDurationPicker}
-              onShowAlertsPicker={handleShowAlertsPicker}
-              onButtonPress={snapToTop} // snap modal to top when any picker button is pressed
-            />
+            {/* form picker button section */}
+            <View style={styles.pickerButtonsSection}>
+              <PickerButtonsSection
+                values={{
+                  icon: task?.icon,
+                  color: task?.color || taskColor,
+                  dueDate: formValues.dueDate || undefined,
+                  time: formValues.time,
+                  duration: formValues.duration,
+                  alerts: formValues.alerts,
+                }}
+                iconButtonHighlightOpacity={new Animated.Value(0)}
+                dateButtonHighlightOpacity={new Animated.Value(0)}
+                timeButtonHighlightOpacity={new Animated.Value(0)}
+                alertsButtonHighlightOpacity={new Animated.Value(0)}
+                onShowIconColorPicker={() => {}} // icon picker not used in task view
+                onShowDatePicker={handleShowDatePicker}
+                onShowTimeDurationPicker={handleShowTimeDurationPicker}
+                onShowAlertsPicker={handleShowAlertsPicker}
+                onButtonPress={snapToTop} // snap modal to top when any picker button is pressed
+              />
+            </View>
           </View>
-        </View>
+        </GroupedList>
       </View>
 
       {/* date picker modal */}
@@ -415,43 +417,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, // horizontal padding from screen edges
   },
   
-  // elevated container - contains first section, list, date, and picker buttons
-  firstSection: {
-    borderRadius: 24, // rounded corners for modern look
-    padding: 16, // padding inside the container
-  },
-  
-  // first section wrapper - provides bottom padding for spacing
+  // first section wrapper - provides padding for first section
+  // GroupedList handles border radius and separators automatically
   firstSectionWrapper: {
-    paddingBottom: 16, // padding below first section (spacing before border)
-  },
-  
-  // border below description (inside elevated container)
-  // borders have no margins - spacing is handled by section padding
-  sectionBorder: {
-    borderBottomWidth: 1,
-    marginTop: 0, // no top margin - borders have no spacing
-    marginBottom: 0, // no bottom margin - borders have no spacing
-  },
-  
-  // date section - displays task due date
-  // padding replaces border margin spacing
-  dateSection: {
-    paddingTop: 16, // padding replaces border margin spacing
+    padding: 16, // padding inside the first section item
   },
   
   // list section - displays task's associated list
-  // padding replaces border margin spacing
+  // GroupedList handles border radius and separators automatically
   listSection: {
-    paddingTop: 16, // padding above list section (spacing after border)
-    paddingBottom: 16, // padding below list section (spacing before next border)
+    padding: 16, // padding inside the list section item
+  },
+  
+  // date + picker button section container
+  // combines date section and picker buttons into one GroupedList item
+  datePickerSection: {
+    padding: 16, // padding inside the combined section item
+  },
+  
+  // date section - displays task due date
+  // padding for spacing within the combined section
+  dateSection: {
+    paddingBottom: 16, // padding below date section (spacing before picker buttons)
   },
   
   // form picker button section
   // negative margins counteract parent container padding to extend to edges
   pickerButtonsSection: {
-    marginHorizontal: -16, // negative margin to counteract contentContainer padding (16px)
-    paddingTop: 20,
+    marginHorizontal: -16, // negative margin to counteract datePickerSection padding (16px)
+    paddingTop: 0, // no top padding (spacing handled by dateSection paddingBottom)
   },
   
 });
