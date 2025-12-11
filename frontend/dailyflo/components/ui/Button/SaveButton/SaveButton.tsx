@@ -134,13 +134,13 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
       disabled={!isActive}
       style={({ pressed }) => ({
         ...(isNewerIOS ? {
-          // iOS 15+: circular button with tertiary background
+          // iOS 15+: circular button with lightOverlay background (matches MainCloseButton)
           width: 42,
           height: 42,
           borderRadius: 21,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: themeColors.background.tertiary(),
+          backgroundColor: themeColors.background.lightOverlay(), // same as MainCloseButton
           // when pressed: use inactive state opacity (0.4), no animations
           // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
           opacity: pressed ? 0.4 : (!isActive ? 0.4 : isLoading ? 0.6 : 1),
