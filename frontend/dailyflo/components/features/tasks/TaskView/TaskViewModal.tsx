@@ -8,10 +8,17 @@
 
 // REACT IMPORTS
 // react: core react library for building components
-import React, { useRef, useState, useRef as useReactRef } from 'react';
+import React, { useState, useRef, useEffect, useRef as useReactRef } from 'react';
 
 // REACT NATIVE IMPORTS
-import { View, Text, StyleSheet, Animated, Pressable, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, Animated, Pressable, Keyboard, TouchableOpacity, LayoutAnimation, UIManager } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+// enable layout animations on android for smooth expand/collapse animations
+// this ensures android can use layout animations like ios does
+if (UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // LAYOUT COMPONENTS IMPORTS
 // WrappedDraggableModal: draggable modal wrapped in Modal for slide animation
@@ -25,11 +32,13 @@ import type { DraggableModalRef } from '@/components/layout/ModalLayout/Draggabl
 // DateSection: section displaying task due date with dynamic messaging
 // ListSection: section displaying task's associated list name and icon
 // PickerButtonsSection: horizontal scrollable section with form picker buttons
-import { FirstSection, DateSection, ListSection, PickerButtonsSection } from './sections';
+// CreateSubtaskButton: button component for creating subtasks
+// SubtaskItem: component for displaying individual subtasks with checkboxes
+import { FirstSection, DateSection, ListSection, PickerButtonsSection, CreateSubtaskButton, SubtaskItem } from './sections';
 
 // UI COMPONENTS IMPORTS
 // GroupedList: flexible iOS-style grouped list component
-import { GroupedList } from '@/components/ui/List/GroupedList';
+import { GroupedList, GroupedListButton } from '@/components/ui/List/GroupedList';
 
 // FEATURE COMPONENTS IMPORTS
 // modals for date, time/duration, and alerts pickers
@@ -39,6 +48,10 @@ import { TimeDurationModal, AlertModal } from '../TaskCreation/modals';
 // CUSTOM HOOKS IMPORTS
 // hooks for accessing design system and theme
 import { useThemeColors } from '@/hooks/useColorPalette';
+// useTypography: hook for accessing typography system
+import { useTypography } from '@/hooks/useTypography';
+// useGroupAnimations: hook for group collapse/expand animations (reused from ListCard)
+import { useGroupAnimations } from '@/hooks/useGroupAnimations';
 
 // TYPES IMPORTS
 // typescript types for type safety
@@ -81,6 +94,11 @@ export function TaskViewModal({
   // HOOKS
   // get theme-aware colors for styling
   const themeColors = useThemeColors();
+  // get typography system for consistent text styling
+  const typography = useTypography();
+  
+  // create dynamic styles using theme colors and typography
+  const styles = React.useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
 
   // REF FOR DRAGGABLE MODAL
   // used to programmatically control modal position (e.g., snap to top when section is tapped)
@@ -115,6 +133,40 @@ export function TaskViewModal({
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [isTimeDurationPickerVisible, setIsTimeDurationPickerVisible] = useState(false);
   const [isAlertsPickerVisible, setIsAlertsPickerVisible] = useState(false);
+  
+  // SUBTASKS STATE
+  // manage list of subtasks - each subtask has id, title, and completion status
+  interface Subtask {
+    id: string;
+    title: string;
+    isCompleted: boolean;
+    isEditing?: boolean; // track if subtask is being edited
+  }
+  
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  
+  // SUBTASKS ANIMATION
+  // use group animations hook (reused from ListCard) for consistent animation behavior
+  const {
+    toggleGroupCollapse,
+    getAnimatedValuesForGroup,
+    isGroupCollapsed,
+  } = useGroupAnimations();
+  
+  // subtasks group title - using a constant group name for the subtasks section
+  const SUBTASKS_GROUP_TITLE = 'Subtasks';
+  
+  // check if subtasks section is collapsed
+  const isSubtasksExpanded = !isGroupCollapsed(SUBTASKS_GROUP_TITLE);
+  
+  // get animated values for subtasks group
+  const subtasksAnimatedValues = getAnimatedValuesForGroup(SUBTASKS_GROUP_TITLE);
+  
+  // calculate arrow rotation interpolation - matches ListCard pattern
+  const arrowRotationInterpolation = subtasksAnimatedValues.rotateValue.interpolate({
+    inputRange: [0, 1], // input range: 0 = collapsed (right pointing), 1 = expanded (down pointing)
+    outputRange: ['90deg', '0deg'], // output range: rotate from 90 degrees (right) to 0 degrees (down)
+  });
 
   // check if any picker modal is currently visible
   // used to disable dragging and scrolling on TaskViewModal when secondary modals are open
@@ -266,6 +318,80 @@ export function TaskViewModal({
     handleShowDatePicker();
   };
 
+  // SUBTASKS HANDLERS
+  // handle subtasks header press - toggle expanded state and snap modal to top
+  const handleSubtasksHeaderPress = () => {
+    // snap modal to top (fully expanded) when subtasks header is tapped
+    snapToTop();
+    // toggle group collapse using reusable hook (matches ListCard animation pattern)
+    // this handles both state management and animations (arrow rotation + layout animation)
+    toggleGroupCollapse(SUBTASKS_GROUP_TITLE);
+  };
+
+  // calculate subtasks count
+  const subtasksCount = subtasks.length;
+  const displayCount = subtasksCount; // show actual count of subtasks
+
+  // handle create subtask button press
+  // adds a new subtask above the create button (in second-to-last position)
+  const handleCreateSubtask = () => {
+    // generate unique ID for new subtask
+    const newSubtaskId = `subtask-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // create new subtask with default title and editing mode enabled
+    const newSubtask: Subtask = {
+      id: newSubtaskId,
+      title: '', // empty title to start
+      isCompleted: false,
+      isEditing: true, // start in edit mode
+    };
+    
+    // add new subtask to the list (will appear above create button)
+    setSubtasks(prev => [...prev, newSubtask]);
+    
+    // snap modal to top when creating subtask
+    snapToTop();
+  };
+  
+  // handle subtask title change
+  const handleSubtaskTitleChange = (subtaskId: string, newTitle: string) => {
+    setSubtasks(prev =>
+      prev.map(subtask =>
+        subtask.id === subtaskId
+          ? { ...subtask, title: newTitle }
+          : subtask
+      )
+    );
+  };
+  
+  // handle finish editing subtask
+  const handleSubtaskFinishEditing = (subtaskId: string) => {
+    setSubtasks(prev =>
+      prev.map(subtask =>
+        subtask.id === subtaskId
+          ? { ...subtask, isEditing: false }
+          : subtask
+      )
+    );
+  };
+  
+  // handle subtask toggle (complete/incomplete)
+  const handleSubtaskToggle = (subtaskId: string) => {
+    setSubtasks(prev =>
+      prev.map(subtask =>
+        subtask.id === subtaskId
+          ? { ...subtask, isCompleted: !subtask.isCompleted }
+          : subtask
+      )
+    );
+  };
+  
+  // handle subtask delete
+  const handleSubtaskDelete = (subtaskId: string) => {
+    setSubtasks(prev => prev.filter(subtask => subtask.id !== subtaskId));
+  };
+
+
   // helper function to snap modal to top when any section is tapped
   // this ensures the modal is fully expanded when user interacts with sections
   const snapToTop = () => {
@@ -373,6 +499,67 @@ export function TaskViewModal({
             </View>
           </View>
         </GroupedList>
+
+        {/* subtasks section: header and create button below the grouped list */}
+        <View style={styles.subtasksSection}>
+          {/* subtasks header: toggle button for expanding/collapsing */}
+          {/* matches GroupHeader styling and animation pattern */}
+          <TouchableOpacity
+            style={styles.subtasksHeader}
+            onPress={handleSubtasksHeaderPress}
+            activeOpacity={0.7}
+          >
+            {/* subtasks label and count - using same typography as GroupHeader */}
+            <View style={styles.subtasksHeaderTextContainer}>
+              <Text style={styles.subtasksHeaderText}>Subtasks</Text>
+              {/* show count only when there are subtasks (count > 0 after subtracting 1) */}
+              {displayCount > 0 && (
+                <Text style={styles.subtasksHeaderCount}>({displayCount})</Text>
+              )}
+            </View>
+            
+            {/* dropdown arrow icon with smooth rotation animation - positioned on the right */}
+            {/* matches GroupHeader arrow animation pattern */}
+            <Animated.View
+              style={[
+                styles.animatedArrowContainer,
+                {
+                  transform: [{ rotate: arrowRotationInterpolation }], // apply rotation animation transform
+                },
+              ]}
+            >
+              <Ionicons
+                name="chevron-down" // always use chevron-down icon since we handle rotation with animation
+                size={16}
+                color={themeColors.text.tertiary()}
+              />
+            </Animated.View>
+          </TouchableOpacity>
+
+          {/* subtask items - shown when subtasks section is expanded */}
+          {/* subtasks list with create button always at the bottom */}
+          {isSubtasksExpanded && (
+            <GroupedList borderRadius={24}>
+              {/* render all subtasks */}
+              {subtasks.map((subtask) => (
+                <SubtaskItem
+                  key={subtask.id}
+                  id={subtask.id}
+                  title={subtask.title}
+                  isCompleted={subtask.isCompleted}
+                  isEditing={subtask.isEditing}
+                  onPress={() => handleSubtaskToggle(subtask.id)}
+                  onDelete={() => handleSubtaskDelete(subtask.id)}
+                  onTitleChange={(newTitle) => handleSubtaskTitleChange(subtask.id, newTitle)}
+                  onFinishEditing={() => handleSubtaskFinishEditing(subtask.id)}
+                />
+              ))}
+              
+              {/* create subtask button - always at the bottom */}
+              <CreateSubtaskButton onPress={handleCreateSubtask} />
+            </GroupedList>
+          )}
+        </View>
       </View>
 
       {/* date picker modal */}
@@ -410,45 +597,102 @@ export function TaskViewModal({
 
 // STYLES
 // stylesheet for component styling
-const styles = StyleSheet.create({
-  // main content container - fills available space
-  contentContainer: {
-    flex: 1,
-    paddingHorizontal: 20, // horizontal padding from screen edges
-  },
-  
-  // first section wrapper - provides padding for first section
-  // GroupedList handles border radius and separators automatically
-  firstSectionWrapper: {
-    padding: 16, // padding inside the first section item
-  },
-  
-  // list section - displays task's associated list
-  // GroupedList handles border radius and separators automatically
-  listSection: {
-    padding: 16, // padding inside the list section item
-  },
-  
-  // date + picker button section container
-  // combines date section and picker buttons into one GroupedList item
-  datePickerSection: {
-    padding: 16, // padding inside the combined section item
-  },
-  
-  // date section - displays task due date
-  // padding for spacing within the combined section
-  dateSection: {
-    paddingBottom: 16, // padding below date section (spacing before picker buttons)
-  },
-  
-  // form picker button section
-  // negative margins counteract parent container padding to extend to edges
-  pickerButtonsSection: {
-    marginHorizontal: -16, // negative margin to counteract datePickerSection padding (16px)
-    paddingTop: 0, // no top padding (spacing handled by dateSection paddingBottom)
-  },
-  
-});
+// note: styles that need theme colors and typography are created inside the component using useMemo
+const createStyles = (
+  themeColors: ReturnType<typeof useThemeColors>,
+  typography: ReturnType<typeof useTypography>
+) =>
+  StyleSheet.create({
+    // main content container - fills available space
+    contentContainer: {
+      flex: 1,
+      paddingHorizontal: 20, // horizontal padding from screen edges
+    },
+    
+    // first section wrapper - provides padding for first section
+    // GroupedList handles border radius and separators automatically
+    firstSectionWrapper: {
+      padding: 16, // padding inside the first section item
+    },
+    
+    // list section - displays task's associated list
+    // GroupedList handles border radius and separators automatically
+    listSection: {
+      padding: 16, // padding inside the list section item
+    },
+    
+    // date + picker button section container
+    // combines date section and picker buttons into one GroupedList item
+    datePickerSection: {
+      padding: 16, // padding inside the combined section item
+    },
+    
+    // date section - displays task due date
+    // padding for spacing within the combined section
+    dateSection: {
+      paddingBottom: 16, // padding below date section (spacing before picker buttons)
+    },
+    
+    // form picker button section
+    // negative margins counteract parent container padding to extend to edges
+    pickerButtonsSection: {
+      marginHorizontal: -16, // negative margin to counteract datePickerSection padding (16px)
+      paddingTop: 0, // no top padding (spacing handled by dateSection paddingBottom)
+    },
+    
+    // subtasks section container - wraps header and create button
+    subtasksSection: {
+      marginTop: 8, // space above the subtasks section (separates from grouped list)
+    },
+    
+    // subtasks header - toggle button for expanding/collapsing
+    // matches GroupHeader styling pattern
+    subtasksHeader: {
+      flexDirection: 'row', // horizontal layout
+      alignItems: 'center', // center align
+      justifyContent: 'space-between', // space between label and arrow
+      paddingHorizontal: 4, // slight padding for alignment (matches GroupHeader)
+      paddingVertical: 8, // vertical padding for better touch target (matches GroupHeader)
+      marginBottom: 12, // space below header before create button (when expanded)
+    },
+    
+    // subtasks header text container - holds label and count
+    // matches GroupHeader text container pattern
+    subtasksHeaderTextContainer: {
+      flexDirection: 'row', // horizontal layout for label and count
+      alignItems: 'center', // center align vertically
+      gap: 4, // small gap between label and count
+    },
+    
+    // subtasks header text styling
+    // using typography system for consistent text styling - matches GroupHeader
+    subtasksHeaderText: {
+      // use the heading-4 text style from typography system (16px, bold, satoshi font)
+      // this matches the typography used in GroupHeader for group titles
+      ...typography.getTextStyle('heading-4'),
+      // use theme-aware primary text color from color system
+      color: themeColors.text.primary(),
+    },
+    
+    // subtasks header count styling
+    // matches GroupHeader count styling pattern
+    subtasksHeaderCount: {
+      // use the heading-4 text style from typography system (16px, bold, satoshi font)
+      // this matches the typography used in GroupHeader for group counts
+      ...typography.getTextStyle('heading-4'),
+      // use theme-aware primary text color from color system
+      color: themeColors.text.primary(),
+    },
+    
+    // animated arrow container for smooth rotation animations
+    // matches GroupHeader arrow container styling
+    animatedArrowContainer: {
+      marginLeft: 8, // space between label and arrow (matches GroupHeader)
+      justifyContent: 'center', // center the arrow icon
+      alignItems: 'center', // center the arrow icon
+    },
+    // margin is handled by GroupedList spacing
+  });
 
 export default TaskViewModal;
 

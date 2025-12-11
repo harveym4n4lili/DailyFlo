@@ -35,6 +35,7 @@ export const GroupedListButton: React.FC<GroupedListButtonProps> = ({
   secondaryValue,
   onPress,
   disabled = false,
+  showChevron = true, // default to showing chevron for backward compatibility
   customStyles,
 }) => {
   // get theme-aware colors from the color palette system
@@ -138,13 +139,15 @@ export const GroupedListButton: React.FC<GroupedListButtonProps> = ({
         </View>
       </View>
 
-      {/* right chevron icon */}
-      <Ionicons
-        name="chevron-forward"
-        size={16}
-        color={themeColors.text.tertiary?.() || labelColor}
-        style={{ marginLeft: 8 }}
-      />
+      {/* right chevron icon - only shown if showChevron is true */}
+      {showChevron && (
+        <Ionicons
+          name="chevron-forward"
+          size={16}
+          color={themeColors.text.tertiary?.() || labelColor}
+          style={{ marginLeft: 8 }}
+        />
+      )}
     </Pressable>
   );
 };
