@@ -16,3 +16,9 @@ export type { ListSectionProps } from './ListSection';
 export { PickerButtonsSection } from './PickerButtonsSection';
 export type { PickerButtonsSectionProps } from './PickerButtonsSection';
 
+export { SubtaskItem } from './SubtaskItem';
+export type { SubtaskItemProps } from './SubtaskItem';
+
+export { CreateSubtaskButton } from './CreateSubtaskButton';
+export type { CreateSubtaskButtonProps } from './CreateSubtaskButton';
+

@@ -57,6 +57,10 @@ export interface GroupedListButtonProps {
   // whether the item is disabled (grayed out, no interaction)
   disabled?: boolean;
   
+  // whether to show the right chevron icon (defaults to true)
+  // set to false to hide the chevron-forward icon on the right
+  showChevron?: boolean;
+  
   // optional custom styles to override defaults for this specific item
   customStyles?: {
     // override the entire item container style
