@@ -39,6 +39,10 @@ import { FirstSection, DateSection, ListSection, PickerButtonsSection } from './
 import { SubtaskList } from '@/components/features/subtasks';
 
 // UI COMPONENTS IMPORTS
+// SaveButton: button component for saving changes
+import { SaveButton } from '@/components/ui/Button';
+
+// UI COMPONENTS IMPORTS
 // GroupedList: flexible iOS-style grouped list component
 import { GroupedList, GroupedListButton } from '@/components/ui/List/GroupedList';
 
@@ -57,8 +61,14 @@ import { useGroupAnimations } from '@/hooks/useGroupAnimations';
 
 // TYPES IMPORTS
 // typescript types for type safety
-import type { TaskColor, Task } from '@/types';
+import type { TaskColor, Task, UpdateTaskInput, Subtask as TaskSubtask } from '@/types';
 import { FontWeight } from '@/constants/Typography';
+
+// STORE IMPORTS
+// redux store hooks and actions for state management
+import { useAppDispatch } from '@/store';
+import { updateTask } from '@/store/slices/tasks/tasksSlice';
+import { useTasks } from '@/store/hooks';
 
 /**
  * Props for the TaskViewModal component
@@ -99,6 +109,12 @@ export function TaskViewModal({
   // get typography system for consistent text styling
   const typography = useTypography();
   
+  // REDUX
+  // dispatch: function to send actions to the Redux store
+  const dispatch = useAppDispatch();
+  // get tasks state including isUpdating and updateError
+  const { isUpdating, updateError } = useTasks();
+  
   // create dynamic styles using theme colors and typography
   const styles = React.useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
 
@@ -116,16 +132,41 @@ export function TaskViewModal({
     alerts: [] as string[], // TODO: convert from TaskReminder[] when alerts are implemented
   });
 
+  // initial form values - store original values to detect changes
+  const [initialFormValues, setInitialFormValues] = useState({
+    dueDate: task?.dueDate || undefined,
+    time: task?.time || undefined,
+    duration: task?.duration || undefined,
+    alerts: [] as string[],
+  });
+
+  // initial subtasks - store original subtasks to detect changes
+  // convert from Task.Subtask[] format (with sortOrder) to local Subtask format
+  const [initialSubtasks, setInitialSubtasks] = useState<Subtask[]>([]);
+
   // update form values when task prop changes
   // this ensures the form reflects the latest task data
   React.useEffect(() => {
     if (task) {
-      setFormValues({
+      const newValues = {
         dueDate: task.dueDate || undefined,
         time: task.time || undefined,
         duration: task.duration || undefined,
-        alerts: [], // TODO: convert from TaskReminder[] when alerts are implemented
-      });
+        alerts: [] as string[], // TODO: convert from TaskReminder[] when alerts are implemented
+      };
+      setFormValues(newValues);
+      setInitialFormValues(newValues);
+      
+      // convert task subtasks from Task.Subtask[] format to local Subtask format
+      // Task.Subtask has sortOrder, local Subtask doesn't (we'll add it back when saving)
+      const taskSubtasks: Subtask[] = (task.metadata?.subtasks || []).map((st, index) => ({
+        id: st.id,
+        title: st.title,
+        isCompleted: st.isCompleted,
+        isEditing: false,
+      }));
+      setSubtasks(taskSubtasks);
+      setInitialSubtasks(taskSubtasks);
     }
   }, [task]);
 
@@ -146,6 +187,32 @@ export function TaskViewModal({
   }
   
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+
+  // CHANGE DETECTION
+  // check if form has any changes from initial values
+  // compares current form values with initial values to detect unsaved changes
+  // must be defined after subtasks state is declared
+  const hasChanges = React.useMemo(() => {
+    // safely check alerts arrays (handle undefined/null cases)
+    const currentAlerts = formValues.alerts || [];
+    const initialAlerts = initialFormValues.alerts || [];
+    
+    // safely check subtasks arrays (handle undefined/null cases)
+    const currentSubtasks = subtasks || [];
+    const initialSubtasksArray = initialSubtasks || [];
+    
+    // compare subtasks by checking if they're different
+    const subtasksChanged = JSON.stringify(currentSubtasks.map(s => ({ id: s.id, title: s.title, isCompleted: s.isCompleted }))) !== 
+                           JSON.stringify(initialSubtasksArray.map(s => ({ id: s.id, title: s.title, isCompleted: s.isCompleted })));
+    
+    return (
+      formValues.dueDate !== initialFormValues.dueDate ||
+      formValues.time !== initialFormValues.time ||
+      formValues.duration !== initialFormValues.duration ||
+      JSON.stringify(currentAlerts) !== JSON.stringify(initialAlerts) ||
+      subtasksChanged
+    );
+  }, [formValues, initialFormValues, subtasks, initialSubtasks]);
   
   // SUBTASKS ANIMATION
   // use group animations hook (reused from ListCard) for consistent animation behavior
@@ -393,6 +460,58 @@ export function TaskViewModal({
     setSubtasks(prev => prev.filter(subtask => subtask.id !== subtaskId));
   };
 
+  // SAVE HANDLER
+  // handle saving changes to the task
+  // this function saves the current form values but does not close the modal
+  const handleSave = async () => {
+    if (!task?.id) return; // can't save without task ID
+    
+    // convert local Subtask format to Task.Subtask format (with sortOrder)
+    // sortOrder is the index in the array
+    const taskSubtasks: TaskSubtask[] = subtasks.map((st, index) => ({
+      id: st.id,
+      title: st.title,
+      isCompleted: st.isCompleted,
+      sortOrder: index,
+    }));
+    
+    // prepare update data in UpdateTaskInput format
+    const updates: UpdateTaskInput = {
+      id: task.id,
+      dueDate: formValues.dueDate || null, // convert undefined to null for API
+      time: formValues.time,
+      duration: formValues.duration,
+      // include subtasks in metadata
+      metadata: {
+        subtasks: taskSubtasks,
+        // preserve existing metadata fields
+        reminders: task.metadata?.reminders || [],
+        notes: task.metadata?.notes,
+        tags: task.metadata?.tags || [],
+      },
+    };
+    
+    try {
+      // dispatch updateTask action to Redux store
+      // this will trigger the async thunk that updates the task
+      const result = await dispatch(updateTask({ id: task.id, updates }));
+      
+      // if update was successful, update initial values to clear change detection
+      if (updateTask.fulfilled.match(result)) {
+        setInitialFormValues({
+          dueDate: formValues.dueDate,
+          time: formValues.time,
+          duration: formValues.duration,
+          alerts: formValues.alerts,
+        });
+        setInitialSubtasks([...subtasks]); // create a copy of current subtasks
+      }
+    } catch (error) {
+      // error is handled by Redux state (updateError)
+      console.error('Failed to update task:', error);
+    }
+  };
+
 
   // helper function to snap modal to top when any section is tapped
   // this ensures the modal is fully expanded when user interacts with sections
@@ -414,15 +533,39 @@ export function TaskViewModal({
       disableGestures={isAnyPickerVisible} // disable dragging when any picker modal is open
     >
       {/* modal header with MainCloseButton on left and drag indicator */}
-      <ModalHeader
-        showCloseButton={true}
-        closeButtonPosition="left"
-        showDragIndicator={true}
-        onClose={onClose}
-        showBorder={false}
-        useMainCloseButton={true}
-        taskCategoryColor={task?.color || taskColor}
-      />
+      <View style={{ position: 'relative' }}>
+        <ModalHeader
+          showCloseButton={true}
+          closeButtonPosition="left"
+          showDragIndicator={true}
+          onClose={onClose}
+          showBorder={false}
+          useMainCloseButton={true}
+          taskCategoryColor={task?.color || taskColor}
+        />
+        
+        {/* save button - appears on the right when changes are detected */}
+        {/* positioned absolutely to align with header buttons */}
+        {hasChanges && (
+          <View
+            style={{
+              position: 'absolute',
+              right: 16, // match header padding
+              top: 16, // match header button top spacing (iOS 15+)
+              zIndex: 10, // ensure it's above header content
+            }}
+          >
+            <SaveButton
+              onPress={handleSave}
+              disabled={false}
+              isLoading={isUpdating}
+              taskCategoryColor={task?.color || taskColor}
+              text="Save"
+              loadingText="Saving..."
+            />
+          </View>
+        )}
+      </View>
 
       {/* main content area */}
       <View style={styles.contentContainer}>
