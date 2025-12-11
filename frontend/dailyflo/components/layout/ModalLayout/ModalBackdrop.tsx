@@ -44,7 +44,7 @@ export interface ModalBackdropProps {
 
 export function ModalBackdrop({
   isVisible,
-  backgroundColor = 'rgba(0, 0, 0, 0.5)',
+  backgroundColor = 'rgba(0, 0, 0, 0.6)',
   duration = 250,
   zIndex = 50,
   onPress,

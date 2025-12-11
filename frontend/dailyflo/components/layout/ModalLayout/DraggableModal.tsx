@@ -6,7 +6,7 @@
  * Can be used by any modal that needs draggable functionality.
  */
 
-import React, { useEffect, useState, useRef, createContext, useContext } from 'react';
+import React, { useEffect, useState, useRef, createContext, useContext, useImperativeHandle, forwardRef } from 'react';
 import { View, Pressable, useWindowDimensions, StyleSheet, BackHandler, Platform, ScrollView, ScrollViewProps } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
@@ -51,6 +51,14 @@ export const useScrollLock = () => {
   return context;
 };
 
+// REF INTERFACE
+// defines the methods that can be called on DraggableModal via ref
+// allows parent components to programmatically control modal position
+export interface DraggableModalRef {
+  /** Snap to the highest snap point (fully expanded) */
+  snapToTop: () => void;
+}
+
 export interface DraggableModalProps {
   // whether the modal is visible
   visible: boolean;
@@ -93,9 +101,18 @@ export interface DraggableModalProps {
   // when false, backdrop is hidden (useful when stacked on another modal with its own backdrop)
   // @default true
   showBackdrop?: boolean;
+  
+  // background color for the modal container
+  // if not provided, defaults to elevated() background
+  backgroundColor?: string;
+  
+  // whether to disable drag gestures
+  // when true, modal cannot be dragged (useful when secondary modals are open)
+  // @default false
+  disableGestures?: boolean;
 }
 
-export function DraggableModal({
+export const DraggableModal = forwardRef<DraggableModalRef, DraggableModalProps>(({
   visible,
   onClose,
   children,
@@ -106,7 +123,9 @@ export function DraggableModal({
   stickyHeader,
   zIndex = 10001, // default higher than FullScreenModal for stacking
   showBackdrop = true, // default to showing backdrop
-}: DraggableModalProps) {
+  backgroundColor, // optional custom background color
+  disableGestures = false, // whether to disable drag gestures
+}, ref) => {
   
   const { height: screenHeight } = useWindowDimensions();
   const themeColors = useThemeColors();
@@ -185,6 +204,26 @@ export function DraggableModal({
   // starts off-screen (maxHeight) so modal can slide up when opening
   // this ensures the modal starts hidden and animates in smoothly
   const translateY = useSharedValue(maxHeight);
+  
+  // IMPERATIVE HANDLE
+  // exposes methods to parent components via ref
+  // allows programmatic control of modal position (e.g., snap to top when section is tapped)
+  useImperativeHandle(ref, () => ({
+    // snap to the highest snap point (fully expanded)
+    // animates the modal to translateY of 0 (top anchor)
+    snapToTop: () => {
+      // calculate translateY for highest snap point (always 0 - fully expanded)
+      const topPosition = 0;
+      
+      // animate to top position using spring animation for smooth, natural feel
+      translateY.value = withSpring(topPosition, {
+        damping: 30, // controls bounce/oscillation (lower = more bounce)
+        stiffness: 400, // controls speed (higher = faster)
+        mass: 0.5, // controls weight (lower = lighter feel)
+        overshootClamping: true, // prevents overshooting the target
+      });
+    },
+  }), [translateY]);
   
   // store the starting position when gesture begins
   // this allows us to apply the drag relative to where we started
@@ -336,7 +375,9 @@ export function DraggableModal({
   }, [visible, onClose]);
 
   // pan gesture handler for dragging the modal
+  // when disableGestures is true, gesture is disabled (modal cannot be dragged)
   const panGesture = Gesture.Pan()
+    .enabled(!disableGestures) // disable gesture when disableGestures is true
     .onStart(() => {
       // remember where we started from
       startY.value = translateY.value;
@@ -522,7 +563,8 @@ export function DraggableModal({
               style={{
                 width: '100%',
                 height: maxHeight,
-                backgroundColor: themeColors.background.primary(),
+                // use custom backgroundColor if provided, otherwise default to elevated()
+                backgroundColor: backgroundColor || themeColors.background.elevated(),
                 // use calculated border radius based on iOS version
                 // iOS 15+ (glass UI): 28px for rounder corners (increased from 20px)
                 // iOS < 15 (pre-glass UI): 20px for smaller corners (increased from 12px)
@@ -577,7 +619,7 @@ export function DraggableModal({
       </View>
     </View>
   );
-}
+});
 
 /**
  * Styles for the DraggableModal component

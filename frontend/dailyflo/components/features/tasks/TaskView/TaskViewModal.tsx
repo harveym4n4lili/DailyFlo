@@ -8,15 +8,17 @@
 
 // REACT IMPORTS
 // react: core react library for building components
-import React from 'react';
+import React, { useRef, useState, useRef as useReactRef } from 'react';
 
 // REACT NATIVE IMPORTS
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Pressable, Keyboard } from 'react-native';
 
 // LAYOUT COMPONENTS IMPORTS
 // WrappedDraggableModal: draggable modal wrapped in Modal for slide animation
 // ModalHeader: header component with close button and drag indicator
+// DraggableModalRef: ref type for programmatic control of draggable modal
 import { WrappedDraggableModal, ModalHeader } from '@/components/layout/ModalLayout';
+import type { DraggableModalRef } from '@/components/layout/ModalLayout/DraggableModal';
 
 // TASK VIEW SECTIONS IMPORTS
 // FirstSection: section containing task icon, title, and description
@@ -24,6 +26,11 @@ import { WrappedDraggableModal, ModalHeader } from '@/components/layout/ModalLay
 // ListSection: section displaying task's associated list name and icon
 // PickerButtonsSection: horizontal scrollable section with form picker buttons
 import { FirstSection, DateSection, ListSection, PickerButtonsSection } from './sections';
+
+// FEATURE COMPONENTS IMPORTS
+// modals for date, time/duration, and alerts pickers
+import { DatePickerModal } from '@/components/features/calendar';
+import { TimeDurationModal, AlertModal } from '../TaskCreation/modals';
 
 // CUSTOM HOOKS IMPORTS
 // hooks for accessing design system and theme
@@ -71,15 +78,208 @@ export function TaskViewModal({
   // get theme-aware colors for styling
   const themeColors = useThemeColors();
 
+  // REF FOR DRAGGABLE MODAL
+  // used to programmatically control modal position (e.g., snap to top when section is tapped)
+  const draggableModalRef = useRef<DraggableModalRef>(null);
+
+  // FORM STATE
+  // local state for form values - initialized from task prop
+  // these values are used to populate picker modals and can be updated
+  const [formValues, setFormValues] = useState({
+    dueDate: task?.dueDate || undefined,
+    time: task?.time || undefined,
+    duration: task?.duration || undefined,
+    alerts: [] as string[], // TODO: convert from TaskReminder[] when alerts are implemented
+  });
+
+  // update form values when task prop changes
+  // this ensures the form reflects the latest task data
+  React.useEffect(() => {
+    if (task) {
+      setFormValues({
+        dueDate: task.dueDate || undefined,
+        time: task.time || undefined,
+        duration: task.duration || undefined,
+        alerts: [], // TODO: convert from TaskReminder[] when alerts are implemented
+      });
+    }
+  }, [task]);
+
+  // PICKER MODAL VISIBILITY STATE
+  // track visibility of all form picker modals
+  // only one modal should be open at a time for better UX
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [isTimeDurationPickerVisible, setIsTimeDurationPickerVisible] = useState(false);
+  const [isAlertsPickerVisible, setIsAlertsPickerVisible] = useState(false);
+
+  // check if any picker modal is currently visible
+  // used to disable dragging and scrolling on TaskViewModal when secondary modals are open
+  const isAnyPickerVisible = isDatePickerVisible || isTimeDurationPickerVisible || isAlertsPickerVisible;
+
+  // HELPER FUNCTION: Close all modals except the one being opened
+  // this ensures seamless transitions by preventing multiple modals from being open
+  const closeAllModalsExcept = (modalToKeep: string) => {
+    if (modalToKeep !== 'date') setIsDatePickerVisible(false);
+    if (modalToKeep !== 'time') setIsTimeDurationPickerVisible(false);
+    if (modalToKeep !== 'alerts') setIsAlertsPickerVisible(false);
+  };
+
+  // DATE PICKER HANDLERS
+  // handle opening and closing the date picker modal
+  const handleShowDatePicker = () => {
+    Keyboard.dismiss(); // close keyboard when opening date picker
+    closeAllModalsExcept('date');
+    setIsDatePickerVisible(true);
+  };
+
+  const handleDateSelect = (date: string) => {
+    // update local form state when date is selected
+    setFormValues(prev => ({ ...prev, dueDate: date }));
+  };
+
+  const handleDatePickerClose = () => {
+    setIsDatePickerVisible(false);
+  };
+
+  // TIME/DURATION PICKER HANDLERS
+  // handle opening and closing the time/duration picker modal
+  const handleShowTimeDurationPicker = () => {
+    Keyboard.dismiss(); // close keyboard when opening time/duration picker
+    closeAllModalsExcept('time');
+    setIsTimeDurationPickerVisible(true);
+  };
+
+  const handleTimeSelect = (time: string | undefined) => {
+    // update local form state when time is selected
+    setFormValues(prev => ({ ...prev, time }));
+  };
+
+  const handleDurationSelect = (duration: number | undefined) => {
+    // update local form state when duration is selected
+    setFormValues(prev => ({ ...prev, duration }));
+  };
+
+  const handleTimeDurationPickerClose = () => {
+    setIsTimeDurationPickerVisible(false);
+  };
+
+  // ALERTS PICKER HANDLERS
+  // handle opening and closing the alerts picker modal
+  const handleShowAlertsPicker = () => {
+    Keyboard.dismiss(); // close keyboard when opening alerts picker
+    closeAllModalsExcept('alerts');
+    setIsAlertsPickerVisible(true);
+  };
+
+  const handleAlertsPickerClose = () => {
+    setIsAlertsPickerVisible(false);
+  };
+
+  const handleAlertsApply = (alertIds: string[]) => {
+    // update local form state when alerts are applied
+    setFormValues(prev => ({ ...prev, alerts: alertIds }));
+  };
+
+  // ANIMATION VALUES
+  // animated values for darken highlight effect on section press
+  // these control the opacity of text and icons when sections are pressed
+  // 0 = normal brightness, 1 = darkened (reduced opacity)
+  const firstSectionOpacity = useRef(new Animated.Value(1)).current;
+  const listSectionOpacity = useRef(new Animated.Value(1)).current;
+  const dateSectionOpacity = useRef(new Animated.Value(1)).current;
+
+  // PRESS HANDLERS
+  // handle press in/out animations for darken highlight effect
+  // when pressed, animate opacity to 0.5 (darkened), when released, animate back to 1 (normal)
+  const handleFirstSectionPressIn = () => {
+    // animate to darkened state (0.5 opacity) when pressed
+    Animated.timing(firstSectionOpacity, {
+      toValue: 0.5, // reduced opacity makes content appear darker
+      duration: 100, // quick animation for responsive feel
+      useNativeDriver: true, // use native driver for better performance
+    }).start();
+  };
+
+  const handleFirstSectionPressOut = () => {
+    // animate back to normal state (1 opacity) when released
+    Animated.timing(firstSectionOpacity, {
+      toValue: 1, // full opacity (normal brightness)
+      duration: 100, // quick animation for responsive feel
+      useNativeDriver: true, // use native driver for better performance
+    }).start();
+  };
+
+  // handle first section press - snap to top when tapped
+  const handleFirstSectionPress = () => {
+    snapToTop();
+  };
+
+  const handleListSectionPressIn = () => {
+    // animate to darkened state (0.5 opacity) when pressed
+    Animated.timing(listSectionOpacity, {
+      toValue: 0.5, // reduced opacity makes content appear darker
+      duration: 100, // quick animation for responsive feel
+      useNativeDriver: true, // use native driver for better performance
+    }).start();
+  };
+
+  const handleListSectionPressOut = () => {
+    // animate back to normal state (1 opacity) when released
+    Animated.timing(listSectionOpacity, {
+      toValue: 1, // full opacity (normal brightness)
+      duration: 100, // quick animation for responsive feel
+      useNativeDriver: true, // use native driver for better performance
+    }).start();
+  };
+
+  // handle list section press - snap to top when tapped
+  const handleListSectionPress = () => {
+    snapToTop();
+  };
+
+  const handleDateSectionPressIn = () => {
+    // animate to darkened state (0.5 opacity) when pressed
+    Animated.timing(dateSectionOpacity, {
+      toValue: 0.5, // reduced opacity makes content appear darker
+      duration: 100, // quick animation for responsive feel
+      useNativeDriver: true, // use native driver for better performance
+    }).start();
+  };
+
+  const handleDateSectionPressOut = () => {
+    // animate back to normal state (1 opacity) when released
+    Animated.timing(dateSectionOpacity, {
+      toValue: 1, // full opacity (normal brightness)
+      duration: 100, // quick animation for responsive feel
+      useNativeDriver: true, // use native driver for better performance
+    }).start();
+  };
+
+  // update date section press handler to also open date picker and snap modal to top
+  const handleDateSectionPress = () => {
+    // snap modal to top (fully expanded) when date section is tapped
+    snapToTop();
+    handleShowDatePicker();
+  };
+
+  // helper function to snap modal to top when any section is tapped
+  // this ensures the modal is fully expanded when user interacts with sections
+  const snapToTop = () => {
+    draggableModalRef.current?.snapToTop();
+  };
+
   // COMPONENT RENDER
   // using WrappedDraggableModal for slide animation
   // backdrop is rendered separately in parent component (TodayScreen) so it fades in independently
   return (
     <WrappedDraggableModal
+      ref={draggableModalRef}
       visible={visible}
       onClose={onClose}
       snapPoints={[0.3, 0.65, 0.9]}
       initialSnapPoint={1}
+      backgroundColor={themeColors.background.primary()}
+      disableGestures={isAnyPickerVisible} // disable dragging when any picker modal is open
     >
       {/* modal header with MainCloseButton on left and drag indicator */}
       <ModalHeader
@@ -94,33 +294,59 @@ export function TaskViewModal({
 
       {/* main content area */}
       <View style={styles.contentContainer}>
-        {/* first section: icon + title, description, and form picker buttons - all contained */}
+        {/* elevated container: contains first section, list, date, and picker buttons */}
         <View style={[styles.firstSection, { backgroundColor: themeColors.background.elevated() }]}>
           {/* first section: task icon, title, and description */}
-          <FirstSection 
-            task={task} 
-            taskColor={task?.color || taskColor}
-          />
+          {/* pressable wrapper for darken highlight animation and auto-expand modal */}
+          <Pressable
+            onPressIn={handleFirstSectionPressIn}
+            onPressOut={handleFirstSectionPressOut}
+            onPress={snapToTop}
+            style={styles.firstSectionWrapper}
+          >
+            <Animated.View style={{ opacity: firstSectionOpacity }}>
+              <FirstSection 
+                task={task} 
+                taskColor={task?.color || taskColor}
+              />
+            </Animated.View>
+          </Pressable>
 
           {/* border below description */}
           <View style={[styles.sectionBorder, { borderBottomColor: themeColors.border.primary() }]} />
 
           {/* list section: displays task's associated list name and icon */}
-          <View style={styles.listSection}>
-            <ListSection 
-              listId={task?.listId || null}
-              listName={undefined} // TODO: fetch list name from listId
-              listIcon={undefined} // TODO: fetch list icon from listId
-            />
-          </View>
+          {/* pressable wrapper for darken highlight animation and auto-expand modal */}
+          <Pressable
+            onPressIn={handleListSectionPressIn}
+            onPressOut={handleListSectionPressOut}
+            onPress={snapToTop}
+            style={styles.listSection}
+          >
+            <Animated.View style={{ opacity: listSectionOpacity }}>
+              <ListSection 
+                listId={task?.listId || null}
+                listName={undefined} // TODO: fetch list name from listId
+                listIcon={undefined} // TODO: fetch list icon from listId
+              />
+            </Animated.View>
+          </Pressable>
 
           {/* border below list section */}
           <View style={[styles.sectionBorder, { borderBottomColor: themeColors.border.primary() }]} />
 
           {/* date section: displays task due date with dynamic messaging */}
-          <View style={styles.dateSection}>
-            <DateSection dueDate={task?.dueDate || null} />
-          </View>
+          {/* pressable wrapper for darken highlight animation and opening date picker */}
+          <Pressable
+            onPressIn={handleDateSectionPressIn}
+            onPressOut={handleDateSectionPressOut}
+            onPress={handleDateSectionPress}
+            style={styles.dateSection}
+          >
+            <Animated.View style={{ opacity: dateSectionOpacity }}>
+              <DateSection dueDate={formValues.dueDate || null} />
+            </Animated.View>
+          </Pressable>
 
           {/* form picker button section */}
           <View style={styles.pickerButtonsSection}>
@@ -128,23 +354,54 @@ export function TaskViewModal({
               values={{
                 icon: task?.icon,
                 color: task?.color || taskColor,
-                dueDate: task?.dueDate || undefined,
-                time: task?.time,
-                duration: task?.duration,
-                alerts: [],
+                dueDate: formValues.dueDate || undefined,
+                time: formValues.time,
+                duration: formValues.duration,
+                alerts: formValues.alerts,
               }}
               iconButtonHighlightOpacity={new Animated.Value(0)}
               dateButtonHighlightOpacity={new Animated.Value(0)}
               timeButtonHighlightOpacity={new Animated.Value(0)}
               alertsButtonHighlightOpacity={new Animated.Value(0)}
-              onShowIconColorPicker={() => {}}
-              onShowDatePicker={() => {}}
-              onShowTimeDurationPicker={() => {}}
-              onShowAlertsPicker={() => {}}
+              onShowIconColorPicker={() => {}} // icon picker not used in task view
+              onShowDatePicker={handleShowDatePicker}
+              onShowTimeDurationPicker={handleShowTimeDurationPicker}
+              onShowAlertsPicker={handleShowAlertsPicker}
+              onButtonPress={snapToTop} // snap modal to top when any picker button is pressed
             />
           </View>
         </View>
       </View>
+
+      {/* date picker modal */}
+      <DatePickerModal
+        visible={isDatePickerVisible}
+        selectedDate={formValues.dueDate || new Date().toISOString()}
+        onClose={handleDatePickerClose}
+        onSelectDate={handleDateSelect}
+        title="Date"
+        taskCategoryColor={task?.color || taskColor}
+      />
+
+      {/* time/duration picker modal */}
+      <TimeDurationModal
+        visible={isTimeDurationPickerVisible}
+        selectedTime={formValues.time}
+        selectedDuration={formValues.duration}
+        onClose={handleTimeDurationPickerClose}
+        onSelectTime={handleTimeSelect}
+        onSelectDuration={handleDurationSelect}
+        taskCategoryColor={task?.color || taskColor}
+      />
+
+      {/* alerts picker modal */}
+      <AlertModal
+        visible={isAlertsPickerVisible}
+        selectedAlerts={formValues.alerts}
+        onClose={handleAlertsPickerClose}
+        onApplyAlerts={handleAlertsApply}
+        taskCategoryColor={task?.color || taskColor}
+      />
     </WrappedDraggableModal>
   );
 }
@@ -158,31 +415,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, // horizontal padding from screen edges
   },
   
-  // first section - contains icon + title and description
+  // elevated container - contains first section, list, date, and picker buttons
   firstSection: {
     borderRadius: 24, // rounded corners for modern look
     padding: 16, // padding inside the container
-    
+  },
+  
+  // first section wrapper - provides bottom padding for spacing
+  firstSectionWrapper: {
+    paddingBottom: 16, // padding below first section (spacing before border)
   },
   
   // border below description (inside elevated container)
-  // borders have no spacing - sections handle their own padding
+  // borders have no margins - spacing is handled by section padding
   sectionBorder: {
     borderBottomWidth: 1,
-    marginTop: 16, // no top margin - borders have no spacing
+    marginTop: 0, // no top margin - borders have no spacing
     marginBottom: 0, // no bottom margin - borders have no spacing
   },
   
   // date section - displays task due date
-  // equal vertical padding for all sections
+  // padding replaces border margin spacing
   dateSection: {
-    paddingTop: 16, // equal vertical padding for sections
+    paddingTop: 16, // padding replaces border margin spacing
   },
   
   // list section - displays task's associated list
-  // equal vertical padding for all sections
+  // padding replaces border margin spacing
   listSection: {
-    paddingTop: 16, // equal vertical padding for sections
+    paddingTop: 16, // padding above list section (spacing after border)
+    paddingBottom: 16, // padding below list section (spacing before next border)
   },
   
   // form picker button section
