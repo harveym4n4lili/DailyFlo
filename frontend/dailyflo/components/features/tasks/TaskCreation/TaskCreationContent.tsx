@@ -580,7 +580,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
             flexDirection: 'row',
             justifyContent: 'flex-end',
             alignItems: 'center',
-            backgroundColor: themeColors.background.elevated(),
+            backgroundColor: 'transparent',
         }}>
           {/* Create button anchored to the right */}
           {/* iOS 15+ (newer): circular checkmark icon button with tertiary background */}
@@ -648,7 +648,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
               left: 16,
               right: 16,
               padding: 8,
-              backgroundColor: themeColors.background.elevated(),
+           
               borderRadius: 8,
               borderWidth: 1,
               // use semantic error color from color palette
