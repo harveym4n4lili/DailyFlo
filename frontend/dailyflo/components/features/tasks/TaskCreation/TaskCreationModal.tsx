@@ -37,7 +37,11 @@ import { useTasks } from '@/store/hooks';
 // TYPES IMPORTS
 // typescript types for type safety
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
-import type { PriorityLevel, RoutineType, CreateTaskInput, TaskColor } from '@/types';
+import type { PriorityLevel, RoutineType, CreateTaskInput, TaskColor, Subtask as TaskSubtask } from '@/types';
+
+// SUBTASKS IMPORTS
+// Subtask type for local state management
+import type { Subtask } from '@/components/features/subtasks';
 
 // VALIDATION IMPORTS
 // validateAll: function to validate all form fields and return errors
@@ -110,10 +114,70 @@ export function TaskCreationModal({
   // track if any form picker modal is visible for custom backdrop in TaskCreationContent
   const [isAnyPickerVisible, setIsAnyPickerVisible] = useState(false);
 
+  // SUBTASKS STATE
+  // manage list of subtasks - each subtask has id, title, and completion status
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+
   // FORM CHANGE HANDLER
   // generic change handler for all form fields
   const onChange = <K extends keyof TaskFormValues>(key: K, v: TaskFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: v }));
+  };
+
+  // SUBTASKS HANDLERS
+  // handle creating a new subtask
+  const handleCreateSubtask = () => {
+    // generate unique ID for new subtask
+    const newSubtaskId = `subtask-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // create new subtask with default title and editing mode enabled
+    const newSubtask: Subtask = {
+      id: newSubtaskId,
+      title: '', // empty title to start
+      isCompleted: false,
+      isEditing: true, // start in edit mode
+    };
+    
+    // add new subtask to the list
+    setSubtasks(prev => [...prev, newSubtask]);
+  };
+  
+  // handle subtask title change
+  const handleSubtaskTitleChange = (subtaskId: string, newTitle: string) => {
+    setSubtasks(prev =>
+      prev.map(subtask =>
+        subtask.id === subtaskId
+          ? { ...subtask, title: newTitle }
+          : subtask
+      )
+    );
+  };
+  
+  // handle finish editing subtask
+  const handleSubtaskFinishEditing = (subtaskId: string) => {
+    setSubtasks(prev =>
+      prev.map(subtask =>
+        subtask.id === subtaskId
+          ? { ...subtask, isEditing: false }
+          : subtask
+      )
+    );
+  };
+  
+  // handle subtask toggle (complete/incomplete)
+  const handleSubtaskToggle = (subtaskId: string) => {
+    setSubtasks(prev =>
+      prev.map(subtask =>
+        subtask.id === subtaskId
+          ? { ...subtask, isCompleted: !subtask.isCompleted }
+          : subtask
+      )
+    );
+  };
+  
+  // handle subtask delete
+  const handleSubtaskDelete = (subtaskId: string) => {
+    setSubtasks(prev => prev.filter(subtask => subtask.id !== subtaskId));
   };
 
   // CHANGE DETECTION
@@ -127,9 +191,10 @@ export function TaskCreationModal({
       values.icon !== getDefaults(themeColor).icon ||
       (values.alerts && values.alerts.length > 0) ||
       values.time !== undefined ||
-      values.duration !== undefined
+      values.duration !== undefined ||
+      subtasks.length > 0 // include subtasks in change detection
     );
-  }, [values, themeColor]);
+  }, [values, themeColor, subtasks]);
 
   // CREATE TASK HANDLER
   // this function is called when user presses the create button
@@ -149,6 +214,16 @@ export function TaskCreationModal({
 
     // Step 2: Transform form values to CreateTaskInput format
     // CreateTaskInput is the type expected by the Redux createTask action
+    
+    // convert local Subtask format to TaskSubtask format (with sortOrder)
+    // sortOrder is the index in the array
+    const taskSubtasks: TaskSubtask[] = subtasks.map((st, index) => ({
+      id: st.id,
+      title: st.title,
+      isCompleted: st.isCompleted,
+      sortOrder: index,
+    }));
+    
     const taskData: CreateTaskInput = {
       title: values.title!.trim(), // title is required, so we know it exists after validation
       description: values.description?.trim() || undefined,
@@ -161,11 +236,10 @@ export function TaskCreationModal({
       routineType: values.routineType || 'once',
       listId: values.listId || undefined,
    
-      // For now, we'll handle alerts/reminders separately if needed
-      // The backend might need reminders created separately via a different endpoint
+      // include subtasks and reminders in metadata
       metadata: {
-        subtasks: [],
-        reminders: [],
+        subtasks: taskSubtasks, // save subtasks with sortOrder
+        reminders: [], // TODO: convert alerts to reminders when implemented
         notes: values.description?.trim() || undefined,
         tags: [],
       },
@@ -185,7 +259,9 @@ export function TaskCreationModal({
         // Close the modal on success
         onClose();
         // Reset form to defaults for next time
-            setValues({ ...getDefaults(themeColor) });
+        setValues({ ...getDefaults(themeColor) });
+        // Reset subtasks to empty array for next time
+        setSubtasks([]);
       } else {
         // createTask.rejected means there was an error
         console.error('Failed to create task:', result.payload);
@@ -217,6 +293,12 @@ export function TaskCreationModal({
         onCreate={handleCreate}
         isCreating={isCreating}
         createError={createError}
+        subtasks={subtasks}
+        onSubtaskToggle={handleSubtaskToggle}
+        onSubtaskDelete={handleSubtaskDelete}
+        onSubtaskTitleChange={handleSubtaskTitleChange}
+        onSubtaskFinishEditing={handleSubtaskFinishEditing}
+        onCreateSubtask={handleCreateSubtask}
       />
     </FullScreenModal>
   );

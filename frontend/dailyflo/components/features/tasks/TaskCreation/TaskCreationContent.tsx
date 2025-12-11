@@ -46,7 +46,11 @@ import { MainCloseButton, SaveButton } from '@/components/ui/Button';
 // task creation sub-components and modals
 import { DatePickerModal } from '@/components/features/calendar';
 import { IconColorModal, TimeDurationModal, AlertModal } from './modals';
-import { PickerButtonsSection, DescriptionSection, SubtaskSection } from './sections';
+import { PickerButtonsSection, DescriptionSection } from './sections';
+
+// SUBTASKS IMPORTS
+// SubtaskList: component that renders the list of subtasks with create button
+import { SubtaskList, type Subtask } from '@/components/features/subtasks';
 
 // CONSTANTS IMPORTS
 // design system constants for styling
@@ -96,6 +100,24 @@ export interface TaskCreationContentProps {
   /** Error message if task creation failed */
   /** Can be displayed to the user */
   createError?: string | null;
+  
+  /** Array of subtasks for the task */
+  subtasks: Subtask[];
+  
+  /** Callback when a subtask is toggled (complete/incomplete) */
+  onSubtaskToggle: (subtaskId: string) => void;
+  
+  /** Callback when a subtask is deleted */
+  onSubtaskDelete: (subtaskId: string) => void;
+  
+  /** Callback when a subtask title changes */
+  onSubtaskTitleChange: (subtaskId: string, newTitle: string) => void;
+  
+  /** Callback when editing a subtask is finished */
+  onSubtaskFinishEditing: (subtaskId: string) => void;
+  
+  /** Callback when create subtask button is pressed */
+  onCreateSubtask: () => void;
 }
 
 // CONSTANTS
@@ -117,6 +139,12 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   onCreate,
   isCreating = false,
   createError,
+  subtasks,
+  onSubtaskToggle,
+  onSubtaskDelete,
+  onSubtaskTitleChange,
+  onSubtaskFinishEditing,
+  onCreateSubtask,
 }) => {
   // CONSOLE DEBUGGING - removed for cleaner logs
   
@@ -505,11 +533,16 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         </View>
 
         {/* Subtask Section */}
-        <View>
-          <SubtaskSection
-            onAddSubtask={() => {
-              // console.log('Add subtask clicked - placeholder functionality');
-            }}
+        {/* uses SubtaskList component to display and manage subtasks */}
+        {/* matches horizontal padding of other sections (20px) */}
+        <View style={{ marginTop: 8, paddingHorizontal: 20 }}>
+          <SubtaskList
+            subtasks={subtasks}
+            onToggle={onSubtaskToggle}
+            onDelete={onSubtaskDelete}
+            onTitleChange={onSubtaskTitleChange}
+            onFinishEditing={onSubtaskFinishEditing}
+            onCreateSubtask={onCreateSubtask}
           />
         </View>
 
