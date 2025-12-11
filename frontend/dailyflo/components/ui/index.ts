@@ -31,3 +31,11 @@ export type {ListCardProps } from './Card';
 // export text input components
 export { CustomTextInput } from './TextInput';
 export type { CustomTextInputProps } from './TextInput';
+
+// export list components (includes DropdownList)
+export { DropdownList } from './List';
+export type { 
+  DropdownListProps, 
+  DropdownListItem, 
+  DropdownListAnchorPosition 
+} from './List';

@@ -11,10 +11,11 @@
  * This component demonstrates the flow from Redux store → ListCard → TaskCard → User interaction.
  */
 
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ListRenderItem, RefreshControl, Animated } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, ListRenderItem, RefreshControl, Animated, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UIManager } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 // enable layout animations on android for smooth group expansion animations
 // this ensures android can use layout animations like ios does
@@ -26,7 +27,7 @@ if (UIManager.setLayoutAnimationEnabledExperimental) {
 import { Task } from '@/types';
 
 // import our TaskCard component
-import { TaskCard, TaskCardProps } from '../TaskCard';
+import { TaskCard } from '../TaskCard';
 
 // import color palette system for consistent theming
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
@@ -40,6 +41,9 @@ import { useTaskCardAnimations } from '@/hooks/useTaskCardAnimations';
 
 // import utility functions for task grouping and sorting
 import { groupTasks, sortTasks, sortGroupEntries } from '@/utils/taskGrouping';
+
+// import dropdown list component for header actions menu
+import { DropdownList, DropdownListItem } from '@/components/ui/List';
 
 // import sub-components
 import GroupHeader from './GroupHeader';
@@ -88,6 +92,20 @@ export interface ListCardProps {
   // header support
   headerTitle?: string; // title to display in header
   headerSubtitle?: string; // subtitle to display in header
+  
+  // dropdown menu support
+  // array of menu items to display in the dropdown menu (shown as ellipse button in header)
+  // if provided, an ellipse button will appear in the header to open the dropdown
+  dropdownItems?: DropdownListItem[];
+  
+  // optional anchor position for the dropdown menu
+  // controls where the menu appears relative to the trigger button
+  dropdownAnchorPosition?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+  
+  // optional offsets for dropdown positioning
+  dropdownTopOffset?: number; // top offset for dropdown positioning
+  dropdownRightOffset?: number; // right offset for dropdown positioning
+  dropdownLeftOffset?: number; // left offset for dropdown positioning
 }
 
 /**
@@ -119,6 +137,11 @@ export default function ListCard({
   scrollEventThrottle = 16,
   headerTitle,
   headerSubtitle,
+  dropdownItems,
+  dropdownAnchorPosition = 'top-right',
+  dropdownTopOffset = 0,
+  dropdownRightOffset = 20,
+  dropdownLeftOffset = 20,
 }: ListCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -129,6 +152,10 @@ export default function ListCard({
 
   // SAFE AREA INSETS - Get safe area insets for proper positioning
   const insets = useSafeAreaInsets();
+
+  // DROPDOWN STATE - Controls the visibility of the dropdown menu
+  // when dropdownItems are provided, this state manages whether the dropdown is visible
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
 
   // create dynamic styles using the color palette system and typography system
   const styles = useMemo(
@@ -215,14 +242,37 @@ export default function ListCard({
     );
   };
 
-  // render header component
+  // handle dropdown button press - toggles dropdown menu visibility
+  const handleDropdownButtonPress = () => {
+    setIsDropdownVisible(!isDropdownVisible);
+  };
+
+  // render header component with optional dropdown button
   const renderHeader = () => {
-    if (!headerTitle && !headerSubtitle) return null;
+    if (!headerTitle && !headerSubtitle && !dropdownItems) return null;
 
     return (
       <View style={styles.headerContainer}>
-        {headerTitle && <Text style={styles.headerTitle}>{headerTitle}</Text>}
-        {headerSubtitle && <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>}
+        {/* header title and subtitle section */}
+        <View style={styles.headerTextContainer}>
+          {headerTitle && <Text style={styles.headerTitle}>{headerTitle}</Text>}
+          {headerSubtitle && <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>}
+        </View>
+        
+        {/* dropdown menu button (ellipse icon) - only shown if dropdownItems are provided */}
+        {dropdownItems && dropdownItems.length > 0 && (
+          <TouchableOpacity
+            style={styles.dropdownButton}
+            onPress={handleDropdownButtonPress}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="ellipsis-horizontal"
+              size={24}
+              color={themeColors.text.primary()}
+            />
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -261,6 +311,18 @@ export default function ListCard({
     // render flat list without grouping
     return (
       <View style={styles.container}>
+        {/* dropdown list component - shown when dropdownItems are provided */}
+        {dropdownItems && dropdownItems.length > 0 && (
+          <DropdownList
+            visible={isDropdownVisible}
+            onClose={() => setIsDropdownVisible(false)}
+            items={dropdownItems}
+            anchorPosition={dropdownAnchorPosition}
+            topOffset={dropdownTopOffset}
+            rightOffset={dropdownRightOffset}
+            leftOffset={dropdownLeftOffset}
+          />
+        )}
         <FlatList
           data={processedTasks}
           renderItem={renderTaskCard}
@@ -283,6 +345,18 @@ export default function ListCard({
 
     return (
       <View style={styles.container}>
+        {/* dropdown list component - shown when dropdownItems are provided */}
+        {dropdownItems && dropdownItems.length > 0 && (
+          <DropdownList
+            visible={isDropdownVisible}
+            onClose={() => setIsDropdownVisible(false)}
+            items={dropdownItems}
+            anchorPosition={dropdownAnchorPosition}
+            topOffset={dropdownTopOffset}
+            rightOffset={dropdownRightOffset}
+            leftOffset={dropdownLeftOffset}
+          />
+        )}
         <FlatList
           data={sortedGroupEntries}
           renderItem={({ item: [groupTitle, groupTasks] }) => {
@@ -378,8 +452,25 @@ const createStyles = (
 
     // header container styling
     headerContainer: {
+      flexDirection: 'row', // horizontal layout for title/subtitle and dropdown button
+      alignItems: 'center', // center align vertically
+      justifyContent: 'space-between', // space between text and button
       paddingTop: 16,
       paddingBottom: 16, // space between header and content
+    },
+
+    // header text container for title and subtitle
+    headerTextContainer: {
+      flex: 1, // take up available space
+    },
+
+    // dropdown button styling (ellipse icon)
+    dropdownButton: {
+      width: 40, // button width for touch target
+      height: 40, // button height for touch target
+      justifyContent: 'center', // center icon vertically
+      alignItems: 'center', // center icon horizontally
+      marginLeft: 12, // space between text and button
     },
 
     // header title text styling
