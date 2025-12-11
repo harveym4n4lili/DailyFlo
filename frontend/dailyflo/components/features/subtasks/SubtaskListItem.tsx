@@ -1,5 +1,5 @@
 /**
- * SubtaskItem Component
+ * SubtaskListItem Component
  * 
  * A component for displaying individual subtasks in the subtasks list.
  * Each subtask has a checkbox for completion status and can be toggled.
@@ -28,9 +28,9 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 
 /**
- * Props interface for SubtaskItem component
+ * Props interface for SubtaskListItem component
  */
-export interface SubtaskItemProps {
+export interface SubtaskListItemProps {
   /**
    * Unique identifier for the subtask
    */
@@ -78,12 +78,12 @@ export interface SubtaskItemProps {
 }
 
 /**
- * SubtaskItem Component
+ * SubtaskListItem Component
  * 
  * Renders a single subtask item with a checkbox and title.
  * The entire item is pressable to toggle completion status.
  */
-export const SubtaskItem: React.FC<SubtaskItemProps> = ({
+export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
   id,
   title,
   isCompleted,
@@ -305,5 +305,5 @@ export const SubtaskItem: React.FC<SubtaskItemProps> = ({
   );
 };
 
-export default SubtaskItem;
+export default SubtaskListItem;
 
