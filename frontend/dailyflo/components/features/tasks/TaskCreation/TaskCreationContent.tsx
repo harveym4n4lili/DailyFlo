@@ -40,7 +40,9 @@ import { KeyboardAnchoredContainer, useKeyboardHeight } from '@/components/layou
 
 // UI COMPONENTS IMPORTS
 // button components for the form
-import { MainCloseButton, SaveButton } from '@/components/ui/Button';
+// import directly from button files to avoid require cycle with Button barrel
+import { MainCloseButton } from '@/components/ui/Button/CloseButton';
+import { SaveButton } from '@/components/ui/Button/SaveButton';
 
 // FEATURE COMPONENTS IMPORTS
 // task creation sub-components and modals

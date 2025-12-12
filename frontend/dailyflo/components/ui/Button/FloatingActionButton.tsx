@@ -45,7 +45,8 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 
 // TASK CREATION MODAL IMPORT
 // TaskCreationModal: full-screen modal for creating new tasks
-import { TaskCreationModal } from '@/components/features/tasks/TaskCreation';
+// import directly from TaskCreationModal to avoid require cycle with TaskCreation barrel
+import { TaskCreationModal } from '@/components/features/tasks/TaskCreation/TaskCreationModal';
 
 /**
  * Props for the FloatingActionButton component
