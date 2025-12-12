@@ -153,7 +153,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
-
+  
   // STATE FOR AUTO-SCROLL
   // track description section position and height for auto-scrolling
   const [descriptionSectionY, setDescriptionSectionY] = useState(0);
