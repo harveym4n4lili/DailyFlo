@@ -7,7 +7,8 @@
 
 import React from 'react';
 import { View, ScrollView, Animated } from 'react-native';
-import { FormPickerButton } from '@/components/ui/Button';
+// import directly from button files to avoid require cycle with Button barrel
+import { FormPickerButton } from '@/components/ui/Button/FormPickerButton';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { Ionicons } from '@expo/vector-icons';
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
@@ -16,7 +17,7 @@ import {
   getTimeDurationPickerDisplay,
   getAlertsPickerDisplay,
   getIconPickerDisplay,
-} from '@/components/ui/Button';
+} from '@/components/ui/Button/FormPickerButton';
 
 export interface PickerButtonsSectionProps {
   /** Form values */

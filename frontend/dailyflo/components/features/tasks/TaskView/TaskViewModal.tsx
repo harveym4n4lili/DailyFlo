@@ -220,9 +220,10 @@ export function TaskViewModal({
     }
     
     // match each reminder to an alert ID based on time offset
-    return reminders
+    const alertIds: string[] = [];
+    reminders
       .filter(reminder => reminder.isEnabled) // only include enabled reminders
-      .map(reminder => {
+      .forEach(reminder => {
         const reminderTime = new Date(reminder.scheduledTime);
         const timeDiffMinutes = Math.round((reminderTime.getTime() - baseDate.getTime()) / (1000 * 60));
         
@@ -231,23 +232,25 @@ export function TaskViewModal({
         if (currentTask?.duration) {
           const endTimeDiff = currentTask.duration;
           if (Math.abs(timeDiffMinutes - endTimeDiff) < 1) {
-            return 'end';
+            alertIds.push('end');
+            return;
           }
         }
         
         // check for start (0 minutes difference)
         if (Math.abs(timeDiffMinutes) < 1) {
-          return 'start';
+          alertIds.push('start');
+          return;
         }
         
         // check for 15 minutes before
         if (Math.abs(timeDiffMinutes + 15) < 1) {
-          return '15-min';
+          alertIds.push('15-min');
+          return;
         }
-        
-        return null; // no match found
-      })
-      .filter((alertId): alertId is string => alertId !== null);
+      });
+    
+    return alertIds;
   };
 
   // update form values when task prop or task from store changes
@@ -285,14 +288,6 @@ export function TaskViewModal({
     }
   }, [currentTask]);
   
-  // reset first section opacity when exiting edit mode
-  // ensures the section isn't stuck in pressed state (grayed out)
-  React.useEffect(() => {
-    if (!isEditMode) {
-      // reset opacity to normal when exiting edit mode
-      firstSectionOpacity.setValue(1);
-    }
-  }, [isEditMode]);
 
   // PICKER MODAL VISIBILITY STATE
   // track visibility of all form picker modals
@@ -304,6 +299,15 @@ export function TaskViewModal({
   // EDIT MODE STATE
   // track if we're in edit mode (showing title/description/icon edit content)
   const [isEditMode, setIsEditMode] = useState(false);
+  
+  // reset first section opacity when exiting edit mode
+  // ensures the section isn't stuck in pressed state (grayed out)
+  React.useEffect(() => {
+    if (!isEditMode) {
+      // reset opacity to normal when exiting edit mode
+      firstSectionOpacity.setValue(1);
+    }
+  }, [isEditMode]);
   
   // EDIT VALUES STATE
   // store edit values for title, description, icon, and color
@@ -675,9 +679,10 @@ export function TaskViewModal({
     }
     
     // convert each alert ID to a TaskReminder
-    return alertIds.map((alertId) => {
+    const reminders: TaskReminder[] = [];
+    alertIds.forEach((alertId) => {
       const option = alertOptionMap[alertId];
-      if (!option) return null; // skip invalid alert IDs
+      if (!option) return; // skip invalid alert IDs
       
       // calculate scheduled time based on alert value
       // value: 0 = start, -1 = end, positive = minutes before
@@ -692,13 +697,15 @@ export function TaskViewModal({
       }
       // value === 0 means start time, which is already set in baseDate
       
-      return {
+      reminders.push({
         id: alertId, // use alert ID as reminder ID
         type: 'due_date' as const, // all alerts are based on due date
         scheduledTime: scheduledTime,
         isEnabled: true, // alerts are enabled by default
-      };
-    }).filter((reminder): reminder is TaskReminder => reminder !== null);
+      });
+    });
+    
+    return reminders;
   };
 
   // SAVE HANDLER
@@ -930,12 +937,20 @@ export function TaskViewModal({
 
             {/* Icon picker button section */}
             <View style={{ paddingTop: 16, paddingBottom: 8, paddingHorizontal: 20 }}>
-              <FormPickerButton
-                icon={getIconPickerDisplay(editIcon, editColor, colors, themeColors).icon}
-                label={getIconPickerDisplay(editIcon, editColor, colors, themeColors).label}
-                onPress={() => setIsIconColorPickerVisible(true)}
-                taskColor={editColor}
-              />
+              {(() => {
+                const display = getIconPickerDisplay(editIcon, editColor, colors, themeColors);
+                return (
+                  <FormPickerButton
+                    icon="color-palette-outline"
+                    defaultText="No Icon"
+                    displayText={display.text}
+                    textColor={display.color}
+                    iconColor={display.iconColor}
+                    onPress={() => setIsIconColorPickerVisible(true)}
+                    forceSelected={!!editIcon}
+                  />
+                );
+              })()}
             </View>
           </LockableScrollView>
         ) : (

@@ -18,7 +18,8 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
-import { MainCloseButton } from '@/components/ui/Button';
+// import directly from CloseButton to avoid require cycle with Button barrel
+import { MainCloseButton } from '@/components/ui/Button/CloseButton';
 
 /**
  * Props for ModalHeader component
