@@ -12,7 +12,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 
 // LAYOUT COMPONENTS IMPORTS
 // Modal components: using composable approach with FullScreenModal
-import { FullScreenModal } from '@/components/layout/ModalLayout';
+import { WrappedFullScreenModal } from '@/components/layout/ModalLayout';
 
 // CUSTOM HOOKS IMPORTS
 // hooks for accessing design system and theme
@@ -274,9 +274,9 @@ export function TaskCreationModal({
   };
 
   // COMPONENT RENDER
-  // using composable approach: FullScreenModal with keyboard-aware content
+  // using composable approach: WrappedFullScreenModal with keyboard-aware content
   return (
-    <FullScreenModal
+    <WrappedFullScreenModal
       visible={visible}
       onClose={onClose}
       backgroundColor={themeColors.background.primarySecondaryBlend()}
@@ -300,7 +300,7 @@ export function TaskCreationModal({
         onSubtaskFinishEditing={handleSubtaskFinishEditing}
         onCreateSubtask={handleCreateSubtask}
       />
-    </FullScreenModal>
+    </WrappedFullScreenModal>
   );
 }
 

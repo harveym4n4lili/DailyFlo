@@ -1,42 +1,47 @@
 /**
  * FullScreenModal Component
  * 
- * A full-screen bottom sheet modal with rounded top corners.
- * Base modal component without keyboard logic - use KeyboardAnchoredContainer for keyboard positioning.
+ * A full-screen modal with slide-up animation and multi-modal layering support.
+ * Uses Reanimated for smooth slide animations similar to DraggableModal.
+ * Supports stacking multiple modals on top of each other with z-index control.
  * 
  * Features:
  * - Full-screen modal presentation
- * - Rounded top corners (iOS version-aware)
+ * - Slide-up animation from bottom (iOS-style)
+ * - Multi-modal layering support (z-index control)
  * - Backdrop overlay with fade animation
  * - Backdrop tap-to-dismiss
  * - Theme-aware styling
  * 
  * Usage:
  * ```tsx
- * <FullScreenModal visible={visible} onClose={onClose}>
+ * <FullScreenModal visible={visible} onClose={onClose} zIndex={10002}>
  *   <ScrollView>...</ScrollView>
- *   <KeyboardAnchoredContainer>
- *     <ActionButton />
- *   </KeyboardAnchoredContainer>
  * </FullScreenModal>
  * ```
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  Modal,
   View,
   Pressable,
   StyleSheet,
   DimensionValue,
-  Animated,
   Platform,
   useWindowDimensions,
   useColorScheme,
+  BackHandler,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  Easing,
+  runOnJS,
+} from 'react-native-reanimated';
 
 export interface FullScreenModalProps {
   /**
@@ -86,11 +91,11 @@ export interface FullScreenModalProps {
   showBackdrop?: boolean;
 
   /**
-   * Additional padding to add to bottom (for keyboard positioning)
-   * Can be used for custom keyboard positioning scenarios
-   * @default 0
+   * z-index for modal stacking
+   * Higher z-index modals appear on top of lower z-index modals
+   * @default 10002 (higher than DraggableModal's default 10001)
    */
-  additionalPaddingBottom?: number;
+  zIndex?: number;
 }
 
 /**
@@ -132,61 +137,102 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
   backdropDismiss = true,
   backgroundColor,
   showBackdrop = true,
-  additionalPaddingBottom = 0,
+  zIndex = 10002,
 }) => {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
-  // get color scheme for theme-aware blur tint
   const colorScheme = useColorScheme();
 
-  // Backdrop opacity animation
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  // Track if modal is animating out to handle cleanup
+  const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const prevVisibleRef = useRef(visible);
-  const prevShowBackdrop = useRef(showBackdrop);
+  const backdropVisibleRef = useRef(visible);
 
-  // Animate backdrop opacity when modal opens/closes or showBackdrop changes
+  // Synchronously detect when visible changes
+  const isTransitioningOut = prevVisibleRef.current && !visible;
+  prevVisibleRef.current = visible;
+
+  // Shared values for animations
+  const translateY = useSharedValue(screenHeight);
+  const backdropOpacity = useSharedValue(0);
+
+  // Calculate border radius
+  const calculatedBorderRadius = getBorderRadius(borderRadius);
+  const isNewerIOS = getIOSVersion() >= 15;
+
+  // Modal slide animation effect
   useEffect(() => {
-    if (visible && !prevVisibleRef.current && showBackdrop) {
-      // Modal just opened - fade in backdrop
-      Animated.timing(backdropOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else if (!visible && prevVisibleRef.current) {
-      // Modal just closed - fade out backdrop
-      Animated.timing(backdropOpacity, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else if (showBackdrop && !prevShowBackdrop.current) {
-      // showBackdrop changed from false to true
-      prevShowBackdrop.current = showBackdrop;
-      requestAnimationFrame(() => {
-        backdropOpacity.setValue(0);
-        Animated.timing(backdropOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      });
-    } else if (!showBackdrop && prevShowBackdrop.current) {
-      // showBackdrop changed from true to false
-      prevShowBackdrop.current = showBackdrop;
-      Animated.timing(backdropOpacity, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
+    if (visible) {
+      backdropVisibleRef.current = true;
+      translateY.value = screenHeight;
+      backdropOpacity.value = 0;
 
-    prevVisibleRef.current = visible;
-    if (showBackdrop === prevShowBackdrop.current) {
-      prevShowBackdrop.current = showBackdrop;
+      requestAnimationFrame(() => {
+        translateY.value = withTiming(0, {
+          duration: 300,
+          easing: Easing.bezier(0.42, 0, 0.58, 1),
+        });
+        backdropOpacity.value = withTiming(1, {
+          duration: 300,
+          easing: Easing.bezier(0.42, 0, 0.58, 1),
+        });
+      });
+
+      setIsAnimatingOut(false);
+    } else {
+      if (!backdropVisibleRef.current) {
+        setIsAnimatingOut(false);
+        return;
+      }
+
+      setIsAnimatingOut(true);
+      backdropVisibleRef.current = false;
+
+      requestAnimationFrame(() => {
+        backdropOpacity.value = withTiming(0, {
+          duration: 300,
+          easing: Easing.bezier(0.42, 0, 0.58, 1),
+        });
+        translateY.value = withTiming(screenHeight, {
+          duration: 300,
+          easing: Easing.bezier(0.42, 0, 0.58, 1),
+        });
+      });
+
+      const timer = setTimeout(() => {
+        setIsAnimatingOut(false);
+        translateY.value = screenHeight;
+        backdropOpacity.value = 0;
+      }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [visible, showBackdrop, backdropOpacity]);
+  }, [visible, screenHeight]);
+
+  // Android back button handler
+  useEffect(() => {
+    if (!visible) return;
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+
+    return () => backHandler.remove();
+  }, [visible, onClose]);
+
+  // Animated styles
+  const modalAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
+
+  const backdropAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: backdropOpacity.value,
+    };
+  });
 
   const handleBackdropPress = () => {
     if (backdropDismiss) {
@@ -194,109 +240,68 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
     }
   };
 
-  const calculatedBorderRadius = getBorderRadius(borderRadius);
-  // check if running on iOS 15+ for glassy edge effect
-  const isNewerIOS = getIOSVersion() >= 15;
+  // Early return if not visible and not animating
+  if (!visible && !isAnimatingOut) {
+    return null;
+  }
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="overFullScreen"
-      onRequestClose={onClose}
-      transparent={true}
+    <View
+      style={[
+        StyleSheet.absoluteFillObject,
+        { zIndex, pointerEvents: visible || isAnimatingOut ? 'auto' : 'none' },
+      ]}
     >
       {/* Backdrop overlay */}
-      <Animated.View
-        style={[
-          styles.backdrop,
-          {
-            opacity: backdropOpacity,
-            pointerEvents: showBackdrop ? 'auto' : 'none',
-          },
-        ]}
-      >
-        <Pressable
-          style={StyleSheet.absoluteFillObject}
-          onPress={handleBackdropPress}
-          disabled={!showBackdrop}
-        />
-      </Animated.View>
+      {showBackdrop && (
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFillObject,
+            styles.backdrop,
+            backdropAnimatedStyle,
+            { pointerEvents: showBackdrop ? 'auto' : 'none' },
+          ]}
+        >
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={handleBackdropPress}
+            disabled={!showBackdrop}
+          />
+        </Animated.View>
+      )}
 
       {/* Modal container */}
-      <View
-        style={[styles.modalContainer, { zIndex: 10001 }]}
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFillObject,
+          { justifyContent: 'flex-end' },
+          modalAnimatedStyle,
+        ]}
         pointerEvents="box-none"
       >
-        {/* Content wrapper */}
+        {/* Visible content wrapper */}
         <View
           style={[
-            styles.contentContainer,
+            styles.visibleContentWrapper,
             {
-              height: screenHeight,
-              backgroundColor: 'transparent',
-              position: 'absolute',
-              bottom: 0,
-              justifyContent: 'flex-end',
+              backgroundColor: backgroundColor || themeColors.background.primary(),
+              borderTopLeftRadius: calculatedBorderRadius,
+              borderTopRightRadius: calculatedBorderRadius,
+              height: height || screenHeight,
+              paddingBottom: insets.bottom,
             },
           ]}
         >
-          {/* Visible content wrapper */}
-          <View
-            style={[
-              styles.visibleContentWrapper,
-              {
-                backgroundColor: backgroundColor || themeColors.background.primary(),
-                borderTopLeftRadius: calculatedBorderRadius,
-                borderTopRightRadius: calculatedBorderRadius,
-                height: height || screenHeight,
-                paddingBottom: insets.bottom + additionalPaddingBottom,
-              },
-            ]}
-          >
-            {/* glassy top edge border for iOS 15+ (glass UI design) */}
-            {/* creates a frosted glass effect at the top border */}
-            {/* only visible on newer iOS versions */}
-            {/* tint adapts to theme (light or dark) */}
-            {isNewerIOS && (
-              <BlurView
-                intensity={20}
-                tint='light'
-                style={[
-                  styles.glassTopEdge,
-                  {
-                    borderTopLeftRadius: calculatedBorderRadius,
-                    borderTopRightRadius: calculatedBorderRadius,
-                  },
-                ]}
-              />
-            )}
-            {children}
-          </View>
+          {children}
         </View>
-      </View>
-    </Modal>
+      </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'transparent',
-    zIndex: 10000,
-  },
-  modalContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    backgroundColor: 'transparent',
-  },
-  contentContainer: {
-    width: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   visibleContentWrapper: {
     width: '100%',
@@ -305,19 +310,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     position: 'relative',
   },
-  // glassy top edge border for iOS 15+ (glass UI design)
-  // creates a frosted glass blur effect at the top border of the modal
-  // positioned absolutely at the top with a thin height to create edge effect
-  glassTopEdge: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 2, // thin blur strip at the very top edge (2px for visible glass effect)
-    zIndex: 1, // above content but below interactive elements
-    overflow: 'hidden',
-  },
 });
 
 export default FullScreenModal;
-

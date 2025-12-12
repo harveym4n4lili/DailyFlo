@@ -9,7 +9,6 @@
 import React, { useEffect, useState, useRef, createContext, useContext, useImperativeHandle, forwardRef } from 'react';
 import { View, Pressable, useWindowDimensions, StyleSheet, BackHandler, Platform, ScrollView, ScrollViewProps } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { BlurView } from 'expo-blur';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -573,29 +572,6 @@ export const DraggableModal = forwardRef<DraggableModalRef, DraggableModalProps>
                 overflow: 'hidden',
               }}
             >
-              {/* glassy top edge border for iOS 15+ (glass UI design) */}
-              {/* creates a frosted glass effect at the top border */}
-              {/* only visible on newer iOS versions */}
-              {/* tint adapts to theme (light or dark) */}
-              {getIOSVersion() >= 15 && (
-                <BlurView
-                  intensity={20}
-                  tint='light'
-                  style={[
-                    {
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: 2, // thin blur strip at the very top edge (2px for visible glass effect)
-                      zIndex: 1, // above content but below interactive elements
-                      overflow: 'hidden',
-                      borderTopLeftRadius: calculatedBorderRadius,
-                      borderTopRightRadius: calculatedBorderRadius,
-                    },
-                  ]}
-                />
-              )}
               
               {/* sticky header that moves with modal but stays fixed over scrolling content */}
               {/* positioned absolutely within the modal so it moves with modal drag */}

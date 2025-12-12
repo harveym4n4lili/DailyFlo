@@ -9,6 +9,7 @@ export * from './ModalHeader';
 export * from './DraggableModal';
 export * from './WrappedDraggableModal';
 export * from './FullScreenModal';
+export * from './WrappedFullScreenModal';
 export * from './ModalBackdrop';
 
 

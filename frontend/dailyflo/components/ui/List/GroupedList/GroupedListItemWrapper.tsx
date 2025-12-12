@@ -74,27 +74,29 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
     }
   };
 
-  // separator style applied to all items except the last one
-  // creates the horizontal line between items
-  const separatorStyle: ViewStyle = showSeparator
-    ? {
-        borderBottomWidth: 1,
-        borderBottomColor: separatorColor,
-      }
-    : {};
-
   // combine all container styles
+  // removed borderBottomWidth/Color from here since we're using a separate separator View
   const containerStyle: ViewStyle = {
     backgroundColor: themeColors.background.elevated(),
     overflow: 'hidden', // ensure border radius is applied correctly
     ...getBorderRadiusStyle(),
-    ...separatorStyle,
     ...style, // allow parent-level override
   };
 
   return (
     <View style={containerStyle}>
       {children}
+      {/* separator line with horizontal padding - only shown for items that need it */}
+      {/* creates a horizontal line between items with padding on the sides */}
+      {showSeparator && (
+        <View
+          style={{
+            height: 1, // 1px separator line
+            backgroundColor: separatorColor,
+            marginHorizontal: 16, // horizontal padding for the separator (16px on each side)
+          }}
+        />
+      )}
     </View>
   );
 };
