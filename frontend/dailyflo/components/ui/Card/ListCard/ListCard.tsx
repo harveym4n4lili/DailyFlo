@@ -333,6 +333,10 @@ export default function ListCard({
           onScroll={onScroll}
           scrollEventThrottle={scrollEventThrottle}
           ListHeaderComponent={renderHeader}
+          // contentInset allows scrolling past the top safe area insets
+          // this ensures content can scroll all the way to the top without being cut off
+          // the top inset creates extra scrollable space above the content
+          contentInset={{ top: insets.top }}
         />
       </View>
     );
@@ -415,6 +419,10 @@ export default function ListCard({
           onScroll={onScroll}
           scrollEventThrottle={scrollEventThrottle}
           ListHeaderComponent={renderHeader}
+          // contentInset allows scrolling past the top safe area insets
+          // this ensures content can scroll all the way to the top without being cut off
+          // the top inset creates extra scrollable space above the content
+          contentInset={{ top: insets.top }}
         />
       </View>
     );
