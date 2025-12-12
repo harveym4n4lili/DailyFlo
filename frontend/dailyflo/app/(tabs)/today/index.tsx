@@ -1,7 +1,8 @@
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, RefreshControl, View, Text, Alert, Modal } from 'react-native';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { StyleSheet, RefreshControl, View, Text, Alert, TouchableOpacity, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 
 // import our custom layout components
 import { ScreenContainer, SafeAreaWrapper } from '@/components';
@@ -9,13 +10,18 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 // import our new task components
 import { ListCard } from '@/components/ui/Card';
 import { FloatingActionButton } from '@/components/ui/Button';
-import { ModalContainer } from '@/components/layout/ModalLayout';
+import { DropdownList } from '@/components/ui/List';
+import { ModalContainer, ModalBackdrop } from '@/components/layout/ModalLayout';
+import { TaskViewModal } from '@/components/features/tasks';
 
 // import color palette system for consistent theming
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
+
+// useThemeColor: hook that provides the global theme color selected by the user
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // STORE FOLDER IMPORTS - Redux state management
 // The store folder contains all Redux-related code for managing app state
@@ -34,7 +40,7 @@ import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSl
 
 // TYPES FOLDER IMPORTS - TypeScript type definitions
 // The types folder contains all TypeScript interfaces and type definitions
-import { Task } from '@/types';
+import { Task, TaskColor } from '@/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TodayScreen() {
@@ -44,6 +50,20 @@ export default function TodayScreen() {
   // TASK DETAIL MODAL STATE
   const [isTaskDetailModalVisible, setIsTaskDetailModalVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  // Store task color separately to maintain it during modal close animation
+  const [selectedTaskColor, setSelectedTaskColor] = useState<TaskColor>('blue');
+  
+  // DROPDOWN STATE - Controls the visibility of the dropdown menu
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  
+  // TITLE STATE - Controls the visibility of the title header
+  const [showTitle, setShowTitle] = useState(false);
+  
+  // Animated value for title fade effect
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Ref to track if animation is currently running
+  const isAnimatingRef = useRef(false);
   
   // COLOR PALETTE USAGE - Getting theme-aware colors
   // useThemeColors: Hook that provides theme-aware colors (background, text, borders, etc.)
@@ -55,6 +75,12 @@ export default function TodayScreen() {
   // useTypography: Hook that provides typography styles, font families, and text utilities
   // This gives us access to predefined text styles and satoshi font family
   const typography = useTypography();
+  
+  // THEME COLOR USAGE
+  // get the global theme color selected by the user (default: red)
+  // this is used for interactive elements like the ellipse button
+  const { getThemeColorValue } = useThemeColor();
+  const themeColor = getThemeColorValue(500); // use shade 500 for ellipse button color
   
   // SAFE AREA INSETS - Get safe area insets for proper positioning
   const insets = useSafeAreaInsets();
@@ -81,18 +107,21 @@ export default function TodayScreen() {
   // useTasks: Custom hook that provides typed access to the tasks slice state
   // This is defined in store/hooks.ts and wraps Redux's useSelector
 
-  // filter tasks to show only today's and overdue tasks (including completed tasks)
+  // filter tasks to show today's, overdue, and completed tasks
   // useMemo ensures this calculation only runs when tasks change
   const todaysTasks = useMemo(() => {
     const today = new Date();
     const todayString = today.toDateString(); // get date in "Mon Jan 15 2024" format
     
     const filtered = tasks.filter(task => {
-      // include tasks that are due today or overdue (including completed tasks)
+      // include completed tasks (they'll be grouped separately)
+      if (task.isCompleted) return true;
+      
+      // include tasks that are due today or overdue
       if (task.dueDate) {
         const taskDate = new Date(task.dueDate);
         const isToday = taskDate.toDateString() === todayString;
-        // include overdue tasks (due before today, including completed ones)
+        // include overdue tasks (due before today)
         const isOverdue = taskDate < today;
         return isToday || isOverdue;
       }
@@ -101,8 +130,10 @@ export default function TodayScreen() {
     return filtered;
   }, [tasks]);
 
-  // calculate total task count for header display
-  const totalTaskCount = todaysTasks.length;
+  // calculate total task count for header display (only incomplete tasks)
+  const totalTaskCount = useMemo(() => {
+    return todaysTasks.filter(task => !task.isCompleted).length;
+  }, [todaysTasks]);
 
   // grouping explanation:
   // the listcard component will automatically group tasks by due date when groupBy="dueDate" is set
@@ -114,6 +145,44 @@ export default function TodayScreen() {
   // the grouping logic is handled internally by the listcard component
 
   // STORE USAGE - Dispatching actions to fetch data
+  // SCROLL DETECTION EFFECT
+  // Monitor scroll position and show title when screen title is covered
+  useEffect(() => {
+    const handleScrollChange = (scrollY: number) => {
+      // lower threshold (more negative) makes the title appear earlier when scrolling up
+      // changed from -30 to -50 to activate the top section sooner
+      const titleThreshold = insets.top - 60;
+      
+      if (scrollY >= titleThreshold && !showTitle && !isAnimatingRef.current) {
+        setShowTitle(true);
+        isAnimatingRef.current = true;
+        Animated.timing(titleOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          isAnimatingRef.current = false;
+        });
+      } else if (scrollY < titleThreshold && showTitle && !isAnimatingRef.current) {
+        isAnimatingRef.current = true;
+        Animated.timing(titleOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          setShowTitle(false);
+          isAnimatingRef.current = false;
+        });
+      }
+    };
+
+    (global as any).trackScrollToTodayLayout = handleScrollChange;
+
+    return () => {
+      delete (global as any).trackScrollToTodayLayout;
+    };
+  }, [insets.top, showTitle, titleOpacity]);
+
   // Fetch tasks when component mounts
   // useEffect runs after the component renders for the first time
   useEffect(() => {
@@ -148,14 +217,20 @@ export default function TodayScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     // show task detail modal
+    // store both task and color separately to maintain color during close animation
     setSelectedTask(task);
+    setSelectedTaskColor(task.color);
     setIsTaskDetailModalVisible(true);
   };
   
   // handle task detail modal close
   const handleTaskDetailModalClose = () => {
     setIsTaskDetailModalVisible(false);
-    setSelectedTask(null);
+    // delay clearing task to allow modal animation to complete
+    // this ensures task color persists during slide-down animation
+    setTimeout(() => {
+      setSelectedTask(null);
+    }, 350); // slightly longer than modal animation duration (300ms)
   };
   
   // handle task completion toggle
@@ -196,31 +271,11 @@ export default function TodayScreen() {
   // SWIPE GESTURE HANDLERS - Functions that handle swipe gestures on task cards
   // these demonstrate how to use the new swipe functionality in TaskCard
   
-  // handle swipe left gesture - shows confirmation dialog before editing task
+  // handle swipe left gesture - completes task directly (no confirmation)
   const handleTaskSwipeLeft = (task: Task) => {
-    console.log('Swiped left on task:', task.title);
-    
-    // show confirmation dialog before editing task
-    Alert.alert(
-      'Edit Task', // dialog title
-      `Do you want to edit "${task.title}"?`, // dialog message with task title
-      [
-        {
-          text: 'Cancel', // cancel button
-          style: 'cancel', // styled as cancel button (appears on left on iOS)
-        },
-        {
-          text: 'Edit', // confirm button
-          style: 'default', // styled as default action
-          onPress: () => {
-            // actually edit the task when user confirms
-            console.log('✏️ User confirmed editing of task:', task.title);
-            handleTaskEdit(task);
-          },
-        },
-      ],
-      { cancelable: true } // allow dismissing dialog by tapping outside
-    );
+    console.log('Swiped left on task to complete:', task.title);
+    // complete the task directly without confirmation
+    handleTaskComplete(task);
   };
   
   // handle swipe right gesture - shows confirmation dialog before deleting task
@@ -250,6 +305,30 @@ export default function TodayScreen() {
     );
   };
 
+  // DROPDOWN HANDLERS
+  // handle ellipse button press - toggles dropdown menu visibility
+  const handleEllipsePress = () => {
+    setIsDropdownVisible(!isDropdownVisible);
+  };
+
+  // handle select all menu item press
+  const handleSelectAll = () => {
+    console.log('📋 Select all tasks requested');
+    // TODO: Implement select all functionality
+    setIsDropdownVisible(false);
+  };
+
+  // create dropdown menu items array
+  // each item defines a menu option with label, icon, and action
+  const dropdownMenuItems = [
+    {
+      id: 'select-all',
+      label: 'Select All',
+      icon: 'checkmark-circle-outline',
+      onPress: handleSelectAll,
+    },
+  ];
+
   // render loading state when no tasks are loaded yet
   if (isLoading && tasks.length === 0) {
     return (
@@ -273,10 +352,69 @@ export default function TodayScreen() {
 
   // render main content with today's tasks
   return (
-    <ScreenContainer 
-      scrollable={false}
-      paddingHorizontal={0}
-     >
+    <View style={{ flex: 1 }}>
+      {/* Fixed top section with title and ellipse button - stays at top */}
+      {/* background and border fade in with title animation */}
+      <View style={styles.fixedTopSection}>
+        {/* animated background that fades in */}
+        <Animated.View 
+          style={[
+            styles.fixedTopSectionBackground,
+            {
+              opacity: titleOpacity,
+              backgroundColor: themeColors.background.elevated(),
+            }
+          ]}
+        />
+        {/* animated border that fades in */}
+        {/* border matches navbar styling: same color and width, but at bottom of section */}
+        <Animated.View 
+          style={[
+            styles.fixedTopSectionBorder,
+            {
+              opacity: titleOpacity,
+              borderBottomColor: themeColors.border.primary(), // same color as navbar borderTopColor
+              borderBottomWidth: 1, // match navbar border width
+            }
+          ]}
+        />
+        <View style={styles.titleContainer}>
+          {showTitle && (
+            <Animated.View style={{ opacity: titleOpacity }}>
+              <Text style={styles.titleHeader}>Today</Text>
+            </Animated.View>
+          )}
+        </View>
+        <TouchableOpacity
+          style={styles.ellipseButton}
+          onPress={handleEllipsePress}
+          activeOpacity={0.7}
+        >
+          <Ionicons 
+            name="ellipsis-horizontal" 
+            size={32} 
+            color={themeColor} 
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* dropdown list - using reusable DropdownList component */}
+      <DropdownList
+        visible={isDropdownVisible}
+        onClose={() => setIsDropdownVisible(false)}
+        items={dropdownMenuItems}
+        anchorPosition="top-right"
+        topOffset={72}
+        rightOffset={20}
+      />
+
+      <ScreenContainer 
+        scrollable={false}
+        paddingHorizontal={0}
+        safeAreaTop={false}
+        safeAreaBottom={false}
+        paddingVertical={0}
+      >
       {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
       {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
       <ListCard
@@ -304,13 +442,7 @@ export default function TodayScreen() {
         }}
         scrollEventThrottle={16}
         headerTitle="Today"
-        headerSubtitle={
-          totalTaskCount === 0 
-            ? "No tasks for today" 
-            : `${totalTaskCount} task${totalTaskCount === 1 ? '' : 's'} for today`
-        }
       />
-      
       {/* Floating Action Button for quick task creation */}
       <FloatingActionButton
         onPress={() => {
@@ -321,62 +453,24 @@ export default function TodayScreen() {
         accessibilityHint="Double tap to create a new task"
       />
       
-      {/* Task Detail Modal - pageSheet style modal for viewing task details */}
-      <Modal
+      {/* separate backdrop that fades in independently behind the modal */}
+      {/* rendered at screen level, behind the modal in z-index */}
+      <ModalBackdrop
+        isVisible={isTaskDetailModalVisible}
+        onPress={handleTaskDetailModalClose}
+        zIndex={10000}
+      />
+      
+      {/* Task Detail Modal - displays task details using TaskViewModal */}
+      <TaskViewModal
         visible={isTaskDetailModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={handleTaskDetailModalClose}
-      >
-        <ModalContainer
-          presentationStyle="pageSheet"
-          title={selectedTask?.title || "Task Details"}
-          onClose={handleTaskDetailModalClose}
-          showCloseButton={true}
-          showHeader={true}
-        >
-          {selectedTask && (
-            <View style={styles.taskDetailContent}>
-              <Text style={styles.taskDetailTitle}>{selectedTask.title}</Text>
-              
-              {selectedTask.description && (
-                <View style={styles.taskDetailSection}>
-                  <Text style={styles.taskDetailSectionTitle}>Description</Text>
-                  <Text style={styles.taskDetailDescription}>{selectedTask.description}</Text>
-                </View>
-              )}
-              
-              <View style={styles.taskDetailSection}>
-                <Text style={styles.taskDetailSectionTitle}>Due Date</Text>
-                <Text style={styles.taskDetailValue}>
-                  {selectedTask.dueDate 
-                    ? new Date(selectedTask.dueDate).toLocaleDateString()
-                    : 'No due date'
-                  }
-                </Text>
-              </View>
-              
-              <View style={styles.taskDetailSection}>
-                <Text style={styles.taskDetailSectionTitle}>Priority</Text>
-                <Text style={styles.taskDetailValue}>
-                  {selectedTask.priorityLevel === 5 ? 'Critical' :
-                   selectedTask.priorityLevel === 4 ? 'High' :
-                   selectedTask.priorityLevel === 3 ? 'Medium' :
-                   selectedTask.priorityLevel === 2 ? 'Low' : 'Minimal'}
-                </Text>
-              </View>
-              
-              <View style={styles.taskDetailSection}>
-                <Text style={styles.taskDetailSectionTitle}>Status</Text>
-                <Text style={[styles.taskDetailValue, { color: selectedTask.isCompleted ? semanticColors.success() : themeColors.text.secondary() }]}>
-                  {selectedTask.isCompleted ? 'Completed' : 'In Progress'}
-                </Text>
-              </View>
-            </View>
-          )}
-        </ModalContainer>
-      </Modal>
-    </ScreenContainer>
+        onClose={handleTaskDetailModalClose}
+        taskColor={selectedTaskColor}
+        taskId={selectedTask?.id}
+        task={selectedTask || undefined}
+      />
+      </ScreenContainer>
+    </View>
   );
 }
 
@@ -388,6 +482,68 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
+  // fixed top section with ellipse button - stays at top of screen
+  // background and border are animated (start transparent, fade in with title)
+  fixedTopSection: {
+    position: 'absolute',
+    top: insets.top,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    paddingHorizontal: 20,
+    height: insets.top + 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    // overflow removed to allow background to extend upward to cover insets
+  },
+  
+  // animated background layer that fades in
+  // extends upward to cover safe area insets
+  fixedTopSectionBackground: {
+    position: 'absolute',
+    top: -insets.top, // extend upward to cover safe area insets
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: insets.top + insets.top + 10, // cover insets + section height
+    zIndex: -1, // behind content
+  },
+  
+  // animated border layer that fades in
+  // matches navbar border styling: borderTopColor with borderTopWidth
+  fixedTopSectionBorder: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    // borderTopWidth and borderTopColor are set dynamically in component
+    zIndex: -1, // behind content
+  },
+
+  // title container - ensures consistent layout structure
+  titleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // title header styling
+  titleHeader: {
+    ...typography.getTextStyle('heading-2'),
+    color: themeColors.text.primary(),
+    fontWeight: '600',
+  },
+
+  // ellipse button styling
+  ellipseButton: {
+    position: 'absolute',
+    right: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
   
   // loading text styling for initial load state
