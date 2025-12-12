@@ -1004,8 +1004,9 @@ Updated User app, models, serializers, views and urls
 - [X] merged basic task management branch to main
 
 ### Plans For Future
-- Plan how to connect task CRUD to api service layer
-- plan to test
+- Learn how to prepare django backend for api integration testing
+- get better understanding of async thunk, redux slice state
+- Learn and record how to test api integration
 
 ### Notes
 - no notes
