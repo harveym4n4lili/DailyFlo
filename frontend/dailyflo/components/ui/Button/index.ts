@@ -30,5 +30,9 @@ export type { MainCloseButtonProps } from './CloseButton';
 export { SaveButton } from './SaveButton';
 export type { SaveButtonProps } from './SaveButton';
 
+// Export TaskButton component
+export { TaskButton } from './TaskButton';
+export type { TaskButtonProps } from './TaskButton';
+
 // Default export for convenience (FloatingActionButton)
 export { FloatingActionButton as default } from './FloatingActionButton';

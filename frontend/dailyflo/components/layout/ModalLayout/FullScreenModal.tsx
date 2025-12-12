@@ -174,7 +174,7 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
           easing: Easing.bezier(0.42, 0, 0.58, 1),
         });
         backdropOpacity.value = withTiming(1, {
-          duration: 300,
+        duration: 300,
           easing: Easing.bezier(0.42, 0, 0.58, 1),
         });
       });
@@ -254,20 +254,20 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
     >
       {/* Backdrop overlay */}
       {showBackdrop && (
-        <Animated.View
-          style={[
+      <Animated.View
+        style={[
             StyleSheet.absoluteFillObject,
-            styles.backdrop,
+          styles.backdrop,
             backdropAnimatedStyle,
             { pointerEvents: showBackdrop ? 'auto' : 'none' },
-          ]}
-        >
-          <Pressable
-            style={StyleSheet.absoluteFillObject}
-            onPress={handleBackdropPress}
-            disabled={!showBackdrop}
-          />
-        </Animated.View>
+        ]}
+      >
+        <Pressable
+          style={StyleSheet.absoluteFillObject}
+          onPress={handleBackdropPress}
+          disabled={!showBackdrop}
+        />
+      </Animated.View>
       )}
 
       {/* Modal container */}
@@ -278,24 +278,24 @@ export const FullScreenModal: React.FC<FullScreenModalProps> = ({
           modalAnimatedStyle,
         ]}
         pointerEvents="box-none"
-      >
-        {/* Visible content wrapper */}
-        <View
-          style={[
-            styles.visibleContentWrapper,
-            {
-              backgroundColor: backgroundColor || themeColors.background.primary(),
-              borderTopLeftRadius: calculatedBorderRadius,
-              borderTopRightRadius: calculatedBorderRadius,
-              height: height || screenHeight,
-              paddingBottom: insets.bottom,
-            },
-          ]}
         >
-          {children}
-        </View>
+          {/* Visible content wrapper */}
+          <View
+            style={[
+              styles.visibleContentWrapper,
+              {
+                backgroundColor: backgroundColor || themeColors.background.primary(),
+                borderTopLeftRadius: calculatedBorderRadius,
+                borderTopRightRadius: calculatedBorderRadius,
+                height: height || screenHeight,
+              paddingBottom: insets.bottom,
+              },
+            ]}
+          >
+            {children}
+          </View>
       </Animated.View>
-    </View>
+      </View>
   );
 };
 
