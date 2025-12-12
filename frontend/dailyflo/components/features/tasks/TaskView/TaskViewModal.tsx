@@ -41,7 +41,8 @@ import { SubtaskList } from '@/components/features/subtasks';
 
 // UI COMPONENTS IMPORTS
 // SaveButton: button component for saving changes
-import { SaveButton } from '@/components/ui/Button';
+// TaskButton: reusable button component for task actions (Focus, Complete, etc.)
+import { SaveButton, TaskButton } from '@/components/ui/Button';
 
 // UI COMPONENTS IMPORTS
 // GroupedList: flexible iOS-style grouped list component
@@ -168,6 +169,10 @@ export function TaskViewModal({
   
   // create dynamic styles using theme colors and typography
   const styles = React.useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
+  
+  // calculate focus button height for bottom padding
+  // button padding (20px * 2) + icon (24px) + gap (8px) + text height (~20px) + container padding (12px top + 20px bottom) ≈ 96px
+  const focusButtonHeight = 96;
 
   // REF FOR DRAGGABLE MODAL
   // used to programmatically control modal position (e.g., snap to top when section is tapped)
@@ -802,6 +807,24 @@ export function TaskViewModal({
       initialSnapPoint={1}
       backgroundColor={themeColors.background.primary()}
       disableGestures={isAnyPickerVisible} // disable dragging when any picker modal is open
+      stickyFooter={
+        // focus button - sticky at bottom, hidden when in edit mode or when any picker modal is open
+        !isEditMode && !isAnyPickerVisible ? (
+          <View style={styles.focusButtonContainer}>
+            <TaskButton
+              label="Focus"
+              icon="leaf"
+              taskCategoryColor={currentTask?.color || taskColor}
+              onPress={() => {
+                // TODO: open full screen modal with live timer
+                console.log('Focus button pressed');
+              }}
+              primary={true}
+              style={styles.focusButton}
+            />
+          </View>
+        ) : null
+      }
     >
       {/* modal header with MainCloseButton on left and drag indicator */}
       {/* absolutely positioned to float over content */}
@@ -859,7 +882,7 @@ export function TaskViewModal({
             keyboardShouldPersistTaps="always"
             contentContainerStyle={{ 
               paddingTop: headerHeight, // add top padding to account for absolutely positioned header
-              paddingBottom: 0 
+              paddingBottom: !isEditMode && !isAnyPickerVisible ? focusButtonHeight : 0 // add bottom padding to account for sticky focus button when visible
             }}
           >
             {/* Title input section */}
@@ -924,7 +947,7 @@ export function TaskViewModal({
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ 
               paddingTop: headerHeight, // add top padding to account for absolutely positioned header
-              paddingBottom: 0 
+              paddingBottom: !isEditMode && !isAnyPickerVisible ? focusButtonHeight : 0 // add bottom padding to account for sticky focus button when visible
             }}
           >
             <GroupedList borderRadius={24}>
@@ -1050,6 +1073,7 @@ export function TaskViewModal({
             />
           )}
           </View>
+
           </LockableScrollView>
         )}
       </View>
@@ -1147,7 +1171,28 @@ const createStyles = (
     
     // subtasks section container - wraps header and create button
     subtasksSection: {
-      marginTop: 8, // space above the subtasks section (separates from grouped list)
+      marginTop: 16, // space above the subtasks section (separates from grouped list)
+    },
+    
+    // focus button container - sticky footer wrapper
+    // absolutely positioned at bottom to appear above modal content
+    // anchored to the right side with relevant padding
+    focusButtonContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      paddingRight: 20, // right padding from screen edge
+      paddingBottom: 20, // bottom padding for safe area
+      paddingTop: 12, // top padding for spacing
+      backgroundColor: 'transparent', // transparent background to allow modal content to show through
+      zIndex: 1000, // ensure button appears above modal content
+      alignItems: 'flex-end', // anchor button to the right side
+    },
+    
+    // focus button style - auto width to fit content
+    focusButton: {
+      width: 'auto', // auto width to fit button contentisten the backgroud
     },
     
     // subtasks header - toggle button for expanding/collapsing

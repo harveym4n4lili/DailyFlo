@@ -259,7 +259,7 @@ export function TaskCreationModal({
         // Close the modal on success
         onClose();
         // Reset form to defaults for next time
-        setValues({ ...getDefaults(themeColor) });
+            setValues({ ...getDefaults(themeColor) });
         // Reset subtasks to empty array for next time
         setSubtasks([]);
       } else {

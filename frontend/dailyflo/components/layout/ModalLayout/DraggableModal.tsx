@@ -591,7 +591,21 @@ export const DraggableModal = forwardRef<DraggableModalRef, DraggableModalProps>
         {/* stays locked to screen position while modal slides up/down */}
         {/* can contain FABs, action buttons, or any custom content */}
         {/* hide during closing animation to prevent layout recalculations */}
-        {shouldShowStickyElements && stickyFooter}
+        {/* absolutely positioned at bottom of screen with higher z-index to appear above modal */}
+        {shouldShowStickyElements && stickyFooter && (
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              zIndex: zIndex + 2, // higher than modal container to appear on top
+            }}
+            pointerEvents="box-none" // allow touches to pass through to children
+          >
+            {stickyFooter}
+          </View>
+        )}
       </View>
     </View>
   );
