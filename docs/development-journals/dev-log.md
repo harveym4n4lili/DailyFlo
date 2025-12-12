@@ -350,6 +350,9 @@ Update authentication.md - Add social auth flows
 - begin to plan task decomposition, plan next steps
 ### Notes
 - no notes
+<<<<<<< Updated upstream
+---
+=======
 ---
 ## [12/09/2025] - [Friday]
 
@@ -973,7 +976,7 @@ Updated User app, models, serializers, views and urls
 - Change task color palette to be more aesthetic
 - Improve text input component
 ---
-## [10/12/2025] - [Wednesday]
+## [11/12/2025] - [Thursday]
 ### Today's Goals
 - [X] Researched expo-go and custom native code limitations
 - [X] Researched development build process, apple dev program enrolment
@@ -992,4 +995,26 @@ Updated User app, models, serializers, views and urls
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
 - Improve text input component
+- Fix scrolling issue with subtasks
+---
+## [12/12/2025] - [Friday]
+### Today's Goals
+- [X] Implemented non-functional focus task button component
+- [X] Implemented task + desc edit mode in task view
+- [X] merged basic task management branch to main
+
+### Plans For Future
+- Plan how to connect task CRUD to api service layer
+- plan to test
+
+### Notes
+- no notes
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+- Improve text input component
 - Fix scrolling issue with subtasks 
+- general haptic feedback
+- fix auto scroll in subtask section of task view, create
+>>>>>>> Stashed changes
