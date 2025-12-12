@@ -149,7 +149,9 @@ export default function TodayScreen() {
   // Monitor scroll position and show title when screen title is covered
   useEffect(() => {
     const handleScrollChange = (scrollY: number) => {
-      const titleThreshold = insets.top - 30;
+      // lower threshold (more negative) makes the title appear earlier when scrolling up
+      // changed from -30 to -50 to activate the top section sooner
+      const titleThreshold = insets.top - 60;
       
       if (scrollY >= titleThreshold && !showTitle && !isAnimatingRef.current) {
         setShowTitle(true);
@@ -409,6 +411,7 @@ export default function TodayScreen() {
       <ScreenContainer 
         scrollable={false}
         paddingHorizontal={0}
+        safeAreaTop={false}
         safeAreaBottom={false}
         paddingVertical={0}
       >
