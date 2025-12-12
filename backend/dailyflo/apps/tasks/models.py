@@ -67,6 +67,21 @@ class Task(models.Model):
         blank=True,
         help_text="Optional description of the task"
     )
+    icon = models.CharField(
+        max_length=50,
+        blank=True,
+        default='',
+        help_text="Icon name for the task (e.g., 'briefcase', 'home')"
+    )
+    time = models.TimeField(
+        blank=True,
+        null=True,
+        help_text="Specific time for the task (optional, used with due_date)"
+    )
+    duration = models.IntegerField(
+        default=0,
+        help_text="Duration of the task in minutes (0 if not specified)"
+    )
     
     # task properties
     due_date = models.DateTimeField(

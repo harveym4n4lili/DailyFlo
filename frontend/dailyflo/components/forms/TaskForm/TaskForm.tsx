@@ -32,6 +32,7 @@ const DEFAULTS: TaskFormValues = {
   color: 'blue',
   routineType: 'once' as RoutineType,
   listId: undefined,
+  alerts: undefined,
 };
 
 const TaskForm: React.FC<TaskFormProps> = ({ initialValues, onSubmitted }) => {

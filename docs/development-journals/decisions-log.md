@@ -95,3 +95,27 @@ Fully decided to remove task icons
 
 ### Notes
 - No notes
+---
+## [12/10/2025] - [Sunday]
+
+### Decision 1
+Added time, duration and icon fields to the Task model.
+#### Decision Goal
+> Allow further expansion and implementation
+#### Decision Context
+* I considered current constraints and implementation, I thought I might as well add these fields for future features, to expand my development.
+* These features gave more to do in the app
+
+### Notes
+- No notes
+---
+## [08/12/2025] - [Monday]
+### Decision 1
+Decided to go through with IOS-version conditional styling
+#### Decision Goal
+> Allow for adaptable, device fitting styling for better UX
+#### Decision Context
+* Recently upgraded my phone for testing, realised that I should ensure the styling should fit for more devices.
+
+### Notes
+- No notes

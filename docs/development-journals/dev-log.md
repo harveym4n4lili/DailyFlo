@@ -601,3 +601,395 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+---
+## [10/10/2025] - [Friday]
+
+### Today's Goals
+- [X] Styled task creation modal topsection
+- [X] Added a color pallete icon that opens a color picker mdoal
+- [X] Designed my own Draggable Modal bringing better UX
+- [X] Added inverted colors to palette
+
+
+### Plans For Future
+- Plan next implementation of task creation basic info
+- Plan how to implement repeating task selection
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+---
+## [12/10/2025] - [Sunday]
+
+### Today's Goals
+- [X] Added icon, time and duration fields to task model
+- [X] Craeted a task icon and color select modal
+- [X] Added a sticky header prop to draggable modal
+
+### Plans For Future
+- Plan to implement next form buttons
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+---
+## [13/10/2025] - [Monday]
+
+### Today's Goals
+- [X] Added alert and duration buttons to the task creation modal
+
+### Plans For Future
+- Plan to implement next form modals
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+---
+## [14/10/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Implemented a GroupedList Button Component to be reused
+- [X] Refactored the task creation modal buttons to use the new component
+- [X] Begun designing task time duration modal and implemented react native time wheel picker
+
+### Plans For Future
+- Plan to implement next form modals
+- Consider Animations
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+---
+## [15/10/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Added action buttons to Draggable Modal
+- [X] Refactored all current form modals to use new action buttons
+- [X] Restructured current form buttons to include dynamic displays for saved options
+- [X] Implemented an icon pressable display
+- [X] Added highlight animations for form button tap and saves
+
+### Plans For Future
+- Plan to implement alert selection modal
+- Plan to implement description and sub tasks
+- Turn form buttons into reusable components for modularity, keeping animations
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement better time picker or style my own
+- Implement better duration slider
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [17/10/2025] - [Friday]
+
+### Today's Goals
+- [X] Implemented new form button components
+- [X] Refactored form buttons to use new components
+- [X] Begun implementing alert modal
+
+### Plans For Future
+- Plan to implement description and sub tasks
+- Plan to implement primary create button
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure23
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [19/10/2025] - [Sunday]
+
+### Today's Goals
+- [X] Implemented TaskDescriptionComponent
+- [X] Refactored task creation modal to include TaskDescription
+
+### Plans For Future
+- Plan to implement primary create button
+- consider auto scroll to keep content avoiding keyboard
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure23
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [20/10/2025] - [Monday]
+
+### Today's Goals
+- [X] Implemented a new keyboard layout modal
+- [X] Fied Modal backdrop issues
+- [X] seerated subtasks from Task Description as its own component
+- [X] Begun new task creation modal refactoring
+
+### Plans For Future
+- Fix form picker buttons not opening modals
+- Fix slide animations for other modals
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [21/10/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Conducted archirectural restructuring such as top section container
+- [X] Changed taskBasicInfo to taskCreationContent
+- [X] Styling Changes
+
+### Plans For Future
+- Continue to improve form picker button and modal UX
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [22/10/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Created new util methods for formpicker button functionality
+- [X] Begun to implement a dynamic message feature on the form picker buttons
+
+### Plans For Future
+- Fix smoothness, and add a seamless feel to transitioning
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [23/10/2025] - [Thursday]
+
+### Today's Goals
+- [X] Begun to implement basic transitioning between task creation modal and form picker modals
+
+### Plans For Future
+- Aim for more seamless transitioning
+- Find alternative to stacked modals, as expo ios does not allow this.
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [13/11/2025] - [Thursday]
+
+### Today's Goals
+- [X] Transformed draggable modals (form picker modals) to be absolute views
+- [X] Implemented create task button functionality
+
+### Plans For Future
+- Begin to address refining points
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [14/11/2025] - [Friday]
+
+### Today's Goals
+- [X] Styling changes
+
+### Plans For Future
+- Begin to check and restructure component hierarchy, especially with task creation modal, task card components
+
+### Notes
+- After task creation is fully implemented, check how current structure follows the planned file architecture
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [15/11/2025] - [Saturday]
+
+### Today's Goals
+- [X] Restructed Taskcard, Listcard, task creation modal component architecture
+
+### Plans For Future
+- Consider fulfilling refine plans
+- Plan how to implement task view
+
+### Notes
+- No notes
+### TODO POSSIBLE REFINING
+- Implement custom task creation modal structure
+- Implement better time picker style
+- Implement better duration slider style
+- Add relevant haptic feedback to buttons
+- Change task color palette to be more aesthetic
+---
+## [16/11/2025] - [Sunday]
+
+### Today's Goals
+- [X] Added haptic feed back
+- [X] Styling changes to task creation modal
+
+### Plans For Future
+- Plan how to implement task view
+
+### Notes
+- Consider file structure after task view implementation
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+---
+## [18/11/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Planned Implemenation on task view screen
+- [X] Also planned file architecture
+
+### Plans For Future
+- Consider refining responsivenes for description input, box expansion
+
+### Notes
+- consider implementing own text input component
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+---
+## [25/11/2025] - [Wednesday]
+
+### Today's Goals
+- [X] Implemented my own ios version of a text input box
+
+### Plans For Future
+- Plan to implement task detail view
+- Find a way to preserve keyboard modal current styling, but remove max height to allow for full description expansion
+
+### Notes
+- no notes
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+---
+## [04/12/2025] - [Thursday]
+
+### Today's Goals
+- [X] remove height constraint for infinite description expansion
+- [X] added auto scroll
+- [X] set conditional scroll in task creation modal
+
+### Plans For Future
+- Plan to implement task detail view
+
+### Notes
+- no notes
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+- Improve text input component
+---
+## [08/12/2025] - [Monday]
+
+### Today's Goals
+- [X] Added conditional IOS styling to modal
+- [X] Added inter-content scroll lock for conditional, full modal dragging (for form picker modals)
+- [X] Decomposed keyboard modal to fullscreen modal and keyboard anchored container for modularity (preparation for task detail view reusable components)
+
+### Plans For Future
+- Plan to implement task detail view
+
+### Notes
+- consider keyboard anchored section in task detail to be initially hidden
+- consider primary buttons and styling
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+- Improve text input component
+---
+## [09/12/2025] - [Tuesday]
+
+### Today's Goals
+- [X] Added conditional IOS styling to modal buttons
+- [X] begun to implement task detail view
+
+### Plans For Future
+- Plan functional buttons for detail view
+- seperate task save button and task create button, consider opacity styling
+- re-style subtask in task creation modal
+- also implement subtask creation
+
+### Notes
+- no notes
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+- Improve text input component
+---
+## [10/12/2025] - [Wednesday]
+### Today's Goals
+- [X] Re-designed task view to draggable modal
+- [X] Created some new key components
+- [X] Modularised a few other components
+- [X] Implemented a subtask section solution
+
+### Plans For Future
+- Plan functional buttons for detail view
+- seperate task save button and task create button, consider opacity styling
+- Implement subtask functionality
+- ensure clear, reusabke component structure for subtask
+- Fix scrolling issue with subtasks 
+
+### Notes
+- no notes
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+- Improve text input component
+---
+## [10/12/2025] - [Wednesday]
+### Today's Goals
+- [X] Researched expo-go and custom native code limitations
+- [X] Researched development build process, apple dev program enrolment
+- [X] Completed functionality fo rtask update
+- [X] Completed further modularisation
+
+### Plans For Future
+- Plan functional buttons for detail view
+- Implement a title, desc and icon edit full screen modal for task view
+- Consider implementing task list association and editing for task create and view
+
+### Notes
+- no notes
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+- Improve text input component
+- Fix scrolling issue with subtasks 

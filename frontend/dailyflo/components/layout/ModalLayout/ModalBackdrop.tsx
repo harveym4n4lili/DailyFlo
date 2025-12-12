@@ -11,6 +11,8 @@
  */
 
 import React, { useEffect } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -33,28 +35,46 @@ export interface ModalBackdropProps {
   // z-index for the backdrop
   // @default 50
   zIndex?: number;
+  
+  // callback when backdrop is tapped
+  // when provided, backdrop becomes tappable
+  // typically used to close modals when tapping outside
+  onPress?: () => void;
 }
 
 export function ModalBackdrop({
   isVisible,
-  backgroundColor = 'rgba(0, 0, 0, 0.5)',
+  backgroundColor = 'rgba(0, 0, 0, 0.6)',
   duration = 250,
   zIndex = 50,
+  onPress,
 }: ModalBackdropProps) {
+  // get safe area insets to extend backdrop into safe areas
+  const insets = useSafeAreaInsets();
+  
   // shared value for backdrop opacity animation
   // backdrop fades in when any modal opens, fades out when all modals close
-  const backdropOpacity = useSharedValue(0);
+  // initialize based on isVisible to prevent flash on first render
+  const backdropOpacity = useSharedValue(isVisible ? 1 : 0);
 
   // watch for visibility changes and animate the backdrop accordingly
   // this creates a darker backdrop that fades behind modals
+  // ensures smooth transitions without flashing by animating from current opacity
+  // only animate if the visibility state actually changed to prevent unnecessary animations
   useEffect(() => {
-    if (isVisible) {
-      // fade in the backdrop
+    // get current opacity value to check if we need to animate
+    const currentOpacity = backdropOpacity.value;
+    
+    if (isVisible && currentOpacity !== 1) {
+      // fade in the backdrop from current opacity to fully visible (1)
+      // only animate if not already at target value
       backdropOpacity.value = withTiming(1, { duration });
-    } else {
-      // fade out the backdrop
+    } else if (!isVisible && currentOpacity !== 0) {
+      // fade out the backdrop from current opacity to invisible (0)
+      // only animate if not already at target value
       backdropOpacity.value = withTiming(0, { duration });
     }
+    // if already at target opacity, don't animate (prevents flash when form picker closes)
   }, [isVisible, duration]);
 
   // animated style for the backdrop
@@ -63,21 +83,27 @@ export function ModalBackdrop({
     opacity: backdropOpacity.value,
   }));
 
+  // create animated pressable component
+  // this allows the backdrop to be tappable while maintaining animations
+  const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
   return (
-    <Animated.View
+    <AnimatedPressable
       style={[
+        StyleSheet.absoluteFillObject,
         {
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          // Use negative margins to extend into safe areas
+          marginTop: -Math.max(insets.top, 100),
+          marginLeft: -Math.max(insets.left, 100),
+          marginRight: -Math.max(insets.right, 100),
+          marginBottom: -Math.max(insets.bottom, 100),
           backgroundColor,
           zIndex,
         },
         backdropAnimatedStyle,
       ]}
-      pointerEvents="none"
+      pointerEvents={onPress && isVisible ? 'auto' : 'none'}
+      onPress={onPress}
     />
   );
 }

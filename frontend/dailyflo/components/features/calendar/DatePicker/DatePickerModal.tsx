@@ -13,11 +13,10 @@
  */
 
 // react: core react library
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 // react native components for the UI
 import {
-  ScrollView,
   View,
   Text,
   Pressable,
@@ -29,7 +28,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // modal layout components
-import { DraggableModal, ModalHeader } from '@/components/layout/ModalLayout';
+import { DraggableModal, ModalHeader, LockableScrollView } from '@/components/layout/ModalLayout';
 
 // quick date options component
 import { QuickDateOptions } from './QuickDateOptions';
@@ -45,6 +44,9 @@ import { getTextStyle } from '@/constants/Typography';
 
 // hooks for theme-aware colors
 import { useThemeColors, useTaskColors } from '@/hooks/useColorPalette';
+
+// types for type safety
+import type { TaskColor } from '@/types';
 
 /**
  * Props for DatePickerModal component
@@ -77,6 +79,11 @@ export interface DatePickerModalProps {
    * @default "Select Date"
    */
   title?: string;
+  
+  /**
+   * Task category color for button styling
+   */
+  taskCategoryColor?: TaskColor;
 }
 
 /**
@@ -90,7 +97,11 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   onClose,
   onSelectDate,
   title = 'Select Date',
+  taskCategoryColor,
 }) => {
+  // CONSOLE DEBUGGING
+  // console.log('📅 DatePickerModal - visible:', visible);
+  
   // get theme-aware colors for styling
   const themeColors = useThemeColors();
   const taskColors = useTaskColors();
@@ -98,32 +109,33 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   // get safe area insets to handle devices with notches/home indicators
   const insets = useSafeAreaInsets();
   
+  // changes are now applied instantly - no temporary state needed
+  
   /**
    * Handle date selection from quick options
-   * This immediately confirms the selection and closes the modal
+   * Immediately applies the date and closes the modal
    */
-  // when user picks a quick option (Today, Tomorrow, etc), we immediately apply it
-  // flow: user taps quick option → this function runs → parent receives new date → modal closes
+  // when user picks a quick option (Today, Tomorrow, etc), we apply it immediately
+  // flow: user taps quick option → applies date to parent → modal closes
   const handleQuickDateSelect = (date: string, optionName: string) => {
-    console.log(`Quick date selected: ${optionName}`);
-    onSelectDate(date); // notify parent component
-    onClose(); // close modal
+    // console.log(`Quick date selected: ${optionName}`);
+    onSelectDate(date); // apply date to parent immediately
+    onClose(); // close modal immediately
   };
   
   /**
    * Handle date selection from calendar view
-   * This immediately confirms the selection and closes the modal
+   * Applies changes instantly - no save button needed
    */
-  // when user picks a specific date from the calendar, we immediately apply it
-  // flow: user taps calendar date → this function runs → parent receives new date → modal closes
+  // when user picks a specific date from the calendar, we apply it immediately
+  // flow: user taps calendar date → applies date to parent immediately → modal stays open
   const handleCalendarDateSelect = (date: string) => {
-    console.log(`Calendar date selected: ${date}`);
-    onSelectDate(date); // notify parent component
-    onClose(); // close modal
+    // console.log(`Calendar date selected: ${date}`);
+    onSelectDate(date); // apply date to parent immediately
   };
   
   /**
-   * Handle modal close
+   * Handle modal close (backdrop/drag)
    */
   const handleModalClose = () => {
     onClose();
@@ -183,47 +195,53 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   );
   
   return (
-    <DraggableModal
-      visible={visible}
-      onClose={handleModalClose}
-      // snap points: close at 30%, initial at 60%, expanded at 95%
-      // lowest snap point (30%) will dismiss the modal
-      snapPoints={[0.3, 0.6, 0.95]}
-      // start at the middle snap point (60%)
-      initialSnapPoint={1}
-      borderRadius={20}
-      // pass the repeating container to float independently of modal drag
-      floatingContainer={repeatingContainer}
-    >
-      {/* custom header for date picker modal */}
-      <ModalHeader
-        title={title}
+    <>
+      <DraggableModal
+        visible={visible}
         onClose={handleModalClose}
-        showCloseButton={false}
-        showDragIndicator={true}
-        showBorder={true}
-      />
-        
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* quick date options */}
-          <QuickDateOptions
-            selectedDate={selectedDate || ''}
-            onSelectDate={handleQuickDateSelect}
-          />
+        // snap points: close at 30%, initial at 60%, expanded at 95%
+        // lowest snap point (30%) will dismiss the modal
+        snapPoints={[0.3, 0.6, 0.9]}
+        // start at the middle snap point (60%)
+        initialSnapPoint={1}
+        // pass the repeating container as sticky footer - stays fixed at bottom while modal drags
+        stickyFooter={repeatingContainer}
+        // showBackdrop=true: DraggableModal handles its own backdrop
+        showBackdrop={true}
+      >
+        {/* custom header for date picker modal - no action buttons needed (changes apply instantly) */}
+        <ModalHeader
+          title={title}
+          showActionButtons={false}
+          showCloseButton={true}
+          onClose={onClose}
+          showDragIndicator={true}
+          showBorder={true}
+          taskCategoryColor={taskCategoryColor}
+        />
           
-          {/* calendar view for specific date selection */}
-          <CalendarView
-            selectedDate={selectedDate || ''}
-            onSelectDate={handleCalendarDateSelect}
-            initialMonth={selectedDate ? new Date(selectedDate) : undefined}
-          />
-        
-        </ScrollView>
-    </DraggableModal>
+          {/* LockableScrollView automatically locks scrolling when modal is not at top anchor */}
+          <LockableScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* quick date options */}
+            <QuickDateOptions
+              selectedDate={selectedDate || ''}
+              onSelectDate={handleQuickDateSelect}
+            />
+            
+            {/* calendar view for specific date selection */}
+            <CalendarView
+              selectedDate={selectedDate || ''}
+              onSelectDate={handleCalendarDateSelect}
+              initialMonth={selectedDate ? new Date(selectedDate) : undefined}
+            />
+          
+          </LockableScrollView>
+      </DraggableModal>
+    </>
   );
 };
 

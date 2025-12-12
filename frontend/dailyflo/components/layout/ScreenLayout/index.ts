@@ -9,6 +9,9 @@
 export { ScreenContainer, default as ScreenContainerDefault } from './ScreenContainer';
 export { SafeAreaWrapper, default as SafeAreaWrapperDefault } from './SafeAreaWrapper';
 
+// keyboard-related components and hooks
+export * from './Keyboard';
+
 // re-export types for convenience
 export type { ScreenContainerProps } from './ScreenContainer';
 export type { SafeAreaWrapperProps } from './SafeAreaWrapper';

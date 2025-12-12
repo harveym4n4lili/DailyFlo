@@ -15,7 +15,7 @@ class TaskListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'id', 'title', 'description', 'due_date', 'is_completed',
+            'id', 'title', 'description', 'icon', 'time', 'duration', 'due_date', 'is_completed',
             'completed_at', 'priority_level', 'priority_display', 'color',
             'routine_type', 'list', 'list_name', 'list_color', 'is_overdue',
             'created_at', 'updated_at'
@@ -37,7 +37,7 @@ class TaskDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'id', 'title', 'description', 'due_date', 'is_completed',
+            'id', 'title', 'description', 'icon', 'time', 'duration', 'due_date', 'is_completed',
             'completed_at', 'priority_level', 'priority_display', 'color',
             'routine_type', 'sort_order', 'list', 'list_name', 'list_color',
             'is_overdue', 'subtasks_count', 'completed_subtasks_count',
@@ -60,7 +60,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'title', 'description', 'due_date', 'priority_level',
+            'title', 'description', 'icon', 'time', 'duration', 'due_date', 'priority_level',
             'color', 'routine_type', 'list', 'sort_order', 'metadata'
         ]
     
@@ -92,7 +92,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'title', 'description', 'due_date', 'priority_level',
+            'title', 'description', 'icon', 'time', 'duration', 'due_date', 'priority_level',
             'color', 'routine_type', 'list', 'sort_order', 'metadata'
         ]
     

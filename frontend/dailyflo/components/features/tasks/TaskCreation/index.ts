@@ -6,8 +6,12 @@
 
 export * from './TaskCreationModal';
 export { default as TaskCreationModal } from './TaskCreationModal';
-export * from './TaskBasicInfo';
-export * from './TaskColorSelectModal';
+export * from './TaskCreationContent';
+export { default as TaskCreationContent } from './TaskCreationContent';
 
+// Export modals from modals folder
+export * from './modals';
 
+// Export sections from sections folder
+export * from './sections';
 
