@@ -25,7 +25,10 @@ SECRET_KEY = 'django-insecure-7%xnn%c*6)yqx#u6sc=^24_*7af-b8loqfqhi0l#ikdv=)urpz
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# allowed hosts - list of host/domain names that django can serve
+# includes localhost for local development and your local network ip for mobile testing
+# the ip address (192.168.0.99) allows your phone on the same wifi network to access django
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', '192.168.0.99']
 
 # DEBUG = False
 
