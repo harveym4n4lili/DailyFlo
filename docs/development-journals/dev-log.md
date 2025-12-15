@@ -1042,4 +1042,17 @@ Updated User app, models, serializers, views and urls
 - Fix scrolling issue with subtasks 
 - general haptic feedback
 - fix auto scroll in subtask section of task view, create
+---
+## [15/12/2025] - [Monday]
+### Today's Goals
+- [X] Fully integrated task APIs, for fetch, create, update and delete
 
+### Plans For Future
+- get better understanding of async thunk, redux slice state
+- Learn and record how to test api integration
+- plan to implement UI loading states and completion toasts
+- plan to implement focus feature
+- plan to implement user onboard
+
+### Notes
+- no notes
