@@ -25,7 +25,10 @@ SECRET_KEY = 'django-insecure-7%xnn%c*6)yqx#u6sc=^24_*7af-b8loqfqhi0l#ikdv=)urpz
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# allowed hosts - list of host/domain names that django can serve
+# includes localhost for local development and your local network ip for mobile testing
+# the ip address (192.168.0.99) allows your phone on the same wifi network to access django
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', '192.168.0.99']
 
 # DEBUG = False
 
@@ -40,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',  # cors headers package - allows mobile app to make requests to django api
     'apps.accounts',
     'apps.tasks',
     'apps.lists',
@@ -50,6 +54,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # cors middleware - must be near the top to process cors headers before other middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -136,3 +141,35 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
 }
+
+# CORS Configuration - allows mobile app (expo go) to access django api
+# cors (cross-origin resource sharing) lets your phone make requests to django server
+# without this, browsers and mobile apps block requests from different origins
+
+# list of allowed origins - specific urls that can access the api
+# these are common expo development server urls
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8081",      # expo web development server
+    "http://localhost:19000",     # expo dev server
+    "exp://localhost:8081",       # expo go app protocol
+]
+
+# allow all origins during development (only for testing!)
+# this lets any origin access the api - convenient for development but not secure
+# remove this in production and use CORS_ALLOWED_ORIGINS with specific domains only
+CORS_ALLOW_ALL_ORIGINS = True
+
+# allow credentials (cookies, authorization headers) to be sent with requests
+# needed for jwt token authentication to work properly
+CORS_ALLOW_CREDENTIALS = True
+
+# allow these http methods from the mobile app
+# these are the standard methods used by rest apis
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
