@@ -17,13 +17,12 @@ class TaskViewSet(viewsets.ModelViewSet):
     """
     ViewSet for task management
     
-    TEMPORARY: Auth bypassed for testing fetchTasks integration.
-    TODO: Remove AllowAny and restore IsAuthenticated before production.
+    TEMPORARY: Auth bypassed for testing without login feature.
+    TODO: Remove AllowAny and restore IsAuthenticated when login is implemented.
     """
-    # TEMPORARY: Bypass auth for testing - REMOVE THIS LINE BEFORE PRODUCTION
+    # TEMPORARY: Allow unauthenticated requests for testing
+    # TODO: Change to IsAuthenticated when login feature is ready
     permission_classes = [permissions.AllowAny]
-    # Original (uncomment when done testing):
-    # permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_completed', 'color', 'priority_level', 'routine_type', 'list']
     search_fields = ['title', 'description']

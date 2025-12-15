@@ -172,41 +172,52 @@ export const fetchTasks = createAsyncThunk(
       // tasksApiService.fetchTasks() makes a GET request to /tasks/ endpoint
       const response = await tasksApiService.fetchTasks();
       
+      // Handle different response formats from Django REST Framework
+      // Django can return data in different formats: wrapped in TasksResponse, direct array, or pagination format
+      // We need to handle all cases for flexibility
+      let tasksArray: any[] = [];
+      
+      // Type assertion to handle flexible response formats
+      // The API service returns TasksResponse, but Django might return arrays directly
+      const responseAny = response as any;
+      
       // DEBUG: Log the actual response structure to understand what Django returns
       console.log('📦 API Response structure:', {
         responseType: typeof response,
         isArray: Array.isArray(response),
-        hasData: !!response.data,
-        hasTasks: !!response.tasks,
+        hasData: !!responseAny.data,
+        hasTasks: !!responseAny.tasks,
+        hasResults: !!responseAny.results,
         responseKeys: response && typeof response === 'object' ? Object.keys(response) : 'not an object',
         responseSample: JSON.stringify(response).substring(0, 200), // First 200 chars
       });
       
       // Handle different response formats
-      // Django REST Framework typically returns arrays directly or wrapped in objects
-      // Try multiple possible formats to be flexible
-      let tasksArray: any[] = [];
-      
+      // Case 1: Response is directly an array of tasks (Django REST Framework default for list views)
       if (Array.isArray(response)) {
-        // Case 1: Response is directly an array of tasks
         tasksArray = response;
-      } else if (response?.data && Array.isArray(response.data)) {
-        // Case 2: Response has a data property with array
-        tasksArray = response.data;
-      } else if (response?.tasks && Array.isArray(response.tasks)) {
-        // Case 3: Response has a tasks property with array
-        tasksArray = response.tasks;
-      } else if (response?.results && Array.isArray(response.results)) {
-        // Case 4: Django REST Framework pagination format
-        tasksArray = response.results;
-      } else {
-        // Case 5: Fallback - log warning and use empty array
+      } 
+      // Case 2: Response has a data property with array (TasksResponse format)
+      else if (responseAny?.data && Array.isArray(responseAny.data)) {
+        tasksArray = responseAny.data;
+      } 
+      // Case 3: Response has a tasks property with array (alternative format)
+      else if (responseAny?.tasks && Array.isArray(responseAny.tasks)) {
+        tasksArray = responseAny.tasks;
+      } 
+      // Case 4: Django REST Framework pagination format (has results property)
+      else if (responseAny?.results && Array.isArray(responseAny.results)) {
+        tasksArray = responseAny.results;
+      } 
+      // Case 5: Fallback - log warning and use empty array
+      else {
         console.warn('⚠️ Unexpected API response format:', response);
         tasksArray = [];
       }
       
       // Transform each API task to our Task interface format
       // This ensures all tasks match our expected structure (camelCase, proper types)
+      // The API returns snake_case (due_date, priority_level) and we convert to camelCase (dueDate, priorityLevel)
       const transformedTasks = tasksArray.map((apiTask: any) => transformApiTaskToTask(apiTask));
       
       console.log('✅ fetchTasks completed:', transformedTasks.length, 'tasks fetched from API');
@@ -216,9 +227,12 @@ export const fetchTasks = createAsyncThunk(
       console.error('❌ fetchTasks failed:', error);
       
       // Extract error message from API response or use default message
+      // Django REST Framework returns errors in response.data.message or response.data.error
       const errorMessage = error instanceof Error 
         ? error.message 
-        : (error as any)?.response?.data?.message || 'Failed to fetch tasks';
+        : (error as any)?.response?.data?.message 
+        || (error as any)?.response?.data?.error
+        || 'Failed to fetch tasks';
       
       // Return error using rejectWithValue so Redux can handle it
       return rejectWithValue(errorMessage);
@@ -547,62 +561,122 @@ function generateTaskId(): string {
   return `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Create a new task (TEMPORARY - uses local storage instead of API)
+// Create a new task - integrated with Django API
 // This is an async thunk - a Redux Toolkit function that handles async operations
 // It dispatches actions automatically: pending (loading), fulfilled (success), rejected (error)
-// For now, this stores tasks in AsyncStorage instead of making API calls
+// This makes an API call to Django backend to create the task in the database
 export const createTask = createAsyncThunk(
   'tasks/createTask',
-  async (taskData: CreateTaskInput, { rejectWithValue, getState }) => {
+  async (taskData: CreateTaskInput, { rejectWithValue }) => {
     try {
-      // Create a new task object with all required fields
-      // This transforms CreateTaskInput into a full Task object
-      const newTask: Task = {
-        id: generateTaskId(), // Generate a unique ID for local storage
-        userId: 'local_user', // Temporary user ID for local storage
-        listId: taskData.listId || null,
-        title: taskData.title,
-        description: taskData.description || '',
-        icon: taskData.icon,
-        time: taskData.time,
-        duration: taskData.duration || 0,
-        dueDate: taskData.dueDate || null,
-        isCompleted: false,
-        completedAt: null,
-        priorityLevel: taskData.priorityLevel || 3,
-        color: taskData.color || 'blue',
-        routineType: taskData.routineType || 'once',
-        sortOrder: taskData.sortOrder || 0,
-        metadata: {
-          subtasks: taskData.metadata?.subtasks || [],
-          reminders: taskData.metadata?.reminders || [],
-          notes: taskData.metadata?.notes,
-          tags: taskData.metadata?.tags,
-        },
-        softDeleted: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      console.log('🔄 createTask thunk started - calling API');
       
-      // Get current tasks from Redux state
-      const state = getState() as any;
-      const currentTasks = state.tasks?.tasks || [];
+      // Call the API service to create the task
+      // tasksApiService.createTask() makes a POST request to /tasks/tasks/ endpoint
+      // The API service handles transforming camelCase to snake_case and the HTTP request
+      // It accepts CreateTaskInput directly (the API service handles the transformation internally)
+      const response = await tasksApiService.createTask(taskData);
       
-      // Add the new task to the list
-      const updatedTasks = [...currentTasks, newTask];
+      // DEBUG: Log the response structure to understand what Django returns
+      console.log('📦 API Response structure:', {
+        responseType: typeof response,
+        isArray: Array.isArray(response),
+        hasData: !!response?.data,
+        hasId: !!(response && typeof response === 'object' && 'id' in response),
+        responseKeys: response && typeof response === 'object' ? Object.keys(response) : 'not an object',
+        responseSample: JSON.stringify(response).substring(0, 500), // First 500 chars
+        fullResponse: response, // Log full response for debugging
+      });
       
-      // Store tasks in AsyncStorage
-      // AsyncStorage stores data as strings, so we need to JSON.stringify
-      await AsyncStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(updatedTasks));
+      // Handle different response formats from Django REST Framework
+      // Django REST Framework ModelViewSet.create() returns serializer.data directly
+      // The API service returns response.data, which should be the task object
+      // Type assertion to handle flexible response formats
+      const responseAny = response as any;
+      let apiTask: any;
       
-      console.log('Task created and stored locally:', newTask.id);
+      // Case 1: Response has a data property (wrapped format like TaskResponse)
+      if (responseAny?.data && typeof responseAny.data === 'object') {
+        apiTask = responseAny.data;
+      } 
+      // Case 2: Response is the task object directly (Django REST Framework default)
+      // Check if it has an 'id' field which indicates it's a task object
+      else if (response && typeof response === 'object' && 'id' in response) {
+        apiTask = response;
+      } 
+      // Case 3: Response might be an array (shouldn't happen for create, but handle it)
+      else if (Array.isArray(response) && response.length > 0) {
+        apiTask = response[0];
+      }
+      // Case 4: Unexpected format - log detailed warning
+      else {
+        console.error('⚠️ Unexpected API response format:', {
+          response,
+          responseType: typeof response,
+          isArray: Array.isArray(response),
+          responseString: JSON.stringify(response),
+        });
+        throw new Error(`Unexpected response format from API: ${JSON.stringify(response).substring(0, 200)}`);
+      }
       
-      // Return the new task so it gets added to Redux state
-      return newTask;
+      // Transform the API response (snake_case) to our Task interface format (camelCase)
+      // This ensures the task matches our expected structure with camelCase field names
+      // The API returns snake_case (due_date, priority_level) and we convert to camelCase (dueDate, priorityLevel)
+      const transformedTask = transformApiTaskToTask(apiTask);
+      
+      console.log('✅ createTask completed:', transformedTask.id, 'task created via API');
+      
+      // Return the transformed task so Redux can add it to state
+      return transformedTask;
     } catch (error) {
-      // If storage fails, return an error message
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create task';
-      console.error('Create task error:', error);
+      // Handle API errors - log the error and return a user-friendly message
+      console.error('❌ createTask failed:', error);
+      
+      // Extract error message from API response or use default message
+      // Django REST Framework returns validation errors in response.data
+      // The error object from axios has a response property with the API error details
+      let errorMessage = 'Failed to create task';
+      
+      // DEBUG: Log the full error for debugging
+      console.error('🔍 Full error object:', {
+        error,
+        errorType: typeof error,
+        response: (error as any)?.response,
+        responseData: (error as any)?.response?.data,
+        responseStatus: (error as any)?.response?.status,
+      });
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if ((error as any)?.response?.data) {
+        // Django validation errors are in response.data
+        const apiError = (error as any).response.data;
+        
+        // DEBUG: Log the API error structure
+        console.error('🔍 Django API Error:', {
+          apiError,
+          apiErrorType: typeof apiError,
+          apiErrorKeys: typeof apiError === 'object' ? Object.keys(apiError) : 'not an object',
+        });
+        
+        // Handle different error formats from Django
+        if (typeof apiError === 'string') {
+          errorMessage = apiError;
+        } else if (apiError.message) {
+          errorMessage = apiError.message;
+        } else if (apiError.error) {
+          errorMessage = apiError.error;
+        } else if (typeof apiError === 'object') {
+          // Django returns field-specific errors as an object
+          // Convert to a readable string
+          const fieldErrors = Object.entries(apiError)
+            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+            .join('; ');
+          errorMessage = fieldErrors || JSON.stringify(apiError);
+        }
+      }
+      
+      // Return error using rejectWithValue so Redux can handle it
       return rejectWithValue(errorMessage);
     }
   }
@@ -759,8 +833,13 @@ const tasksSlice = createSlice({
       })
       .addCase(createTask.fulfilled, (state, action) => {
         state.isCreating = false;
+        // Add the newly created task to the tasks array
+        // The task comes from the API with all fields populated (id, timestamps, etc.)
         state.tasks.push(action.payload);
+        // Re-apply filters to include the new task in filteredTasks if it matches current filters
         state.filteredTasks = applyFilters(state.tasks, state.filters);
+        // Update cache timestamp since we have fresh data
+        state.lastFetched = Date.now();
       })
       .addCase(createTask.rejected, (state, action) => {
         state.isCreating = false;

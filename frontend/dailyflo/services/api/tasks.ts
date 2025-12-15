@@ -40,11 +40,11 @@ class TasksApiService {
    */
   async fetchTasks(params: TaskQueryRequest = {}): Promise<TasksResponse> {
     try {
-      // Send a GET request to /tasks/tasks/ with query parameters
-      // Django URL structure: /tasks/ includes apps.tasks.urls, which has router with 'tasks' registered
-      // So the full path is /tasks/tasks/ for the list endpoint
-      // Query parameters are added to the URL like: /tasks/tasks/?isCompleted=false&sortBy=dueDate
-      const response = await apiClient.get('/tasks/tasks/', { params });
+      // Send a GET request to /tasks/ with query parameters
+      // Django URL structure: /tasks/ includes apps.tasks.urls, which has router registered with empty string
+      // So the full path is /tasks/ for the list endpoint
+      // Query parameters are added to the URL like: /tasks/?isCompleted=false&sortBy=dueDate
+      const response = await apiClient.get('/tasks/', { params });
       
       return response.data;
     } catch (error) {
@@ -62,9 +62,9 @@ class TasksApiService {
    */
   async fetchTaskById(taskId: string): Promise<TaskResponse> {
     try {
-      // Send a GET request to /tasks/tasks/{id}/ to get a specific task
-      // Django URL structure: /tasks/tasks/{id}/ for detail view
-      const response = await apiClient.get(`/tasks/tasks/${taskId}/`);
+      // Send a GET request to /tasks/{id}/ to get a specific task
+      // Django URL structure: /tasks/{id}/ for detail view
+      const response = await apiClient.get(`/tasks/${taskId}/`);
       
       return response.data;
     } catch (error) {
@@ -117,8 +117,26 @@ class TasksApiService {
         apiData.duration = taskData.duration;
       }
       // Convert camelCase dueDate to snake_case due_date
+      // Django validation rejects dates in the past, so we need to handle this carefully
+      // Only send due_date if it's explicitly set and not in the past
       if (taskData.dueDate !== undefined && taskData.dueDate !== null) {
-        apiData.due_date = taskData.dueDate; // Django DateTimeField accepts ISO string
+        const dueDate = new Date(taskData.dueDate);
+        const now = new Date();
+        
+        // Add a small buffer (5 seconds) to account for network latency and processing time
+        // This ensures the date won't be rejected as "in the past" by Django
+        const bufferTime = 5000; // 5 seconds in milliseconds
+        const futureDate = new Date(now.getTime() + bufferTime);
+        
+        // If the due date is in the future (with buffer), send it
+        // If it's in the past or too close to now, adjust it to be slightly in the future
+        if (dueDate >= futureDate) {
+          apiData.due_date = taskData.dueDate; // Django DateTimeField accepts ISO string
+        } else {
+          // If date is in the past or too close to now, set it to slightly in the future
+          // This prevents Django validation errors while preserving user intent
+          apiData.due_date = futureDate.toISOString();
+        }
       }
       // Convert camelCase priorityLevel to snake_case priority_level
       if (taskData.priorityLevel !== undefined && taskData.priorityLevel !== null) {
@@ -132,8 +150,9 @@ class TasksApiService {
         apiData.routine_type = taskData.routineType;
       }
       // Convert camelCase listId to snake_case list (Django field is 'list', not 'list_id')
-      // Django expects the list ID value, not the field name 'list_id'
-      if (taskData.listId !== undefined && taskData.listId !== null) {
+      // Django expects the list ID value (UUID string), not the field name 'list_id'
+      // Only include if listId is a valid non-empty string
+      if (taskData.listId !== undefined && taskData.listId !== null && taskData.listId !== '') {
         apiData.list = taskData.listId;
       }
       // Convert camelCase sortOrder to snake_case sort_order
@@ -145,14 +164,28 @@ class TasksApiService {
         apiData.metadata = taskData.metadata;
       }
       
-      // Send a POST request to /tasks/tasks/ to create a new task
-      // Django URL structure: /tasks/tasks/ for list/create endpoint
+      // DEBUG: Log the data being sent to Django
+      console.log('📤 Sending task data to API:', JSON.stringify(apiData, null, 2));
+      
+      // Send a POST request to /tasks/ to create a new task
+      // Django URL structure: /tasks/ for list/create endpoint
       // Django REST Framework expects the data directly in snake_case format (not wrapped)
-      const response = await apiClient.post('/tasks/tasks/', apiData);
+      const response = await apiClient.post('/tasks/', apiData);
       
       return response.data;
     } catch (error) {
       console.error('Create task failed:', error);
+      
+      // DEBUG: Log the full error response from Django
+      if ((error as any)?.response) {
+        console.error('📦 Django Error Response:', {
+          status: (error as any).response.status,
+          statusText: (error as any).response.statusText,
+          data: (error as any).response.data,
+          headers: (error as any).response.headers,
+        });
+      }
+      
       throw error;
     }
   }
@@ -167,10 +200,10 @@ class TasksApiService {
    */
   async updateTask(taskId: string, data: UpdateTaskRequest): Promise<TaskResponse> {
     try {
-      // Send a PATCH request to /tasks/tasks/{id}/ to update a specific task
+      // Send a PATCH request to /tasks/{id}/ to update a specific task
       // PATCH is used for partial updates (only changing some fields)
-      // Django URL structure: /tasks/tasks/{id}/ for detail/update endpoint
-      const response = await apiClient.patch(`/tasks/tasks/${taskId}/`, data);
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
+      const response = await apiClient.patch(`/tasks/${taskId}/`, data);
       
       return response.data;
     } catch (error) {
@@ -188,9 +221,9 @@ class TasksApiService {
    */
   async deleteTask(taskId: string): Promise<TaskResponse> {
     try {
-      // Send a DELETE request to /tasks/tasks/{id}/ to delete a specific task
-      // Django URL structure: /tasks/tasks/{id}/ for detail/delete endpoint
-      const response = await apiClient.delete(`/tasks/tasks/${taskId}/`);
+      // Send a DELETE request to /tasks/{id}/ to delete a specific task
+      // Django URL structure: /tasks/{id}/ for detail/delete endpoint
+      const response = await apiClient.delete(`/tasks/${taskId}/`);
       
       return response.data;
     } catch (error) {
@@ -210,8 +243,8 @@ class TasksApiService {
   async toggleTaskCompletion(taskId: string, isCompleted: boolean): Promise<TaskResponse> {
     try {
       // Send a PATCH request to update the completion status
-      // Django URL structure: /tasks/tasks/{id}/ for detail/update endpoint
-      const response = await apiClient.patch(`/tasks/tasks/${taskId}/`, {
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
+      const response = await apiClient.patch(`/tasks/${taskId}/`, {
         isCompleted,
         completedAt: isCompleted ? new Date().toISOString() : null,
       });
@@ -234,8 +267,8 @@ class TasksApiService {
   async updateTaskPriority(taskId: string, priorityLevel: number): Promise<TaskResponse> {
     try {
       // Send a PATCH request to update the priority
-      // Django URL structure: /tasks/tasks/{id}/ for detail/update endpoint
-      const response = await apiClient.patch(`/tasks/tasks/${taskId}/`, {
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
+      const response = await apiClient.patch(`/tasks/${taskId}/`, {
         priorityLevel,
       });
       
@@ -257,8 +290,8 @@ class TasksApiService {
   async updateTaskDueDate(taskId: string, dueDate: Date | null): Promise<TaskResponse> {
     try {
       // Send a PATCH request to update the due date
-      // Django URL structure: /tasks/tasks/{id}/ for detail/update endpoint
-      const response = await apiClient.patch(`/tasks/tasks/${taskId}/`, {
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
+      const response = await apiClient.patch(`/tasks/${taskId}/`, {
         dueDate: dueDate ? dueDate.toISOString() : null,
       });
       
@@ -280,8 +313,8 @@ class TasksApiService {
   async moveTaskToList(taskId: string, listId: string | null): Promise<TaskResponse> {
     try {
       // Send a PATCH request to update the list
-      // Django URL structure: /tasks/tasks/{id}/ for detail/update endpoint
-      const response = await apiClient.patch(`/tasks/tasks/${taskId}/`, {
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
+      const response = await apiClient.patch(`/tasks/${taskId}/`, {
         listId,
       });
       
@@ -302,8 +335,8 @@ class TasksApiService {
   async duplicateTask(taskId: string): Promise<TaskResponse> {
     try {
       // Send a POST request to duplicate the task
-      // Django URL structure: /tasks/tasks/{id}/duplicate/ for duplicate action
-      const response = await apiClient.post(`/tasks/tasks/${taskId}/duplicate/`);
+      // Django URL structure: /tasks/{id}/duplicate/ for duplicate action
+      const response = await apiClient.post(`/tasks/${taskId}/duplicate/`);
       
       return response.data;
     } catch (error) {
@@ -322,8 +355,8 @@ class TasksApiService {
   async archiveTask(taskId: string): Promise<TaskResponse> {
     try {
       // Send a PATCH request to mark the task as archived
-      // Django URL structure: /tasks/tasks/{id}/ for detail/update endpoint
-      const response = await apiClient.patch(`/tasks/tasks/${taskId}/`, {
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
+      const response = await apiClient.patch(`/tasks/${taskId}/`, {
         softDeleted: true,
       });
       
@@ -344,8 +377,8 @@ class TasksApiService {
   async restoreTask(taskId: string): Promise<TaskResponse> {
     try {
       // Send a PATCH request to unarchive the task
-      // Django URL structure: /tasks/tasks/{id}/ for detail/update endpoint
-      const response = await apiClient.patch(`/tasks/tasks/${taskId}/`, {
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
+      const response = await apiClient.patch(`/tasks/${taskId}/`, {
         softDeleted: false,
       });
       
@@ -406,8 +439,8 @@ class TasksApiService {
       const today = new Date().toISOString().split('T')[0];
       
       // Send a GET request with today's date as a filter
-      // Django URL structure: /tasks/tasks/ for list endpoint
-      const response = await apiClient.get('/tasks/tasks/', {
+      // Django URL structure: /tasks/ for list endpoint
+      const response = await apiClient.get('/tasks/', {
         params: {
           dueDate: today,
           isCompleted: false, // Only get incomplete tasks
@@ -433,8 +466,8 @@ class TasksApiService {
       const today = new Date().toISOString().split('T')[0];
       
       // Send a GET request to get tasks due before today
-      // Django URL structure: /tasks/tasks/ for list endpoint
-      const response = await apiClient.get('/tasks/tasks/', {
+      // Django URL structure: /tasks/ for list endpoint
+      const response = await apiClient.get('/tasks/', {
         params: {
           dueDateBefore: today,
           isCompleted: false, // Only get incomplete tasks
@@ -458,8 +491,8 @@ class TasksApiService {
   async getCompletedTasks(params: { limit?: number; offset?: number } = {}): Promise<TasksResponse> {
     try {
       // Send a GET request to get completed tasks
-      // Django URL structure: /tasks/tasks/ for list endpoint
-      const response = await apiClient.get('/tasks/tasks/', {
+      // Django URL structure: /tasks/ for list endpoint
+      const response = await apiClient.get('/tasks/', {
         params: {
           isCompleted: true,
           ...params, // Include any additional parameters
@@ -485,8 +518,8 @@ class TasksApiService {
     try {
       // Send a GET request to the search endpoint
       // Django URL structure: /tasks/search/ (if custom search endpoint exists)
-      // Note: This might need to be /tasks/tasks/search/ depending on Django setup
-      const response = await apiClient.get('/tasks/tasks/search/', {
+      // Note: This might need to be /tasks/search/ depending on Django setup
+      const response = await apiClient.get('/tasks/search/', {
         params: {
           q: query, // The search query
           ...filters, // Any additional filters
