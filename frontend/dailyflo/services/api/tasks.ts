@@ -118,26 +118,10 @@ class TasksApiService {
         apiData.duration = taskData.duration;
       }
       // Convert camelCase dueDate to snake_case due_date
-      // Django validation rejects dates in the past, so we need to handle this carefully
-      // Only send due_date if it's explicitly set and not in the past
+      // Send due_date if it's explicitly set (can be past, present, or future dates)
+      // Django DateTimeField accepts ISO string format
       if (taskData.dueDate !== undefined && taskData.dueDate !== null) {
-        const dueDate = new Date(taskData.dueDate);
-        const now = new Date();
-        
-        // Add a small buffer (5 seconds) to account for network latency and processing time
-        // This ensures the date won't be rejected as "in the past" by Django
-        const bufferTime = 5000; // 5 seconds in milliseconds
-        const futureDate = new Date(now.getTime() + bufferTime);
-        
-        // If the due date is in the future (with buffer), send it
-        // If it's in the past or too close to now, adjust it to be slightly in the future
-        if (dueDate >= futureDate) {
-          apiData.due_date = taskData.dueDate; // Django DateTimeField accepts ISO string
-        } else {
-          // If date is in the past or too close to now, set it to slightly in the future
-          // This prevents Django validation errors while preserving user intent
-          apiData.due_date = futureDate.toISOString();
-        }
+        apiData.due_date = taskData.dueDate; // Django DateTimeField accepts ISO string
       }
       // Convert camelCase priorityLevel to snake_case priority_level
       if (taskData.priorityLevel !== undefined && taskData.priorityLevel !== null) {
@@ -230,30 +214,43 @@ class TasksApiService {
       if (taskData.icon !== undefined && taskData.icon !== null) {
         apiData.icon = taskData.icon;
       }
-      if (taskData.time !== undefined && taskData.time !== null) {
-        apiData.time = taskData.time; // Django TimeField accepts HH:MM format string
+      // Handle time field - distinguish between not provided vs explicitly cleared
+      // If time is undefined, null, or empty string, send null to clear it in Django
+      // If time has a value, send that value
+      // This allows users to clear the time field by setting it to "No Time"
+      if (taskData.time !== undefined) {
+        if (taskData.time === null || taskData.time === '') {
+          // Explicitly clearing time - send null to Django to remove the time
+          apiData.time = null;
+        } else {
+          // Time has a value - send it to Django
+          apiData.time = taskData.time; // Django TimeField accepts HH:MM format string
+        }
       }
-      if (taskData.duration !== undefined && taskData.duration !== null) {
-        apiData.duration = taskData.duration;
+      // Handle duration field - distinguish between not provided vs explicitly cleared
+      // Django duration field doesn't allow null (default is 0), so we send 0 to clear it
+      // If duration has a value, send that value
+      // This allows users to clear the duration field by setting it to "No Duration"
+      if (taskData.duration !== undefined) {
+        if (taskData.duration === null || taskData.duration === 0) {
+          // Explicitly clearing duration - send 0 to Django (Django doesn't allow null for duration)
+          // Django model has default=0, so 0 represents "no duration"
+          apiData.duration = 0;
+        } else {
+          // Duration has a value - send it to Django
+          apiData.duration = taskData.duration;
+        }
       }
       // Convert camelCase dueDate to snake_case due_date
       // Handle null case - if dueDate is explicitly null, send null to remove the due date
+      // Otherwise, send the date as-is (can be past, present, or future dates)
       if (taskData.dueDate !== undefined) {
         if (taskData.dueDate === null) {
           // Explicitly setting to null removes the due date
           apiData.due_date = null;
         } else {
-          // Check if date is in the past and add buffer if needed
-          const dueDate = new Date(taskData.dueDate);
-          const now = new Date();
-          const bufferTime = 5000; // 5 seconds buffer
-          const futureDate = new Date(now.getTime() + bufferTime);
-          
-          if (dueDate >= futureDate) {
-            apiData.due_date = taskData.dueDate;
-          } else {
-            apiData.due_date = futureDate.toISOString();
-          }
+          // Send the date as-is - Django DateTimeField accepts ISO string format
+          apiData.due_date = taskData.dueDate;
         }
       }
       // Convert camelCase priorityLevel to snake_case priority_level

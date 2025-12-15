@@ -113,14 +113,6 @@ class TaskCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You can only assign tasks to your own lists.")
         return value
     
-    def validate_due_date(self, value):
-        """validate due date is not in the past"""
-        if value:
-            from django.utils import timezone
-            if value < timezone.now():
-                raise serializers.ValidationError("Due date cannot be in the past.")
-        return value
-    
     def create(self, validated_data):
         """create new task with current user"""
         user = self.context['request'].user
@@ -178,15 +170,6 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         
         if value and value.user != user:
             raise serializers.ValidationError("You can only assign tasks to your own lists.")
-        return value
-    
-    def validate_due_date(self, value):
-        """validate due date is not in the past"""
-        # Allow null values (removing due date is valid)
-        if value:
-            from django.utils import timezone
-            if value < timezone.now():
-                raise serializers.ValidationError("Due date cannot be in the past.")
         return value
 
 

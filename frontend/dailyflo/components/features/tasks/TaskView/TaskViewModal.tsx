@@ -762,8 +762,8 @@ export function TaskViewModal({
     const updates: UpdateTaskInput = {
       id: currentTask.id,
       dueDate: formValues.dueDate || null, // convert undefined to null for API
-      time: formValues.time,
-      duration: formValues.duration,
+      time: formValues.time ?? null, // convert undefined to null to clear time field
+      duration: formValues.duration ?? null, // convert undefined to null to clear duration field
       // include subtasks and reminders in metadata
       metadata: {
         subtasks: taskSubtasks,
