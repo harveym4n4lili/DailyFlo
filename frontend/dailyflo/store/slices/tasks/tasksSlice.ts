@@ -172,10 +172,38 @@ export const fetchTasks = createAsyncThunk(
       // tasksApiService.fetchTasks() makes a GET request to /tasks/ endpoint
       const response = await tasksApiService.fetchTasks();
       
+      // DEBUG: Log the actual response structure to understand what Django returns
+      console.log('📦 API Response structure:', {
+        responseType: typeof response,
+        isArray: Array.isArray(response),
+        hasData: !!response.data,
+        hasTasks: !!response.tasks,
+        responseKeys: response && typeof response === 'object' ? Object.keys(response) : 'not an object',
+        responseSample: JSON.stringify(response).substring(0, 200), // First 200 chars
+      });
+      
       // Handle different response formats
-      // API may return { success: true, data: Task[] } or just Task[]
-      // Extract the tasks array from the response
-      const tasksArray = response.data || response.tasks || (Array.isArray(response) ? response : []);
+      // Django REST Framework typically returns arrays directly or wrapped in objects
+      // Try multiple possible formats to be flexible
+      let tasksArray: any[] = [];
+      
+      if (Array.isArray(response)) {
+        // Case 1: Response is directly an array of tasks
+        tasksArray = response;
+      } else if (response?.data && Array.isArray(response.data)) {
+        // Case 2: Response has a data property with array
+        tasksArray = response.data;
+      } else if (response?.tasks && Array.isArray(response.tasks)) {
+        // Case 3: Response has a tasks property with array
+        tasksArray = response.tasks;
+      } else if (response?.results && Array.isArray(response.results)) {
+        // Case 4: Django REST Framework pagination format
+        tasksArray = response.results;
+      } else {
+        // Case 5: Fallback - log warning and use empty array
+        console.warn('⚠️ Unexpected API response format:', response);
+        tasksArray = [];
+      }
       
       // Transform each API task to our Task interface format
       // This ensures all tasks match our expected structure (camelCase, proper types)
