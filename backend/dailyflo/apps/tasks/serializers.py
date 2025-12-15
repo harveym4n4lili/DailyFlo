@@ -7,10 +7,23 @@ class TaskListSerializer(serializers.ModelSerializer):
     """
     Serializer for listing tasks (minimal data)
     """
-    list_name = serializers.CharField(source='list.name', read_only=True)
-    list_color = serializers.CharField(source='list.color', read_only=True)
+    list_name = serializers.SerializerMethodField()
+    list_color = serializers.SerializerMethodField()
+    
+    def get_list_name(self, obj):
+        """safely get list name, handling null lists"""
+        return obj.list.name if obj.list else None
+    
+    def get_list_color(self, obj):
+        """safely get list color, handling null lists"""
+        return obj.list.color if obj.list else None
+    
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
-    is_overdue = serializers.BooleanField(read_only=True)
+    is_overdue = serializers.SerializerMethodField()
+    
+    def get_is_overdue(self, obj):
+        """get overdue status from model method"""
+        return obj.is_overdue()
     
     class Meta:
         model = Task
@@ -27,12 +40,25 @@ class TaskDetailSerializer(serializers.ModelSerializer):
     """
     Serializer for detailed task view (includes subtasks and reminders)
     """
-    list_name = serializers.CharField(source='list.name', read_only=True)
-    list_color = serializers.CharField(source='list.color', read_only=True)
+    list_name = serializers.SerializerMethodField()
+    list_color = serializers.SerializerMethodField()
+    
+    def get_list_name(self, obj):
+        """safely get list name, handling null lists"""
+        return obj.list.name if obj.list else None
+    
+    def get_list_color(self, obj):
+        """safely get list color, handling null lists"""
+        return obj.list.color if obj.list else None
+    
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
-    is_overdue = serializers.BooleanField(read_only=True)
+    is_overdue = serializers.SerializerMethodField()
     subtasks_count = serializers.SerializerMethodField()
     completed_subtasks_count = serializers.SerializerMethodField()
+    
+    def get_is_overdue(self, obj):
+        """get overdue status from model method"""
+        return obj.is_overdue()
     
     class Meta:
         model = Task
