@@ -682,19 +682,116 @@ export const createTask = createAsyncThunk(
   }
 );
 
-// Update an existing task
+// Update an existing task - integrated with Django API
+// This is an async thunk - a Redux Toolkit function that handles async operations
+// It dispatches actions automatically: pending (loading), fulfilled (success), rejected (error)
+// This makes an API call to Django backend to update the task in the database
 export const updateTask = createAsyncThunk(
   'tasks/updateTask',
   async ({ id, updates }: { id: string; updates: UpdateTaskInput }, { rejectWithValue }) => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.updateTask(id, updates);
-      // return response.data;
+      console.log('🔄 updateTask thunk started - calling API');
       
-      // For now, return the updated task data
-      return { id, updates };
+      // Call the API service to update the task
+      // tasksApiService.updateTask() makes a PATCH request to /tasks/{id}/ endpoint
+      // The API service handles transforming camelCase to snake_case and the HTTP request
+      // It accepts UpdateTaskInput directly (the API service handles the transformation internally)
+      const response = await tasksApiService.updateTask(id, updates);
+      
+      // DEBUG: Log the response structure to understand what Django returns
+      console.log('📦 API Response structure:', {
+        responseType: typeof response,
+        hasData: !!response.data,
+        responseKeys: response && typeof response === 'object' ? Object.keys(response) : 'not an object',
+        responseSample: JSON.stringify(response).substring(0, 200), // First 200 chars
+        fullResponse: response, // Log full response for debugging
+      });
+      
+      // Handle different response formats from Django
+      // Django REST Framework can return data directly or wrapped in a response object
+      // Type assertion to handle flexible response formats
+      const responseAny = response as any;
+      let apiTask: any;
+      
+      // Case 1: Response has a data property (wrapped format like TaskResponse)
+      if (responseAny?.data && typeof responseAny.data === 'object') {
+        apiTask = responseAny.data;
+      } 
+      // Case 2: Response is the task object directly (Django REST Framework default)
+      // Check if it has an 'id' field which indicates it's a task object
+      else if (response && typeof response === 'object' && 'id' in response) {
+        apiTask = response;
+      } 
+      // Case 3: Unexpected format - log detailed warning
+      else {
+        console.error('⚠️ Unexpected API response format:', {
+          response,
+          responseType: typeof response,
+          isArray: Array.isArray(response),
+          responseString: JSON.stringify(response),
+        });
+        throw new Error(`Unexpected response format from API: ${JSON.stringify(response).substring(0, 200)}`);
+      }
+      
+      // Transform the API response (snake_case) to our Task interface format (camelCase)
+      // This ensures the task matches our expected structure with camelCase field names
+      // The API returns snake_case (due_date, priority_level) and we convert to camelCase (dueDate, priorityLevel)
+      const transformedTask = transformApiTaskToTask(apiTask);
+      
+      console.log('✅ updateTask completed:', transformedTask.id, 'task updated via API');
+      
+      // Return the transformed task so Redux can update it in state
+      return transformedTask;
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to update task');
+      // Handle API errors - log the error and return a user-friendly message
+      console.error('❌ updateTask failed:', error);
+      
+      // Extract error message from API response or use default message
+      // Django REST Framework returns validation errors in response.data
+      // The error object from axios has a response property with the API error details
+      let errorMessage = 'Failed to update task';
+      
+      // DEBUG: Log the full error for debugging
+      console.error('🔍 Full error object:', {
+        error,
+        errorType: typeof error,
+        response: (error as any)?.response,
+        responseData: (error as any)?.response?.data,
+        responseStatus: (error as any)?.response?.status,
+      });
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if ((error as any)?.response?.data) {
+        // Django validation errors are in response.data
+        const apiError = (error as any).response.data;
+        
+        // DEBUG: Log the API error structure
+        console.error('🔍 Django API Error:', {
+          apiError,
+          apiErrorType: typeof apiError,
+          apiErrorKeys: typeof apiError === 'object' ? Object.keys(apiError) : 'not an object',
+        });
+        
+        // Handle different error formats from Django
+        if (typeof apiError === 'string') {
+          errorMessage = apiError;
+        } else if (apiError.message) {
+          errorMessage = apiError.message;
+        } else if (apiError.error) {
+          errorMessage = apiError.error;
+        } else if (typeof apiError === 'object') {
+          // Django returns field-specific errors as an object
+          // Convert to a readable string
+          const fieldErrors = Object.entries(apiError)
+            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+            .join('; ');
+          errorMessage = fieldErrors || JSON.stringify(apiError);
+        }
+      }
+      
+      // Return error using rejectWithValue so Redux can handle it
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -853,19 +950,33 @@ const tasksSlice = createSlice({
       })
       .addCase(updateTask.fulfilled, (state, action) => {
         state.isUpdating = false;
-        const { id, updates } = action.payload;
-        const taskIndex = state.tasks.findIndex(task => task.id === id);
+        // The API returns the full updated task object (not just updates)
+        // Transform the API response to our Task interface format
+        const updatedTask = action.payload; // This is already a transformed Task object
+        
+        // Find the task in the tasks array and replace it with the updated version
+        const taskIndex = state.tasks.findIndex(task => task.id === updatedTask.id);
         
         if (taskIndex !== -1) {
-          state.tasks[taskIndex] = { 
-            ...state.tasks[taskIndex], 
-            ...updates,
-            metadata: {
-              ...state.tasks[taskIndex].metadata,
-              ...updates.metadata,
-              subtasks: updates.metadata?.subtasks || state.tasks[taskIndex].metadata.subtasks || []
-            }
-          };
+          // Replace the task with the updated version from the API
+          // This ensures we have the latest data from the server
+          state.tasks[taskIndex] = updatedTask;
+          
+          // Also update in filtered tasks if it exists there
+          const filteredIndex = state.filteredTasks.findIndex(task => task.id === updatedTask.id);
+          if (filteredIndex !== -1) {
+            state.filteredTasks[filteredIndex] = updatedTask;
+          } else {
+            // Re-apply filters in case the update changed filter-relevant fields
+            state.filteredTasks = applyFilters(state.tasks, state.filters);
+          }
+          
+          // Update cache timestamp since we have fresh data
+          state.lastFetched = Date.now();
+        } else {
+          // Task not found in current state - add it (shouldn't happen, but handle gracefully)
+          console.warn('⚠️ Updated task not found in state, adding it:', updatedTask.id);
+          state.tasks.push(updatedTask);
           state.filteredTasks = applyFilters(state.tasks, state.filters);
         }
       })
