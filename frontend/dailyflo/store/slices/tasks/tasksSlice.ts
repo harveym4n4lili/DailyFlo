@@ -796,18 +796,76 @@ export const updateTask = createAsyncThunk(
   }
 );
 
-// Delete a task
+// Delete a task - integrated with Django API
+// This is an async thunk - a Redux Toolkit function that handles async operations
+// It dispatches actions automatically: pending (loading), fulfilled (success), rejected (error)
+// This makes an API call to Django backend to soft delete the task in the database
 export const deleteTask = createAsyncThunk(
   'tasks/deleteTask',
   async (taskId: string, { rejectWithValue }) => {
     try {
-      // TODO: Replace with actual API call
-      // await api.deleteTask(taskId);
+      console.log('🔄 deleteTask thunk started - calling API');
       
-      // For now, just return the task ID
+      // Call the API service to delete the task
+      // tasksApiService.deleteTask() makes a DELETE request to /tasks/{id}/ endpoint
+      // Django performs soft delete (sets soft_deleted=True) instead of hard delete
+      // This allows for recovery and maintains data integrity
+      await tasksApiService.deleteTask(taskId);
+      
+      console.log('✅ deleteTask completed:', taskId, 'task deleted via API');
+      
+      // Return the task ID so Redux can remove it from state
+      // The API doesn't return data for DELETE requests (204 No Content)
       return taskId;
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to delete task');
+      // Handle API errors - log the error and return a user-friendly message
+      console.error('❌ deleteTask failed:', error);
+      
+      // Extract error message from API response or use default message
+      // Django REST Framework returns errors in response.data
+      let errorMessage = 'Failed to delete task';
+      
+      // DEBUG: Log the full error for debugging
+      console.error('🔍 Full error object:', {
+        error,
+        errorType: typeof error,
+        response: (error as any)?.response,
+        responseData: (error as any)?.response?.data,
+        responseStatus: (error as any)?.response?.status,
+      });
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if ((error as any)?.response?.data) {
+        // Django validation errors are in response.data
+        const apiError = (error as any).response.data;
+        
+        // DEBUG: Log the API error structure
+        console.error('🔍 Django API Error:', {
+          apiError,
+          apiErrorType: typeof apiError,
+          apiErrorKeys: typeof apiError === 'object' ? Object.keys(apiError) : 'not an object',
+        });
+        
+        // Handle different error formats from Django
+        if (typeof apiError === 'string') {
+          errorMessage = apiError;
+        } else if (apiError.message) {
+          errorMessage = apiError.message;
+        } else if (apiError.error) {
+          errorMessage = apiError.error;
+        } else if (typeof apiError === 'object') {
+          // Django returns field-specific errors as an object
+          // Convert to a readable string
+          const fieldErrors = Object.entries(apiError)
+            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+            .join('; ');
+          errorMessage = fieldErrors || JSON.stringify(apiError);
+        }
+      }
+      
+      // Return error using rejectWithValue so Redux can handle it
+      return rejectWithValue(errorMessage);
     }
   }
 );
