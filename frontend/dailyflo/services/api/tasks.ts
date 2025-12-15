@@ -318,20 +318,39 @@ class TasksApiService {
 
   /**
    * Delete a task
-   * This removes a task from the server
+   * This removes a task from the server (soft delete)
    * 
    * @param taskId - The ID of the task to delete
    * @returns Promise with deletion confirmation
    */
-  async deleteTask(taskId: string): Promise<TaskResponse> {
+  async deleteTask(taskId: string): Promise<void> {
     try {
       // Send a DELETE request to /tasks/{id}/ to delete a specific task
       // Django URL structure: /tasks/{id}/ for detail/delete endpoint
+      // Django REST Framework performs soft delete (sets soft_deleted=True)
+      // Returns 204 No Content on success
       const response = await apiClient.delete(`/tasks/${taskId}/`);
       
-      return response.data;
+      // Django REST Framework returns 204 No Content for successful DELETE
+      // No response body is returned, so we don't need to return anything
+      // The response object will have status 204 if successful
+      console.log('✅ Task deleted successfully:', taskId);
+      
+      // Return void since DELETE doesn't return data
+      return;
     } catch (error) {
       console.error('Delete task failed:', error);
+      
+      // DEBUG: Log the full error response from Django
+      if ((error as any)?.response) {
+        console.error('📦 Django Error Response:', {
+          status: (error as any).response.status,
+          statusText: (error as any).response.statusText,
+          data: (error as any).response.data,
+          headers: (error as any).response.headers,
+        });
+      }
+      
       throw error;
     }
   }

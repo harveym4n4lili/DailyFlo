@@ -57,6 +57,13 @@ class TaskViewSet(viewsets.ModelViewSet):
         """create task with current user"""
         serializer.save(user=self.request.user)
     
+    def perform_destroy(self, instance):
+        """soft delete task instead of hard delete"""
+        # Instead of actually deleting, mark as soft deleted
+        # This allows for recovery and maintains data integrity
+        instance.soft_deleted = True
+        instance.save()
+    
     @action(detail=True, methods=['patch'])
     def complete(self, request, pk=None):
         """mark task as completed"""
