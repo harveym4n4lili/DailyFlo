@@ -13,6 +13,12 @@
  */
 
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+// redux store imports - access auth state and dispatch actions
+// store: the main redux store that holds all app state
+// refreshAccessToken: async thunk that refreshes the access token
+// logout: action that logs out the user
+import { store } from '../../store';
+import { refreshAccessToken, logout } from '../../store/slices/auth/authSlice';
 
 /**
  * Configuration for the API client
@@ -30,9 +36,10 @@ interface ApiClientConfig {
  */
 const defaultConfig: ApiClientConfig = {
   // The URL where your Django server is running
-  // In development, this is usually localhost:8000
-  // In production, this would be your actual server URL
-  baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api',
+  // Uses environment variable if set, otherwise falls back to your local network ip
+  // The ip address (192.168.0.99) allows your phone on the same wifi network to access django
+  // Change this to your computer's ip address if it changes
+  baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://192.168.0.99:8000',
   
   // Wait 10 seconds before timing out
   timeout: 10000,
@@ -125,40 +132,50 @@ const createApiClient = (): AxiosInstance => {
 
 /**
  * Get stored access token
- * This retrieves the user's login token from secure storage
- * TODO: Replace with actual token storage implementation
+ * This retrieves the user's login token from the Redux store
+ * The token is stored in the auth slice when the user logs in
  */
 const getStoredToken = (): string | null => {
-  // This will be replaced with actual storage implementation
-  // For now, we'll use localStorage (which works in web environments)
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('accessToken');
-  }
-  return null;
+  // Get the current state from the Redux store
+  // The auth slice contains the accessToken
+  const state = store.getState();
+  const accessToken = state.auth?.accessToken || null;
+  
+  // Return the token if it exists, otherwise return null
+  return accessToken;
 };
 
 /**
  * Refresh access token
- * When your login token expires, this gets a new one
- * TODO: Replace with actual token refresh implementation
+ * When your login token expires, this gets a new one using Redux
+ * This dispatches the refreshAccessToken async thunk which handles the API call
+ * and updates the Redux store with the new token
  */
 const refreshToken = async (): Promise<string | null> => {
   try {
-    // Get the refresh token (like having a backup ID)
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (!refreshToken) {
+    // Get the current state to check if we have a refresh token
+    const state = store.getState();
+    const refreshTokenValue = state.auth?.refreshToken;
+    
+    // If no refresh token, we can't refresh
+    if (!refreshTokenValue) {
       throw new Error('No refresh token available');
     }
     
-    // Make a request to get a new access token
-    const response = await axios.post(`${defaultConfig.baseURL}/auth/refresh/`, {
-      refresh: refreshToken,
-    });
+    // Dispatch the refreshAccessToken async thunk
+    // This will make the API call and update the Redux store automatically
+    const result = await store.dispatch(refreshAccessToken());
     
-    const { access } = response.data;
-    localStorage.setItem('accessToken', access);
-    
-    return access;
+    // Check if the refresh was successful
+    if (refreshAccessToken.fulfilled.match(result)) {
+      // Get the new access token from the updated state
+      const newState = store.getState();
+      const newAccessToken = newState.auth?.accessToken || null;
+      return newAccessToken;
+    } else {
+      // Refresh failed, return null
+      throw new Error('Token refresh failed');
+    }
   } catch (error) {
     console.error('Token refresh failed:', error);
     return null;
@@ -167,21 +184,16 @@ const refreshToken = async (): Promise<string | null> => {
 
 /**
  * Handle authentication errors
- * When login fails, this cleans up and redirects to login
+ * When login fails or token refresh fails, this logs out the user
+ * This dispatches the logout action which clears all auth data from Redux store
  */
 const handleAuthError = (): void => {
-  // Clear stored tokens (like throwing away expired ID cards)
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-  }
+  // Dispatch the logout action to Redux store
+  // This clears the user, tokens, and all auth state
+  store.dispatch(logout());
   
-  // TODO: Dispatch logout action to Redux store
-  // dispatch(logout());
-  
-  // TODO: Navigate to login screen
-  // router.replace('/login');
+  // Note: Navigation to login screen should be handled by the component
+  // that detects the auth state change, not here in the API client
 };
 
 /**

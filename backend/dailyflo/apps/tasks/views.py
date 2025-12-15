@@ -16,8 +16,13 @@ from apps.lists.models import List
 class TaskViewSet(viewsets.ModelViewSet):
     """
     ViewSet for task management
+    
+    TEMPORARY: Auth bypassed for testing without login feature.
+    TODO: Remove AllowAny and restore IsAuthenticated when login is implemented.
     """
-    permission_classes = [permissions.IsAuthenticated]
+    # TEMPORARY: Allow unauthenticated requests for testing
+    # TODO: Change to IsAuthenticated when login feature is ready
+    permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_completed', 'color', 'priority_level', 'routine_type', 'list']
     search_fields = ['title', 'description']
@@ -26,6 +31,12 @@ class TaskViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """filter tasks by current user"""
+        # TEMPORARY: Return all tasks when testing without auth
+        # TODO: Restore user filtering when auth is re-enabled
+        if not self.request.user.is_authenticated:
+            return Task.objects.filter(soft_deleted=False).select_related('list')
+        
+        # Original: Filter by current user
         return Task.objects.filter(
             user=self.request.user,
             soft_deleted=False
@@ -45,6 +56,13 @@ class TaskViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """create task with current user"""
         serializer.save(user=self.request.user)
+    
+    def perform_destroy(self, instance):
+        """soft delete task instead of hard delete"""
+        # Instead of actually deleting, mark as soft deleted
+        # This allows for recovery and maintains data integrity
+        instance.soft_deleted = True
+        instance.save()
     
     @action(detail=True, methods=['patch'])
     def complete(self, request, pk=None):

@@ -22,6 +22,10 @@ import {
   BulkTaskRequest,
   BulkTaskResponse
 } from '../../types/api/tasks';
+// CreateTaskInput: Type for creating tasks (from types/common/Task.ts)
+// UpdateTaskInput: Type for updating tasks (from types/common/Task.ts)
+// These are the frontend formats with camelCase field names
+import { CreateTaskInput, UpdateTaskInput } from '../../types/common/Task';
 
 /**
  * Tasks API service class
@@ -38,6 +42,8 @@ class TasksApiService {
   async fetchTasks(params: TaskQueryRequest = {}): Promise<TasksResponse> {
     try {
       // Send a GET request to /tasks/ with query parameters
+      // Django URL structure: /tasks/ includes apps.tasks.urls, which has router registered with empty string
+      // So the full path is /tasks/ for the list endpoint
       // Query parameters are added to the URL like: /tasks/?isCompleted=false&sortBy=dueDate
       const response = await apiClient.get('/tasks/', { params });
       
@@ -58,6 +64,7 @@ class TasksApiService {
   async fetchTaskById(taskId: string): Promise<TaskResponse> {
     try {
       // Send a GET request to /tasks/{id}/ to get a specific task
+      // Django URL structure: /tasks/{id}/ for detail view
       const response = await apiClient.get(`/tasks/${taskId}/`);
       
       return response.data;
@@ -71,17 +78,99 @@ class TasksApiService {
    * Create a new task
    * This adds a new task to the server
    * 
-   * @param data - The task data to create
+   * @param data - The task data to create (can be wrapped CreateTaskRequest or direct CreateTaskInput)
    * @returns Promise with the newly created task
    */
-  async createTask(data: CreateTaskRequest): Promise<TaskResponse> {
+  async createTask(data: CreateTaskRequest | CreateTaskInput): Promise<TaskResponse> {
     try {
+      // Extract task data - handle both wrapped format { task: ... } and direct format
+      // Django REST Framework expects the data directly in snake_case format
+      let taskData: CreateTaskInput;
+      
+      if ('task' in data) {
+        // Wrapped format: { task: CreateTaskInput }
+        taskData = (data as CreateTaskRequest).task;
+      } else {
+        // Direct format: CreateTaskInput
+        taskData = data as CreateTaskInput;
+      }
+      
+      // Transform camelCase (frontend format) to snake_case (Django API format)
+      // Django uses snake_case field names (e.g., due_date, priority_level)
+      // This transformation ensures the frontend can use camelCase while Django gets snake_case
+      const apiData: any = {};
+      
+      // Required field - always include
+      apiData.title = taskData.title;
+      
+      // Optional fields - only include if defined (not undefined)
+      // This prevents sending null/undefined values that Django might reject
+      if (taskData.description !== undefined && taskData.description !== null) {
+        apiData.description = taskData.description;
+      }
+      if (taskData.icon !== undefined && taskData.icon !== null) {
+        apiData.icon = taskData.icon;
+      }
+      if (taskData.time !== undefined && taskData.time !== null) {
+        apiData.time = taskData.time; // Django TimeField accepts HH:MM format string
+      }
+      if (taskData.duration !== undefined && taskData.duration !== null) {
+        apiData.duration = taskData.duration;
+      }
+      // Convert camelCase dueDate to snake_case due_date
+      // Send due_date if it's explicitly set (can be past, present, or future dates)
+      // Django DateTimeField accepts ISO string format
+      if (taskData.dueDate !== undefined && taskData.dueDate !== null) {
+        apiData.due_date = taskData.dueDate; // Django DateTimeField accepts ISO string
+      }
+      // Convert camelCase priorityLevel to snake_case priority_level
+      if (taskData.priorityLevel !== undefined && taskData.priorityLevel !== null) {
+        apiData.priority_level = taskData.priorityLevel;
+      }
+      if (taskData.color !== undefined && taskData.color !== null) {
+        apiData.color = taskData.color;
+      }
+      // Convert camelCase routineType to snake_case routine_type
+      if (taskData.routineType !== undefined && taskData.routineType !== null) {
+        apiData.routine_type = taskData.routineType;
+      }
+      // Convert camelCase listId to snake_case list (Django field is 'list', not 'list_id')
+      // Django expects the list ID value (UUID string), not the field name 'list_id'
+      // Only include if listId is a valid non-empty string
+      if (taskData.listId !== undefined && taskData.listId !== null && taskData.listId !== '') {
+        apiData.list = taskData.listId;
+      }
+      // Convert camelCase sortOrder to snake_case sort_order
+      if (taskData.sortOrder !== undefined && taskData.sortOrder !== null) {
+        apiData.sort_order = taskData.sortOrder;
+      }
+      // Include metadata if it exists (metadata structure stays the same - nested objects don't need transformation)
+      if (taskData.metadata !== undefined && taskData.metadata !== null) {
+        apiData.metadata = taskData.metadata;
+      }
+      
+      // DEBUG: Log the data being sent to Django
+      console.log('📤 Sending task data to API:', JSON.stringify(apiData, null, 2));
+      
       // Send a POST request to /tasks/ to create a new task
-      const response = await apiClient.post('/tasks/', data);
+      // Django URL structure: /tasks/ for list/create endpoint
+      // Django REST Framework expects the data directly in snake_case format (not wrapped)
+      const response = await apiClient.post('/tasks/', apiData);
       
       return response.data;
     } catch (error) {
       console.error('Create task failed:', error);
+      
+      // DEBUG: Log the full error response from Django
+      if ((error as any)?.response) {
+        console.error('📦 Django Error Response:', {
+          status: (error as any).response.status,
+          statusText: (error as any).response.statusText,
+          data: (error as any).response.data,
+          headers: (error as any).response.headers,
+        });
+      }
+      
       throw error;
     }
   }
@@ -91,37 +180,174 @@ class TasksApiService {
    * This modifies an existing task on the server
    * 
    * @param taskId - The ID of the task to update
-   * @param data - The new data for the task
+   * @param data - The new data for the task (can be wrapped UpdateTaskRequest or direct UpdateTaskInput)
    * @returns Promise with the updated task
    */
-  async updateTask(taskId: string, data: UpdateTaskRequest): Promise<TaskResponse> {
+  async updateTask(taskId: string, data: UpdateTaskRequest | UpdateTaskInput): Promise<TaskResponse> {
     try {
+      // Extract task data - handle both wrapped format { task: ... } and direct format
+      // Django REST Framework expects the data directly in snake_case format
+      let taskData: UpdateTaskInput;
+      
+      if ('task' in data) {
+        // Wrapped format: { task: UpdateTaskInput }
+        taskData = (data as UpdateTaskRequest).task;
+      } else {
+        // Direct format: UpdateTaskInput
+        taskData = data as UpdateTaskInput;
+      }
+      
+      // Transform camelCase (frontend format) to snake_case (Django API format)
+      // Django uses snake_case field names (e.g., due_date, priority_level)
+      // This transformation ensures the frontend can use camelCase while Django gets snake_case
+      const apiData: any = {};
+      
+      // Optional fields - only include if defined (not undefined)
+      // This prevents sending null/undefined values that Django might reject
+      // Note: For updates, we only send the fields that are being changed
+      if (taskData.title !== undefined && taskData.title !== null) {
+        apiData.title = taskData.title;
+      }
+      if (taskData.description !== undefined && taskData.description !== null) {
+        apiData.description = taskData.description;
+      }
+      if (taskData.icon !== undefined && taskData.icon !== null) {
+        apiData.icon = taskData.icon;
+      }
+      // Handle time field - distinguish between not provided vs explicitly cleared
+      // If time is undefined, null, or empty string, send null to clear it in Django
+      // If time has a value, send that value
+      // This allows users to clear the time field by setting it to "No Time"
+      if (taskData.time !== undefined) {
+        if (taskData.time === null || taskData.time === '') {
+          // Explicitly clearing time - send null to Django to remove the time
+          apiData.time = null;
+        } else {
+          // Time has a value - send it to Django
+          apiData.time = taskData.time; // Django TimeField accepts HH:MM format string
+        }
+      }
+      // Handle duration field - distinguish between not provided vs explicitly cleared
+      // Django duration field doesn't allow null (default is 0), so we send 0 to clear it
+      // If duration has a value, send that value
+      // This allows users to clear the duration field by setting it to "No Duration"
+      if (taskData.duration !== undefined) {
+        if (taskData.duration === null || taskData.duration === 0) {
+          // Explicitly clearing duration - send 0 to Django (Django doesn't allow null for duration)
+          // Django model has default=0, so 0 represents "no duration"
+          apiData.duration = 0;
+        } else {
+          // Duration has a value - send it to Django
+          apiData.duration = taskData.duration;
+        }
+      }
+      // Convert camelCase dueDate to snake_case due_date
+      // Handle null case - if dueDate is explicitly null, send null to remove the due date
+      // Otherwise, send the date as-is (can be past, present, or future dates)
+      if (taskData.dueDate !== undefined) {
+        if (taskData.dueDate === null) {
+          // Explicitly setting to null removes the due date
+          apiData.due_date = null;
+        } else {
+          // Send the date as-is - Django DateTimeField accepts ISO string format
+          apiData.due_date = taskData.dueDate;
+        }
+      }
+      // Convert camelCase priorityLevel to snake_case priority_level
+      if (taskData.priorityLevel !== undefined && taskData.priorityLevel !== null) {
+        apiData.priority_level = taskData.priorityLevel;
+      }
+      if (taskData.color !== undefined && taskData.color !== null) {
+        apiData.color = taskData.color;
+      }
+      // Convert camelCase routineType to snake_case routine_type
+      if (taskData.routineType !== undefined && taskData.routineType !== null) {
+        apiData.routine_type = taskData.routineType;
+      }
+      // Convert camelCase listId to snake_case list (Django field is 'list', not 'list_id')
+      // Handle null case - if listId is explicitly null, send null to remove from list
+      if (taskData.listId !== undefined) {
+        if (taskData.listId === null || taskData.listId === '') {
+          apiData.list = null; // Remove task from list (move to inbox)
+        } else {
+          apiData.list = taskData.listId;
+        }
+      }
+      // Convert camelCase sortOrder to snake_case sort_order
+      if (taskData.sortOrder !== undefined && taskData.sortOrder !== null) {
+        apiData.sort_order = taskData.sortOrder;
+      }
+      // Include metadata if it exists (metadata structure stays the same)
+      if (taskData.metadata !== undefined && taskData.metadata !== null) {
+        apiData.metadata = taskData.metadata;
+      }
+      // Handle isCompleted - Django uses is_completed
+      if (taskData.isCompleted !== undefined) {
+        apiData.is_completed = taskData.isCompleted;
+      }
+      
+      // DEBUG: Log the data being sent to Django
+      console.log('📤 Sending task update data to API:', JSON.stringify(apiData, null, 2));
+      
       // Send a PATCH request to /tasks/{id}/ to update a specific task
       // PATCH is used for partial updates (only changing some fields)
-      const response = await apiClient.patch(`/tasks/${taskId}/`, data);
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
+      // Django REST Framework expects the data directly in snake_case format (not wrapped)
+      const response = await apiClient.patch(`/tasks/${taskId}/`, apiData);
       
       return response.data;
     } catch (error) {
       console.error('Update task failed:', error);
+      
+      // DEBUG: Log the full error response from Django
+      if ((error as any)?.response) {
+        console.error('📦 Django Error Response:', {
+          status: (error as any).response.status,
+          statusText: (error as any).response.statusText,
+          data: (error as any).response.data,
+          headers: (error as any).response.headers,
+        });
+      }
+      
       throw error;
     }
   }
 
   /**
    * Delete a task
-   * This removes a task from the server
+   * This removes a task from the server (soft delete)
    * 
    * @param taskId - The ID of the task to delete
    * @returns Promise with deletion confirmation
    */
-  async deleteTask(taskId: string): Promise<TaskResponse> {
+  async deleteTask(taskId: string): Promise<void> {
     try {
       // Send a DELETE request to /tasks/{id}/ to delete a specific task
+      // Django URL structure: /tasks/{id}/ for detail/delete endpoint
+      // Django REST Framework performs soft delete (sets soft_deleted=True)
+      // Returns 204 No Content on success
       const response = await apiClient.delete(`/tasks/${taskId}/`);
       
-      return response.data;
+      // Django REST Framework returns 204 No Content for successful DELETE
+      // No response body is returned, so we don't need to return anything
+      // The response object will have status 204 if successful
+      console.log('✅ Task deleted successfully:', taskId);
+      
+      // Return void since DELETE doesn't return data
+      return;
     } catch (error) {
       console.error('Delete task failed:', error);
+      
+      // DEBUG: Log the full error response from Django
+      if ((error as any)?.response) {
+        console.error('📦 Django Error Response:', {
+          status: (error as any).response.status,
+          statusText: (error as any).response.statusText,
+          data: (error as any).response.data,
+          headers: (error as any).response.headers,
+        });
+      }
+      
       throw error;
     }
   }
@@ -137,6 +363,7 @@ class TasksApiService {
   async toggleTaskCompletion(taskId: string, isCompleted: boolean): Promise<TaskResponse> {
     try {
       // Send a PATCH request to update the completion status
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
       const response = await apiClient.patch(`/tasks/${taskId}/`, {
         isCompleted,
         completedAt: isCompleted ? new Date().toISOString() : null,
@@ -160,6 +387,7 @@ class TasksApiService {
   async updateTaskPriority(taskId: string, priorityLevel: number): Promise<TaskResponse> {
     try {
       // Send a PATCH request to update the priority
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
       const response = await apiClient.patch(`/tasks/${taskId}/`, {
         priorityLevel,
       });
@@ -182,6 +410,7 @@ class TasksApiService {
   async updateTaskDueDate(taskId: string, dueDate: Date | null): Promise<TaskResponse> {
     try {
       // Send a PATCH request to update the due date
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
       const response = await apiClient.patch(`/tasks/${taskId}/`, {
         dueDate: dueDate ? dueDate.toISOString() : null,
       });
@@ -204,6 +433,7 @@ class TasksApiService {
   async moveTaskToList(taskId: string, listId: string | null): Promise<TaskResponse> {
     try {
       // Send a PATCH request to update the list
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
       const response = await apiClient.patch(`/tasks/${taskId}/`, {
         listId,
       });
@@ -225,6 +455,7 @@ class TasksApiService {
   async duplicateTask(taskId: string): Promise<TaskResponse> {
     try {
       // Send a POST request to duplicate the task
+      // Django URL structure: /tasks/{id}/duplicate/ for duplicate action
       const response = await apiClient.post(`/tasks/${taskId}/duplicate/`);
       
       return response.data;
@@ -244,6 +475,7 @@ class TasksApiService {
   async archiveTask(taskId: string): Promise<TaskResponse> {
     try {
       // Send a PATCH request to mark the task as archived
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
       const response = await apiClient.patch(`/tasks/${taskId}/`, {
         softDeleted: true,
       });
@@ -265,6 +497,7 @@ class TasksApiService {
   async restoreTask(taskId: string): Promise<TaskResponse> {
     try {
       // Send a PATCH request to unarchive the task
+      // Django URL structure: /tasks/{id}/ for detail/update endpoint
       const response = await apiClient.patch(`/tasks/${taskId}/`, {
         softDeleted: false,
       });
@@ -326,6 +559,7 @@ class TasksApiService {
       const today = new Date().toISOString().split('T')[0];
       
       // Send a GET request with today's date as a filter
+      // Django URL structure: /tasks/ for list endpoint
       const response = await apiClient.get('/tasks/', {
         params: {
           dueDate: today,
@@ -352,6 +586,7 @@ class TasksApiService {
       const today = new Date().toISOString().split('T')[0];
       
       // Send a GET request to get tasks due before today
+      // Django URL structure: /tasks/ for list endpoint
       const response = await apiClient.get('/tasks/', {
         params: {
           dueDateBefore: today,
@@ -376,6 +611,7 @@ class TasksApiService {
   async getCompletedTasks(params: { limit?: number; offset?: number } = {}): Promise<TasksResponse> {
     try {
       // Send a GET request to get completed tasks
+      // Django URL structure: /tasks/ for list endpoint
       const response = await apiClient.get('/tasks/', {
         params: {
           isCompleted: true,
@@ -401,6 +637,8 @@ class TasksApiService {
   async searchTasks(query: string, filters: any = {}): Promise<TasksResponse> {
     try {
       // Send a GET request to the search endpoint
+      // Django URL structure: /tasks/search/ (if custom search endpoint exists)
+      // Note: This might need to be /tasks/search/ depending on Django setup
       const response = await apiClient.get('/tasks/search/', {
         params: {
           q: query, // The search query

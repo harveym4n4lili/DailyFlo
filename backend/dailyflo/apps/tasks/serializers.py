@@ -7,10 +7,23 @@ class TaskListSerializer(serializers.ModelSerializer):
     """
     Serializer for listing tasks (minimal data)
     """
-    list_name = serializers.CharField(source='list.name', read_only=True)
-    list_color = serializers.CharField(source='list.color', read_only=True)
+    list_name = serializers.SerializerMethodField()
+    list_color = serializers.SerializerMethodField()
+    
+    def get_list_name(self, obj):
+        """safely get list name, handling null lists"""
+        return obj.list.name if obj.list else None
+    
+    def get_list_color(self, obj):
+        """safely get list color, handling null lists"""
+        return obj.list.color if obj.list else None
+    
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
-    is_overdue = serializers.BooleanField(read_only=True)
+    is_overdue = serializers.SerializerMethodField()
+    
+    def get_is_overdue(self, obj):
+        """get overdue status from model method"""
+        return obj.is_overdue()
     
     class Meta:
         model = Task
@@ -27,12 +40,25 @@ class TaskDetailSerializer(serializers.ModelSerializer):
     """
     Serializer for detailed task view (includes subtasks and reminders)
     """
-    list_name = serializers.CharField(source='list.name', read_only=True)
-    list_color = serializers.CharField(source='list.color', read_only=True)
+    list_name = serializers.SerializerMethodField()
+    list_color = serializers.SerializerMethodField()
+    
+    def get_list_name(self, obj):
+        """safely get list name, handling null lists"""
+        return obj.list.name if obj.list else None
+    
+    def get_list_color(self, obj):
+        """safely get list color, handling null lists"""
+        return obj.list.color if obj.list else None
+    
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
-    is_overdue = serializers.BooleanField(read_only=True)
+    is_overdue = serializers.SerializerMethodField()
     subtasks_count = serializers.SerializerMethodField()
     completed_subtasks_count = serializers.SerializerMethodField()
+    
+    def get_is_overdue(self, obj):
+        """get overdue status from model method"""
+        return obj.is_overdue()
     
     class Meta:
         model = Task
@@ -60,27 +86,54 @@ class TaskCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'title', 'description', 'icon', 'time', 'duration', 'due_date', 'priority_level',
-            'color', 'routine_type', 'list', 'sort_order', 'metadata'
+            'id', 'title', 'description', 'icon', 'time', 'duration', 'due_date', 'priority_level',
+            'color', 'routine_type', 'list', 'sort_order', 'metadata', 'created_at', 'updated_at'
         ]
+        read_only_fields = ['id', 'created_at', 'updated_at']  # These are auto-generated, read-only
     
     def validate_list(self, value):
         """validate that the list belongs to the current user"""
-        if value and value.user != self.context['request'].user:
+        user = self.context['request'].user
+        
+        # TEMPORARY: Handle AnonymousUser for testing without login feature
+        # If user is not authenticated, get or create a default test user
+        if not user.is_authenticated:
+            from apps.accounts.models import CustomUser
+            test_user, _ = CustomUser.objects.get_or_create(
+                email='test@dailyflo.com',
+                defaults={
+                    'first_name': 'Test',
+                    'last_name': 'User',
+                    'is_active': True,
+                }
+            )
+            user = test_user
+        
+        if value and value.user != user:
             raise serializers.ValidationError("You can only assign tasks to your own lists.")
-        return value
-    
-    def validate_due_date(self, value):
-        """validate due date is not in the past"""
-        if value:
-            from django.utils import timezone
-            if value < timezone.now():
-                raise serializers.ValidationError("Due date cannot be in the past.")
         return value
     
     def create(self, validated_data):
         """create new task with current user"""
-        validated_data['user'] = self.context['request'].user
+        user = self.context['request'].user
+        
+        # TEMPORARY: Handle AnonymousUser for testing without login feature
+        # If user is not authenticated, get or create a default test user
+        if not user.is_authenticated:
+            from apps.accounts.models import CustomUser
+            # Get or create a default test user for unauthenticated requests
+            # This allows testing without login feature
+            test_user, created = CustomUser.objects.get_or_create(
+                email='test@dailyflo.com',
+                defaults={
+                    'first_name': 'Test',
+                    'last_name': 'User',
+                    'is_active': True,
+                }
+            )
+            user = test_user
+        
+        validated_data['user'] = user
         return super().create(validated_data)
 
 
@@ -92,22 +145,31 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'title', 'description', 'icon', 'time', 'duration', 'due_date', 'priority_level',
-            'color', 'routine_type', 'list', 'sort_order', 'metadata'
+            'id', 'title', 'description', 'icon', 'time', 'duration', 'due_date', 'priority_level',
+            'color', 'routine_type', 'list', 'sort_order', 'metadata', 'is_completed', 'created_at', 'updated_at'
         ]
+        read_only_fields = ['id', 'created_at', 'updated_at']  # These are auto-generated, read-only
     
     def validate_list(self, value):
         """validate that the list belongs to the current user"""
-        if value and value.user != self.context['request'].user:
+        user = self.context['request'].user
+        
+        # TEMPORARY: Handle AnonymousUser for testing without login feature
+        # If user is not authenticated, get or create a default test user
+        if not user.is_authenticated:
+            from apps.accounts.models import CustomUser
+            test_user, _ = CustomUser.objects.get_or_create(
+                email='test@dailyflo.com',
+                defaults={
+                    'first_name': 'Test',
+                    'last_name': 'User',
+                    'is_active': True,
+                }
+            )
+            user = test_user
+        
+        if value and value.user != user:
             raise serializers.ValidationError("You can only assign tasks to your own lists.")
-        return value
-    
-    def validate_due_date(self, value):
-        """validate due date is not in the past"""
-        if value:
-            from django.utils import timezone
-            if value < timezone.now():
-                raise serializers.ValidationError("Due date cannot be in the past.")
         return value
 
 
