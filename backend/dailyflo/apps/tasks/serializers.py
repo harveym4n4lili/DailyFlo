@@ -86,13 +86,30 @@ class TaskCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'title', 'description', 'icon', 'time', 'duration', 'due_date', 'priority_level',
-            'color', 'routine_type', 'list', 'sort_order', 'metadata'
+            'id', 'title', 'description', 'icon', 'time', 'duration', 'due_date', 'priority_level',
+            'color', 'routine_type', 'list', 'sort_order', 'metadata', 'created_at', 'updated_at'
         ]
+        read_only_fields = ['id', 'created_at', 'updated_at']  # These are auto-generated, read-only
     
     def validate_list(self, value):
         """validate that the list belongs to the current user"""
-        if value and value.user != self.context['request'].user:
+        user = self.context['request'].user
+        
+        # TEMPORARY: Handle AnonymousUser for testing without login feature
+        # If user is not authenticated, get or create a default test user
+        if not user.is_authenticated:
+            from apps.accounts.models import CustomUser
+            test_user, _ = CustomUser.objects.get_or_create(
+                email='test@dailyflo.com',
+                defaults={
+                    'first_name': 'Test',
+                    'last_name': 'User',
+                    'is_active': True,
+                }
+            )
+            user = test_user
+        
+        if value and value.user != user:
             raise serializers.ValidationError("You can only assign tasks to your own lists.")
         return value
     
@@ -106,7 +123,25 @@ class TaskCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         """create new task with current user"""
-        validated_data['user'] = self.context['request'].user
+        user = self.context['request'].user
+        
+        # TEMPORARY: Handle AnonymousUser for testing without login feature
+        # If user is not authenticated, get or create a default test user
+        if not user.is_authenticated:
+            from apps.accounts.models import CustomUser
+            # Get or create a default test user for unauthenticated requests
+            # This allows testing without login feature
+            test_user, created = CustomUser.objects.get_or_create(
+                email='test@dailyflo.com',
+                defaults={
+                    'first_name': 'Test',
+                    'last_name': 'User',
+                    'is_active': True,
+                }
+            )
+            user = test_user
+        
+        validated_data['user'] = user
         return super().create(validated_data)
 
 
