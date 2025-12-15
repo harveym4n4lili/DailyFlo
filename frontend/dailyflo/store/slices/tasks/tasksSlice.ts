@@ -22,6 +22,11 @@ import { Task, CreateTaskInput, UpdateTaskInput, TaskFilters, TaskSortOptions } 
 // this is used temporarily to store tasks locally without API calls
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// API SERVICE IMPORTS
+// tasksApiService: service that handles all task-related API calls to Django backend
+// this service makes HTTP requests and returns formatted responses
+import tasksApiService from '../../../services/api/tasks';
+
 /**
  * Define the shape of the tasks state
  * 
@@ -117,17 +122,86 @@ const initialState: TasksState = {
  * like API calls. They're the modern way to handle async logic in Redux.
  */
 
+/**
+ * Transform API task response to Task interface format
+ * This function converts API response (which may use snake_case) to our Task interface (camelCase)
+ * It handles both formats for compatibility - if API returns camelCase, it works; if snake_case, it converts
+ * 
+ * @param apiTask - Task data from API (may be snake_case or camelCase)
+ * @returns Task object in the format expected by our app
+ */
+function transformApiTaskToTask(apiTask: any): Task {
+  // Handle both snake_case (from Django) and camelCase (if already converted)
+  // This makes the function flexible and works with different API response formats
+  return {
+    id: apiTask.id || '',
+    userId: apiTask.user_id || apiTask.userId || '',
+    listId: apiTask.list_id !== undefined ? apiTask.list_id : (apiTask.listId !== undefined ? apiTask.listId : null),
+    title: apiTask.title || '',
+    description: apiTask.description || '',
+    icon: apiTask.icon,
+    time: apiTask.time,
+    duration: apiTask.duration || 0,
+    dueDate: apiTask.due_date || apiTask.dueDate || null,
+    isCompleted: apiTask.is_completed !== undefined ? apiTask.is_completed : (apiTask.isCompleted !== undefined ? apiTask.isCompleted : false),
+    completedAt: apiTask.completed_at || apiTask.completedAt || null,
+    priorityLevel: apiTask.priority_level || apiTask.priorityLevel || 3,
+    color: apiTask.color || 'blue',
+    routineType: apiTask.routine_type || apiTask.routineType || 'once',
+    sortOrder: apiTask.sort_order || apiTask.sortOrder || 0,
+    metadata: {
+      subtasks: apiTask.metadata?.subtasks || [],
+      reminders: apiTask.metadata?.reminders || [],
+      notes: apiTask.metadata?.notes,
+      tags: apiTask.metadata?.tags,
+    },
+    softDeleted: apiTask.soft_deleted !== undefined ? apiTask.soft_deleted : (apiTask.softDeleted !== undefined ? apiTask.softDeleted : false),
+    createdAt: apiTask.created_at || apiTask.createdAt || new Date().toISOString(),
+    updatedAt: apiTask.updated_at || apiTask.updatedAt || new Date().toISOString(),
+  };
+}
+
 // Fetch all tasks from the API
 export const fetchTasks = createAsyncThunk(
   'tasks/fetchTasks',
   async (_, { rejectWithValue }) => {
     try {
-      console.log('🔄 fetchTasks thunk started');
+      console.log('🔄 fetchTasks thunk started - calling API');
       
-      // TODO: Replace with actual API call
-      // const response = await api.getTasks();
-      // return response.data;
+      // Call the API service to fetch tasks from Django backend
+      // tasksApiService.fetchTasks() makes a GET request to /tasks/ endpoint
+      const response = await tasksApiService.fetchTasks();
       
+      // Handle different response formats
+      // API may return { success: true, data: Task[] } or just Task[]
+      // Extract the tasks array from the response
+      const tasksArray = response.data || response.tasks || (Array.isArray(response) ? response : []);
+      
+      // Transform each API task to our Task interface format
+      // This ensures all tasks match our expected structure (camelCase, proper types)
+      const transformedTasks = tasksArray.map((apiTask: any) => transformApiTaskToTask(apiTask));
+      
+      console.log('✅ fetchTasks completed:', transformedTasks.length, 'tasks fetched from API');
+      return transformedTasks;
+    } catch (error) {
+      // Handle API errors - log the error and return a user-friendly message
+      console.error('❌ fetchTasks failed:', error);
+      
+      // Extract error message from API response or use default message
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (error as any)?.response?.data?.message || 'Failed to fetch tasks';
+      
+      // Return error using rejectWithValue so Redux can handle it
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+// OLD CODE - Mock data (commented out, kept for reference during development)
+// This mock data was used before API integration
+// Can be removed once API integration is fully tested
+/*
       // For now, return mock data
       const today = new Date();
       const tomorrow = new Date(today);
@@ -432,12 +506,7 @@ export const fetchTasks = createAsyncThunk(
       
       console.log('📦 Returning mock tasks:', mockTasks.length, 'tasks');
       return mockTasks;
-    } catch (error) {
-      // If the API call fails, return the error
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch tasks');
-    }
-  }
-);
+*/
 
 // TEMPORARY LOCAL STORAGE KEY
 // This key is used to store tasks in AsyncStorage
