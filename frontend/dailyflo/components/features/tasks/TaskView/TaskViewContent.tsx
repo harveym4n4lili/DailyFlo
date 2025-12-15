@@ -302,8 +302,8 @@ export const TaskViewContent: React.FC<TaskViewContentProps> = ({
           color: formColor,
           icon: formIcon,
           dueDate: formDueDate ?? null, // convert undefined to null for API
-          time: formTime,
-          duration: formDuration,
+          time: formTime ?? null, // convert undefined to null to clear time field
+          duration: formDuration ?? null, // convert undefined to null to clear duration field
           // TODO: convert formAlerts (string[]) to TaskReminder[] format when alerts are implemented
           // metadata: { reminders: ... } 
         }
