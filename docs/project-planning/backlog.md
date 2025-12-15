@@ -76,6 +76,7 @@ This document tracks features, improvements, and technical debt items that are p
   - Implement title, desc and icon edit full screen modal for task view
   - Consider keyboard anchored section in task detail to be initially hidden
   - Consider primary buttons and styling
+  - Update button should disappear when task update is complete (better UX feedback)
 - **Files**: `components/features/tasks/TaskDetail/`
 - **Reference**: Dev-log entries 09/12/2025, 11/12/2025
 
