@@ -174,10 +174,6 @@ This document tracks features, improvements, and technical debt items that are p
 - **Status**: Not Started
 - **Description**: Save task configurations as templates for quick creation
 
-#### Task Dependencies
-- **Status**: Not Started
-- **Description**: Link tasks that depend on each other
-
 #### Task Attachments
 - **Status**: Not Started
 - **Description**: Attach files/images to tasks
