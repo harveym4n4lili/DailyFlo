@@ -1018,4 +1018,28 @@ Updated User app, models, serializers, views and urls
 - Fix scrolling issue with subtasks 
 - general haptic feedback
 - fix auto scroll in subtask section of task view, create
->>>>>>> Stashed changes
+---
+## [14/12/2025] - [Sunday]
+### Today's Goals
+- [X] Noted how to prepare backend for react native expo integration testing
+- [X] Installed CORS headers, updated backend settings for integration testing preparation
+- [X] refactor token API client to use redux store for token management and auth
+- [X] refactored fetchTasks async thunk with Django API
+
+### Plans For Future
+- get better understanding of async thunk, redux slice state
+- Learn and record how to test api integration
+- note how to bypass temporarily bypass auth (token checks) for local testing
+- note how to manually set tokens to bypass auth for local testing
+
+### Notes
+- no notes
+### TODO POSSIBLE REFINING
+- Implement better time picker style
+- Implement better duration slider style
+- Change task color palette to be more aesthetic
+- Improve text input component
+- Fix scrolling issue with subtasks 
+- general haptic feedback
+- fix auto scroll in subtask section of task view, create
+
