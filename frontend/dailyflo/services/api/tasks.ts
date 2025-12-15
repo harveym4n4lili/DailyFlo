@@ -22,6 +22,9 @@ import {
   BulkTaskRequest,
   BulkTaskResponse
 } from '../../types/api/tasks';
+// CreateTaskInput: Type for creating tasks (from types/common/Task.ts)
+// This is the frontend format with camelCase field names
+import { CreateTaskInput } from '../../types/common/Task';
 
 /**
  * Tasks API service class
@@ -74,14 +77,78 @@ class TasksApiService {
    * Create a new task
    * This adds a new task to the server
    * 
-   * @param data - The task data to create
+   * @param data - The task data to create (can be wrapped CreateTaskRequest or direct CreateTaskInput)
    * @returns Promise with the newly created task
    */
-  async createTask(data: CreateTaskRequest): Promise<TaskResponse> {
+  async createTask(data: CreateTaskRequest | CreateTaskInput): Promise<TaskResponse> {
     try {
+      // Extract task data - handle both wrapped format { task: ... } and direct format
+      // Django REST Framework expects the data directly in snake_case format
+      let taskData: CreateTaskInput;
+      
+      if ('task' in data) {
+        // Wrapped format: { task: CreateTaskInput }
+        taskData = (data as CreateTaskRequest).task;
+      } else {
+        // Direct format: CreateTaskInput
+        taskData = data as CreateTaskInput;
+      }
+      
+      // Transform camelCase (frontend format) to snake_case (Django API format)
+      // Django uses snake_case field names (e.g., due_date, priority_level)
+      // This transformation ensures the frontend can use camelCase while Django gets snake_case
+      const apiData: any = {};
+      
+      // Required field - always include
+      apiData.title = taskData.title;
+      
+      // Optional fields - only include if defined (not undefined)
+      // This prevents sending null/undefined values that Django might reject
+      if (taskData.description !== undefined && taskData.description !== null) {
+        apiData.description = taskData.description;
+      }
+      if (taskData.icon !== undefined && taskData.icon !== null) {
+        apiData.icon = taskData.icon;
+      }
+      if (taskData.time !== undefined && taskData.time !== null) {
+        apiData.time = taskData.time; // Django TimeField accepts HH:MM format string
+      }
+      if (taskData.duration !== undefined && taskData.duration !== null) {
+        apiData.duration = taskData.duration;
+      }
+      // Convert camelCase dueDate to snake_case due_date
+      if (taskData.dueDate !== undefined && taskData.dueDate !== null) {
+        apiData.due_date = taskData.dueDate; // Django DateTimeField accepts ISO string
+      }
+      // Convert camelCase priorityLevel to snake_case priority_level
+      if (taskData.priorityLevel !== undefined && taskData.priorityLevel !== null) {
+        apiData.priority_level = taskData.priorityLevel;
+      }
+      if (taskData.color !== undefined && taskData.color !== null) {
+        apiData.color = taskData.color;
+      }
+      // Convert camelCase routineType to snake_case routine_type
+      if (taskData.routineType !== undefined && taskData.routineType !== null) {
+        apiData.routine_type = taskData.routineType;
+      }
+      // Convert camelCase listId to snake_case list (Django field is 'list', not 'list_id')
+      // Django expects the list ID value, not the field name 'list_id'
+      if (taskData.listId !== undefined && taskData.listId !== null) {
+        apiData.list = taskData.listId;
+      }
+      // Convert camelCase sortOrder to snake_case sort_order
+      if (taskData.sortOrder !== undefined && taskData.sortOrder !== null) {
+        apiData.sort_order = taskData.sortOrder;
+      }
+      // Include metadata if it exists (metadata structure stays the same - nested objects don't need transformation)
+      if (taskData.metadata !== undefined && taskData.metadata !== null) {
+        apiData.metadata = taskData.metadata;
+      }
+      
       // Send a POST request to /tasks/tasks/ to create a new task
       // Django URL structure: /tasks/tasks/ for list/create endpoint
-      const response = await apiClient.post('/tasks/tasks/', data);
+      // Django REST Framework expects the data directly in snake_case format (not wrapped)
+      const response = await apiClient.post('/tasks/tasks/', apiData);
       
       return response.data;
     } catch (error) {
