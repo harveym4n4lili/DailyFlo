@@ -39,7 +39,7 @@ const defaultConfig: ApiClientConfig = {
   // Uses environment variable if set, otherwise falls back to your local network ip
   // The ip address (192.168.0.99) allows your phone on the same wifi network to access django
   // Change this to your computer's ip address if it changes
-  baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://192.168.0.99:8000/api',
+  baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://192.168.0.99:8000',
   
   // Wait 10 seconds before timing out
   timeout: 10000,
