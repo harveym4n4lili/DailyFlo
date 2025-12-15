@@ -103,6 +103,7 @@ export default function TodayScreen() {
     filteredTasks,   // Tasks after filtering is applied (computed in the slice)
     isLoading,       // Whether we're currently loading tasks (managed by Redux)
     error,           // Any error that occurred while loading (managed by Redux)
+    lastFetched,     // Timestamp of last successful fetch (prevents infinite loops)
   } = useTasks();
   // useTasks: Custom hook that provides typed access to the tasks slice state
   // This is defined in store/hooks.ts and wraps Redux's useSelector
@@ -186,15 +187,19 @@ export default function TodayScreen() {
   // Fetch tasks when component mounts
   // useEffect runs after the component renders for the first time
   useEffect(() => {
-    // Only fetch if we don't have tasks yet or if there was an error
-    if (tasks.length === 0 && !isLoading && !error) {
+    // Only fetch if:
+    // 1. We haven't fetched yet (lastFetched is null)
+    // 2. AND we're not currently loading
+    // 3. AND there's no error
+    // Using lastFetched prevents infinite loops when API returns empty array
+    if (lastFetched === null && !isLoading && !error) {
       console.log('📡 Dispatching fetchTasks...');
       // dispatch(fetchTasks()): Sends the fetchTasks action to the Redux store
       // This triggers the async thunk defined in store/slices/tasks/tasksSlice.ts
       // The thunk will make an API call and update the store with the results
       dispatch(fetchTasks());
     }
-  }, [tasks.length, isLoading, error, dispatch]);
+  }, [lastFetched, isLoading, error, dispatch]);
 
   // STORE USAGE - Dispatching actions for user interactions
   // Handle pull-to-refresh
