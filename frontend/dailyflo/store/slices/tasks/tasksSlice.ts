@@ -123,6 +123,106 @@ const initialState: TasksState = {
  */
 
 /**
+ * Helper function to convert API errors to user-friendly messages
+ * This function extracts error messages from different error formats (axios errors, Django errors, etc.)
+ * and converts them to readable messages for users
+ * 
+ * @param error - The error object from API calls (can be axios error, Error instance, or unknown)
+ * @returns User-friendly error message string
+ */
+function getErrorMessage(error: any): string {
+  // Check if error has a response property (axios error with server response)
+  if (error?.response) {
+    const status = error.response.status;
+    const data = error.response.data;
+    
+    // Handle specific HTTP status codes with user-friendly messages
+    if (status === 401) return 'Please log in again';
+    if (status === 403) return 'You don\'t have permission';
+    if (status === 404) return 'Task not found';
+    if (status === 422) {
+      // Django validation errors - extract message from response data
+      if (typeof data === 'string') return data;
+      if (data?.message) return data.message;
+      if (data?.error) return data.error;
+      if (typeof data === 'object') {
+        // Django returns field-specific errors as an object
+        // Convert to a readable string
+        const fieldErrors = Object.entries(data)
+          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+          .join('; ');
+        return fieldErrors || 'Invalid data';
+      }
+      return 'Invalid data';
+    }
+    if (status === 500) return 'Server error. Please try again later';
+    
+    // Generic error message from API response
+    if (data?.message) return data.message;
+    if (data?.error) return data.error;
+    if (typeof data === 'string') return data;
+    return 'An error occurred';
+  }
+  
+  // Check if error has a request property (axios error without response - network error)
+  if (error?.request) {
+    return 'Network error. Check your connection';
+  }
+  
+  // Handle Error instances
+  if (error instanceof Error) {
+    return error.message;
+  }
+  
+  // Fallback for unknown error types
+  return 'An unexpected error occurred';
+}
+
+/**
+ * Retry logic with exponential backoff
+ * This function retries an async operation up to 3 times with exponential backoff delays
+ * It doesn't retry on 4xx errors (client errors) since those won't succeed on retry
+ * 
+ * @param operation - The async function to retry
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @returns Promise that resolves with the operation result or rejects with the last error
+ */
+async function retryWithExponentialBackoff<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3
+): Promise<T> {
+  let lastError: any;
+  
+  // Try the operation up to maxRetries times
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Execute the operation
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      
+      // Don't retry on 4xx errors (client errors) - these won't succeed on retry
+      // 4xx errors are validation errors, authentication errors, etc. that need user action
+      if ((error as any)?.response?.status >= 400 && (error as any)?.response?.status < 500) {
+        console.log(`⚠️ Client error (${(error as any)?.response?.status}), not retrying`);
+        break;
+      }
+      
+      // If this isn't the last attempt, wait before retrying with exponential backoff
+      // Exponential backoff: 1s, 2s, 4s (Math.pow(2, attempt) * 1000)
+      if (attempt < maxRetries - 1) {
+        const delayMs = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+        console.log(`🔄 Retry attempt ${attempt + 1}/${maxRetries - 1} after ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  
+  // All retries failed, throw the last error
+  throw lastError;
+}
+
+/**
  * Transform API task response to Task interface format
  * This function converts API response (which may use snake_case) to our Task interface (camelCase)
  * It handles both formats for compatibility - if API returns camelCase, it works; if snake_case, it converts
@@ -168,9 +268,11 @@ export const fetchTasks = createAsyncThunk(
     try {
       console.log('🔄 fetchTasks thunk started - calling API');
       
-      // Call the API service to fetch tasks from Django backend
+      // Call the API service to fetch tasks from Django backend with retry logic
       // tasksApiService.fetchTasks() makes a GET request to /tasks/ endpoint
-      const response = await tasksApiService.fetchTasks();
+      // retryWithExponentialBackoff will retry up to 3 times with exponential backoff (1s, 2s, 4s)
+      // It won't retry on 4xx errors (client errors) since those won't succeed on retry
+      const response = await retryWithExponentialBackoff(() => tasksApiService.fetchTasks());
       
       // Handle different response formats from Django REST Framework
       // Django can return data in different formats: wrapped in TasksResponse, direct array, or pagination format
@@ -224,15 +326,10 @@ export const fetchTasks = createAsyncThunk(
       return transformedTasks;
     } catch (error) {
       // Handle API errors - log the error and return a user-friendly message
-      console.error('❌ fetchTasks failed:', error);
+      console.error('❌ fetchTasks failed after retries:', error);
       
-      // Extract error message from API response or use default message
-      // Django REST Framework returns errors in response.data.message or response.data.error
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : (error as any)?.response?.data?.message 
-        || (error as any)?.response?.data?.error
-        || 'Failed to fetch tasks';
+      // Use helper function to convert error to user-friendly message
+      const errorMessage = getErrorMessage(error);
       
       // Return error using rejectWithValue so Redux can handle it
       return rejectWithValue(errorMessage);
@@ -571,11 +668,13 @@ export const createTask = createAsyncThunk(
     try {
       console.log('🔄 createTask thunk started - calling API');
       
-      // Call the API service to create the task
-      // tasksApiService.createTask() makes a POST request to /tasks/tasks/ endpoint
+      // Call the API service to create the task with retry logic
+      // tasksApiService.createTask() makes a POST request to /tasks/ endpoint
       // The API service handles transforming camelCase to snake_case and the HTTP request
       // It accepts CreateTaskInput directly (the API service handles the transformation internally)
-      const response = await tasksApiService.createTask(taskData);
+      // retryWithExponentialBackoff will retry up to 3 times with exponential backoff (1s, 2s, 4s)
+      // It won't retry on 4xx errors (client errors) since those won't succeed on retry
+      const response = await retryWithExponentialBackoff(() => tasksApiService.createTask(taskData));
       
       // DEBUG: Log the response structure to understand what Django returns
       console.log('📦 API Response structure:', {
@@ -630,51 +729,10 @@ export const createTask = createAsyncThunk(
       return transformedTask;
     } catch (error) {
       // Handle API errors - log the error and return a user-friendly message
-      console.error('❌ createTask failed:', error);
+      console.error('❌ createTask failed after retries:', error);
       
-      // Extract error message from API response or use default message
-      // Django REST Framework returns validation errors in response.data
-      // The error object from axios has a response property with the API error details
-      let errorMessage = 'Failed to create task';
-      
-      // DEBUG: Log the full error for debugging
-      console.error('🔍 Full error object:', {
-        error,
-        errorType: typeof error,
-        response: (error as any)?.response,
-        responseData: (error as any)?.response?.data,
-        responseStatus: (error as any)?.response?.status,
-      });
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if ((error as any)?.response?.data) {
-        // Django validation errors are in response.data
-        const apiError = (error as any).response.data;
-        
-        // DEBUG: Log the API error structure
-        console.error('🔍 Django API Error:', {
-          apiError,
-          apiErrorType: typeof apiError,
-          apiErrorKeys: typeof apiError === 'object' ? Object.keys(apiError) : 'not an object',
-        });
-        
-        // Handle different error formats from Django
-        if (typeof apiError === 'string') {
-          errorMessage = apiError;
-        } else if (apiError.message) {
-          errorMessage = apiError.message;
-        } else if (apiError.error) {
-          errorMessage = apiError.error;
-        } else if (typeof apiError === 'object') {
-          // Django returns field-specific errors as an object
-          // Convert to a readable string
-          const fieldErrors = Object.entries(apiError)
-            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
-            .join('; ');
-          errorMessage = fieldErrors || JSON.stringify(apiError);
-        }
-      }
+      // Use helper function to convert error to user-friendly message
+      const errorMessage = getErrorMessage(error);
       
       // Return error using rejectWithValue so Redux can handle it
       return rejectWithValue(errorMessage);
@@ -692,11 +750,13 @@ export const updateTask = createAsyncThunk(
     try {
       console.log('🔄 updateTask thunk started - calling API');
       
-      // Call the API service to update the task
+      // Call the API service to update the task with retry logic
       // tasksApiService.updateTask() makes a PATCH request to /tasks/{id}/ endpoint
       // The API service handles transforming camelCase to snake_case and the HTTP request
       // It accepts UpdateTaskInput directly (the API service handles the transformation internally)
-      const response = await tasksApiService.updateTask(id, updates);
+      // retryWithExponentialBackoff will retry up to 3 times with exponential backoff (1s, 2s, 4s)
+      // It won't retry on 4xx errors (client errors) since those won't succeed on retry
+      const response = await retryWithExponentialBackoff(() => tasksApiService.updateTask(id, updates));
       
       // DEBUG: Log the response structure to understand what Django returns
       console.log('📦 API Response structure:', {
@@ -744,51 +804,10 @@ export const updateTask = createAsyncThunk(
       return transformedTask;
     } catch (error) {
       // Handle API errors - log the error and return a user-friendly message
-      console.error('❌ updateTask failed:', error);
+      console.error('❌ updateTask failed after retries:', error);
       
-      // Extract error message from API response or use default message
-      // Django REST Framework returns validation errors in response.data
-      // The error object from axios has a response property with the API error details
-      let errorMessage = 'Failed to update task';
-      
-      // DEBUG: Log the full error for debugging
-      console.error('🔍 Full error object:', {
-        error,
-        errorType: typeof error,
-        response: (error as any)?.response,
-        responseData: (error as any)?.response?.data,
-        responseStatus: (error as any)?.response?.status,
-      });
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if ((error as any)?.response?.data) {
-        // Django validation errors are in response.data
-        const apiError = (error as any).response.data;
-        
-        // DEBUG: Log the API error structure
-        console.error('🔍 Django API Error:', {
-          apiError,
-          apiErrorType: typeof apiError,
-          apiErrorKeys: typeof apiError === 'object' ? Object.keys(apiError) : 'not an object',
-        });
-        
-        // Handle different error formats from Django
-        if (typeof apiError === 'string') {
-          errorMessage = apiError;
-        } else if (apiError.message) {
-          errorMessage = apiError.message;
-        } else if (apiError.error) {
-          errorMessage = apiError.error;
-        } else if (typeof apiError === 'object') {
-          // Django returns field-specific errors as an object
-          // Convert to a readable string
-          const fieldErrors = Object.entries(apiError)
-            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
-            .join('; ');
-          errorMessage = fieldErrors || JSON.stringify(apiError);
-        }
-      }
+      // Use helper function to convert error to user-friendly message
+      const errorMessage = getErrorMessage(error);
       
       // Return error using rejectWithValue so Redux can handle it
       return rejectWithValue(errorMessage);
@@ -806,11 +825,13 @@ export const deleteTask = createAsyncThunk(
     try {
       console.log('🔄 deleteTask thunk started - calling API');
       
-      // Call the API service to delete the task
+      // Call the API service to delete the task with retry logic
       // tasksApiService.deleteTask() makes a DELETE request to /tasks/{id}/ endpoint
       // Django performs soft delete (sets soft_deleted=True) instead of hard delete
       // This allows for recovery and maintains data integrity
-      await tasksApiService.deleteTask(taskId);
+      // retryWithExponentialBackoff will retry up to 3 times with exponential backoff (1s, 2s, 4s)
+      // It won't retry on 4xx errors (client errors) since those won't succeed on retry
+      await retryWithExponentialBackoff(() => tasksApiService.deleteTask(taskId));
       
       console.log('✅ deleteTask completed:', taskId, 'task deleted via API');
       
@@ -819,50 +840,10 @@ export const deleteTask = createAsyncThunk(
       return taskId;
     } catch (error) {
       // Handle API errors - log the error and return a user-friendly message
-      console.error('❌ deleteTask failed:', error);
+      console.error('❌ deleteTask failed after retries:', error);
       
-      // Extract error message from API response or use default message
-      // Django REST Framework returns errors in response.data
-      let errorMessage = 'Failed to delete task';
-      
-      // DEBUG: Log the full error for debugging
-      console.error('🔍 Full error object:', {
-        error,
-        errorType: typeof error,
-        response: (error as any)?.response,
-        responseData: (error as any)?.response?.data,
-        responseStatus: (error as any)?.response?.status,
-      });
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if ((error as any)?.response?.data) {
-        // Django validation errors are in response.data
-        const apiError = (error as any).response.data;
-        
-        // DEBUG: Log the API error structure
-        console.error('🔍 Django API Error:', {
-          apiError,
-          apiErrorType: typeof apiError,
-          apiErrorKeys: typeof apiError === 'object' ? Object.keys(apiError) : 'not an object',
-        });
-        
-        // Handle different error formats from Django
-        if (typeof apiError === 'string') {
-          errorMessage = apiError;
-        } else if (apiError.message) {
-          errorMessage = apiError.message;
-        } else if (apiError.error) {
-          errorMessage = apiError.error;
-        } else if (typeof apiError === 'object') {
-          // Django returns field-specific errors as an object
-          // Convert to a readable string
-          const fieldErrors = Object.entries(apiError)
-            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
-            .join('; ');
-          errorMessage = fieldErrors || JSON.stringify(apiError);
-        }
-      }
+      // Use helper function to convert error to user-friendly message
+      const errorMessage = getErrorMessage(error);
       
       // Return error using rejectWithValue so Redux can handle it
       return rejectWithValue(errorMessage);
