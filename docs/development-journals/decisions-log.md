@@ -119,3 +119,17 @@ Decided to go through with IOS-version conditional styling
 
 ### Notes
 - No notes
+---
+## [16/12/2025] - [Tuesday]
+
+### Decision 1
+Decided to remove toast notifications from the application.
+#### Decision Goal
+> Reduce screen clutter and maintain a cleaner user interface.
+#### Decision Context
+* After implementing toast notifications for task creation success, I noticed they added visual clutter to the screen.
+* The toast component was positioned above the navbar but still felt intrusive during use.
+* Decided that the existing haptic feedback and visual state changes provide sufficient user feedback without needing toast notifications.
+
+### Notes
+- No notes
