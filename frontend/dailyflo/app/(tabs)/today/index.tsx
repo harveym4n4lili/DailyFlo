@@ -12,7 +12,7 @@ import { ListCard } from '@/components/ui/Card';
 import { FloatingActionButton } from '@/components/ui/Button';
 import { DropdownList } from '@/components/ui/List';
 import { ModalContainer, ModalBackdrop } from '@/components/layout/ModalLayout';
-import { TaskViewModal } from '@/components/features/tasks';
+import { TaskViewModal, TaskCreationModal } from '@/components/features/tasks';
 
 // import color palette system for consistent theming
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
@@ -25,9 +25,10 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 
 // STORE FOLDER IMPORTS - Redux state management
 // The store folder contains all Redux-related code for managing app state
-import { useTasks } from '@/store/hooks';
+import { useTasks, useUI } from '@/store/hooks';
 // useTasks: Custom hook that provides easy access to task-related state and actions
 // This hook wraps the Redux useSelector and useDispatch to give us typed access to tasks
+// useUI: Custom hook that provides easy access to UI-related state and actions (like modal visibility)
 import { useAppDispatch } from '@/store';
 // useAppDispatch: Typed version of Redux's useDispatch hook
 // This gives us the dispatch function to send actions to the Redux store
@@ -52,6 +53,12 @@ export default function TodayScreen() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   // Store task color separately to maintain it during modal close animation
   const [selectedTaskColor, setSelectedTaskColor] = useState<TaskColor>('blue');
+  
+  // TASK CREATION MODAL STATE - separate state for modal controlled by Redux
+  const [isCreateTaskModalVisible, setIsCreateTaskModalVisible] = useState(false);
+  
+  // get UI state from Redux to check if createTask modal should be opened
+  const { modals, closeModal } = useUI();
   
   // DROPDOWN STATE - Controls the visibility of the dropdown menu
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
@@ -200,6 +207,17 @@ export default function TodayScreen() {
       dispatch(fetchTasks());
     }
   }, [lastFetched, isLoading, error, dispatch]);
+  
+  // watch Redux createTask modal state and open local modal when it becomes true
+  // this allows opening the modal from navigation (e.g., from onboarding completion screen)
+  useEffect(() => {
+    if (modals.createTask) {
+      // open the local modal state
+      setIsCreateTaskModalVisible(true);
+      // immediately close the Redux modal state to prevent it from staying open
+      closeModal('createTask');
+    }
+  }, [modals.createTask, closeModal]);
 
   // STORE USAGE - Dispatching actions for user interactions
   // Handle pull-to-refresh
@@ -473,6 +491,12 @@ export default function TodayScreen() {
         taskColor={selectedTaskColor}
         taskId={selectedTask?.id}
         task={selectedTask || undefined}
+      />
+      
+      {/* Task Creation Modal - can be opened from Redux state (e.g., from onboarding) */}
+      <TaskCreationModal
+        visible={isCreateTaskModalVisible}
+        onClose={() => setIsCreateTaskModalVisible(false)}
       />
       </ScreenContainer>
     </View>
