@@ -480,7 +480,7 @@ export function OnboardingActions() {
                   disabled={!!socialAuthInProgress}
                 >
                   <Ionicons name="logo-facebook" size={24} color={themeColors.text.primary()} />
-                  <Text style={styles.socialButtonText}>Sign up with Facebook</Text>
+                  <Text style={styles.socialButtonText}>Sign in with Facebook</Text>
                 </TouchableOpacity>
               </Animated.View>
               
@@ -498,7 +498,7 @@ export function OnboardingActions() {
                   disabled={!!socialAuthInProgress}
                 >
                   <Ionicons name="logo-google" size={24} color={themeColors.text.primary()} />
-                  <Text style={styles.socialButtonText}>Sign up with Google</Text>
+                  <Text style={styles.socialButtonText}>Sign in with Google</Text>
                 </TouchableOpacity>
               </Animated.View>
               
@@ -517,7 +517,7 @@ export function OnboardingActions() {
                     disabled={!!socialAuthInProgress}
                   >
                     <Ionicons name="logo-apple" size={24} color={themeColors.text.primary()} />
-                    <Text style={styles.socialButtonText}>Sign up with Apple</Text>
+                    <Text style={styles.socialButtonText}>Sign in with Apple</Text>
                   </TouchableOpacity>
                 </Animated.View>
               )}
@@ -537,7 +537,7 @@ export function OnboardingActions() {
                 activeOpacity={0.7}
               >
                 <Text style={styles.secondaryLinkText}>
-                  Sign up later? <Text style={styles.secondaryLinkHighlight}>Skip</Text>
+                  Sign in later? <Text style={styles.secondaryLinkHighlight}>Skip</Text>
                 </Text>
               </TouchableOpacity>
             </Animated.View>

@@ -465,6 +465,7 @@ export default function TodayScreen() {
         }}
         scrollEventThrottle={16}
         headerTitle="Today"
+       
       />
       {/* Floating Action Button for quick task creation */}
       <FloatingActionButton
