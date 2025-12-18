@@ -16,9 +16,14 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, Animated, Ea
 import { useRouter, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useUI } from '@/store/hooks';
+
+// storage key for tracking onboarding completion status
+// this key matches the one used in _layout.tsx for checking onboarding status
+const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
 
 // define the onboarding screens in order
 const ONBOARDING_SCREENS = ['welcome', 'reminders', 'signup', 'completion'] as const;
@@ -340,11 +345,23 @@ export function OnboardingActions() {
   /**
    * Handle "Skip" link press (Reminders/Signup screens)
    * Skips current step and goes to next screen
+   * When skipping from signup, marks onboarding as complete since user has seen all screens
    */
-  const handleSkip = () => {
+  const handleSkip = async () => {
     if (activeScreen === 'reminders') {
+      // skip reminders and go to signup screen
       router.push('/(onboarding)/signup');
     } else if (activeScreen === 'signup') {
+      // user is skipping from signup screen - they've seen all onboarding screens
+      // mark onboarding as complete so they don't see it again on app reload
+      try {
+        await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
+      } catch (error) {
+        // if saving fails, still navigate - user has seen onboarding
+        console.error('Failed to save onboarding completion:', error);
+      }
+      
+      // navigate to main app
       router.replace('/(tabs)');
     }
   };
@@ -373,18 +390,34 @@ export function OnboardingActions() {
   
   /**
    * Handle "Create Task" button press (Completion screen)
-   * Goes to main app (Today screen) and opens the create task modal
+   * Marks onboarding as complete, then goes to main app and opens the create task modal
    */
-  const handleCreateTask = () => {
+  const handleCreateTask = async () => {
     if (isButtonPressed) return; // prevent spam clicks
     setIsButtonPressed(true);
     
-    // open the create task modal via Redux UI state
-    // this will be checked by the Today screen to open the modal
-    openModal('createTask');
-    
-    // navigate to the home screen (today tab)
-    router.replace('/(tabs)/today');
+    try {
+      // mark onboarding as complete in AsyncStorage
+      // this ensures that when the app is reloaded, it will skip onboarding
+      // AsyncStorage is a simple key-value storage system for React Native
+      await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
+      
+      // open the create task modal via Redux UI state
+      // this will be checked by the Today screen to open the modal
+      openModal('createTask');
+      
+      // navigate to the home screen (today tab)
+      // use replace to prevent going back to onboarding screens
+      router.replace('/(tabs)/today');
+    } catch (error) {
+      // if saving fails, still navigate to main app
+      // the user has completed onboarding, so we should let them continue
+      console.error('Failed to save onboarding completion:', error);
+      
+      // still open modal and navigate even if save fails
+      openModal('createTask');
+      router.replace('/(tabs)/today');
+    }
   };
   
   // render different buttons based on current screen
