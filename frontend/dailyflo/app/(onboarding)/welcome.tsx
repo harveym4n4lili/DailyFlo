@@ -9,54 +9,98 @@
  * 1. User sees welcome message
  * 2. User taps "Get Started" → goes to Reminders screen
  * 3. User taps "Sign In" → goes to Sign-up/Login screen
- * 
- * TODO: This is a placeholder - will be implemented in Step 2
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTypography } from '@/hooks/useTypography';
 
+// animation configuration - adjust delay between sequential fade-ins (in milliseconds)
+const SEQUENTIAL_FADE_DELAY = 200; // time between each element fading in
+
 export default function WelcomeScreen() {
-  const router = useRouter();
   const themeColors = useThemeColors();
-  const { getThemeColorValue } = useThemeColor();
   const typography = useTypography();
-  const styles = createStyles(themeColors, getThemeColorValue, typography);
+  const insets = useSafeAreaInsets();
+  
+  // animated values for sequential fade-in and scale (start invisible and smaller)
+  const appNameOpacity = useRef(new Animated.Value(0)).current;
+  const appNameScale = useRef(new Animated.Value(0.8)).current;
+  const taglineOpacity = useRef(new Animated.Value(0)).current;
+  const taglineScale = useRef(new Animated.Value(0.8)).current;
+  
+  // animate elements sequentially on mount
+  useEffect(() => {
+    // animate app name first (no delay) - fade in and scale up simultaneously
+    Animated.parallel([
+      Animated.timing(appNameOpacity, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(appNameScale, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    // animate tagline after app name - fade in and scale up simultaneously
+    Animated.parallel([
+      Animated.timing(taglineOpacity, {
+        toValue: 1,
+        duration: 400,
+        delay: SEQUENTIAL_FADE_DELAY,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(taglineScale, {
+        toValue: 1,
+        duration: 400,
+        delay: SEQUENTIAL_FADE_DELAY,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [appNameOpacity, appNameScale, taglineOpacity, taglineScale]);
+  
+  const styles = createStyles(themeColors, typography, insets);
   
   return (
     <View style={styles.container}>
-      <Text style={styles.placeholder}>Welcome Screen - Coming Soon</Text>
-      
-      {/* Temporary test buttons for navigation */}
-      <View style={styles.testButtons}>
-        <TouchableOpacity 
-          style={styles.testButton}
-          onPress={() => router.push('/(onboarding)/reminders')}
-        >
-          <Text style={styles.testButtonText}>→ Reminders</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.testButton}
-          onPress={() => router.push('/(onboarding)/signup')}
-        >
-          <Text style={styles.testButtonText}>→ Sign Up</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.testButton}
-          onPress={() => router.push('/(onboarding)/completion')}
-        >
-          <Text style={styles.testButtonText}>→ Completion</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.testButton}
-          onPress={() => router.push('/(tabs)')}
-        >
-          <Text style={styles.testButtonText}>→ Main App</Text>
-        </TouchableOpacity>
+      {/* Main Content */}
+      {/* this section contains the app name and tagline, centered vertically */}
+      {/* navigation and buttons are handled globally in the layout */}
+      <View style={styles.content}>
+        {/* App Logo/Name */}
+        {/* large, bold white text displaying the app name */}
+        {/* fades in and scales up first (top element) */}
+        <Animated.Text style={[
+          styles.appName,
+          {
+            opacity: appNameOpacity,
+            transform: [{ scale: appNameScale }],
+          },
+        ]}>
+          Dailyflo
+        </Animated.Text>
+        
+        {/* Tagline */}
+        {/* smaller white text describing what the app does */}
+        {/* fades in and scales up second (bottom element) */}
+        <Animated.Text style={[
+          styles.tagline,
+          {
+            opacity: taglineOpacity,
+            transform: [{ scale: taglineScale }],
+          },
+        ]}>
+          Your day, simplified and in flow
+        </Animated.Text>
       </View>
     </View>
   );
@@ -64,35 +108,45 @@ export default function WelcomeScreen() {
 
 const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
-  getThemeColorValue: (shade?: number) => string,
-  typography: ReturnType<typeof useTypography>
+  typography: ReturnType<typeof useTypography>,
+  insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    // use regular primary background - adapts to user's theme preference
     backgroundColor: themeColors.background.primary(),
+    paddingHorizontal: 24,
+    // padding top accounts for global navigation component (60px = 40px height + 20px spacing)
+    paddingTop: insets.top,
+    // padding bottom accounts for global actions component (100px = button height + spacing)
+    paddingBottom: insets.bottom + 100,
+    justifyContent: 'center', // center content vertically
   },
-  placeholder: {
-    fontSize: 18,
-    color: themeColors.text.primary(),
-    marginBottom: 32,
-    ...typography.body,
+  content: {
+    // content takes up available space and centers vertically, positioned slightly higher
+    justifyContent: 'center',
+    alignItems: 'center', // center content horizontally
+    marginTop: -80, // move content slightly higher while maintaining center alignment
   },
-  testButtons: {
-    gap: 12,
-    width: '80%',
+  appName: {
+    // use typography heading-1 style - this provides fontSize, lineHeight, fontWeight, fontFamily
+    // we override fontSize to make it larger for the welcome screen (48 instead of 36)
+   
+    color: themeColors.text.primary(), // text color using theme color hook
+    marginBottom: 16,
+
+    // use typography system for fontFamily, fontWeight, lineHeight from heading-1 style
+    ...typography.getTextStyle('heading-1'),
+    fontSize: 48, // override typography: large headline size
+    lineHeight: 64, // override typography: line height
   },
-  testButton: {
-    backgroundColor: getThemeColorValue(500), // use theme color for button background
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  testButtonText: {
-    color: '#FFFFFF', // white text on primary colored buttons
-    fontSize: 14,
-    fontWeight: '500',
-    ...typography.body,
+  tagline: {
+    // use typography body-large style - this provides fontSize, lineHeight, fontWeight, fontFamily
+   
+    color: themeColors.text.primary(), // text color using theme color hook
+    textAlign: 'center',
+    
+    // use typography system for fontFamily and fontWeight from body-large style
+    ...typography.getTextStyle('body-large'),
   },
 });

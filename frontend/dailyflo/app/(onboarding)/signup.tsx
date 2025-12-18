@@ -13,53 +13,93 @@
  * TODO: This is a placeholder - will be implemented in Step 4
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTypography } from '@/hooks/useTypography';
 
+// animation configuration - adjust delay between sequential fade-ins (in milliseconds)
+const SEQUENTIAL_FADE_DELAY = 200; // time between each element fading in
+
 export default function SignupScreen() {
-  const router = useRouter();
   const themeColors = useThemeColors();
-  const { getThemeColorValue } = useThemeColor();
   const typography = useTypography();
-  const styles = createStyles(themeColors, getThemeColorValue, typography);
+  const insets = useSafeAreaInsets();
+  
+  // animated values for sequential fade-in and scale (start invisible and smaller)
+  const headlineOpacity = useRef(new Animated.Value(0)).current;
+  const headlineScale = useRef(new Animated.Value(0.8)).current;
+  const placeholderOpacity = useRef(new Animated.Value(0)).current;
+  const placeholderScale = useRef(new Animated.Value(0.8)).current;
+  
+  // animate elements sequentially on mount (top to bottom)
+  useEffect(() => {
+    // animate headline first (no delay) - fade in and scale up simultaneously
+    Animated.parallel([
+      Animated.timing(headlineOpacity, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(headlineScale, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    // animate placeholder second - fade in and scale up simultaneously
+    Animated.parallel([
+      Animated.timing(placeholderOpacity, {
+        toValue: 1,
+        duration: 400,
+        delay: SEQUENTIAL_FADE_DELAY,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(placeholderScale, {
+        toValue: 1,
+        duration: 400,
+        delay: SEQUENTIAL_FADE_DELAY,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [headlineOpacity, headlineScale, placeholderOpacity, placeholderScale]);
+  
+  const styles = createStyles(themeColors, typography, insets);
   
   return (
     <View style={styles.container}>
-      {/* Back button */}
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={() => router.back()}
-      >
-        <Ionicons name="arrow-back" size={24} color={themeColors.text.primary()} />
-      </TouchableOpacity>
-      
-      <Text style={styles.placeholder}>Sign-up Screen - Coming Soon</Text>
-      
-      {/* Temporary test buttons */}
-      <View style={styles.testButtons}>
-        <TouchableOpacity 
-          style={styles.testButton}
-          onPress={() => router.push('/(onboarding)/completion')}
-        >
-          <Text style={styles.testButtonText}>→ Completion</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.testButton}
-          onPress={() => router.push('/(onboarding)/reminders')}
-        >
-          <Text style={styles.testButtonText}>← Reminders</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.testButton}
-          onPress={() => router.push('/(tabs)')}
-        >
-          <Text style={styles.testButtonText}>→ Main App (Skip)</Text>
-        </TouchableOpacity>
+      {/* Main Content */}
+      {/* navigation and buttons are handled globally in the layout */}
+      <View style={styles.content}>
+        {/* Headline */}
+        {/* fades in and scales up first (top element) */}
+        <Animated.Text style={[
+          styles.headline,
+          {
+            opacity: headlineOpacity,
+            transform: [{ scale: headlineScale }],
+          },
+        ]}>
+          Lets get you in...
+        </Animated.Text>
+        
+        {/* Placeholder - will be replaced with social auth buttons in Step 4 */}
+        {/* fades in and scales up second (bottom element) */}
+        <Animated.Text style={[
+          styles.placeholder,
+          {
+            opacity: placeholderOpacity,
+            transform: [{ scale: placeholderScale }],
+          },
+        ]}>
+          Sign-up Screen - Coming Soon
+        </Animated.Text>
       </View>
     </View>
   );
@@ -67,41 +107,38 @@ export default function SignupScreen() {
 
 const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
-  getThemeColorValue: (shade?: number) => string,
-  typography: ReturnType<typeof useTypography>
+  typography: ReturnType<typeof useTypography>,
+  insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: themeColors.background.primary(),
+    paddingHorizontal: 24,
+    // padding top accounts for global navigation component (60px = 40px height + 20px spacing)
+    paddingTop: insets.top,
+    // padding bottom accounts for global actions component (100px = button height + spacing)
+    paddingBottom: insets.bottom + 100,
+    justifyContent: 'center', // center content vertically
   },
-  backButton: {
-    position: 'absolute',
-    top: 60,
-    left: 24,
-    zIndex: 1,
+  content: {
+    // content takes up available space and centers vertically
+    justifyContent: 'center',
+    alignItems: 'center', // center content horizontally
+    gap: 32, // spacing between elements
+  },
+  headline: {
+    // use typography heading-1 style for headline
+    color: themeColors.text.primary(), // text color using theme color hook
+    textAlign: 'center',
+    marginBottom: 48,
+    // use typography system for fontFamily, fontWeight, lineHeight
+    ...typography.getTextStyle('heading-1'),
+    fontSize: 32, // override typography: large headline size
   },
   placeholder: {
-    fontSize: 18,
     color: themeColors.text.primary(),
-    marginBottom: 32,
-    ...typography.body,
-  },
-  testButtons: {
-    gap: 12,
-    width: '80%',
-  },
-  testButton: {
-    backgroundColor: getThemeColorValue(500), // use theme color for button background
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  testButtonText: {
-    color: '#FFFFFF', // white text on primary colored buttons
-    fontSize: 14,
-    fontWeight: '500',
-    ...typography.body,
+    // use typography system for fontFamily and fontWeight
+    ...typography.getTextStyle('body-large'),
+    fontSize: 18, // override typography: slightly larger for placeholder
   },
 });
