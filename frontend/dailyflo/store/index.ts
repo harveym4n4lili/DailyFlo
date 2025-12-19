@@ -43,7 +43,33 @@ export const store = configureStore({
       serializableCheck: {
         // Ignore these action types for serializable check
         // (useful for Date objects and other non-serializable data)
-        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
+        ignoredActions: [
+          'persist/PERSIST', 
+          'persist/REHYDRATE',
+          // Ignore all auth async thunk actions that contain Date objects in payload
+          // Date objects are not serializable but are needed for the User type
+          // When connecting to real API, dates will come as ISO strings and be converted
+          'auth/registerUser/fulfilled',
+          'auth/registerUser/pending',
+          'auth/registerUser/rejected',
+          'auth/loginUser/fulfilled',
+          'auth/loginUser/pending',
+          'auth/loginUser/rejected',
+          'auth/socialAuth/fulfilled',
+          'auth/socialAuth/pending',
+          'auth/socialAuth/rejected',
+          'auth/checkAuthStatus/fulfilled',
+          'auth/checkAuthStatus/pending',
+          'auth/checkAuthStatus/rejected',
+        ],
+        // Ignore Date objects in auth.user path (lastLogin, createdAt, updatedAt)
+        // Date objects are not serializable but are needed for the User type
+        // When connecting to real API, dates will come as ISO strings and be converted
+        ignoredPaths: [
+          'auth.user.lastLogin', 
+          'auth.user.createdAt', 
+          'auth.user.updatedAt',
+        ],
       },
     }),
   

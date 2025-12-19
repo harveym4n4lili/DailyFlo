@@ -3,12 +3,12 @@
  * 
  * This is the first screen users see when they open the app for the first time.
  * It introduces the app and provides entry points to either start onboarding
- * or sign in if they already have an account.
+ * or sign up if they already have an account.
  * 
  * Flow:
  * 1. User sees welcome message
  * 2. User taps "Get Started" → goes to Reminders screen
- * 3. User taps "Sign In" → goes to Sign-up/Login screen
+ * 3. User taps "Sign Up" → goes to Sign-up/Login screen
  */
 
 import React, { useEffect, useRef } from 'react';

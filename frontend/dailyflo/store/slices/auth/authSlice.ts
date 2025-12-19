@@ -179,13 +179,14 @@ export const registerUser = createAsyncThunk(
       // return response.data;
       
       // For now, create a mock user
+      // firstName and lastName are required and validated before this thunk is called
       const mockUser: User = {
         id: Date.now().toString(),
         email: userData.email,
         authProvider: userData.authProvider || 'email',
         authProviderId: userData.authProviderId || null,
-        firstName: userData.firstName || '',
-        lastName: userData.lastName || '',
+        firstName: userData.firstName || '', // firstName is required and validated in OnboardingActions
+        lastName: userData.lastName || '', // lastName is required and validated in OnboardingActions
         avatarUrl: null,
         isEmailVerified: false,
         lastLogin: new Date(),
@@ -353,6 +354,8 @@ const authSlice = createSlice({
     },
     
     // Logout user (clear all auth data)
+    // Note: Token storage clearing should be handled by TokenManager/SecureStorage service
+    // This reducer only clears Redux state (localStorage doesn't exist in React Native)
     logout: (state) => {
       state.user = null;
       state.isAuthenticated = false;
@@ -362,11 +365,8 @@ const authSlice = createSlice({
       state.authMethod = null;
       state.lastLoginTime = null;
       
-      // Clear stored tokens
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      localStorage.removeItem('tokenExpiry');
+      // Note: Actual token storage clearing should be done by TokenManager/SecureStorage
+      // when implementing full auth persistence. For now, we only clear Redux state.
     },
     
     // Set remember me preference

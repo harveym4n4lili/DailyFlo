@@ -3,7 +3,7 @@
  * 
  * This component provides global action buttons for all onboarding screens.
  * The buttons change based on the current screen:
- * - Welcome: "Get Started" button + "Sign In" link
+ * - Welcome: "Get Started" button + "Sign Up" link
  * - Reminders: "Allow" button + "Skip" link
  * - Signup: Social auth buttons + "Skip" link
  * - Completion: "Create Task" button
@@ -20,6 +20,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useUI } from '@/store/hooks';
+import { useAppDispatch } from '@/store';
+import { loginUser, registerUser } from '@/store/slices/auth/authSlice';
 
 // storage key for tracking onboarding completion status
 // this key matches the one used in _layout.tsx for checking onboarding status
@@ -38,12 +40,23 @@ export function OnboardingActions() {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
-  const { openModal } = useUI(); // get openModal action from Redux UI slice
+  const dispatch = useAppDispatch(); // get dispatch function to call Redux actions
+  
+  // get UI state and actions from Redux UI slice
+  // showEmailAuth controls whether email inputs are visible
+  // emailAuthEmail, emailAuthPassword, emailAuthFirstName, emailAuthLastName store the input values
+  const { 
+    openModal,
+    onboarding: { showEmailAuth, emailAuthEmail, emailAuthPassword, emailAuthFirstName, emailAuthLastName },
+    toggleEmailAuth,
+  } = useUI();
+  
   const [permissionRequested, setPermissionRequested] = useState(false);
   
   // state to prevent multiple button presses (spam protection)
   const [isButtonPressed, setIsButtonPressed] = useState(false);
   const [socialAuthInProgress, setSocialAuthInProgress] = useState<string | null>(null);
+  const [emailAuthInProgress, setEmailAuthInProgress] = useState(false); // track if email auth is in progress
   
   // determine current screen from route segments
   const currentScreen = segments[segments.length - 1] as OnboardingScreen;
@@ -76,6 +89,7 @@ export function OnboardingActions() {
     setPermissionRequested(false);
     setIsButtonPressed(false);
     setSocialAuthInProgress(null);
+    setEmailAuthInProgress(false);
   }, [activeScreen]);
   
   // animate secondary elements when screen changes
@@ -139,7 +153,7 @@ export function OnboardingActions() {
         // reset container position for non-signup screens
         containerTranslateY.setValue(0);
         
-        // animate secondary link (Sign In) only
+        // animate secondary link (Sign Up) only
         Animated.parallel([
           Animated.timing(secondaryLinkOpacity, {
             toValue: 1,
@@ -304,7 +318,7 @@ export function OnboardingActions() {
   };
   
   /**
-   * Handle "Sign In" link press (Welcome screen)
+   * Handle "Sign Up" link press (Welcome screen)
    * Navigates directly to sign-up/login screen (skips reminders)
    */
   const handleSignIn = () => {
@@ -368,24 +382,100 @@ export function OnboardingActions() {
   
   /**
    * Handle social authentication (Signup screen)
-   * Mocks the authentication process
+   * Currently disabled - social auth is not implemented yet
+   * This function does nothing when called
    */
   const handleSocialAuth = async (provider: 'facebook' | 'google' | 'apple') => {
-    // prevent spam clicks - if any social auth is in progress, don't allow another
-    if (socialAuthInProgress) return;
+    // social auth buttons are disabled for now
+    // TODO: Implement social authentication when connecting to API
+    console.log(`Social auth with ${provider} is not implemented yet`);
+    // do nothing - buttons are disabled
+    return;
+  };
+  
+  /**
+   * Handle email/password authentication (Signup screen)
+   * Tries to login first, then registers if user doesn't exist
+   * This allows users to sign up with email and password
+   */
+  const handleEmailAuth = async () => {
+    // prevent spam clicks - if any auth is in progress, don't allow another
+    if (emailAuthInProgress || socialAuthInProgress) return;
     
-    setSocialAuthInProgress(provider); // mark this provider as in progress
-    try {
-      // TODO: Replace with real social auth when connecting to API
-      // Simulate authentication delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Navigate to completion screen
-      router.push('/(onboarding)/completion');
-    } catch (error) {
-      console.error(`Failed to authenticate with ${provider}:`, error);
-      setSocialAuthInProgress(null); // reset on error
+    // validate that email and password are provided
+    if (!emailAuthEmail || !emailAuthPassword) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
     }
+    
+    // basic email validation (check for @ symbol)
+    if (!emailAuthEmail.includes('@')) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+    
+    // basic password validation (at least 6 characters)
+    if (emailAuthPassword.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+    
+    // validate that first name and last name are provided
+    // these are required for registration
+    if (!emailAuthFirstName || emailAuthFirstName.trim().length === 0) {
+      Alert.alert('Error', 'Please enter your first name');
+      return;
+    }
+    
+    if (!emailAuthLastName || emailAuthLastName.trim().length === 0) {
+      Alert.alert('Error', 'Please enter your last name');
+      return;
+    }
+    
+    setEmailAuthInProgress(true); // mark email auth as in progress
+    
+    try {
+      // since this is the signup screen, we always register new users
+      // registerUser is a Redux async thunk that creates a new user account
+      // firstName and lastName are required and validated above
+      const registerResult = await dispatch(registerUser({ 
+        email: emailAuthEmail, 
+        password: emailAuthPassword,
+        firstName: emailAuthFirstName.trim(), // trim whitespace and use the provided first name
+        lastName: emailAuthLastName.trim(), // trim whitespace and use the provided last name
+        authProvider: 'email',
+      }));
+      
+      // check if registration was successful
+      if (registerUser.fulfilled.match(registerResult)) {
+        // registration successful, navigate to completion screen
+        router.push('/(onboarding)/completion');
+      } else {
+        // registration failed, show error
+        // the error message comes from the Redux thunk
+        const errorMessage = registerUser.rejected.match(registerResult) 
+          ? registerResult.payload as string 
+          : 'Failed to sign up. Please try again.';
+        Alert.alert('Error', errorMessage);
+      }
+    } catch (error) {
+      // catch any unexpected errors
+      console.error('Email authentication error:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      // always reset loading state, even if there was an error
+      setEmailAuthInProgress(false);
+    }
+  };
+  
+  /**
+   * Handle toggle email auth view
+   * Shows or hides email/password inputs on signup screen
+   */
+  const handleToggleEmailAuth = () => {
+    // toggle the showEmailAuth state in Redux
+    // this will show/hide the email inputs in the signup screen
+    toggleEmailAuth();
   };
   
   /**
@@ -450,7 +540,7 @@ export function OnboardingActions() {
                 activeOpacity={0.7}
               >
                 <Text style={styles.secondaryLinkText}>
-                  Already have an account? <Text style={styles.secondaryLinkHighlight}>Sign In</Text>
+                  Already have an account? <Text style={styles.secondaryLinkHighlight}>Sign Up</Text>
                 </Text>
               </TouchableOpacity>
             </Animated.View>
@@ -496,84 +586,126 @@ export function OnboardingActions() {
       case 'signup':
         return (
           <View style={styles.actions}>
-            {/* Social Auth Buttons */}
-            {/* social buttons fade in and scale up sequentially (primary buttons are not animated) */}
-            <View style={styles.socialButtons}>
-              {/* Facebook Button */}
-              <Animated.View
-                style={{
-                  opacity: facebookButtonOpacity,
-                  transform: [{ scale: facebookButtonScale }],
-                }}
-              >
+            {showEmailAuth ? (
+              // Email Auth View - show email/password inputs and sign up button
+              <>
+                {/* Register Button */}
+                {/* primary button for email authentication */}
                 <TouchableOpacity
-                  style={styles.socialButton}
-                  onPress={() => handleSocialAuth('facebook')}
+                  style={styles.primaryButton}
+                  onPress={handleEmailAuth}
                   activeOpacity={0.8}
-                  disabled={!!socialAuthInProgress}
+                  disabled={emailAuthInProgress || !!socialAuthInProgress}
                 >
-                  <Ionicons name="logo-facebook" size={24} color={themeColors.text.primary()} />
-                  <Text style={styles.socialButtonText}>Sign in with Facebook</Text>
+                  <Text style={styles.primaryButtonText}>
+                    {emailAuthInProgress ? 'Registering...' : 'Register'}
+                  </Text>
                 </TouchableOpacity>
-              </Animated.View>
-              
-              {/* Google Button */}
-              <Animated.View
-                style={{
-                  opacity: googleButtonOpacity,
-                  transform: [{ scale: googleButtonScale }],
-                }}
-              >
-                <TouchableOpacity
-                  style={styles.socialButton}
-                  onPress={() => handleSocialAuth('google')}
-                  activeOpacity={0.8}
-                  disabled={!!socialAuthInProgress}
-                >
-                  <Ionicons name="logo-google" size={24} color={themeColors.text.primary()} />
-                  <Text style={styles.socialButtonText}>Sign in with Google</Text>
-                </TouchableOpacity>
-              </Animated.View>
-              
-              {/* Apple Button (iOS only) */}
-              {Platform.OS === 'ios' && (
+                
+                {/* Back to Social Auth Link */}
+                {/* allows user to go back to social auth options */}
                 <Animated.View
                   style={{
-                    opacity: appleButtonOpacity,
-                    transform: [{ scale: appleButtonScale }],
+                    opacity: secondaryLinkOpacity,
+                    transform: [{ scale: secondaryLinkScale }],
                   }}
                 >
                   <TouchableOpacity
-                    style={styles.socialButton}
-                    onPress={() => handleSocialAuth('apple')}
-                    activeOpacity={0.8}
-                    disabled={!!socialAuthInProgress}
+                    style={styles.secondaryLink}
+                    onPress={handleToggleEmailAuth}
+                    activeOpacity={0.7}
+                    disabled={emailAuthInProgress}
                   >
-                    <Ionicons name="logo-apple" size={24} color={themeColors.text.primary()} />
-                    <Text style={styles.socialButtonText}>Sign in with Apple</Text>
+                    <Text style={styles.secondaryLinkText}>
+                      Use social auth instead? <Text style={styles.secondaryLinkHighlight}>Back</Text>
+                    </Text>
                   </TouchableOpacity>
                 </Animated.View>
-              )}
-            </View>
-            
-            {/* Sign up later SKIP Link */}
-            {/* fades in and scales up (social buttons are animated separately) */}
-            <Animated.View
-              style={{
-                opacity: secondaryLinkOpacity,
-                transform: [{ scale: secondaryLinkScale }],
-              }}
-            >
-              <TouchableOpacity
-                style={styles.secondaryLink}
-                onPress={handleSkip}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.secondaryLinkText}>
-                  Sign in later? <Text style={styles.secondaryLinkHighlight}>Skip</Text>
-                </Text>
-              </TouchableOpacity>
-            </Animated.View>
+              </>
+            ) : (
+              // Social Auth View - show social buttons and email toggle
+              <>
+                {/* Social Auth Buttons */}
+                {/* social buttons fade in and scale up sequentially (primary buttons are not animated) */}
+                <View style={styles.socialButtons}>
+                  {/* Facebook Button */}
+                  <Animated.View
+                    style={{
+                      opacity: facebookButtonOpacity,
+                      transform: [{ scale: facebookButtonScale }],
+                    }}
+                  >
+                    <TouchableOpacity
+                      style={styles.socialButton}
+                      onPress={() => handleSocialAuth('facebook')}
+                      activeOpacity={0.8}
+                      disabled={true}
+                    >
+                      <Ionicons name="logo-facebook" size={24} color={themeColors.text.primary()} />
+                      <Text style={styles.socialButtonText}>Sign up with Facebook</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                  
+                  {/* Google Button */}
+                  <Animated.View
+                    style={{
+                      opacity: googleButtonOpacity,
+                      transform: [{ scale: googleButtonScale }],
+                    }}
+                  >
+                    <TouchableOpacity
+                      style={styles.socialButton}
+                      onPress={() => handleSocialAuth('google')}
+                      activeOpacity={0.8}
+                      disabled={true}
+                    >
+                      <Ionicons name="logo-google" size={24} color={themeColors.text.primary()} />
+                      <Text style={styles.socialButtonText}>Sign up with Google</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                  
+                  {/* Apple Button (iOS only) */}
+                  {Platform.OS === 'ios' && (
+                    <Animated.View
+                      style={{
+                        opacity: appleButtonOpacity,
+                        transform: [{ scale: appleButtonScale }],
+                      }}
+                    >
+                      <TouchableOpacity
+                        style={styles.socialButton}
+                        onPress={() => handleSocialAuth('apple')}
+                        activeOpacity={0.8}
+                        disabled={true}
+                      >
+                        <Ionicons name="logo-apple" size={24} color={themeColors.text.primary()} />
+                        <Text style={styles.socialButtonText}>Sign up with Apple</Text>
+                      </TouchableOpacity>
+                    </Animated.View>
+                  )}
+                </View>
+                
+                {/* Use Email Instead Link */}
+                {/* allows user to switch to email/password authentication */}
+                <Animated.View
+                  style={{
+                    opacity: secondaryLinkOpacity,
+                    transform: [{ scale: secondaryLinkScale }],
+                  }}
+                >
+                  <TouchableOpacity
+                    style={styles.secondaryLink}
+                    onPress={handleToggleEmailAuth}
+                    activeOpacity={0.7}
+                    disabled={!!socialAuthInProgress}
+                  >
+                    <Text style={styles.secondaryLinkText}>
+                      Use email instead? <Text style={styles.secondaryLinkHighlight}>Sign up with Email</Text>
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              </>
+            )}
           </View>
         );
         

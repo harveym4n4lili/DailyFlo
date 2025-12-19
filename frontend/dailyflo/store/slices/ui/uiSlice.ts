@@ -80,6 +80,15 @@ interface UIState {
     isInitialized: boolean;          // Whether app has been initialized
     lastSyncTime: number | null;     // Last successful sync timestamp
   };
+  
+  // Onboarding state
+  onboarding: {
+    showEmailAuth: boolean;          // Whether to show email/password inputs on signup screen
+    emailAuthEmail: string;          // Email value for email auth (shared between signup screen and actions)
+    emailAuthPassword: string;       // Password value for email auth (shared between signup screen and actions)
+    emailAuthFirstName: string;      // First name value for email auth registration
+    emailAuthLastName: string;       // Last name value for email auth registration
+  };
 }
 
 /**
@@ -147,6 +156,15 @@ const initialState: UIState = {
     isOnline: true,
     isInitialized: false,
     lastSyncTime: null,
+  },
+  
+  // Start with email auth hidden
+  onboarding: {
+    showEmailAuth: false,            // Email inputs are hidden by default (show social auth first)
+    emailAuthEmail: '',              // Empty email initially
+    emailAuthPassword: '',           // Empty password initially
+    emailAuthFirstName: '',          // Empty first name initially
+    emailAuthLastName: '',           // Empty last name initially
   },
 };
 
@@ -375,6 +393,54 @@ const uiSlice = createSlice({
     },
     
     /**
+     * Onboarding state management actions
+     */
+    
+    // Toggle email auth view (show/hide email/password inputs)
+    toggleEmailAuth: (state) => {
+      state.onboarding.showEmailAuth = !state.onboarding.showEmailAuth;
+      // clear email/password and name fields when hiding email auth
+      if (!state.onboarding.showEmailAuth) {
+        state.onboarding.emailAuthEmail = '';
+        state.onboarding.emailAuthPassword = '';
+        state.onboarding.emailAuthFirstName = '';
+        state.onboarding.emailAuthLastName = '';
+      }
+    },
+    
+    // Set email auth visibility
+    setShowEmailAuth: (state, action: PayloadAction<boolean>) => {
+      state.onboarding.showEmailAuth = action.payload;
+      // clear email/password and name fields when hiding email auth
+      if (!action.payload) {
+        state.onboarding.emailAuthEmail = '';
+        state.onboarding.emailAuthPassword = '';
+        state.onboarding.emailAuthFirstName = '';
+        state.onboarding.emailAuthLastName = '';
+      }
+    },
+    
+    // Set email auth email value
+    setEmailAuthEmail: (state, action: PayloadAction<string>) => {
+      state.onboarding.emailAuthEmail = action.payload;
+    },
+    
+    // Set email auth password value
+    setEmailAuthPassword: (state, action: PayloadAction<string>) => {
+      state.onboarding.emailAuthPassword = action.payload;
+    },
+    
+    // Set email auth first name value
+    setEmailAuthFirstName: (state, action: PayloadAction<string>) => {
+      state.onboarding.emailAuthFirstName = action.payload;
+    },
+    
+    // Set email auth last name value
+    setEmailAuthLastName: (state, action: PayloadAction<string>) => {
+      state.onboarding.emailAuthLastName = action.payload;
+    },
+    
+    /**
      * Utility actions
      */
     
@@ -413,6 +479,14 @@ export const {
   enterSelectionMode,
   exitSelectionMode,
   toggleItemSelection,
+  
+  // Onboarding actions
+  toggleEmailAuth,
+  setShowEmailAuth,
+  setEmailAuthEmail,
+  setEmailAuthPassword,
+  setEmailAuthFirstName,
+  setEmailAuthLastName,
   selectAllItems,
   clearSelection,
   
