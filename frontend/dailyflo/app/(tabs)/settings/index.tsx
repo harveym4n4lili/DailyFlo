@@ -7,14 +7,18 @@ import {
   resetOnboarding, 
   markOnboardingComplete, 
   toggleOnboardingStatus,
-  debugOnboardingStorage 
+  debugOnboardingStorage,
+  checkLoggedInUser,
+  getLoggedInUser,
 } from '@/utils/dev/onboardingDevUtils';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/store/hooks';
 
 export default function SettingsScreen() {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const router = useRouter();
+  const { user, isAuthenticated, authMethod } = useAuth(); // get auth state from Redux
   const styles = createStyles(themeColors, typography);
   
   // check if we're in development mode (__DEV__ is a global variable in React Native)
@@ -108,6 +112,43 @@ export default function SettingsScreen() {
     Alert.alert('Debug Info', 'Check the console/terminal for detailed onboarding storage information.');
   };
 
+  /**
+   * Handle checking logged in user
+   * Shows current logged in user information
+   */
+  const handleCheckLoggedInUser = () => {
+    // log to console for detailed info
+    checkLoggedInUser();
+    
+    // get user info for alert display
+    const userInfo = getLoggedInUser();
+    
+    if (userInfo.isAuthenticated && userInfo.user) {
+      // user is logged in, show their info
+      const userName = `${userInfo.user.firstName} ${userInfo.user.lastName}`.trim() || 'Not set';
+      Alert.alert(
+        'Logged In User',
+        `✅ User is logged in\n\n` +
+        `Email: ${userInfo.user.email}\n` +
+        `Name: ${userName}\n` +
+        `Auth Method: ${userInfo.authMethod || 'Unknown'}\n` +
+        `User ID: ${userInfo.user.id}\n` +
+        `Email Verified: ${userInfo.user.isEmailVerified ? 'Yes' : 'No'}\n\n` +
+        `Check console for more details.`,
+        [{ text: 'OK' }]
+      );
+    } else {
+      // no user is logged in
+      Alert.alert(
+        'Logged In User',
+        '❌ No user is currently logged in\n\n' +
+        `isAuthenticated: ${userInfo.isAuthenticated}\n` +
+        `Check console for more details.`,
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   return (
     <ScreenContainer>
       <Text style={styles.title}>Settings</Text>
@@ -171,6 +212,15 @@ export default function SettingsScreen() {
               activeOpacity={0.7}
             >
               <Text style={styles.devButtonText}>Debug Storage (Console)</Text>
+            </TouchableOpacity>
+
+            {/* Check Logged In User Button */}
+            <TouchableOpacity
+              style={[styles.devButton, styles.devButtonSecondary]}
+              onPress={handleCheckLoggedInUser}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.devButtonText}>Check Logged In User</Text>
             </TouchableOpacity>
           </View>
         </View>

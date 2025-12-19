@@ -9,6 +9,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ReduxProvider } from '@/store/Provider';
+import { store } from '@/store';
+import { logout } from '@/store/slices/auth/authSlice';
 
 // storage key for tracking onboarding completion status
 // this key is used to check if the user has completed the onboarding flow
@@ -85,7 +87,16 @@ export default function RootLayout() {
             router.replace('/(tabs)');
           }
         } else {
-          // user hasn't completed onboarding, show welcome screen
+          // user hasn't completed onboarding, they are a first-time user
+          // ensure no account is logged in - clear any existing auth state
+          // this ensures first-time users start with a clean slate
+          const authState = store.getState().auth;
+          if (authState.isAuthenticated) {
+            // dispatch logout action to clear auth state
+            // this ensures first-time users don't have any logged-in account
+            store.dispatch(logout());
+          }
+          
           // only navigate if we're not already on the onboarding route
           if (currentGroup !== '(onboarding)') {
             // this is the first screen in the onboarding flow
@@ -99,6 +110,13 @@ export default function RootLayout() {
         
         // mark as navigated
         hasNavigatedRef.current = true;
+        
+        // on error, treat as first-time user - ensure no account is logged in
+        const authState = store.getState().auth;
+        if (authState.isAuthenticated) {
+          // dispatch logout action to clear auth state
+          store.dispatch(logout());
+        }
         
         // only navigate if we're not already on onboarding
         const currentGroup = segments[0];
