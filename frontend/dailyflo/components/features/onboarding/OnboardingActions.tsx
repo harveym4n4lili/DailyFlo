@@ -20,8 +20,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useUI } from '@/store/hooks';
-import { useAppDispatch } from '@/store';
-import { loginUser, registerUser } from '@/store/slices/auth/authSlice';
 
 // storage key for tracking onboarding completion status
 // this key matches the one used in _layout.tsx for checking onboarding status
@@ -40,15 +38,11 @@ export function OnboardingActions() {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
-  const dispatch = useAppDispatch(); // get dispatch function to call Redux actions
   
   // get UI state and actions from Redux UI slice
-  // showEmailAuth controls whether email inputs are visible
-  // emailAuthEmail, emailAuthPassword, emailAuthFirstName, emailAuthLastName store the input values
+  // openModal is a Redux action that opens modals (we use it to open the email auth modal)
   const { 
     openModal,
-    onboarding: { showEmailAuth, emailAuthEmail, emailAuthPassword, emailAuthFirstName, emailAuthLastName },
-    toggleEmailAuth,
   } = useUI();
   
   const [permissionRequested, setPermissionRequested] = useState(false);
@@ -56,7 +50,6 @@ export function OnboardingActions() {
   // state to prevent multiple button presses (spam protection)
   const [isButtonPressed, setIsButtonPressed] = useState(false);
   const [socialAuthInProgress, setSocialAuthInProgress] = useState<string | null>(null);
-  const [emailAuthInProgress, setEmailAuthInProgress] = useState(false); // track if email auth is in progress
   
   // determine current screen from route segments
   const currentScreen = segments[segments.length - 1] as OnboardingScreen;
@@ -89,7 +82,6 @@ export function OnboardingActions() {
     setPermissionRequested(false);
     setIsButtonPressed(false);
     setSocialAuthInProgress(null);
-    setEmailAuthInProgress(false);
   }, [activeScreen]);
   
   // animate secondary elements when screen changes
@@ -394,88 +386,13 @@ export function OnboardingActions() {
   };
   
   /**
-   * Handle email/password authentication (Signup screen)
-   * Tries to login first, then registers if user doesn't exist
-   * This allows users to sign up with email and password
+   * Handle open email auth modal
+   * Opens the full-screen email authentication modal
    */
-  const handleEmailAuth = async () => {
-    // prevent spam clicks - if any auth is in progress, don't allow another
-    if (emailAuthInProgress || socialAuthInProgress) return;
-    
-    // validate that email and password are provided
-    if (!emailAuthEmail || !emailAuthPassword) {
-      Alert.alert('Error', 'Please enter both email and password');
-      return;
-    }
-    
-    // basic email validation (check for @ symbol)
-    if (!emailAuthEmail.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return;
-    }
-    
-    // basic password validation (at least 6 characters)
-    if (emailAuthPassword.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
-      return;
-    }
-    
-    // validate that first name and last name are provided
-    // these are required for registration
-    if (!emailAuthFirstName || emailAuthFirstName.trim().length === 0) {
-      Alert.alert('Error', 'Please enter your first name');
-      return;
-    }
-    
-    if (!emailAuthLastName || emailAuthLastName.trim().length === 0) {
-      Alert.alert('Error', 'Please enter your last name');
-      return;
-    }
-    
-    setEmailAuthInProgress(true); // mark email auth as in progress
-    
-    try {
-      // since this is the signup screen, we always register new users
-      // registerUser is a Redux async thunk that creates a new user account
-      // firstName and lastName are required and validated above
-      const registerResult = await dispatch(registerUser({ 
-        email: emailAuthEmail, 
-        password: emailAuthPassword,
-        firstName: emailAuthFirstName.trim(), // trim whitespace and use the provided first name
-        lastName: emailAuthLastName.trim(), // trim whitespace and use the provided last name
-        authProvider: 'email',
-      }));
-      
-      // check if registration was successful
-      if (registerUser.fulfilled.match(registerResult)) {
-        // registration successful, navigate to completion screen
-        router.push('/(onboarding)/completion');
-      } else {
-        // registration failed, show error
-        // the error message comes from the Redux thunk
-        const errorMessage = registerUser.rejected.match(registerResult) 
-          ? registerResult.payload as string 
-          : 'Failed to sign up. Please try again.';
-        Alert.alert('Error', errorMessage);
-      }
-    } catch (error) {
-      // catch any unexpected errors
-      console.error('Email authentication error:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
-      // always reset loading state, even if there was an error
-      setEmailAuthInProgress(false);
-    }
-  };
-  
-  /**
-   * Handle toggle email auth view
-   * Shows or hides email/password inputs on signup screen
-   */
-  const handleToggleEmailAuth = () => {
-    // toggle the showEmailAuth state in Redux
-    // this will show/hide the email inputs in the signup screen
-    toggleEmailAuth();
+  const handleOpenEmailAuth = () => {
+    // open the email auth modal via Redux state
+    // this will show a full-screen modal with the email auth form
+    openModal('emailAuth');
   };
   
   /**
@@ -586,44 +503,7 @@ export function OnboardingActions() {
       case 'signup':
         return (
           <View style={styles.actions}>
-            {showEmailAuth ? (
-              // Email Auth View - show email/password inputs and sign up button
-              <>
-                {/* Register Button */}
-                {/* primary button for email authentication */}
-                <TouchableOpacity
-                  style={styles.primaryButton}
-                  onPress={handleEmailAuth}
-                  activeOpacity={0.8}
-                  disabled={emailAuthInProgress || !!socialAuthInProgress}
-                >
-                  <Text style={styles.primaryButtonText}>
-                    {emailAuthInProgress ? 'Registering...' : 'Register'}
-                  </Text>
-                </TouchableOpacity>
-                
-                {/* Back to Social Auth Link */}
-                {/* allows user to go back to social auth options */}
-                <Animated.View
-                  style={{
-                    opacity: secondaryLinkOpacity,
-                    transform: [{ scale: secondaryLinkScale }],
-                  }}
-                >
-                  <TouchableOpacity
-                    style={styles.secondaryLink}
-                    onPress={handleToggleEmailAuth}
-                    activeOpacity={0.7}
-                    disabled={emailAuthInProgress}
-                  >
-                    <Text style={styles.secondaryLinkText}>
-                      Use social auth instead? <Text style={styles.secondaryLinkHighlight}>Back</Text>
-                    </Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              </>
-            ) : (
-              // Social Auth View - show social buttons and email toggle
+            {/* Social Auth View - show social buttons and email toggle */}
               <>
                 {/* Social Auth Buttons */}
                 {/* social buttons fade in and scale up sequentially (primary buttons are not animated) */}
@@ -686,7 +566,7 @@ export function OnboardingActions() {
                 </View>
                 
                 {/* Use Email Instead Link */}
-                {/* allows user to switch to email/password authentication */}
+              {/* opens full-screen email auth modal when clicked */}
                 <Animated.View
                   style={{
                     opacity: secondaryLinkOpacity,
@@ -695,7 +575,7 @@ export function OnboardingActions() {
                 >
                   <TouchableOpacity
                     style={styles.secondaryLink}
-                    onPress={handleToggleEmailAuth}
+                  onPress={handleOpenEmailAuth}
                     activeOpacity={0.7}
                     disabled={!!socialAuthInProgress}
                   >
@@ -705,7 +585,6 @@ export function OnboardingActions() {
                   </TouchableOpacity>
                 </Animated.View>
               </>
-            )}
           </View>
         );
         

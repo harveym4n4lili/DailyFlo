@@ -24,7 +24,7 @@
  * ```
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Keyboard, KeyboardEvent, Platform, LayoutAnimation, UIManager } from 'react-native';
 
 // Enable LayoutAnimation on Android
@@ -40,6 +40,11 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
  */
 export function useKeyboardHeight(): number {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  // track if keyboard is currently shown
+  // once keyboard opens, we lock the height and ignore subsequent show events
+  // this prevents twitching when switching fields - button stays at locked position
+  const isKeyboardOpenRef = useRef(false);
+  const lockedHeightRef = useRef(0);
 
   useEffect(() => {
     // Keyboard show listener
@@ -50,8 +55,20 @@ export function useKeyboardHeight(): number {
         const height = event.endCoordinates.height;
         const duration = event.duration || 250;
 
+        // if keyboard is already open, ignore this event
+        // this prevents button position changes when switching between fields
+        // button stays locked at the position where keyboard first opened
+        if (isKeyboardOpenRef.current) {
+          return;
+        }
+
+        // keyboard is opening for the first time
+        // lock the height and mark keyboard as open
+        isKeyboardOpenRef.current = true;
+        lockedHeightRef.current = height;
+
         // Configure LayoutAnimation to sync with keyboard animation
-        // This ensures smooth animations that match keyboard timing
+        // This only runs when keyboard first opens
         LayoutAnimation.configureNext({
           duration: duration,
           update: {
@@ -64,7 +81,7 @@ export function useKeyboardHeight(): number {
           },
         });
 
-        // Update state - LayoutAnimation handles the animation automatically
+        // Update state with locked height
         setKeyboardHeight(height);
       }
     );
@@ -75,6 +92,11 @@ export function useKeyboardHeight(): number {
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       (event: KeyboardEvent) => {
         const duration = event.duration || 250;
+
+        // keyboard is closing - reset lock
+        // next time keyboard opens, we'll lock to new height
+        isKeyboardOpenRef.current = false;
+        lockedHeightRef.current = 0;
 
         // Configure LayoutAnimation to sync with keyboard hide animation
         LayoutAnimation.configureNext({
@@ -89,7 +111,7 @@ export function useKeyboardHeight(): number {
           },
         });
 
-        // Update state - LayoutAnimation handles the animation automatically
+        // Update state - keyboard is closed
         setKeyboardHeight(0);
       }
     );
@@ -103,4 +125,3 @@ export function useKeyboardHeight(): number {
 
   return keyboardHeight;
 }
-

@@ -20,6 +20,7 @@ interface UIState {
     deleteConfirm: boolean;          // Delete confirmation modal visibility
     settings: boolean;               // Settings modal visibility
     datePicker: boolean;             // Date picker modal visibility
+    emailAuth: boolean;              // Email authentication modal visibility (sign up with email)
   };
   
   // Loading states for UI operations
@@ -104,6 +105,7 @@ const initialState: UIState = {
     deleteConfirm: false,
     settings: false,
     datePicker: false,
+    emailAuth: false,
   },
   
   // Start with no loading states
