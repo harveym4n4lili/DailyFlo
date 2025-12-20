@@ -1,0 +1,396 @@
+/**
+ * Sign In Modal Component
+ * 
+ * A draggable modal for signing in with email and password.
+ * This modal opens when users click "Sign in" on the welcome screen.
+ * 
+ * Features:
+ * - Draggable modal using WrappedDraggableModal (same as task view modal)
+ * - Initial snap point at highest point (0.9) from task view modal
+ * - Modal is draggable at the header - swiping down closes it
+ * - Contains ModalHeader with white close button and drag indicator
+ * - Same structure as task view modal
+ */
+
+import React, { useState, useRef, useEffect } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity, Animated, Easing, Platform, ScrollView } from 'react-native';
+import { useThemeColors } from '@/hooks/useColorPalette';
+import { useTypography } from '@/hooks/useTypography';
+import { useUI } from '@/store/hooks';
+import { WrappedDraggableModal, ModalHeader } from '@/components/layout/ModalLayout';
+import { DraggableModalRef } from '@/components/layout/ModalLayout/DraggableModal';
+import { SocialAuthActions } from './SocialAuthActions';
+import { EmailAuthSection } from './EmailAuth';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAnchoredContainer } from '@/components/layout/ScreenLayout';
+
+// animation configuration - adjust delay between sequential fade-ins (in milliseconds)
+const SEQUENTIAL_FADE_DELAY = 200; // time between each element fading in
+
+/**
+ * Sign In Modal Component
+ * 
+ * Renders a draggable modal for email sign in.
+ * The modal is controlled by Redux state (modals.emailAuthSignIn).
+ * Modal opens at the middle snap point (0.65) and is draggable at the header.
+ * Swiping down closes the modal.
+ * Contains social auth buttons (sign in variant) and email sign in option.
+ */
+export function SignInModal() {
+  const themeColors = useThemeColors();
+  const typography = useTypography();
+  const insets = useSafeAreaInsets();
+  
+  /**
+   * Get iOS version number for conditional styling
+   * iOS 15+ introduced the glass UI design with updated header styling
+   * Returns the major version number (e.g., 14, 15, 16, 17)
+   */
+  const getIOSVersion = (): number => {
+    if (Platform.OS !== 'ios') return 0;
+    const version = Platform.Version as string;
+    // Platform.Version can be a string like "15.0" or number like 15
+    // parse it to get the major version number
+    const majorVersion = typeof version === 'string' 
+      ? parseInt(version.split('.')[0], 10) 
+      : Math.floor(version as number);
+    return majorVersion;
+  };
+  
+  // check if running on iOS 15+ (newer glass UI design)
+  const isNewerIOS = getIOSVersion() >= 15;
+  
+  // calculate header height based on iOS version
+  // iOS 15+: 70px (16px top + 38px button + 16px bottom)
+  // iOS < 15: 56px
+  const headerHeight = isNewerIOS ? 70 : 56;
+  
+  // ref to control draggable modal programmatically
+  // allows us to snap modal to highest snap point when email auth is selected
+  const draggableModalRef = useRef<DraggableModalRef>(null);
+  
+  // track current view mode: 'social' shows social auth buttons, 'email' shows email auth form
+  // starts with 'social' to show social auth options first
+  const [viewMode, setViewMode] = useState<'social' | 'email'>('social');
+  
+  // track current snap point index to check if already at highest
+  // snapPoints array: [0.3, 0.65, 0.9] - index 2 is highest (0.9)
+  // we track this to avoid unnecessary snap animations
+  const [currentSnapIndex, setCurrentSnapIndex] = useState<number>(1); // starts at middle (index 1)
+  
+  // track if social auth is in progress
+  // this prevents multiple button presses while authentication is happening
+  const [socialAuthInProgress, setSocialAuthInProgress] = useState<string | null>(null);
+  
+  // track when modal becomes visible to trigger social auth animations
+  const [shouldAnimateSocialAuth, setShouldAnimateSocialAuth] = useState(false);
+  
+  // animated value for email link fade-in
+  // email link fades in after social buttons
+  const emailLinkOpacity = useRef(new Animated.Value(0)).current;
+  const emailLinkScale = useRef(new Animated.Value(0.8)).current;
+  
+  // get modal visibility state from Redux UI slice
+  // modals.emailAuthSignIn controls whether this modal is visible
+  // closeModal is a Redux action that closes the modal
+  // openModal is a Redux action that opens modals (we use it to open the email auth modal)
+  const { 
+    modals: { emailAuthSignIn },
+    closeModal,
+    openModal,
+  } = useUI();
+  
+  // trigger animations when modal becomes visible
+  // social auth buttons handle their own animations, but we need to trigger them
+  useEffect(() => {
+    if (emailAuthSignIn) {
+      // modal just opened - reset to social view and trigger animations
+      setViewMode('social');
+      setCurrentSnapIndex(1); // reset to middle snap point
+      setShouldAnimateSocialAuth(true);
+      
+      // reset email link animation values
+      emailLinkOpacity.setValue(0);
+      emailLinkScale.setValue(0.8);
+      
+      // animate email link after social buttons (delay depends on number of buttons)
+      // Facebook (delay 1), Google (delay 2), Apple if iOS (delay 3), then email link
+      const emailLinkDelay = 4 * SEQUENTIAL_FADE_DELAY; // after all social buttons
+      Animated.parallel([
+        Animated.timing(emailLinkOpacity, {
+          toValue: 1,
+          duration: 400,
+          delay: emailLinkDelay,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(emailLinkScale, {
+          toValue: 1,
+          duration: 400,
+          delay: emailLinkDelay,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // modal closed - reset animation trigger and view mode
+      setShouldAnimateSocialAuth(false);
+      setViewMode('social');
+    }
+  }, [emailAuthSignIn, emailLinkOpacity, emailLinkScale]);
+  
+  /**
+   * Handle modal close
+   * Closes the modal by updating Redux state
+   */
+  const handleClose = () => {
+    // close the modal by updating Redux state
+    // this triggers a re-render and hides the modal
+    closeModal('emailAuthSignIn');
+  };
+  
+  /**
+   * Handle social authentication (Sign in modal)
+   * Currently disabled - social auth is not implemented yet
+   * This function does nothing when called
+   */
+  const handleSocialAuth = async (provider: 'facebook' | 'google' | 'apple') => {
+    // social auth buttons are disabled for now
+    // TODO: Implement social authentication when connecting to API
+    console.log(`Social auth with ${provider} is not implemented yet`);
+    // do nothing - buttons are disabled
+    return;
+  };
+  
+  /**
+   * Handle open email auth form
+   * Expands modal to top snap point (0.9, same as task view's top snap point) and switches to email auth form
+   */
+  const handleOpenEmailAuth = () => {
+    // snap modal to top snap point (0.9 - fully expanded, same as task view modal)
+    // snapToTop() animates to translateY of 0, which is the top position
+    // if already at top, the animation will be minimal/no animation
+    draggableModalRef.current?.snapToTop();
+    
+    // update tracked snap index to top (index 2 = 0.9)
+    setCurrentSnapIndex(2);
+    
+    // switch view mode to show email auth form instead of social auth buttons
+    setViewMode('email');
+  };
+  
+  // track if email sign in is in progress
+  // this prevents multiple button presses while authentication is happening
+  const [emailAuthInProgress, setEmailAuthInProgress] = useState(false);
+  
+  // get email auth form values from Redux state
+  // these are shared with EmailAuthSection component
+  const {
+    onboarding: { emailAuthEmail, emailAuthPassword },
+  } = useUI();
+  
+  /**
+   * Handle email sign in
+   * Submits email and password for authentication
+   */
+  const handleEmailSignIn = async () => {
+    // TODO: Implement email sign in when connecting to API
+    console.log('Email sign in not implemented yet');
+    setEmailAuthInProgress(true);
+    // simulate API call
+    setTimeout(() => {
+      setEmailAuthInProgress(false);
+    }, 1000);
+  };
+  
+  const styles = createStyles(themeColors, typography, headerHeight);
+  
+  return (
+    <WrappedDraggableModal
+      ref={draggableModalRef}
+      visible={emailAuthSignIn}
+      onClose={handleClose}
+      // snap points: same as task view modal
+      // [0.3, 0.65, 0.9] - lowest point (0.3) closes modal, middle (0.65) is initial position, highest (0.9)
+      // when dragged down to 0.3, modal closes automatically
+      snapPoints={[0.3, 0.65, 0.9]}
+      // initial snap point is 1 (the middle snap point in the array - 0.65)
+      initialSnapPoint={1}
+      // enable gestures to make modal draggable at the header
+      disableGestures={false}
+      backgroundColor={themeColors.background.primary()}
+      backdropDismiss={true}
+    >
+      {/* modal header with close button on left and drag indicator */}
+      {/* absolutely positioned to float over content */}
+      {/* header is draggable - user can swipe down from here to close modal */}
+      <View 
+        style={{ 
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10, // ensure header is above scrollable content
+        }}
+      >
+        {/* modal header with close button and drag indicator */}
+        {/* close button is integrated into ModalHeader component using MainCloseButton */}
+        <ModalHeader
+          showCloseButton={true}
+          closeButtonPosition="left"
+          showDragIndicator={true}
+          onClose={handleClose}
+          showBorder={false}
+          useMainCloseButton={true}
+          taskCategoryColor="blue"
+          backgroundColor="transparent"
+        />
+      </View>
+      
+      {/* main content area */}
+      {/* conditionally shows social auth buttons or email auth form based on viewMode */}
+      {viewMode === 'social' ? (
+        <View style={styles.contentContainer}>
+          {/* Social Auth Buttons */}
+          {/* social buttons fade in and scale up sequentially (handled by SocialAuthActions component) */}
+          {/* uses signin variant to show "Sign in with [Provider]" text */}
+          <SocialAuthActions
+            variant="signin"
+            onSocialAuth={handleSocialAuth}
+            disabled={true}
+            animate={shouldAnimateSocialAuth}
+          />
+          
+          {/* Use Email Instead Link */}
+          {/* expands modal to highest snap point and switches to email auth form */}
+          {/* fades in after social buttons */}
+          <Animated.View
+            style={{
+              opacity: emailLinkOpacity,
+              transform: [{ scale: emailLinkScale }],
+            }}
+          >
+            <TouchableOpacity
+              style={styles.secondaryLink}
+              onPress={handleOpenEmailAuth}
+              activeOpacity={0.7}
+              disabled={!!socialAuthInProgress}
+            >
+              <Text style={styles.secondaryLinkText}>
+                Use email instead? <Text style={styles.secondaryLinkHighlight}>Sign in with Email</Text>
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      ) : (
+        /* Email Auth Form */
+        /* shown when viewMode is 'email' - displays email and password inputs */
+        <View style={styles.emailAuthWrapper}>
+          {/* Email Auth Section Component */}
+          {/* reusable component with email and password input fields */}
+          {/* variant="signin" hides first name and last name fields */}
+          {/* flex: 1 allows content to take available space above keyboard-anchored bottom section */}
+          <View style={styles.emailAuthSectionContainer}>
+            <EmailAuthSection variant="signin" />
+          </View>
+          
+          {/* Sign In Button */}
+          {/* anchored to keyboard using KeyboardAnchoredContainer */}
+          {/* uses locked keyboard height approach: height locks when keyboard first opens */}
+          {/* when switching fields, keyboard height stays locked - no position recalculation */}
+          {/* this prevents twitching when user switches between input fields */}
+          {/* offset={96} ensures more spacing from keyboard for better visual separation */}
+          <KeyboardAnchoredContainer offset={0}>
+            <View style={[styles.signInButtonContainer, { paddingBottom: insets.bottom }]}>
+              <TouchableOpacity
+                style={styles.signInButton}
+                onPress={handleEmailSignIn}
+                activeOpacity={0.8}
+                disabled={emailAuthInProgress || !emailAuthEmail || !emailAuthPassword}
+              >
+                <Text style={styles.signInButtonText}>
+                  {emailAuthInProgress ? 'Signing in...' : 'Sign In'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAnchoredContainer>
+        </View>
+      )}
+    </WrappedDraggableModal>
+  );
+}
+
+/**
+ * Create styles for the component
+ * Uses theme colors and typography system for consistent design
+ */
+const createStyles = (
+  themeColors: ReturnType<typeof useThemeColors>,
+  typography: ReturnType<typeof useTypography>,
+  headerHeight: number
+) => StyleSheet.create({
+  contentContainer: {
+    flex: 1,
+    // add top padding to account for absolutely positioned header
+    // headerHeight is calculated based on iOS version (70px for iOS 15+, 56px for older iOS)
+    // add extra 16px for visual breathing room between header and social auth buttons
+    paddingTop: headerHeight + 16, // header height + spacing
+    paddingHorizontal: 24, // horizontal padding to match other screens
+    gap: 16, // spacing between social buttons and email link
+  },
+  secondaryLink: {
+    paddingVertical: 12, // padding for touch target
+    alignItems: 'center',
+  },
+  secondaryLinkText: {
+    color: themeColors.text.secondary(), // text color using theme color hook
+    textAlign: 'center',
+    // use typography system for fontFamily and fontWeight
+    ...typography.getTextStyle('body-large'),
+  },
+  secondaryLinkHighlight: {
+    fontWeight: '800', // make highlighted part slightly bolder
+    color: themeColors.text.primary(), // text color using theme color hook
+  },
+  emailAuthWrapper: {
+    flex: 1,
+    // wrapper for email auth form and sign in button
+    // ensures proper layout with flex: 1 to take available space
+  },
+  emailAuthSectionContainer: {
+    flex: 1,
+    // add top padding to account for absolutely positioned header
+    // headerHeight is calculated based on iOS version (70px for iOS 15+, 56px for older iOS)
+    paddingTop: headerHeight + 24, // header height + spacing
+    paddingHorizontal: 24, // horizontal padding to match other screens
+    paddingBottom: 24, // bottom padding for content
+    // flex: 1 allows this container to take available space above the keyboard-anchored button
+  },
+  signInButtonContainer: {
+    paddingVertical: 12,
+    paddingHorizontal: 24, // matches other button container padding
+    // paddingBottom for safe area is added inline (insets.bottom)
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  signInButton: {
+    // use interactive primary color for button background (same as register button)
+    backgroundColor: themeColors.interactive.primary(),
+    borderRadius: 28, // rounded rectangular button (same as register button)
+    paddingVertical: 16, // vertical padding for button height (same as register button)
+    paddingHorizontal: 32, // horizontal padding (same as register button)
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 58, // minimum touch target size for accessibility (same as register button)
+    width: '100%', // full width button (same as register button)
+  },
+  signInButtonText: {
+    // use interactive quaternary color for text (same as register button)
+    // this provides contrasting text color on the primary button background
+    color: themeColors.interactive.quaternary(),
+    // use typography system for fontFamily and fontWeight (same as register button)
+    ...typography.getTextStyle('button-primary'),
+  },
+});
+
