@@ -24,7 +24,7 @@ import { useAppDispatch } from '@/store';
 import { registerUser, loginUser } from '@/store/slices/auth/authSlice';
 import { WrappedFullScreenModal } from '@/components/layout/ModalLayout/WrappedFullScreenModal';
 import { KeyboardAnchoredContainer } from '@/components/layout/ScreenLayout';
-import { EmailAuthSection } from './EmailAuth';
+import { EmailAuthSection } from '@/components/features/authentication/sections/EmailAuth';
 
 // animation configuration - adjust delay between sequential fade-ins (in milliseconds)
 const SEQUENTIAL_FADE_DELAY = 200; // time between each element fading in

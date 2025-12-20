@@ -20,7 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useUI } from '@/store/hooks';
-import { SocialAuthActions } from './SocialAuthActions';
+import { SocialAuthActions } from '@/components/features/authentication/sections/SocialAuthActions';
 
 // storage key for tracking onboarding completion status
 // this key matches the one used in _layout.tsx for checking onboarding status
