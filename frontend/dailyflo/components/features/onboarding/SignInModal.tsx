@@ -13,10 +13,14 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Animated, Easing, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Animated, Easing, Platform, ScrollView, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useUI } from '@/store/hooks';
+import { useAppDispatch } from '@/store';
+import { loginUser } from '@/store/slices/auth/authSlice';
 import { WrappedDraggableModal, ModalHeader } from '@/components/layout/ModalLayout';
 import { DraggableModalRef } from '@/components/layout/ModalLayout/DraggableModal';
 import { SocialAuthActions } from './SocialAuthActions';
@@ -36,10 +40,16 @@ const SEQUENTIAL_FADE_DELAY = 200; // time between each element fading in
  * Swiping down closes the modal.
  * Contains social auth buttons (sign in variant) and email sign in option.
  */
+// storage key for tracking onboarding completion status
+// this key is used to check if the user has completed the onboarding flow
+const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
+
 export function SignInModal() {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const dispatch = useAppDispatch(); // get dispatch function to call Redux actions
   
   /**
    * Get iOS version number for conditional styling
@@ -94,10 +104,13 @@ export function SignInModal() {
   // modals.emailAuthSignIn controls whether this modal is visible
   // closeModal is a Redux action that closes the modal
   // openModal is a Redux action that opens modals (we use it to open the email auth modal)
+  // setEmailAuthEmail and setEmailAuthPassword are Redux actions to clear form fields
   const { 
     modals: { emailAuthSignIn },
     closeModal,
     openModal,
+    setEmailAuthEmail,
+    setEmailAuthPassword,
   } = useUI();
   
   // trigger animations when modal becomes visible
@@ -141,9 +154,14 @@ export function SignInModal() {
   
   /**
    * Handle modal close
-   * Closes the modal by updating Redux state
+   * Closes the modal and clears all form fields
    */
   const handleClose = () => {
+    // clear email and password fields when modal closes
+    // this ensures form is clean when modal opens again
+    setEmailAuthEmail('');
+    setEmailAuthPassword('');
+    
     // close the modal by updating Redux state
     // this triggers a re-render and hides the modal
     closeModal('emailAuthSignIn');
@@ -191,16 +209,80 @@ export function SignInModal() {
   
   /**
    * Handle email sign in
-   * Submits email and password for authentication
+   * Validates form fields and authenticates user with email and password
+   * Uses Redux loginUser thunk to authenticate, then navigates to home page
    */
   const handleEmailSignIn = async () => {
-    // TODO: Implement email sign in when connecting to API
-    console.log('Email sign in not implemented yet');
-    setEmailAuthInProgress(true);
-    // simulate API call
-    setTimeout(() => {
+    // prevent spam clicks - if authentication is in progress, don't allow another
+    if (emailAuthInProgress) return;
+    
+    // validate that email and password are provided
+    if (!emailAuthEmail || !emailAuthPassword) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+    
+    // basic email validation (check for @ symbol)
+    if (!emailAuthEmail.includes('@')) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+    
+    // basic password validation (at least 6 characters)
+    if (emailAuthPassword.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+    
+    setEmailAuthInProgress(true); // mark email auth as in progress
+    
+    try {
+      // use loginUser thunk to authenticate existing user
+      // loginUser is a Redux async thunk that authenticates an existing user account
+      // Redux thunks are functions that can perform async operations and dispatch actions
+      const loginResult = await dispatch(loginUser({ 
+        email: emailAuthEmail, 
+        password: emailAuthPassword,
+      }));
+      
+      // check if login was successful
+      // loginUser.fulfilled.match checks if the thunk completed successfully
+      if (loginUser.fulfilled.match(loginResult)) {
+        // login successful - mark onboarding as complete and navigate to home page
+        // this ensures returning users don't see onboarding screens again
+        try {
+          // mark onboarding as complete in AsyncStorage
+          // this ensures that when the app is reloaded, it will skip onboarding
+          // AsyncStorage is a simple key-value storage system for React Native
+          await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
+        } catch (error) {
+          // if saving fails, still navigate to main app
+          // the user has successfully signed in, so we should let them continue
+          console.error('Failed to save onboarding completion:', error);
+        }
+        
+        // close the sign-in modal
+        handleClose();
+        
+        // navigate to the home screen (today tab)
+        // use replace to prevent going back to onboarding screens
+        router.replace('/(tabs)/today');
+      } else {
+        // login failed, show error
+        // the error message comes from the Redux thunk
+        const errorMessage = loginUser.rejected.match(loginResult) 
+          ? loginResult.payload as string 
+          : 'Failed to sign in. Please check your email and password.';
+        Alert.alert('Error', errorMessage);
+      }
+    } catch (error) {
+      // handle unexpected errors
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      console.error('Sign in error:', error);
+    } finally {
+      // always reset loading state, even if there was an error
       setEmailAuthInProgress(false);
-    }, 1000);
+    }
   };
   
   const styles = createStyles(themeColors, typography, headerHeight);

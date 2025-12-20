@@ -107,6 +107,13 @@ export const checkAuthStatus = createAsyncThunk(
   }
 );
 
+// mock account credentials for testing
+// this allows testing sign-in functionality without a backend
+const MOCK_ACCOUNT = {
+  email: 'test@example.com',
+  password: 'password123',
+};
+
 // Login with email and password
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
@@ -116,7 +123,14 @@ export const loginUser = createAsyncThunk(
       // const response = await api.login(credentials);
       // return response.data;
       
-      // For now, create a mock user
+      // for now, validate against mock account for testing
+      // check if email and password match the mock account
+      if (credentials.email !== MOCK_ACCOUNT.email || credentials.password !== MOCK_ACCOUNT.password) {
+        // credentials don't match mock account - reject with error
+        return rejectWithValue('Invalid email or password. Please check your credentials and try again.');
+      }
+      
+      // credentials match mock account - create mock user
       const mockUser: User = {
         id: '1',
         email: credentials.email,
