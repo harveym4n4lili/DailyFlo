@@ -1110,3 +1110,20 @@ Updated User app, models, serializers, views and urls
 ### Notes
 - update backlog for onboarding, including action section secondary functionlaity
 - permission functionality
+---
+## [20/12/2025] - [Thursday]
+### Today's Goals
+- [X] Implemented registration and sign in modal, for email auth
+- [X] Implemented mockup authentication for UX testing
+- [X] Completed onboarding navigation flow and screens
+- [X] Updated API client to use secure store for token management
+- [X] Integrated API auths for login, registraiton and logout
+- [X] Implemented an auth check status feature
+- [X] Implemented user scoped task data
+
+### Plans For Future
+- get better understanding of async thunk, redux slice state
+- do a deep run manual test, and ensure backlog is COMPLETELY up to date
+
+### Notes
+- no notes
