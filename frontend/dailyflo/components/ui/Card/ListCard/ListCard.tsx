@@ -187,6 +187,16 @@ export default function ListCard({
     return groupTasks(processedTasks, groupBy);
   }, [processedTasks, groupBy]);
 
+  // sort groups: Today first, then Overdue, then others, Completed last
+  // this must be called unconditionally (before the if/else) to follow Rules of Hooks
+  const sortedGroupEntries = useMemo(() => {
+    // only sort if grouping is enabled, otherwise return empty array
+    if (groupBy === 'none') {
+      return [];
+    }
+    return sortGroupEntries(Object.entries(groupedTasks));
+  }, [groupedTasks, groupBy]);
+
   // handle group toggle with animation tracking
   const handleGroupToggle = (groupTitle: string) => {
     const wasCollapsed = isGroupCollapsed(groupTitle);
@@ -349,12 +359,7 @@ export default function ListCard({
       </View>
     );
   } else {
-    // render grouped list
-    // sort groups: Today first, then Overdue, then others, Completed last
-    const sortedGroupEntries = useMemo(() => {
-      return sortGroupEntries(Object.entries(groupedTasks));
-    }, [groupedTasks]);
-
+    // render grouped list using sortedGroupEntries (already computed above)
     return (
       <View style={styles.container}>
         {/* dropdown list component - shown when dropdownItems are provided */}

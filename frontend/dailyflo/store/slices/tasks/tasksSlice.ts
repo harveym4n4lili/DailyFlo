@@ -912,6 +912,30 @@ const tasksSlice = createSlice({
       state.editingTaskId = action.payload;
     },
     
+    // Clear all tasks (used when user logs out)
+    // This resets the tasks state to initial values
+    // Called when user logs out to ensure no data persists for the next user
+    clearTasks: (state) => {
+      // Reset to initial state values
+      state.tasks = [];
+      state.filteredTasks = [];
+      state.isLoading = false;
+      state.isCreating = false;
+      state.isUpdating = false;
+      state.isDeleting = false;
+      state.error = null;
+      state.createError = null;
+      state.updateError = null;
+      state.deleteError = null;
+      state.selectedTaskIds = [];
+      state.editingTaskId = null;
+      state.currentPage = 1;
+      state.totalTasks = 0;
+      state.hasNextPage = false;
+      state.hasPreviousPage = false;
+      state.lastFetched = null;
+    },
+    
     // Update pagination
     setPagination: (state, action: PayloadAction<{ page: number; pageSize: number }>) => {
       state.currentPage = action.payload.page;
@@ -1162,6 +1186,7 @@ export const {
   setEditingTaskId,
   setPagination,
   optimisticUpdateTask,
+  clearTasks,
 } = tasksSlice.actions;
 
 export default tasksSlice.reducer;

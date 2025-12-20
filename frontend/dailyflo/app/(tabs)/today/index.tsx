@@ -29,7 +29,7 @@ import { useTasks, useUI } from '@/store/hooks';
 // useTasks: Custom hook that provides easy access to task-related state and actions
 // This hook wraps the Redux useSelector and useDispatch to give us typed access to tasks
 // useUI: Custom hook that provides easy access to UI-related state and actions (like modal visibility)
-import { useAppDispatch } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store';
 // useAppDispatch: Typed version of Redux's useDispatch hook
 // This gives us the dispatch function to send actions to the Redux store
 // It's typed to ensure we can only dispatch valid actions
@@ -115,6 +115,10 @@ export default function TodayScreen() {
   // useTasks: Custom hook that provides typed access to the tasks slice state
   // This is defined in store/hooks.ts and wraps Redux's useSelector
 
+  // Get authentication state from Redux
+  // Only fetch tasks if user is authenticated
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+
   // filter tasks to show today's, overdue, and completed tasks
   // useMemo ensures this calculation only runs when tasks change
   const todaysTasks = useMemo(() => {
@@ -195,18 +199,19 @@ export default function TodayScreen() {
   // useEffect runs after the component renders for the first time
   useEffect(() => {
     // Only fetch if:
-    // 1. We haven't fetched yet (lastFetched is null)
-    // 2. AND we're not currently loading
-    // 3. AND there's no error
+    // 1. User is authenticated (has valid tokens)
+    // 2. We haven't fetched yet (lastFetched is null)
+    // 3. AND we're not currently loading
+    // 4. AND there's no error
     // Using lastFetched prevents infinite loops when API returns empty array
-    if (lastFetched === null && !isLoading && !error) {
+    if (isAuthenticated && lastFetched === null && !isLoading && !error) {
       console.log('📡 Dispatching fetchTasks...');
       // dispatch(fetchTasks()): Sends the fetchTasks action to the Redux store
       // This triggers the async thunk defined in store/slices/tasks/tasksSlice.ts
       // The thunk will make an API call and update the store with the results
       dispatch(fetchTasks());
     }
-  }, [lastFetched, isLoading, error, dispatch]);
+  }, [isAuthenticated, lastFetched, isLoading, error, dispatch]);
   
   // watch Redux createTask modal state and open local modal when it becomes true
   // this allows opening the modal from navigation (e.g., from onboarding completion screen)

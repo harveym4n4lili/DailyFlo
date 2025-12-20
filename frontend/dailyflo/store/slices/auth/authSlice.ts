@@ -97,7 +97,7 @@ const initialState: AuthState = {
 // This runs when the app launches to see if the user is still logged in
 export const checkAuthStatus = createAsyncThunk(
   'auth/checkAuthStatus',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, dispatch }) => {
     try {
       // Check if we have valid tokens stored in SecureStore
       // hasValidTokens checks if tokens exist and haven't expired
@@ -137,14 +137,22 @@ export const checkAuthStatus = createAsyncThunk(
         // UserProfileView returns the user object directly, so use userResponse directly
         const user: User = transformApiUserToUser(userResponse.user || userResponse);
         
-        // Return user data and tokens
-        // The user is authenticated and tokens are valid
-        return {
+        // Return user data and tokens FIRST before fetching tasks
+        // This ensures Redux state is updated with auth info before tasks API calls
+        // The auth state update happens in the reducer, which runs after this thunk completes
+        // We'll fetch tasks after auth state is updated (in the reducer or component)
+        const result = {
           user,
           accessToken,
           refreshToken,
           expiresAt: expiry ? new Date(expiry) : new Date(Date.now() + 15 * 60 * 1000),
         };
+        
+        // Note: Tasks will be fetched automatically when user navigates to tasks screen
+        // or after auth state is updated in Redux. We don't fetch here to avoid
+        // making API calls before auth state is properly set in Redux.
+        
+        return result;
       } catch (error: any) {
         // Token validation failed - might be expired or invalid
         // Try to refresh the token using the refresh token
@@ -178,13 +186,22 @@ export const checkAuthStatus = createAsyncThunk(
               const profileResponse = await authApiService.getCurrentUser();
               const user: User = transformApiUserToUser(profileResponse.user || profileResponse);
               
-              // Return user data and new tokens
-              return {
+              // Return user data and new tokens FIRST before fetching tasks
+              // This ensures Redux state is updated with auth info before tasks API calls
+              // The auth state update happens in the reducer, which runs after this thunk completes
+              // We'll fetch tasks after auth state is updated (in the reducer or component)
+              const result = {
                 user,
                 accessToken: newAccessToken,
                 refreshToken: newRefreshToken,
                 expiresAt: new Date(newExpiryTime),
               };
+              
+              // Note: Tasks will be fetched automatically when user navigates to tasks screen
+              // or after auth state is updated in Redux. We don't fetch here to avoid
+              // making API calls before auth state is properly set in Redux.
+              
+              return result;
             }
           } catch (refreshError) {
             // Refresh failed - tokens are invalid, user needs to log in again
@@ -275,7 +292,7 @@ function transformApiPreferencesToPreferences(apiPrefs: any): UserPreferences {
  */
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
-  async (credentials: LoginUserInput, { rejectWithValue }) => {
+  async (credentials: LoginUserInput, { rejectWithValue, dispatch }) => {
     try {
       // Call the API service to login
       // The API service makes the HTTP request to Django backend
@@ -333,8 +350,10 @@ export const loginUser = createAsyncThunk(
       const expiryTime = Date.now() + (15 * 60 * 1000); // 15 minutes in milliseconds
       await storeTokenExpiry(expiryTime);
       
-      // Return user data and tokens
+      // Return user data and tokens FIRST
       // Redux will automatically update the state with this data via the reducer
+      // Tasks will be fetched automatically when user navigates to tasks screen
+      // or can be fetched after auth state is updated in Redux
       return {
         user,
         accessToken,
@@ -415,20 +434,21 @@ export const loginUser = createAsyncThunk(
  */
 export const registerUser = createAsyncThunk(
   'auth/registerUser',
-  async (userData: RegisterUserInput, { rejectWithValue }) => {
+  async (userData: RegisterUserInput, { rejectWithValue, dispatch }) => {
     try {
       // Call the API service to register
       // authApiService.register() sends a POST request to /accounts/auth/register/ endpoint
       // Backend expects snake_case field names (first_name, last_name, password_confirm)
       // Django requires password_confirm to match password for validation - we send the same password for both
       // since the frontend form only has one password field (users enter password once)
+      // The authApiService.register() accepts the raw registration data directly (not wrapped)
       const response = await authApiService.register({
         email: userData.email,
         password: userData.password,
         password_confirm: userData.password, // Django requires password confirmation - use same password
         first_name: userData.firstName,
         last_name: userData.lastName,
-      });
+      } as any); // Type assertion needed because RegisterRequest type definition doesn't match actual API implementation
       
       // Log the full response for debugging
       // This helps us see the exact structure Django returns
@@ -466,9 +486,10 @@ export const registerUser = createAsyncThunk(
       const expiryTime = Date.now() + (15 * 60 * 1000); // 15 minutes in milliseconds
       await storeTokenExpiry(expiryTime);
       
-      // Return user data and tokens
+      // Return user data and tokens FIRST
       // Redux will automatically update the state with this data via the reducer
       // User is automatically logged in after successful registration
+      // New users won't have tasks yet, so tasks will be fetched when they navigate to tasks screen
       return {
         user,
         accessToken,
@@ -657,12 +678,27 @@ export const logoutUser = createAsyncThunk(
       // This clears user data, tokens, and authentication status from Redux
       dispatch(logout());
       
+      // Clear tasks when user logs out
+      // This ensures tasks from the previous user don't persist for the next user
+      // Import clearTasks action from tasks slice to reset task state
+      const { clearTasks } = await import('../tasks/tasksSlice');
+      dispatch(clearTasks());
+      
       // Return success - the reducer handles clearing the state
       return true;
     } catch (error) {
       // Even if clearing tokens fails, we still want to clear Redux state
       // This ensures the user appears logged out even if there's a storage error
       dispatch(logout());
+      
+      // Try to clear tasks even if token clearing failed
+      try {
+        const { clearTasks } = await import('../tasks/tasksSlice');
+        dispatch(clearTasks());
+      } catch (taskClearError) {
+        console.error('Error clearing tasks during logout:', taskClearError);
+      }
+      
       console.error('Error during logout (tokens may not have been cleared):', error);
       return true;
     }
