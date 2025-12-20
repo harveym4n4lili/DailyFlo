@@ -17,6 +17,10 @@ import {
   storeRefreshToken,
   storeTokenExpiry,
   clearAllTokens,
+  getAccessToken,
+  getRefreshToken,
+  getTokenExpiry,
+  hasValidTokens,
 } from '../../../services/auth/tokenStorage';
 
 /**
@@ -90,29 +94,116 @@ const initialState: AuthState = {
  */
 
 // Check if user is already authenticated (on app startup)
+// This runs when the app launches to see if the user is still logged in
 export const checkAuthStatus = createAsyncThunk(
   'auth/checkAuthStatus',
   async (_, { rejectWithValue }) => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.checkAuthStatus();
-      // return response.data;
+      // Check if we have valid tokens stored in SecureStore
+      // hasValidTokens checks if tokens exist and haven't expired
+      const hasValid = await hasValidTokens();
       
-      // For now, check if we have stored tokens
-      const storedToken = localStorage.getItem('accessToken');
-      const storedUser = localStorage.getItem('user');
-      
-      if (storedToken && storedUser) {
-        return {
-          user: JSON.parse(storedUser),
-          accessToken: storedToken,
-          refreshToken: localStorage.getItem('refreshToken'),
-          tokenExpiry: parseInt(localStorage.getItem('tokenExpiry') || '0'),
-        };
+      if (!hasValid) {
+        // No valid tokens, user is not authenticated
+        // Clear any leftover invalid tokens
+        await clearAllTokens();
+        return null;
       }
       
-      return null;
+      // Get tokens from SecureStore
+      // These are the tokens we stored when the user logged in
+      const accessToken = await getAccessToken();
+      const refreshToken = await getRefreshToken();
+      const expiry = await getTokenExpiry();
+      
+      if (!accessToken || !refreshToken) {
+        // Tokens missing, clear everything
+        await clearAllTokens();
+        return null;
+      }
+      
+      // Validate token with backend by fetching user profile
+      // This makes an API call to verify the token is still valid on the server
+      // If the token is invalid, we'll get a 401 and can try to refresh
+      try {
+        // Call getCurrentUser to verify token and get user data
+        // This endpoint requires authentication, so if the token is valid, we get user data
+        // If the token is invalid, we get a 401 error
+        // Django UserProfileView returns user data directly (not wrapped in { user: ... })
+        const userResponse = await authApiService.getCurrentUser();
+        
+        // Transform API response to match our User interface
+        // Backend returns snake_case, frontend uses camelCase
+        // UserProfileView returns the user object directly, so use userResponse directly
+        const user: User = transformApiUserToUser(userResponse.user || userResponse);
+        
+        // Return user data and tokens
+        // The user is authenticated and tokens are valid
+        return {
+          user,
+          accessToken,
+          refreshToken,
+          expiresAt: expiry ? new Date(expiry) : new Date(Date.now() + 15 * 60 * 1000),
+        };
+      } catch (error: any) {
+        // Token validation failed - might be expired or invalid
+        // Try to refresh the token using the refresh token
+        if (error.response?.status === 401) {
+          // Token is invalid/expired, try to refresh it
+          try {
+            // Call refresh token endpoint to get a new access token
+            const refreshResponse = await authApiService.refreshToken({
+              refresh: refreshToken,
+            });
+            
+            // Extract new tokens from response
+            // Backend returns tokens in different formats, handle both
+            const newAccessToken = refreshResponse.access || refreshResponse.data?.access;
+            const newRefreshToken = refreshResponse.refresh || refreshResponse.data?.refresh || refreshToken;
+            
+            if (newAccessToken) {
+              // Successfully refreshed tokens, store the new ones
+              await storeAccessToken(newAccessToken);
+              if (newRefreshToken !== refreshToken) {
+                // If backend rotated the refresh token, store the new one
+                await storeRefreshToken(newRefreshToken);
+              }
+              
+              // Calculate new expiry time (15 minutes from now)
+              const newExpiryTime = Date.now() + (15 * 60 * 1000);
+              await storeTokenExpiry(newExpiryTime);
+              
+              // Try to get user profile again with the new token
+              // UserProfileView returns user data directly
+              const profileResponse = await authApiService.getCurrentUser();
+              const user: User = transformApiUserToUser(profileResponse.user || profileResponse);
+              
+              // Return user data and new tokens
+              return {
+                user,
+                accessToken: newAccessToken,
+                refreshToken: newRefreshToken,
+                expiresAt: new Date(newExpiryTime),
+              };
+            }
+          } catch (refreshError) {
+            // Refresh failed - tokens are invalid, user needs to log in again
+            console.error('Token refresh failed during auth check:', refreshError);
+            await clearAllTokens();
+            return null;
+          }
+        }
+        
+        // If we get here, validation failed and refresh didn't work
+        // Clear tokens and return null (user needs to log in again)
+        await clearAllTokens();
+        return null;
+      }
     } catch (error) {
+      // On any error, assume user is not authenticated
+      // This is the safest approach - better to ask user to log in than to allow invalid access
+      console.error('Failed to check auth status:', error);
+      await clearAllTokens();
       return rejectWithValue(error instanceof Error ? error.message : 'Failed to check auth status');
     }
   }
@@ -645,21 +736,35 @@ const authSlice = createSlice({
       .addCase(checkAuthStatus.fulfilled, (state, action) => {
         state.isLoading = false;
         if (action.payload) {
+          // User is authenticated, restore their session
           state.user = action.payload.user;
           state.isAuthenticated = true;
           state.accessToken = action.payload.accessToken;
           state.refreshToken = action.payload.refreshToken;
-          state.tokenExpiry = action.payload.tokenExpiry;
+          state.tokenExpiry = action.payload.expiresAt.getTime();
+          state.authMethod = action.payload.user.authProvider;
+          state.lastLoginTime = Date.now();
+        } else {
+          // No valid tokens, user is not authenticated
+          state.isAuthenticated = false;
+          state.user = null;
+          state.accessToken = null;
+          state.refreshToken = null;
+          state.tokenExpiry = null;
+          state.authMethod = null;
         }
       })
       .addCase(checkAuthStatus.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
-        // Clear any stored tokens on error
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        localStorage.removeItem('tokenExpiry');
+        // User is not authenticated
+        state.isAuthenticated = false;
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.tokenExpiry = null;
+        state.authMethod = null;
+        // Note: Tokens are cleared by the thunk, no need to clear here
       })
       
       // Handle loginUser actions
