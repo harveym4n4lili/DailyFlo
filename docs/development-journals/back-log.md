@@ -2,11 +2,42 @@
 
 This document tracks features, improvements, and technical debt items that are planned for future implementation. Items are organized by priority and category.
 
-**Last Updated**: 2025-01-20 (Updated from dev-log analysis)
+**Last Updated**: 2025-01-20 (Updated with authentication API integration progress)
 
 ---
 
 ## 🔴 High Priority
+
+### Authentication API Integration - Remaining Items
+
+#### Social Authentication Implementation
+- **Status**: Not Started
+- **Description**: Implement functionality for social auth buttons (Google, Apple, Facebook)
+- **Files**: 
+  - `store/slices/auth/authSlice.ts` (update socialAuth thunk)
+  - `services/api/auth.ts` (connect to social auth API endpoint)
+  - `components/features/authentication/sections/SocialAuthActions.tsx` (wire up button handlers)
+  - `components/features/onboarding/OnboardingActions.tsx` (connect handleSocialAuth)
+- **Details**: 
+  - Connect socialAuth Redux thunk to backend API endpoint `/accounts/auth/social/`
+  - Integrate with Expo AuthSession or appropriate social auth libraries
+  - Handle provider token validation and user creation/retrieval
+  - Store tokens securely after successful social auth
+  - Handle social auth errors and edge cases
+- **Reference**: `docs/technical-design/authentication/plan/auth-api-integration.md` - Step 3 (partial), backend endpoint exists
+
+#### Onboarding Reminders Message Functionality
+- **Status**: Not Started
+- **Description**: Implement reminder permission request functionality on reminders screen
+- **Files**: 
+  - `app/(onboarding)/reminders.tsx` (implement permission request)
+  - `components/features/onboarding/OnboardingActions.tsx` (implement handleAllow)
+- **Details**: 
+  - Request notification permissions from device
+  - Handle permission grant/denial appropriately
+  - Store permission status
+  - Navigate to next screen after handling permissions
+- **Reference**: Onboarding reminders screen exists but permission handling is not implemented
 
 ### Tasks API Integration - Remaining Items
 
@@ -295,7 +326,56 @@ This document tracks features, improvements, and technical debt items that are p
 
 ## ✅ Completed (Archive)
 
-*Items moved here after completion*
+### Authentication API Integration - Completed Steps
+
+#### Secure Token Storage Implementation
+- **Status**: ✅ Completed
+- **Description**: Implemented secure token storage using Expo SecureStore
+- **Files**: `services/auth/tokenStorage.ts`
+- **Details**: Created functions to store, retrieve, and clear access tokens, refresh tokens, and expiry timestamps using encrypted device storage
+- **Completed**: 20/01/2025
+
+#### API Client Token Management
+- **Status**: ✅ Completed
+- **Description**: Updated API client to use stored tokens and handle automatic token refresh
+- **Files**: `services/api/client.ts`
+- **Details**: Implemented request interceptor to add auth headers, response interceptor for automatic token refresh on 401 errors, proper error handling
+- **Completed**: 20/01/2025
+
+#### Login API Integration
+- **Status**: ✅ Completed
+- **Description**: Connected loginUser Redux thunk to real backend API
+- **Files**: `store/slices/auth/authSlice.ts`, `services/api/auth.ts`
+- **Details**: Integrated with TokenObtainPairView endpoint, handles username/password authentication, stores tokens securely, fetches user data separately, comprehensive error handling
+- **Completed**: 20/01/2025
+
+#### Registration API Integration
+- **Status**: ✅ Completed
+- **Description**: Connected registerUser Redux thunk to real backend API
+- **Files**: `store/slices/auth/authSlice.ts`, `services/api/auth.ts`
+- **Details**: Integrated with UserRegistrationView endpoint, includes password_confirm field, transforms API responses from snake_case to camelCase, stores tokens securely, comprehensive error handling
+- **Completed**: 20/01/2025
+
+#### Token Refresh Logic
+- **Status**: ✅ Completed
+- **Description**: Implemented automatic token refresh in API client response interceptor
+- **Files**: `services/api/client.ts`
+- **Details**: Handles 401 errors by refreshing access token using refresh token, retries failed requests, clears tokens and logs out on refresh failure
+- **Completed**: 20/01/2025
+
+#### Check Auth Status on App Launch
+- **Status**: ✅ Completed
+- **Description**: Implemented authentication status check on app launch using SecureStore
+- **Files**: `store/slices/auth/authSlice.ts`, `app/_layout.tsx`
+- **Details**: Checks for valid tokens, validates with backend, automatically refreshes expired tokens, clears invalid tokens, restores user session on successful validation
+- **Completed**: 20/01/2025
+
+#### Logout Functionality
+- **Status**: ✅ Completed
+- **Description**: Implemented logout functionality with secure token clearing
+- **Files**: `store/slices/auth/authSlice.ts`, `app/(tabs)/settings/index.tsx`
+- **Details**: Created logoutUser async thunk, clears tokens from SecureStore, clears Redux state, resets onboarding status, navigates to welcome screen, added logout button to settings page
+- **Completed**: 20/01/2025
 
 ---
 
