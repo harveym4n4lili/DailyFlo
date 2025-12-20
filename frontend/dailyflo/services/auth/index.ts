@@ -13,3 +13,15 @@ export { default as authService } from './AuthService';
 
 // Token Management - JWT token handling and refresh
 export { TokenManager } from './TokenManager';
+
+// Token Storage - Secure storage for authentication tokens (using Expo SecureStore)
+export {
+  storeAccessToken,
+  getAccessToken,
+  storeRefreshToken,
+  getRefreshToken,
+  storeTokenExpiry,
+  getTokenExpiry,
+  clearAllTokens,
+  hasValidTokens,
+} from './tokenStorage';

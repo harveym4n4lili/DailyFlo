@@ -93,6 +93,9 @@ export interface ListCardProps {
   headerTitle?: string; // title to display in header
   headerSubtitle?: string; // subtitle to display in header
   
+  // padding support
+  paddingTop?: number; // top padding for the list container
+  
   // dropdown menu support
   // array of menu items to display in the dropdown menu (shown as ellipse button in header)
   // if provided, an ellipse button will appear in the header to open the dropdown
@@ -137,6 +140,7 @@ export default function ListCard({
   scrollEventThrottle = 16,
   headerTitle,
   headerSubtitle,
+  paddingTop,
   dropdownItems,
   dropdownAnchorPosition = 'top-right',
   dropdownTopOffset = 0,
@@ -159,8 +163,8 @@ export default function ListCard({
 
   // create dynamic styles using the color palette system and typography system
   const styles = useMemo(
-    () => createStyles(themeColors, semanticColors, typography, insets),
-    [themeColors, semanticColors, typography, insets]
+    () => createStyles(themeColors, semanticColors, typography, insets, paddingTop),
+    [themeColors, semanticColors, typography, insets, paddingTop]
   );
 
   // use custom hooks for animation management
@@ -182,6 +186,16 @@ export default function ListCard({
   const groupedTasks = useMemo(() => {
     return groupTasks(processedTasks, groupBy);
   }, [processedTasks, groupBy]);
+
+  // sort groups: Today first, then Overdue, then others, Completed last
+  // this must be called unconditionally (before the if/else) to follow Rules of Hooks
+  const sortedGroupEntries = useMemo(() => {
+    // only sort if grouping is enabled, otherwise return empty array
+    if (groupBy === 'none') {
+      return [];
+    }
+    return sortGroupEntries(Object.entries(groupedTasks));
+  }, [groupedTasks, groupBy]);
 
   // handle group toggle with animation tracking
   const handleGroupToggle = (groupTitle: string) => {
@@ -296,13 +310,14 @@ export default function ListCard({
   }
 
   // create refresh control for pull-to-refresh functionality
+  // progressViewOffset accounts for contentInset top to ensure refresh indicator appears correctly
   const refreshControl = onRefresh ? (
     <RefreshControl
       refreshing={refreshing}
       onRefresh={onRefresh}
       tintColor="#007AFF" // iOS blue color for pull-to-refresh indicator
-      progressViewOffset={20} // Offset from top
-      style={{ padding: 20 }}
+      progressViewOffset={insets.top} // offset from top to account for contentInset
+      style={{ paddingTop: 32 }}
     />
   ) : undefined;
 
@@ -337,16 +352,14 @@ export default function ListCard({
           // this ensures content can scroll all the way to the top without being cut off
           // the top inset creates extra scrollable space above the content
           contentInset={{ top: insets.top }}
+          // initial scroll offset matches the position after refresh control completes
+          // this ensures the header title doesn't touch the top edge initially
+          contentOffset={{ x: 0, y: -insets.top }}
         />
       </View>
     );
   } else {
-    // render grouped list
-    // sort groups: Today first, then Overdue, then others, Completed last
-    const sortedGroupEntries = useMemo(() => {
-      return sortGroupEntries(Object.entries(groupedTasks));
-    }, [groupedTasks]);
-
+    // render grouped list using sortedGroupEntries (already computed above)
     return (
       <View style={styles.container}>
         {/* dropdown list component - shown when dropdownItems are provided */}
@@ -423,6 +436,9 @@ export default function ListCard({
           // this ensures content can scroll all the way to the top without being cut off
           // the top inset creates extra scrollable space above the content
           contentInset={{ top: insets.top }}
+          // initial scroll offset matches the position after refresh control completes
+          // this ensures the header title doesn't touch the top edge initially
+          contentOffset={{ x: 0, y: -insets.top }}
         />
       </View>
     );
@@ -434,7 +450,8 @@ const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
   semanticColors: ReturnType<typeof useSemanticColors>,
   typography: ReturnType<typeof useTypography>,
-  insets: { top: number; bottom: number; left: number; right: number }
+  insets: { top: number; bottom: number; left: number; right: number },
+  paddingTop?: number
 ) =>
   StyleSheet.create({
     // main container
@@ -447,6 +464,7 @@ const createStyles = (
     // list container for proper spacing
     // extra bottom padding to allow scrolling tasks above the FAB
     listContainer: {
+      paddingTop: paddingTop ?? 0, // top padding for list container (optional, defaults to 0)
       paddingBottom: 58 + 80 + 16 + insets.bottom + 40, // FAB height (58px) + navbar height (80px) + spacing (16px) + safe area bottom + extra space (40px)
       paddingHorizontal: 20, // horizontal padding for task cards
       // ensure content can scroll all the way to bottom of screen

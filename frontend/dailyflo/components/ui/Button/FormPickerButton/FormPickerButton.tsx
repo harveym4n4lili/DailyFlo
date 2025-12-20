@@ -154,10 +154,11 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   // use forceSelected to override the hasValue logic for cases like icon picker
   const hasValue = forceSelected || !!finalDisplayText;
   
-  // create animated container if highlightOpacity is provided
+  // create animated container - always use View (not Fragment) so we can apply styles
+  // use Animated.View when highlightOpacity is provided, regular View otherwise
   // this allows the button to have a subtle highlight animation when pressed
   // flow: user taps button → parent triggers animation → background color smoothly transitions
-  const AnimatedContainer = highlightOpacity ? Animated.View : React.Fragment;
+  const AnimatedContainer = highlightOpacity ? Animated.View : View;
   
   // get animated styles if highlightOpacity is provided and has value
   // use opacity-based highlight overlay instead of backgroundColor interpolation
