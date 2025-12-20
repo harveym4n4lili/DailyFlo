@@ -7,3 +7,6 @@
 export { MainCloseButton } from './MainCloseButton';
 export type { MainCloseButtonProps } from './MainCloseButton';
 
+export { MainBackButton } from './MainBackButton';
+export type { MainBackButtonProps } from './MainBackButton';
+

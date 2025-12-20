@@ -16,6 +16,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Animated, Easing, Platform, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useUI } from '@/store/hooks';
@@ -100,6 +101,13 @@ export function SignInModal() {
   const emailLinkOpacity = useRef(new Animated.Value(0)).current;
   const emailLinkScale = useRef(new Animated.Value(0.8)).current;
   
+  // animated values for email auth section sequential fade-in
+  // email auth section and sign in button animate sequentially when email view loads
+  const emailAuthSectionOpacity = useRef(new Animated.Value(0)).current;
+  const emailAuthSectionScale = useRef(new Animated.Value(0.8)).current;
+  const signInButtonOpacity = useRef(new Animated.Value(0)).current;
+  const signInButtonScale = useRef(new Animated.Value(0.8)).current;
+  
   // get modal visibility state from Redux UI slice
   // modals.emailAuthSignIn controls whether this modal is visible
   // closeModal is a Redux action that closes the modal
@@ -126,9 +134,18 @@ export function SignInModal() {
       emailLinkOpacity.setValue(0);
       emailLinkScale.setValue(0.8);
       
-      // animate email link after social buttons (delay depends on number of buttons)
-      // Facebook (delay 1), Google (delay 2), Apple if iOS (delay 3), then email link
-      const emailLinkDelay = 4 * SEQUENTIAL_FADE_DELAY; // after all social buttons
+      // animate email link after social buttons finish animating
+      // social buttons animate sequentially: Facebook (delay 1), Google (delay 2), Apple if iOS (delay 3)
+      // each button animation takes 400ms duration
+      // calculate delay to start after the last button finishes:
+      // - iOS: Apple button starts at delay 3 (600ms), finishes at 1000ms (600ms + 400ms duration)
+      // - Android: Google button starts at delay 2 (400ms), finishes at 800ms (400ms + 400ms duration)
+      const animationDuration = 400; // duration of each social button animation
+      const lastButtonDelay = Platform.OS === 'ios' 
+        ? SEQUENTIAL_FADE_DELAY * 3  // Apple button delay (600ms)
+        : SEQUENTIAL_FADE_DELAY * 2;  // Google button delay (400ms)
+      const emailLinkDelay = lastButtonDelay + animationDuration; // start after last button finishes
+      
       Animated.parallel([
         Animated.timing(emailLinkOpacity, {
           toValue: 1,
@@ -151,6 +168,60 @@ export function SignInModal() {
       setViewMode('social');
     }
   }, [emailAuthSignIn, emailLinkOpacity, emailLinkScale]);
+  
+  // animate email auth section sequentially when viewMode switches to 'email'
+  // email auth section fades in first, then sign in button fades in after delay
+  useEffect(() => {
+    if (viewMode === 'email') {
+      // reset animation values when email view loads
+      // start all elements invisible and slightly smaller
+      emailAuthSectionOpacity.setValue(0);
+      emailAuthSectionScale.setValue(0.8);
+      signInButtonOpacity.setValue(0);
+      signInButtonScale.setValue(0.8);
+      
+      // animate email auth section first (no delay) - fade in and scale up simultaneously
+      Animated.parallel([
+        Animated.timing(emailAuthSectionOpacity, {
+          toValue: 1,
+          duration: 400,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(emailAuthSectionScale, {
+          toValue: 1,
+          duration: 400,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+      
+      // animate sign in button second (after delay) - fade in and scale up simultaneously
+      Animated.parallel([
+        Animated.timing(signInButtonOpacity, {
+          toValue: 1,
+          duration: 400,
+          delay: SEQUENTIAL_FADE_DELAY,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(signInButtonScale, {
+          toValue: 1,
+          duration: 400,
+          delay: SEQUENTIAL_FADE_DELAY,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // reset animation values when switching away from email view
+      // this ensures fresh animations when email view loads again
+      emailAuthSectionOpacity.setValue(0);
+      emailAuthSectionScale.setValue(0.8);
+      signInButtonOpacity.setValue(0);
+      signInButtonScale.setValue(0.8);
+    }
+  }, [viewMode, emailAuthSectionOpacity, emailAuthSectionScale, signInButtonOpacity, signInButtonScale]);
   
   /**
    * Handle modal close
@@ -195,6 +266,21 @@ export function SignInModal() {
     
     // switch view mode to show email auth form instead of social auth buttons
     setViewMode('email');
+  };
+  
+  /**
+   * Handle back button press
+   * Reverts modal back to social auth view (first section)
+   */
+  const handleBack = () => {
+    // switch view mode back to social auth buttons
+    setViewMode('social');
+    
+    // reset snap index to middle (index 1 = 0.65)
+    setCurrentSnapIndex(1);
+    
+    // snap modal back to middle snap point
+    draggableModalRef.current?.snapToIndex(1);
   };
   
   // track if email sign in is in progress
@@ -285,7 +371,7 @@ export function SignInModal() {
     }
   };
   
-  const styles = createStyles(themeColors, typography, headerHeight);
+  const styles = createStyles(themeColors, typography, headerHeight, insets);
   
   return (
     <WrappedDraggableModal
@@ -303,7 +389,7 @@ export function SignInModal() {
       backgroundColor={themeColors.background.primary()}
       backdropDismiss={true}
     >
-      {/* modal header with close button on left and drag indicator */}
+      {/* modal header with close/back button on left and drag indicator */}
       {/* absolutely positioned to float over content */}
       {/* header is draggable - user can swipe down from here to close modal */}
       <View 
@@ -315,18 +401,50 @@ export function SignInModal() {
           zIndex: 10, // ensure header is above scrollable content
         }}
       >
-        {/* modal header with close button and drag indicator */}
-        {/* close button is integrated into ModalHeader component using MainCloseButton */}
-        <ModalHeader
-          showCloseButton={true}
-          closeButtonPosition="left"
-          showDragIndicator={true}
-          onClose={handleClose}
-          showBorder={false}
-          useMainCloseButton={true}
-          taskCategoryColor="blue"
-          backgroundColor="transparent"
-        />
+        {/* modal header with drag indicator and custom white close/back button */}
+        {/* button switches between close (social view) and back (email view) */}
+        <View style={{ position: 'relative' }}>
+          {/* conditionally render close button or back button based on viewMode */}
+          {/* social view: show white close button that closes modal */}
+          {/* email view: show white back button that returns to social view */}
+          {viewMode === 'social' ? (
+            // close button - shown when in social auth view
+            // custom white close button positioned within header
+            <TouchableOpacity
+              onPress={handleClose}
+              style={styles.closeButton}
+            >
+              <Ionicons
+                name="close"
+                size={32}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
+          ) : (
+            // back button - shown when in email auth view
+            // custom white back button positioned within header
+            // icon size matches onboarding screens (24px) for consistency
+            <TouchableOpacity
+              onPress={handleBack}
+              style={styles.closeButton}
+            >
+              <Ionicons
+                name="arrow-back"
+                size={24}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
+          )}
+          
+          {/* modal header with drag indicator (close button hidden, using custom white button above) */}
+          <ModalHeader
+            showCloseButton={false}
+            showDragIndicator={true}
+            onClose={handleClose}
+            showBorder={false}
+            backgroundColor="transparent"
+          />
+        </View>
       </View>
       
       {/* main content area */}
@@ -372,9 +490,18 @@ export function SignInModal() {
           {/* reusable component with email and password input fields */}
           {/* variant="signin" hides first name and last name fields */}
           {/* flex: 1 allows content to take available space above keyboard-anchored bottom section */}
-          <View style={styles.emailAuthSectionContainer}>
+          {/* fades in and scales up first (top animated element) */}
+          <Animated.View
+            style={[
+              styles.emailAuthSectionContainer,
+              {
+                opacity: emailAuthSectionOpacity,
+                transform: [{ scale: emailAuthSectionScale }],
+              },
+            ]}
+          >
             <EmailAuthSection variant="signin" />
-          </View>
+          </Animated.View>
           
           {/* Sign In Button */}
           {/* anchored to keyboard using KeyboardAnchoredContainer */}
@@ -382,8 +509,18 @@ export function SignInModal() {
           {/* when switching fields, keyboard height stays locked - no position recalculation */}
           {/* this prevents twitching when user switches between input fields */}
           {/* offset={96} ensures more spacing from keyboard for better visual separation */}
+          {/* fades in and scales up second (bottom animated element) */}
           <KeyboardAnchoredContainer offset={0}>
-            <View style={[styles.signInButtonContainer, { paddingBottom: insets.bottom }]}>
+            <Animated.View
+              style={[
+                styles.signInButtonContainer,
+                { paddingBottom: insets.bottom },
+                {
+                  opacity: signInButtonOpacity,
+                  transform: [{ scale: signInButtonScale }],
+                },
+              ]}
+            >
               <TouchableOpacity
                 style={styles.signInButton}
                 onPress={handleEmailSignIn}
@@ -394,7 +531,7 @@ export function SignInModal() {
                   {emailAuthInProgress ? 'Signing in...' : 'Sign In'}
                 </Text>
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           </KeyboardAnchoredContainer>
         </View>
       )}
@@ -409,8 +546,24 @@ export function SignInModal() {
 const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>,
-  headerHeight: number
+  headerHeight: number,
+  insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
+  closeButton: {
+    // absolutely position close button at top left within ModalHeader
+    // positioned to match ModalHeader's close button position (16px from top and left for iOS 15+)
+    // circular button matching iOS 15+ style from MainCloseButton
+    position: 'absolute',
+    left: 16, // matches ModalHeader's closeButtonSpacing for iOS 15+
+    top: 16, // matches ModalHeader's closeButtonSpacing for iOS 15+ (safe area handled by container)
+    zIndex: 11, // ensure button appears above ModalHeader content
+    width: 42,
+    height: 42,
+    borderRadius: 21, // circular shape
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: themeColors.background.lightOverlay(), // tertiary background like MainCloseButton
+  },
   contentContainer: {
     flex: 1,
     // add top padding to account for absolutely positioned header
