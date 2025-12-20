@@ -457,7 +457,7 @@ export function OnboardingActions() {
                 activeOpacity={0.7}
               >
                 <Text style={styles.secondaryLinkText}>
-                  Already have an account? <Text style={styles.secondaryLinkHighlight}>Sign Up</Text>
+                  Already have an account? <Text style={styles.secondaryLinkHighlight}>Sign in</Text>
                 </Text>
               </TouchableOpacity>
             </Animated.View>

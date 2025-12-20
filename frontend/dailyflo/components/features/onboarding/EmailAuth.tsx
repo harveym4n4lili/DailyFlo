@@ -1,5 +1,5 @@
 /**
- * Email Auth Component
+ * Email auth Section Component
  * 
  * A reusable, modular component for email/password authentication inputs.
  * Contains first name, last name, email, and password input fields.
@@ -25,9 +25,9 @@ import { useTypography } from '@/hooks/useTypography';
 import { useUI } from '@/store/hooks';
 
 /**
- * Props for EmailAuth component
+ * Props for Email auth Section component
  */
-export interface EmailAuthProps {
+export interface EmailAuthSectionProps {
   /**
    * Optional container style
    * Allows parent to customize positioning or spacing
@@ -48,7 +48,7 @@ export interface EmailAuthProps {
 }
 
 /**
- * Email Auth Component
+ * Email auth Section Component
  * 
  * Renders a container with input fields based on variant:
  * - Register variant: First Name, Last Name, Email, Password
@@ -57,7 +57,7 @@ export interface EmailAuthProps {
  * All inputs are connected to Redux state and can be accessed by parent components.
  * The component handles its own focus management.
  */
-export function EmailAuth({ containerStyle, onReady, variant = 'register' }: EmailAuthProps) {
+export function EmailAuthSection({ containerStyle, onReady, variant = 'register' }: EmailAuthSectionProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
   

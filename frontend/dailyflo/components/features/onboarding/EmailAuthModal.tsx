@@ -1,12 +1,12 @@
 /**
- * Email Auth Modal Component
+ * Email Auth Register Modal Component
  * 
  * A full-screen modal that displays the email authentication form.
  * This modal pops up when users click "Sign up with Email" on the signup screen.
  * 
  * Features:
  * - Full-screen modal presentation
- * - Contains EmailAuth component
+ * - Contains Email auth Section component
  * - Register button anchored to keyboard
  * - Close button to dismiss modal
  * - Clears form fields when closed
@@ -24,13 +24,13 @@ import { useAppDispatch } from '@/store';
 import { registerUser, loginUser } from '@/store/slices/auth/authSlice';
 import { WrappedFullScreenModal } from '@/components/layout/ModalLayout/WrappedFullScreenModal';
 import { KeyboardAnchoredContainer } from '@/components/layout/ScreenLayout';
-import { EmailAuth } from './EmailAuth';
+import { EmailAuthSection } from './EmailAuth';
 
 // animation configuration - adjust delay between sequential fade-ins (in milliseconds)
 const SEQUENTIAL_FADE_DELAY = 200; // time between each element fading in
 
 /**
- * Email Auth Modal Component
+ * Email Auth Register Modal Component
  * 
  * Renders a full-screen modal with the email authentication form.
  * The modal is controlled by Redux state (modals.emailAuth).
@@ -38,7 +38,7 @@ const SEQUENTIAL_FADE_DELAY = 200; // time between each element fading in
  * 
  * @param variant - 'register' for new user registration, 'signin' for existing user login
  */
-export function EmailAuthModal({ variant = 'register' }: { variant?: 'register' | 'signin' }) {
+export function EmailAuthRegisterModal({ variant = 'register' }: { variant?: 'register' | 'signin' }) {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
@@ -277,8 +277,8 @@ export function EmailAuthModal({ variant = 'register' }: { variant?: 'register' 
           />
         </TouchableOpacity>
         
-        {/* Email Auth Component */}
-        {/* This is the modular email auth component with all input fields */}
+        {/* Email auth Section Component */}
+        {/* This is the modular email auth section component with all input fields */}
         {/* flex: 1 allows content to take available space above keyboard-anchored bottom section */}
         {/* fades in and scales up first (top animated element) */}
         <Animated.View
@@ -290,7 +290,7 @@ export function EmailAuthModal({ variant = 'register' }: { variant?: 'register' 
             transform: [{ scale: emailAuthScale }],
           }}
         >
-          <EmailAuth variant={variant} />
+          <EmailAuthSection variant={variant} />
         </Animated.View>
         
         {/* Register/Sign In Button Section */}
