@@ -1056,3 +1056,74 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - no notes
+---
+## [16/12/2025] - [Tuesday]
+### Today's Goals
+- [X] Implemented retry logic for api fetch
+- [X] merged task api integration branch with main
+- [X] prepared onboarding and auth plans
+
+### Plans For Future
+- get better understanding of async thunk, redux slice state
+- Learn and record how to test api integration
+- plan to implement UI loading states and completion toasts
+- plan to implement focus feature
+- plan to implement user onboard
+
+### Notes
+- no notes
+---
+## [17/12/2025] - [Wednesday]
+### Today's Goals
+- [X] Implemented retry logic for api fetch
+- [X] merged task api integration branch with main
+- [X] started new auth-onboarding branch
+- [X] created implementation and api integration plans for onboarding and auth
+ -[X] started implementation of onboarding screen UI
+
+### Plans For Future
+- get better understanding of async thunk, redux slice state
+- Learn and record how to test api integration
+- plan to implement UI loading states and completion toasts
+- plan to implement focus feature
+- plan to implement user onboard
+
+### Notes
+- update backlog for onboarding, including action section secondary functionlaity
+- permission functionality
+---
+## [18/12/2025] - [Thursday]
+### Today's Goals
+- [X] Implemented retry logic for api fetch
+- [X] merged task api integration branch with main
+- [X] started new auth-onboarding branch
+- [X] created implementation and api integration plans for onboarding and auth
+ -[X] started implementation of onboarding screen UI
+
+### Plans For Future
+- get better understanding of async thunk, redux slice state
+- Learn and record how to test api integration
+- plan to implement UI loading states and completion toasts
+- plan to implement focus feature
+- plan to implement user onboard
+
+### Notes
+- update backlog for onboarding, including action section secondary functionlaity
+- permission functionality
+---
+## [20/12/2025] - [Thursday]
+### Today's Goals
+- [X] Implemented registration and sign in modal, for email auth
+- [X] Implemented mockup authentication for UX testing
+- [X] Completed onboarding navigation flow and screens
+- [X] Updated API client to use secure store for token management
+- [X] Integrated API auths for login, registraiton and logout
+- [X] Implemented an auth check status feature
+- [X] Implemented user scoped task data
+
+### Plans For Future
+- get better understanding of async thunk, redux slice state
+- do a deep run manual test, and ensure backlog is COMPLETELY up to date
+
+### Notes
+- no notes

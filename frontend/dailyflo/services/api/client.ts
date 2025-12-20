@@ -15,10 +15,18 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 // redux store imports - access auth state and dispatch actions
 // store: the main redux store that holds all app state
-// refreshAccessToken: async thunk that refreshes the access token
 // logout: action that logs out the user
 import { store } from '../../store';
-import { refreshAccessToken, logout } from '../../store/slices/auth/authSlice';
+import { logout } from '../../store/slices/auth/authSlice';
+// token storage imports - secure storage for authentication tokens
+// these functions store and retrieve tokens from Expo SecureStore (encrypted storage)
+import {
+  getAccessToken,
+  getRefreshToken,
+  storeAccessToken,
+  storeRefreshToken,
+  clearAllTokens,
+} from '../auth/tokenStorage';
 
 /**
  * Configuration for the API client
@@ -62,16 +70,29 @@ const createApiClient = (): AxiosInstance => {
   /**
    * REQUEST INTERCEPTOR - Runs BEFORE each request is sent
    * This is like adding a stamp and return address to every letter before sending it
+   * 
+   * This interceptor automatically adds the authentication token to every request
+   * by getting it from secure storage (Expo SecureStore)
    */
   client.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
-      // Get the user's authentication token (like getting their ID card)
-      const token = getStoredToken();
+    async (config: InternalAxiosRequestConfig) => {
+      // Don't add auth token for login/register/refresh endpoints
+      // These endpoints don't require authentication and would fail with auth headers
+      const isAuthEndpoint = config.url?.includes('/auth/login/') || 
+                             config.url?.includes('/auth/register/') || 
+                             config.url?.includes('/auth/refresh/');
       
-      // If we have a token, add it to the request headers
-      // This tells the server "I'm a logged-in user"
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
+      if (!isAuthEndpoint) {
+        // Get the access token from secure storage
+        // SecureStore encrypts tokens and stores them securely on the device
+        const token = await getAccessToken();
+        
+        // If we have a token, add it to the request headers
+        // The backend will check this token to verify the user is authenticated
+        // The format is "Bearer <token>" which is the standard for JWT tokens
+        if (token && config.headers) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
       }
       
       // Add a timestamp for debugging (like adding a postmark)
@@ -100,23 +121,65 @@ const createApiClient = (): AxiosInstance => {
     async (error: AxiosError) => {
       const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
       
+      // Don't try to refresh tokens for login/register/refresh endpoints
+      // These endpoints can return 401 for invalid credentials, not expired tokens
+      const isAuthEndpoint = originalRequest?.url?.includes('/auth/login/') || 
+                             originalRequest?.url?.includes('/auth/register/') || 
+                             originalRequest?.url?.includes('/auth/refresh/');
+      
       // Handle 401 Unauthorized - This means "your login has expired"
-      if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      // When we get a 401, the access token has likely expired, so we try to refresh it
+      // But skip auth endpoints since they handle their own 401 errors
+      if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
+        // Mark this request as retried so we don't loop forever
         originalRequest._retry = true;
         
         try {
-          // Try to refresh the token (like renewing your ID card)
-          const newToken = await refreshToken();
-          if (newToken) {
-            // Retry the original request with the new token
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            }
-            return client(originalRequest);
+          // Try to refresh the token by getting a new access token using the refresh token
+          // Get the refresh token from secure storage
+          const refreshTokenValue = await getRefreshToken();
+          
+          if (!refreshTokenValue) {
+            // No refresh token available, user needs to log in again
+            throw new Error('No refresh token available');
           }
+          
+          // Call the refresh token endpoint directly using axios (not apiClient to avoid interceptors)
+          // We need to use the base URL from defaultConfig since we're calling axios directly
+          const response = await axios.post(`${defaultConfig.baseURL}/accounts/auth/refresh/`, {
+            refresh: refreshTokenValue,
+          });
+          
+          // Extract the new tokens from the response
+          // Backend returns tokens in different formats, handle both
+          const { access, refresh: newRefreshToken } = response.data;
+          
+          if (!access) {
+            throw new Error('New access token not received');
+          }
+          
+          // Store the new tokens in secure storage
+          // This updates the tokens so future requests will use the new access token
+          await storeAccessToken(access);
+          if (newRefreshToken) {
+            // Store new refresh token if provided (some backends rotate refresh tokens)
+            await storeRefreshToken(newRefreshToken);
+          }
+          
+          // Update the original request with the new token
+          // This allows us to retry the failed request with the new token
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${access}`;
+          }
+          
+          // Retry the original request with the new token
+          return client(originalRequest);
         } catch (refreshError) {
-          // If refresh fails, redirect to login (like going to get a new ID card)
-          handleAuthError();
+          // If refresh fails, clear tokens and logout user
+          // This means the refresh token is also expired or invalid, user needs to log in again
+          await clearAllTokens();
+          // Dispatch logout action to clear Redux state
+          store.dispatch(logout());
           return Promise.reject(refreshError);
         }
       }
@@ -128,72 +191,6 @@ const createApiClient = (): AxiosInstance => {
   );
 
   return client;
-};
-
-/**
- * Get stored access token
- * This retrieves the user's login token from the Redux store
- * The token is stored in the auth slice when the user logs in
- */
-const getStoredToken = (): string | null => {
-  // Get the current state from the Redux store
-  // The auth slice contains the accessToken
-  const state = store.getState();
-  const accessToken = state.auth?.accessToken || null;
-  
-  // Return the token if it exists, otherwise return null
-  return accessToken;
-};
-
-/**
- * Refresh access token
- * When your login token expires, this gets a new one using Redux
- * This dispatches the refreshAccessToken async thunk which handles the API call
- * and updates the Redux store with the new token
- */
-const refreshToken = async (): Promise<string | null> => {
-  try {
-    // Get the current state to check if we have a refresh token
-    const state = store.getState();
-    const refreshTokenValue = state.auth?.refreshToken;
-    
-    // If no refresh token, we can't refresh
-    if (!refreshTokenValue) {
-      throw new Error('No refresh token available');
-    }
-    
-    // Dispatch the refreshAccessToken async thunk
-    // This will make the API call and update the Redux store automatically
-    const result = await store.dispatch(refreshAccessToken());
-    
-    // Check if the refresh was successful
-    if (refreshAccessToken.fulfilled.match(result)) {
-      // Get the new access token from the updated state
-      const newState = store.getState();
-      const newAccessToken = newState.auth?.accessToken || null;
-      return newAccessToken;
-    } else {
-      // Refresh failed, return null
-      throw new Error('Token refresh failed');
-    }
-  } catch (error) {
-    console.error('Token refresh failed:', error);
-    return null;
-  }
-};
-
-/**
- * Handle authentication errors
- * When login fails or token refresh fails, this logs out the user
- * This dispatches the logout action which clears all auth data from Redux store
- */
-const handleAuthError = (): void => {
-  // Dispatch the logout action to Redux store
-  // This clears the user, tokens, and all auth state
-  store.dispatch(logout());
-  
-  // Note: Navigation to login screen should be handled by the component
-  // that detects the auth state change, not here in the API client
 };
 
 /**

@@ -95,20 +95,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         """validate that the list belongs to the current user"""
         user = self.context['request'].user
         
-        # TEMPORARY: Handle AnonymousUser for testing without login feature
-        # If user is not authenticated, get or create a default test user
-        if not user.is_authenticated:
-            from apps.accounts.models import CustomUser
-            test_user, _ = CustomUser.objects.get_or_create(
-                email='test@dailyflo.com',
-                defaults={
-                    'first_name': 'Test',
-                    'last_name': 'User',
-                    'is_active': True,
-                }
-            )
-            user = test_user
-        
+        # Ensure the list belongs to the authenticated user
         if value and value.user != user:
             raise serializers.ValidationError("You can only assign tasks to your own lists.")
         return value
@@ -117,22 +104,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         """create new task with current user"""
         user = self.context['request'].user
         
-        # TEMPORARY: Handle AnonymousUser for testing without login feature
-        # If user is not authenticated, get or create a default test user
-        if not user.is_authenticated:
-            from apps.accounts.models import CustomUser
-            # Get or create a default test user for unauthenticated requests
-            # This allows testing without login feature
-            test_user, created = CustomUser.objects.get_or_create(
-                email='test@dailyflo.com',
-                defaults={
-                    'first_name': 'Test',
-                    'last_name': 'User',
-                    'is_active': True,
-                }
-            )
-            user = test_user
-        
+        # Automatically assign the task to the authenticated user
         validated_data['user'] = user
         return super().create(validated_data)
 
@@ -154,20 +126,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         """validate that the list belongs to the current user"""
         user = self.context['request'].user
         
-        # TEMPORARY: Handle AnonymousUser for testing without login feature
-        # If user is not authenticated, get or create a default test user
-        if not user.is_authenticated:
-            from apps.accounts.models import CustomUser
-            test_user, _ = CustomUser.objects.get_or_create(
-                email='test@dailyflo.com',
-                defaults={
-                    'first_name': 'Test',
-                    'last_name': 'User',
-                    'is_active': True,
-                }
-            )
-            user = test_user
-        
+        # Ensure the list belongs to the authenticated user
         if value and value.user != user:
             raise serializers.ValidationError("You can only assign tasks to your own lists.")
         return value

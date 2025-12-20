@@ -136,6 +136,12 @@ export const useUI = () => {
     setOnlineStatus: useCallback((online: boolean) => dispatch({ type: 'ui/setOnlineStatus', payload: online }), [dispatch]),
     setAppInitialized: useCallback((initialized: boolean) => dispatch({ type: 'ui/setAppInitialized', payload: initialized }), [dispatch]),
     setLastSyncTime: useCallback((time: number) => dispatch({ type: 'ui/setLastSyncTime', payload: time }), [dispatch]),
+    toggleEmailAuth: useCallback(() => dispatch({ type: 'ui/toggleEmailAuth' }), [dispatch]),
+    setShowEmailAuth: useCallback((show: boolean) => dispatch({ type: 'ui/setShowEmailAuth', payload: show }), [dispatch]),
+    setEmailAuthEmail: useCallback((email: string) => dispatch({ type: 'ui/setEmailAuthEmail', payload: email }), [dispatch]),
+    setEmailAuthPassword: useCallback((password: string) => dispatch({ type: 'ui/setEmailAuthPassword', payload: password }), [dispatch]),
+    setEmailAuthFirstName: useCallback((firstName: string) => dispatch({ type: 'ui/setEmailAuthFirstName', payload: firstName }), [dispatch]),
+    setEmailAuthLastName: useCallback((lastName: string) => dispatch({ type: 'ui/setEmailAuthLastName', payload: lastName }), [dispatch]),
     resetUIState: useCallback(() => dispatch({ type: 'ui/resetUIState' }), [dispatch]),
   };
 };
