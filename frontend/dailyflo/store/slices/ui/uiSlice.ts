@@ -21,6 +21,7 @@ interface UIState {
     settings: boolean;               // Settings modal visibility
     datePicker: boolean;             // Date picker modal visibility
     emailAuth: boolean;              // Email authentication modal visibility (sign up with email)
+    emailAuthSignIn: boolean;        // Email sign in modal visibility
   };
   
   // Loading states for UI operations
@@ -106,6 +107,7 @@ const initialState: UIState = {
     settings: false,
     datePicker: false,
     emailAuth: false,
+    emailAuthSignIn: false,
   },
   
   // Start with no loading states

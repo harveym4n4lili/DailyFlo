@@ -6,3 +6,5 @@
 
 export { OnboardingNavigation } from './OnboardingNavigation';
 export { OnboardingActions } from './OnboardingActions';
+export { SocialAuthActions } from './SocialAuthActions';
+export type { SocialAuthActionsProps } from './SocialAuthActions';

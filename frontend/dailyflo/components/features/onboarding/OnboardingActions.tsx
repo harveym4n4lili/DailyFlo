@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useUI } from '@/store/hooks';
+import { SocialAuthActions } from './SocialAuthActions';
 
 // storage key for tracking onboarding completion status
 // this key matches the one used in _layout.tsx for checking onboarding status
@@ -67,14 +68,6 @@ export function OnboardingActions() {
   // these animate when the screen changes
   const secondaryLinkOpacity = useRef(new Animated.Value(0)).current;
   const secondaryLinkScale = useRef(new Animated.Value(0.8)).current;
-  const socialButtonsOpacity = useRef(new Animated.Value(0)).current;
-  const socialButtonsScale = useRef(new Animated.Value(0.8)).current;
-  const facebookButtonOpacity = useRef(new Animated.Value(0)).current;
-  const facebookButtonScale = useRef(new Animated.Value(0.8)).current;
-  const googleButtonOpacity = useRef(new Animated.Value(0)).current;
-  const googleButtonScale = useRef(new Animated.Value(0.8)).current;
-  const appleButtonOpacity = useRef(new Animated.Value(0)).current;
-  const appleButtonScale = useRef(new Animated.Value(0.8)).current;
   
   // reset button press states when screen changes
   // this ensures the state doesn't persist when navigating between screens
@@ -84,20 +77,27 @@ export function OnboardingActions() {
     setSocialAuthInProgress(null);
   }, [activeScreen]);
   
+  // track when signup screen becomes active to trigger social auth animations
+  // social auth buttons handle their own animations, but we need to reset them when screen changes
+  const [shouldAnimateSocialAuth, setShouldAnimateSocialAuth] = useState(false);
+  
+  useEffect(() => {
+    if (activeScreen === 'signup') {
+      // trigger animation when signup screen becomes active
+      setShouldAnimateSocialAuth(true);
+    } else {
+      // reset animation trigger when leaving signup screen
+      setShouldAnimateSocialAuth(false);
+    }
+  }, [activeScreen]);
+  
   // animate secondary elements when screen changes
   // primary buttons are NOT animated
+  // social auth buttons handle their own animations in SocialAuthActions component
   useEffect(() => {
     // reset animation values when screen changes
     secondaryLinkOpacity.setValue(0);
     secondaryLinkScale.setValue(0.8);
-    socialButtonsOpacity.setValue(0);
-    socialButtonsScale.setValue(0.8);
-    facebookButtonOpacity.setValue(0);
-    facebookButtonScale.setValue(0.8);
-    googleButtonOpacity.setValue(0);
-    googleButtonScale.setValue(0.8);
-    appleButtonOpacity.setValue(0);
-    appleButtonScale.setValue(0.8);
     
     // check if transitioning FROM signup to another screen
     const wasOnSignup = prevScreenRef.current === 'signup';
@@ -193,84 +193,29 @@ export function OnboardingActions() {
       // start from pushed down position (100px down) and slide to 0 (normal position)
       containerTranslateY.setValue(100);
       
-      // slide container up, then start sequential button animations after it completes
+      // slide container up, then animate email link after it completes
+      // social auth buttons handle their own animations in SocialAuthActions component
       Animated.timing(containerTranslateY, {
         toValue: 0,
         duration: 300,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start(() => {
-        // after container slide-up completes, start sequential button fade animations
-        // Facebook button first (no additional delay since slide-up already happened)
-        Animated.parallel([
-          Animated.timing(facebookButtonOpacity, {
-            toValue: 1,
-            duration: 400,
-            delay: SEQUENTIAL_FADE_DELAY,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(facebookButtonScale, {
-            toValue: 1,
-            duration: 400,
-            delay: SEQUENTIAL_FADE_DELAY,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]).start();
-        
-        // Google button second
-        Animated.parallel([
-          Animated.timing(googleButtonOpacity, {
-            toValue: 1,
-            duration: 400,
-            delay: SEQUENTIAL_FADE_DELAY * 2,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(googleButtonScale, {
-            toValue: 1,
-            duration: 400,
-            delay: SEQUENTIAL_FADE_DELAY * 2,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]).start();
-        
-        // Apple button third (if iOS)
-        if (Platform.OS === 'ios') {
-          Animated.parallel([
-            Animated.timing(appleButtonOpacity, {
-              toValue: 1,
-              duration: 400,
-              delay: SEQUENTIAL_FADE_DELAY * 3,
-              easing: Easing.out(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(appleButtonScale, {
-              toValue: 1,
-              duration: 400,
-              delay: SEQUENTIAL_FADE_DELAY * 3,
-              easing: Easing.out(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ]).start();
-        }
-        
-        // Skip link last (delay depends on number of social buttons)
-        const skipDelay = Platform.OS === 'ios' ? SEQUENTIAL_FADE_DELAY * 4 : SEQUENTIAL_FADE_DELAY * 3;
+        // after container slide-up completes, animate email link
+        // delay depends on number of social buttons (they animate in SocialAuthActions)
+        const emailLinkDelay = Platform.OS === 'ios' ? SEQUENTIAL_FADE_DELAY * 4 : SEQUENTIAL_FADE_DELAY * 3;
         Animated.parallel([
           Animated.timing(secondaryLinkOpacity, {
             toValue: 1,
             duration: 400,
-            delay: skipDelay,
+            delay: emailLinkDelay,
             easing: Easing.out(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(secondaryLinkScale, {
             toValue: 1,
             duration: 400,
-            delay: skipDelay,
+            delay: emailLinkDelay,
             easing: Easing.out(Easing.ease),
             useNativeDriver: true,
           }),
@@ -289,12 +234,6 @@ export function OnboardingActions() {
     containerTranslateY,
     secondaryLinkOpacity,
     secondaryLinkScale,
-    facebookButtonOpacity,
-    facebookButtonScale,
-    googleButtonOpacity,
-    googleButtonScale,
-    appleButtonOpacity,
-    appleButtonScale,
   ]);
   
   const styles = createStyles(themeColors, typography, insets);
@@ -310,11 +249,13 @@ export function OnboardingActions() {
   };
   
   /**
-   * Handle "Sign Up" link press (Welcome screen)
-   * Navigates directly to sign-up/login screen (skips reminders)
+   * Handle "Sign in" link press (Welcome screen)
+   * Opens the email sign in modal
    */
   const handleSignIn = () => {
-    router.push('/(onboarding)/signup');
+    // open the email sign in modal via Redux state
+    // this will show a draggable modal for signing in
+    openModal('emailAuthSignIn');
   };
   
   /**
@@ -503,88 +444,34 @@ export function OnboardingActions() {
       case 'signup':
         return (
           <View style={styles.actions}>
-            {/* Social Auth View - show social buttons and email toggle */}
-              <>
-                {/* Social Auth Buttons */}
-                {/* social buttons fade in and scale up sequentially (primary buttons are not animated) */}
-                <View style={styles.socialButtons}>
-                  {/* Facebook Button */}
-                  <Animated.View
-                    style={{
-                      opacity: facebookButtonOpacity,
-                      transform: [{ scale: facebookButtonScale }],
-                    }}
-                  >
-                    <TouchableOpacity
-                      style={styles.socialButton}
-                      onPress={() => handleSocialAuth('facebook')}
-                      activeOpacity={0.8}
-                      disabled={true}
-                    >
-                      <Ionicons name="logo-facebook" size={24} color={themeColors.text.primary()} />
-                      <Text style={styles.socialButtonText}>Sign up with Facebook</Text>
-                    </TouchableOpacity>
-                  </Animated.View>
-                  
-                  {/* Google Button */}
-                  <Animated.View
-                    style={{
-                      opacity: googleButtonOpacity,
-                      transform: [{ scale: googleButtonScale }],
-                    }}
-                  >
-                    <TouchableOpacity
-                      style={styles.socialButton}
-                      onPress={() => handleSocialAuth('google')}
-                      activeOpacity={0.8}
-                      disabled={true}
-                    >
-                      <Ionicons name="logo-google" size={24} color={themeColors.text.primary()} />
-                      <Text style={styles.socialButtonText}>Sign up with Google</Text>
-                    </TouchableOpacity>
-                  </Animated.View>
-                  
-                  {/* Apple Button (iOS only) */}
-                  {Platform.OS === 'ios' && (
-                    <Animated.View
-                      style={{
-                        opacity: appleButtonOpacity,
-                        transform: [{ scale: appleButtonScale }],
-                      }}
-                    >
-                      <TouchableOpacity
-                        style={styles.socialButton}
-                        onPress={() => handleSocialAuth('apple')}
-                        activeOpacity={0.8}
-                        disabled={true}
-                      >
-                        <Ionicons name="logo-apple" size={24} color={themeColors.text.primary()} />
-                        <Text style={styles.socialButtonText}>Sign up with Apple</Text>
-                      </TouchableOpacity>
-                    </Animated.View>
-                  )}
-                </View>
-                
-                {/* Use Email Instead Link */}
-              {/* opens full-screen email auth modal when clicked */}
-                <Animated.View
-                  style={{
-                    opacity: secondaryLinkOpacity,
-                    transform: [{ scale: secondaryLinkScale }],
-                  }}
-                >
-                  <TouchableOpacity
-                    style={styles.secondaryLink}
-                  onPress={handleOpenEmailAuth}
-                    activeOpacity={0.7}
-                    disabled={!!socialAuthInProgress}
-                  >
-                    <Text style={styles.secondaryLinkText}>
-                      Use email instead? <Text style={styles.secondaryLinkHighlight}>Sign up with Email</Text>
-                    </Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              </>
+            {/* Social Auth Buttons */}
+            {/* social buttons fade in and scale up sequentially (handled by SocialAuthActions component) */}
+            <SocialAuthActions
+              variant="register"
+              onSocialAuth={handleSocialAuth}
+              disabled={true}
+              animate={shouldAnimateSocialAuth}
+            />
+            
+            {/* Use Email Instead Link */}
+            {/* opens full-screen email auth modal when clicked */}
+            <Animated.View
+              style={{
+                opacity: secondaryLinkOpacity,
+                transform: [{ scale: secondaryLinkScale }],
+              }}
+            >
+              <TouchableOpacity
+                style={styles.secondaryLink}
+                onPress={handleOpenEmailAuth}
+                activeOpacity={0.7}
+                disabled={!!socialAuthInProgress}
+              >
+                <Text style={styles.secondaryLinkText}>
+                  Use email instead? <Text style={styles.secondaryLinkHighlight}>Sign up with Email</Text>
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
           </View>
         );
         
@@ -681,29 +568,5 @@ const createStyles = (
   secondaryLinkHighlight: {
     fontWeight: '800', // make highlighted part slightly bolder
     color: themeColors.text.primary(), // text color using theme color hook
-
-  },
-  socialButtons: {
-    gap: 16, // spacing between social buttons
-  },
-  socialButton: {
-    // semi-transparent background for social buttons
-    backgroundColor: themeColors.withOpacity(themeColors.text.primary(), 0.1),
-    borderRadius: 28, // rounded rectangular button
-    paddingVertical: 16, // vertical padding
-    paddingHorizontal: 24, // horizontal padding
-    flexDirection: 'row', // horizontal layout for icon and text
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12, // spacing between icon and text
-    
-    minHeight: 56, // minimum touch target size
-  },
-  socialButtonText: {
-    color: themeColors.text.primary(), // text color using theme color hook
-    // use typography system for fontFamily
-    ...typography.getTextStyle('button-secondary'),
-    fontSize: 16, // override typography: standard social button text size
-    fontWeight: '500', // override typography: medium weight for social buttons
   },
 });
