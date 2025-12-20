@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ReduxProvider } from '@/store/Provider';
 import { store } from '@/store';
-import { logout } from '@/store/slices/auth/authSlice';
+import { logout, checkAuthStatus } from '@/store/slices/auth/authSlice';
 
 // storage key for tracking onboarding completion status
 // this key is used to check if the user has completed the onboarding flow
@@ -45,14 +45,16 @@ export default function RootLayout() {
   });
 
   /**
-   * Check onboarding completion status on app launch
-   * This determines whether to show onboarding screens or the main app
+   * Check authentication status and onboarding completion on app launch
+   * This determines whether user is logged in and where to route them
    * 
    * Flow:
-   * 1. Check AsyncStorage for onboarding completion flag
-   * 2. If complete → route to main app (tabs)
-   * 3. If not complete → route to onboarding welcome screen
-   * 4. On error → default to onboarding (safer for new users)
+   * 1. Check if user is authenticated (has valid tokens)
+   * 2. If authenticated → load user data from backend
+   * 3. Check AsyncStorage for onboarding completion flag
+   * 4. If onboarding complete → route to main app (tabs)
+   * 5. If not complete → route to onboarding welcome screen
+   * 6. On error → default to onboarding (safer for new users)
    * 
    * We use a ref to ensure this only runs once, preventing flashing
    * We only depend on 'loaded' to avoid re-running when segments change
@@ -65,6 +67,15 @@ export default function RootLayout() {
     
     const checkOnboardingStatus = async () => {
       try {
+        // First, check authentication status
+        // This checks if user has valid tokens and loads user data if authenticated
+        // checkAuthStatus is a Redux async thunk that:
+        // - Checks SecureStore for tokens
+        // - Validates tokens with backend
+        // - Refreshes tokens if expired
+        // - Loads user data if tokens are valid
+        await store.dispatch(checkAuthStatus());
+        
         // check if user has completed onboarding by reading from AsyncStorage
         // AsyncStorage is a simple key-value storage system for React Native
         const onboardingComplete = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY);
