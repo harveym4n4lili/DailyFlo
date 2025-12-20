@@ -20,7 +20,7 @@ import { Stack } from 'expo-router';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { OnboardingNavigation } from '@/components/features/onboarding';
 import { OnboardingActions } from '@/components/features/onboarding';
-import { EmailAuthModal } from '@/components/features/onboarding/EmailAuthModal';
+import { EmailAuthRegisterModal } from '@/components/features/onboarding/EmailAuthModal';
 
 export default function OnboardingLayout() {
   const themeColors = useThemeColors();
@@ -63,7 +63,7 @@ export default function OnboardingLayout() {
       
       {/* Email Auth Modal */}
       {/* full-screen modal that appears when user clicks "Sign up with Email" */}
-      <EmailAuthModal variant="register" />
+      <EmailAuthRegisterModal variant="register" />
     </View>
   );
 }
