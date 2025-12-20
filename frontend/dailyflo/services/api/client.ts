@@ -76,15 +76,23 @@ const createApiClient = (): AxiosInstance => {
    */
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-      // Get the access token from secure storage
-      // SecureStore encrypts tokens and stores them securely on the device
-      const token = await getAccessToken();
+      // Don't add auth token for login/register/refresh endpoints
+      // These endpoints don't require authentication and would fail with auth headers
+      const isAuthEndpoint = config.url?.includes('/auth/login/') || 
+                             config.url?.includes('/auth/register/') || 
+                             config.url?.includes('/auth/refresh/');
       
-      // If we have a token, add it to the request headers
-      // The backend will check this token to verify the user is authenticated
-      // The format is "Bearer <token>" which is the standard for JWT tokens
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
+      if (!isAuthEndpoint) {
+        // Get the access token from secure storage
+        // SecureStore encrypts tokens and stores them securely on the device
+        const token = await getAccessToken();
+        
+        // If we have a token, add it to the request headers
+        // The backend will check this token to verify the user is authenticated
+        // The format is "Bearer <token>" which is the standard for JWT tokens
+        if (token && config.headers) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
       }
       
       // Add a timestamp for debugging (like adding a postmark)
@@ -113,9 +121,16 @@ const createApiClient = (): AxiosInstance => {
     async (error: AxiosError) => {
       const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
       
+      // Don't try to refresh tokens for login/register/refresh endpoints
+      // These endpoints can return 401 for invalid credentials, not expired tokens
+      const isAuthEndpoint = originalRequest?.url?.includes('/auth/login/') || 
+                             originalRequest?.url?.includes('/auth/register/') || 
+                             originalRequest?.url?.includes('/auth/refresh/');
+      
       // Handle 401 Unauthorized - This means "your login has expired"
       // When we get a 401, the access token has likely expired, so we try to refresh it
-      if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      // But skip auth endpoints since they handle their own 401 errors
+      if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
         // Mark this request as retried so we don't loop forever
         originalRequest._retry = true;
         
@@ -131,7 +146,7 @@ const createApiClient = (): AxiosInstance => {
           
           // Call the refresh token endpoint directly using axios (not apiClient to avoid interceptors)
           // We need to use the base URL from defaultConfig since we're calling axios directly
-          const response = await axios.post(`${defaultConfig.baseURL}/auth/refresh/`, {
+          const response = await axios.post(`${defaultConfig.baseURL}/accounts/auth/refresh/`, {
             refresh: refreshTokenValue,
           });
           

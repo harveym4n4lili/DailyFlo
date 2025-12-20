@@ -10,9 +10,11 @@ import * as SecureStore from 'expo-secure-store';
 
 // Constants for storage keys
 // These are like labels for the "drawers" in our secure storage
-const ACCESS_TOKEN_KEY = '@DailyFlo:accessToken';
-const REFRESH_TOKEN_KEY = '@DailyFlo:refreshToken';
-const TOKEN_EXPIRY_KEY = '@DailyFlo:tokenExpiry';
+// Note: SecureStore keys can only contain alphanumeric characters, ".", "-", and "_"
+// So we use underscores instead of colons
+const ACCESS_TOKEN_KEY = 'DailyFlo_accessToken';
+const REFRESH_TOKEN_KEY = 'DailyFlo_refreshToken';
+const TOKEN_EXPIRY_KEY = 'DailyFlo_tokenExpiry';
 
 /**
  * Store access token securely

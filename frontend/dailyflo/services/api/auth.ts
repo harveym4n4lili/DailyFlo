@@ -29,9 +29,9 @@ class AuthApiService {
    */
   async register(data: RegisterRequest): Promise<any> {
     try {
-      // Send a POST request to the /auth/register/ endpoint
+      // Send a POST request to the /accounts/auth/register/ endpoint
       // POST is used for creating new resources (like creating a new user)
-      const response = await apiClient.post('/auth/register/', data);
+      const response = await apiClient.post('/accounts/auth/register/', data);
       
       // Return the data from the server's response
       return response.data;
@@ -46,12 +46,24 @@ class AuthApiService {
    * This is like showing your ID to get into a building
    * 
    * @param data - Login credentials (email and password)
+   * TokenObtainPairView expects username and password fields
+   * For email auth users, username is set to email address in Django CustomUser model
    * @returns Promise with user data and authentication tokens
    */
-  async login(data: LoginRequest): Promise<any> {
+  async login(data: { email: string; password: string }): Promise<any> {
     try {
-      // Send a POST request to the /auth/login/ endpoint
-      const response = await apiClient.post('/auth/login/', data);
+      // Prepare the login payload
+      // TokenObtainPairView expects username (not email) - for email auth users, username = email
+      const loginPayload = {
+        username: data.email, // use email as username since Django sets username = email for email auth users
+        password: data.password,
+      };
+      
+      // Log what we're sending for debugging
+      console.log('Login payload being sent:', { username: loginPayload.username, password: '***' });
+      
+      // Send a POST request to the /accounts/auth/login/ endpoint
+      const response = await apiClient.post('/accounts/auth/login/', loginPayload);
       
       // The server should return user data and tokens
       return response.data;
@@ -70,8 +82,8 @@ class AuthApiService {
    */
   async socialLogin(data: any): Promise<any> {
     try {
-      // Send a POST request to the /auth/social/ endpoint
-      const response = await apiClient.post('/auth/social/', data);
+      // Send a POST request to the /accounts/auth/social/ endpoint
+      const response = await apiClient.post('/accounts/auth/social/', data);
       
       return response.data;
     } catch (error) {
@@ -90,8 +102,8 @@ class AuthApiService {
    */
   async refreshToken(data: any): Promise<any> {
     try {
-      // Send a POST request to the /auth/refresh/ endpoint
-      const response = await apiClient.post('/auth/refresh/', data);
+      // Send a POST request to the /accounts/auth/refresh/ endpoint
+      const response = await apiClient.post('/accounts/auth/refresh/', data);
       
       return response.data;
     } catch (error) {
@@ -109,8 +121,8 @@ class AuthApiService {
    */
   async logout(data: any): Promise<any> {
     try {
-      // Send a POST request to the /auth/logout/ endpoint
-      const response = await apiClient.post('/auth/logout/', data);
+      // Send a POST request to the /accounts/auth/logout/ endpoint
+      const response = await apiClient.post('/accounts/auth/logout/', data);
       
       return response.data;
     } catch (error) {
@@ -131,7 +143,7 @@ class AuthApiService {
     try {
       // Send a PATCH request to update the user
       // PATCH is used for partial updates (only changing some fields)
-      const response = await apiClient.patch(`/auth/users/${userId}/`, updates);
+      const response = await apiClient.patch(`/accounts/users/${userId}/`, updates);
       
       return response.data;
     } catch (error) {
@@ -152,7 +164,7 @@ class AuthApiService {
   async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<ChangePasswordResponse> {
     try {
       // Send a POST request to change the password
-      const response = await apiClient.post(`/auth/users/${userId}/change-password/`, {
+      const response = await apiClient.post(`/accounts/auth/password/change/`, {
         oldPassword,
         newPassword,
       });
@@ -174,7 +186,8 @@ class AuthApiService {
   async verifyEmail(token: string): Promise<any> {
     try {
       // Send a POST request with the verification token
-      const response = await apiClient.post('/auth/verify-email/', { token });
+      // Note: This endpoint may not exist yet in Django, placeholder for future implementation
+      const response = await apiClient.post('/accounts/auth/verify-email/', { token });
       
       return response.data;
     } catch (error) {
@@ -193,7 +206,8 @@ class AuthApiService {
   async resendVerification(email: string): Promise<{ message: string }> {
     try {
       // Send a POST request to resend verification
-      const response = await apiClient.post('/auth/resend-verification/', { email });
+      // Note: This endpoint may not exist yet in Django, placeholder for future implementation
+      const response = await apiClient.post('/accounts/auth/resend-verification/', { email });
       
       return response.data;
     } catch (error) {
@@ -212,7 +226,7 @@ class AuthApiService {
   async requestPasswordReset(email: string): Promise<{ message: string }> {
     try {
       // Send a POST request to request password reset
-      const response = await apiClient.post('/auth/password-reset/', { email });
+      const response = await apiClient.post('/accounts/auth/password/reset/request/', { email });
       
       return response.data;
     } catch (error) {
@@ -232,7 +246,7 @@ class AuthApiService {
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
     try {
       // Send a POST request to reset the password
-      const response = await apiClient.post('/auth/password-reset-confirm/', {
+      const response = await apiClient.post('/accounts/auth/password/reset/confirm/', {
         token,
         new_password: newPassword,
       });
@@ -254,7 +268,7 @@ class AuthApiService {
     try {
       // Send a GET request to get current user info
       // GET is used for retrieving data
-      const response = await apiClient.get('/auth/me/');
+      const response = await apiClient.get('/accounts/users/profile/');
       
       return response.data;
     } catch (error) {
@@ -274,7 +288,7 @@ class AuthApiService {
     try {
       // Send a DELETE request to delete the user
       // DELETE is used for removing resources
-      const response = await apiClient.delete(`/auth/users/${userId}/`);
+      const response = await apiClient.delete(`/accounts/users/${userId}/`);
       
       return response.data;
     } catch (error) {
