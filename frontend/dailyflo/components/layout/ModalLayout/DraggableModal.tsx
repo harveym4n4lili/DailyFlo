@@ -56,6 +56,8 @@ export const useScrollLock = () => {
 export interface DraggableModalRef {
   /** Snap to the highest snap point (fully expanded) */
   snapToTop: () => void;
+  /** Snap to a specific snap point by index */
+  snapToIndex: (index: number) => void;
 }
 
 export interface DraggableModalProps {
@@ -222,7 +224,25 @@ export const DraggableModal = forwardRef<DraggableModalRef, DraggableModalProps>
         overshootClamping: true, // prevents overshooting the target
       });
     },
-  }), [translateY]);
+    // snap to a specific snap point by index
+    // animates the modal to the translateY position for the given snap point index
+    snapToIndex: (index: number) => {
+      // clamp index to valid range
+      const clampedIndex = Math.max(0, Math.min(index, snapHeights.length - 1));
+      
+      // calculate translateY for the specified snap point
+      // translateY is the difference between max height and the snap point height
+      const targetPosition = maxHeight - snapHeights[clampedIndex];
+      
+      // animate to target position using spring animation for smooth, natural feel
+      translateY.value = withSpring(targetPosition, {
+        damping: 30, // controls bounce/oscillation (lower = more bounce)
+        stiffness: 400, // controls speed (higher = faster)
+        mass: 0.5, // controls weight (lower = lighter feel)
+        overshootClamping: true, // prevents overshooting the target
+      });
+    },
+  }), [translateY, snapHeights, maxHeight]);
   
   // store the starting position when gesture begins
   // this allows us to apply the drag relative to where we started
