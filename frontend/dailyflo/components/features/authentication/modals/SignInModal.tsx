@@ -23,8 +23,8 @@ import { useAppDispatch } from '@/store';
 import { loginUser } from '@/store/slices/auth/authSlice';
 import { WrappedDraggableModal, ModalHeader } from '@/components/layout/ModalLayout';
 import { DraggableModalRef } from '@/components/layout/ModalLayout/DraggableModal';
-import { SocialAuthActions } from './SocialAuthActions';
-import { EmailAuthSection } from './EmailAuth';
+import { SocialAuthActions } from '@/components/features/authentication/sections/SocialAuthActions';
+import { EmailAuthSection } from '@/components/features/authentication/sections/EmailAuth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAnchoredContainer } from '@/components/layout/ScreenLayout';
 

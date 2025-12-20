@@ -21,8 +21,8 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useUI } from '@/store/hooks';
 import { OnboardingNavigation } from '@/components/features/onboarding';
 import { OnboardingActions } from '@/components/features/onboarding';
-import { EmailAuthRegisterModal } from '@/components/features/onboarding/EmailAuthModal';
-import { SignInModal } from '@/components/features/onboarding/SignInModal';
+import { EmailAuthRegisterModal } from '@/components/features/authentication/modals/EmailAuthModal';
+import { SignInModal } from '@/components/features/authentication/modals/SignInModal';
 import { ModalBackdrop } from '@/components/layout/ModalLayout';
 
 export default function OnboardingLayout() {

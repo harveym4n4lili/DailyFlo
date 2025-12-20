@@ -6,5 +6,5 @@
 
 export { OnboardingNavigation } from './OnboardingNavigation';
 export { OnboardingActions } from './OnboardingActions';
-export { SocialAuthActions } from './SocialAuthActions';
-export type { SocialAuthActionsProps } from './SocialAuthActions';
+export { SocialAuthActions } from '@/components/features/authentication/sections/SocialAuthActions';
+export type { SocialAuthActionsProps } from '@/components/features/authentication/sections/SocialAuthActions';
