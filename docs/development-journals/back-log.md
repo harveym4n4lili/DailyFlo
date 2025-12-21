@@ -2,7 +2,7 @@
 
 This document tracks features, improvements, and technical debt items that are planned for future implementation. Items are organized by priority and category.
 
-**Last Updated**: 2025-01-20 (Updated with authentication API integration progress)
+**Last Updated**: 2025-01-21 (Updated with task management and social auth planning items)
 
 ---
 
@@ -10,20 +10,30 @@ This document tracks features, improvements, and technical debt items that are p
 
 ### Authentication API Integration - Remaining Items
 
-#### Social Authentication Implementation
+#### Social Authentication Implementation Plan & Development
 - **Status**: Not Started
-- **Description**: Implement functionality for social auth buttons (Google, Apple, Facebook)
+- **Description**: Create implementation plan and implement functionality for social auth buttons (Google, Apple, Facebook) in onboarding and sign-in modals
 - **Files**: 
+  - Create planning document: `docs/technical-design/authentication/plan/social-auth-implementation.md`
   - `store/slices/auth/authSlice.ts` (update socialAuth thunk)
   - `services/api/auth.ts` (connect to social auth API endpoint)
   - `components/features/authentication/sections/SocialAuthActions.tsx` (wire up button handlers)
+  - `components/features/authentication/modals/SignInModal.tsx` (connect handleSocialAuth)
   - `components/features/onboarding/OnboardingActions.tsx` (connect handleSocialAuth)
-- **Details**: 
+- **Planning Tasks**:
+  - Research and document Expo AuthSession capabilities and setup requirements
+  - Plan OAuth flow for each provider (Google, Apple, Facebook)
+  - Design token exchange flow with backend API
+  - Plan error handling and edge cases (user cancellation, network failures)
+  - Design user experience flow (loading states, success/error feedback)
+  - Document required backend API contract and response formats
+- **Implementation Details**: 
   - Connect socialAuth Redux thunk to backend API endpoint `/accounts/auth/social/`
   - Integrate with Expo AuthSession or appropriate social auth libraries
   - Handle provider token validation and user creation/retrieval
   - Store tokens securely after successful social auth
   - Handle social auth errors and edge cases
+  - Implement proper loading states and user feedback
 - **Reference**: `docs/technical-design/authentication/plan/auth-api-integration.md` - Step 3 (partial), backend endpoint exists
 
 #### Onboarding Reminders Message Functionality
@@ -101,7 +111,7 @@ This document tracks features, improvements, and technical debt items that are p
 
 #### Task Detail View Enhancements
 - **Status**: Partially Complete
-- **Description**: Complete task detail view functionality
+- **Description**: Complete task detail view functionality and fix modal refresh issues
 - **Details**:
   - Implement functional buttons for detail view
   - Separate task save button and task create button styling (consider opacity styling)
@@ -109,15 +119,26 @@ This document tracks features, improvements, and technical debt items that are p
   - Consider keyboard anchored section in task detail to be initially hidden
   - Consider primary buttons and styling
   - Update button should disappear when task update is complete (better UX feedback)
-- **Files**: `components/features/tasks/TaskDetail/`
+  - **Bug**: Task view modal does not update/refresh after saving changes - modal should reflect updated task data immediately after save
+  - Ensure modal syncs with Redux store state after update operations
+- **Files**: 
+  - `components/features/tasks/TaskView/TaskViewModal.tsx` (fix refresh after save)
+  - `components/features/tasks/TaskDetail/`
 - **Reference**: Dev-log entries 09/12/2025, 11/12/2025
 
 #### Task List Association & Editing
 - **Status**: Not Started
-- **Description**: Implement task list association and editing for task create and view
-- **Details**: Allow users to assign tasks to lists from create and detail views
-- **Files**: `components/forms/TaskForm/`, `components/features/tasks/TaskDetail/`
-- **Reference**: Dev-log entry 11/12/2025
+- **Description**: Implement task list association and editing for task create and view modals
+- **Details**: 
+  - Allow users to assign tasks to lists from task creation modal
+  - **Currently broken**: Allow users to update associated list from task view modal (ListSection exists but cannot be edited)
+  - Implement list selection UI/component for both modals
+  - Update task when list association changes
+- **Files**: 
+  - `components/features/tasks/TaskView/TaskViewModal.tsx` (implement list editing in ListSection)
+  - `components/features/tasks/TaskView/sections/ListSection.tsx` (make editable)
+  - `components/forms/TaskForm/` (if needed for create modal)
+- **Reference**: Dev-log entry 11/12/2025, TaskViewModal.tsx ListSection (line ~985-990)
 
 #### Subtask Functionality
 - **Status**: Partially Complete
@@ -178,8 +199,18 @@ This document tracks features, improvements, and technical debt items that are p
 
 #### Bulk Operations UI
 - **Status**: Not Started
-- **Description**: UI for bulk update/delete operations
-- **Details**: Multi-select interface, bulk action toolbar
+- **Description**: UI for bulk update/delete operations, including "Select All" functionality
+- **Details**: 
+  - Implement "Select All" feature accessible from 3-dots menu (ellipse button) in today screen
+  - Multi-select interface for selecting multiple tasks
+  - Bulk action toolbar for performing actions on selected tasks
+  - Clear visual indication of selected tasks
+  - Handle selection state in Redux store
+- **Files**: 
+  - `app/(tabs)/today/index.tsx` (implement handleSelectAll function - currently has TODO at line ~343)
+  - `components/ui/Card/TaskCard/` (add selection state UI)
+  - `store/slices/tasks/tasksSlice.ts` (bulk selection actions already exist - toggleTaskSelection, clearTaskSelection)
+- **Reference**: Today screen dropdown menu with "Select All" option exists but is not functional
 
 #### Advanced Search
 - **Status**: Not Started
@@ -212,11 +243,19 @@ This document tracks features, improvements, and technical debt items that are p
 
 #### Recurring Task Improvements
 - **Status**: Not Started
-- **Description**: Enhanced recurring task options (custom patterns, exceptions)
+- **Description**: Implement repeating/recurring task selection in task creation date picker modal
 - **Details**: 
-  - Plan how to implement repeating task selection
-  - Custom patterns beyond daily/weekly/monthly
-- **Reference**: Dev-log entries 09/10/2025, 13/10/2025
+  - **Currently broken**: Repeating option exists in DatePickerModal but has no functionality (button is disabled/does nothing)
+  - Implement repeating task selection UI and logic in DatePickerModal
+  - Allow users to select repeat patterns (daily, weekly, monthly) when creating tasks
+  - Store routineType in task data when repeating is selected
+  - Plan and implement custom patterns beyond daily/weekly/monthly (future enhancement)
+  - Integrate with backend routine/recurring task system when available
+- **Files**: 
+  - `components/features/calendar/DatePicker/DatePickerModal.tsx` (implement repeating functionality - currently no-op at line ~156)
+  - `components/features/tasks/TaskCreation/TaskCreationModal.tsx` (handle routineType from date picker)
+  - `store/slices/tasks/tasksSlice.ts` (ensure routineType is saved with task)
+- **Reference**: Dev-log entries 09/10/2025, 13/10/2025, DatePickerModal.tsx repeating button (line ~154-193)
 
 #### Task Categories/Grouping
 - **Status**: Not Started
