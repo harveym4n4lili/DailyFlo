@@ -1127,3 +1127,14 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - no notes
+---
+## [28/12/2025] - [Sunday]
+### Today's Goals
+- [X] Begun full revision of frontend structure
+
+### Plans For Future
+- get better understanding of async thunk, redux slice state
+- do a deep run manual integration test, and ensure backlog is COMPLETELY up to date
+
+### Notes
+- no notes
