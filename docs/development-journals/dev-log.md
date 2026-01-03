@@ -1138,3 +1138,14 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - no notes
+---
+## [03/12/2025] - [Monday]
+### Today's Goals
+- [X] Further learning on types and TypeScript
+
+### Plans For Future
+- get better understanding of async thunk, redux slice state
+- do a deep run manual integration test, and ensure backlog is COMPLETELY up to date
+
+### Notes
+- no notes
