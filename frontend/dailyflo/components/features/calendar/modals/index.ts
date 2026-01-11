@@ -9,6 +9,10 @@
 export { DatePickerModal } from './DatePickerModal';
 export type { DatePickerModalProps } from './DatePickerModal';
 
-// default export for convenience
+// export the calendar navigation modal component
+export { CalendarNavigationModal } from './CalendarNavigationModal';
+export type { CalendarNavigationModalProps } from './CalendarNavigationModal';
+
+// default export for convenience (DatePickerModal)
 export { DatePickerModal as default } from './DatePickerModal';
 
