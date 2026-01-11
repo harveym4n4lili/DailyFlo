@@ -12,42 +12,20 @@
  * 4. User taps "Skip" → goes to main app without authentication
  */
 
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-// animation configuration - adjust delay between sequential fade-ins (in milliseconds)
-const SEQUENTIAL_FADE_DELAY = 200; // time between each element fading in
+import { useFadeZoomAnimation } from '@/hooks';
 
 export default function SignupScreen() {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
   
-  // animated values for sequential fade-in and scale (start invisible and smaller)
-  const headlineOpacity = useRef(new Animated.Value(0)).current;
-  const headlineScale = useRef(new Animated.Value(0.8)).current;
-  
-  // animate elements sequentially on mount (top to bottom)
-  useEffect(() => {
-    // animate headline first (no delay) - fade in and scale up simultaneously
-    Animated.parallel([
-      Animated.timing(headlineOpacity, {
-        toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(headlineScale, {
-        toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [headlineOpacity, headlineScale]);
+  // use shared fade zoom animation hook for headline (no delay - animates on mount)
+  const { opacityValue: headlineOpacity, scaleValue: headlineScale } = useFadeZoomAnimation();
   
   const styles = createStyles(themeColors, typography, insets);
   

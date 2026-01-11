@@ -11,12 +11,13 @@
  * TODO: This is a placeholder - will be implemented in Step 5
  */
 
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { useFadeZoomAnimation } from '@/hooks';
 
 // animation configuration - adjust delay between sequential fade-ins (in milliseconds)
 const SEQUENTIAL_FADE_DELAY = 200; // time between each element fading in
@@ -26,68 +27,20 @@ export default function CompletionScreen() {
   const typography = useTypography();
   const insets = useSafeAreaInsets();
   
-  // animated values for sequential fade-in and scale (start invisible and smaller)
-  const iconOpacity = useRef(new Animated.Value(0)).current;
-  const iconScale = useRef(new Animated.Value(0.8)).current;
-  const headlineOpacity = useRef(new Animated.Value(0)).current;
-  const headlineScale = useRef(new Animated.Value(0.8)).current;
-  const instructionOpacity = useRef(new Animated.Value(0)).current;
-  const instructionScale = useRef(new Animated.Value(0.8)).current;
+  // use shared fade zoom animation hook for icon (no delay - animates first)
+  const { opacityValue: iconOpacity, scaleValue: iconScale } = useFadeZoomAnimation({
+    delay: 0, // no delay - animates first
+  });
   
-  // animate elements sequentially on mount (top to bottom)
-  useEffect(() => {
-    // animate icon first (no delay) - fade in and scale up simultaneously
-    Animated.parallel([
-      Animated.timing(iconOpacity, {
-        toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(iconScale, {
-        toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-    
-    // animate headline second - fade in and scale up simultaneously
-    Animated.parallel([
-      Animated.timing(headlineOpacity, {
-        toValue: 1,
-        duration: 400,
-        delay: SEQUENTIAL_FADE_DELAY,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(headlineScale, {
-        toValue: 1,
-        duration: 400,
-        delay: SEQUENTIAL_FADE_DELAY,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-    
-    // animate instruction last - fade in and scale up simultaneously
-    Animated.parallel([
-      Animated.timing(instructionOpacity, {
-        toValue: 1,
-        duration: 400,
-        delay: SEQUENTIAL_FADE_DELAY * 2,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(instructionScale, {
-        toValue: 1,
-        duration: 400,
-        delay: SEQUENTIAL_FADE_DELAY * 2,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [iconOpacity, iconScale, headlineOpacity, headlineScale, instructionOpacity, instructionScale]);
+  // use shared fade zoom animation hook for headline (with delay - animates second)
+  const { opacityValue: headlineOpacity, scaleValue: headlineScale } = useFadeZoomAnimation({
+    delay: SEQUENTIAL_FADE_DELAY, // delay - animates after icon
+  });
+  
+  // use shared fade zoom animation hook for instruction (with longer delay - animates last)
+  const { opacityValue: instructionOpacity, scaleValue: instructionScale } = useFadeZoomAnimation({
+    delay: SEQUENTIAL_FADE_DELAY * 2, // longer delay - animates after headline
+  });
   
   const styles = createStyles(themeColors, typography, insets);
   

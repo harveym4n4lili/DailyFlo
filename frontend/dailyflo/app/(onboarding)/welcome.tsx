@@ -11,11 +11,12 @@
  * 3. User taps "Sign Up" → goes to Sign-up/Login screen
  */
 
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { useFadeZoomAnimation } from '@/hooks';
 
 // animation configuration - adjust delay between sequential fade-ins (in milliseconds)
 const SEQUENTIAL_FADE_DELAY = 200; // time between each element fading in
@@ -25,48 +26,15 @@ export default function WelcomeScreen() {
   const typography = useTypography();
   const insets = useSafeAreaInsets();
   
-  // animated values for sequential fade-in and scale (start invisible and smaller)
-  const appNameOpacity = useRef(new Animated.Value(0)).current;
-  const appNameScale = useRef(new Animated.Value(0.8)).current;
-  const taglineOpacity = useRef(new Animated.Value(0)).current;
-  const taglineScale = useRef(new Animated.Value(0.8)).current;
+  // use shared fade zoom animation hook for app name (no delay - animates first)
+  const { opacityValue: appNameOpacity, scaleValue: appNameScale } = useFadeZoomAnimation({
+    delay: 0, // no delay - animates first
+  });
   
-  // animate elements sequentially on mount
-  useEffect(() => {
-    // animate app name first (no delay) - fade in and scale up simultaneously
-    Animated.parallel([
-      Animated.timing(appNameOpacity, {
-        toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(appNameScale, {
-        toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-    
-    // animate tagline after app name - fade in and scale up simultaneously
-    Animated.parallel([
-      Animated.timing(taglineOpacity, {
-        toValue: 1,
-        duration: 400,
-        delay: SEQUENTIAL_FADE_DELAY,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(taglineScale, {
-        toValue: 1,
-        duration: 400,
-        delay: SEQUENTIAL_FADE_DELAY,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [appNameOpacity, appNameScale, taglineOpacity, taglineScale]);
+  // use shared fade zoom animation hook for tagline (with delay - animates second)
+  const { opacityValue: taglineOpacity, scaleValue: taglineScale } = useFadeZoomAnimation({
+    delay: SEQUENTIAL_FADE_DELAY, // delay - animates after app name
+  });
   
   const styles = createStyles(themeColors, typography, insets);
   
