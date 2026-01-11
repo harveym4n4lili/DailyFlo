@@ -31,10 +31,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DraggableModal, ModalHeader, LockableScrollView } from '@/components/layout/ModalLayout';
 
 // quick date options component
-import { QuickDateOptions } from './QuickDateOptions';
+import { QuickDateOptions } from '../sections/QuickDateOptions';
 
 // calendar view component
-import { CalendarView } from './CalendarView';
+import { CalendarView } from '../sections/CalendarView';
 
 // icons from expo vector icons
 import { Ionicons } from '@expo/vector-icons';

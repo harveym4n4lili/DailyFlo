@@ -5,6 +5,9 @@
  * This allows clean imports like: import { DatePickerModal } from '@/components/features/calendar'
  */
 
-// export date picker components
-export * from './DatePicker';
+// export calendar modal components
+export * from './modals';
+
+// export calendar section components
+export * from './sections';
 
