@@ -289,7 +289,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         DAY HEADERS SECTION
         Shows: Sun, Mon, Tue, Wed, Thu, Fri, Sat
         Layout: flexDirection: 'row' with 7 equal-width columns
-        Styling: uppercase, secondary text color, centered
+        Styling: first letter capitalized, secondary text color, centered
       */}
       <View style={styles.dayHeaders}>
         {dayHeaders.map((day) => (
@@ -315,8 +315,20 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         {calendarData.map((week, weekIndex) => (
           <View key={weekIndex} style={styles.week}>
             {week.map((date, dayIndex) => {
+              // determine margin based on column position
+              // first column: no left margin, right margin for spacing
+              // last column: left margin for spacing, no right margin
+              // middle columns: margins on both sides for spacing
+              const isFirstColumn = dayIndex === 0;
+              const isLastColumn = dayIndex === 6;
+              const cellMargin = isFirstColumn 
+                ? { marginLeft: 0, marginRight: 4 }
+                : isLastColumn
+                ? { marginLeft: 4, marginRight: 0 }
+                : { marginHorizontal: 4 };
+              
               // handle empty cells (shouldn't happen with our logic, but safety check)
-              if (!date) return <View key={dayIndex} style={styles.dayCell} />;
+              if (!date) return <View key={dayIndex} style={[styles.dayCell, cellMargin]} />;
               
               // extract date info for styling and interaction
               const dayNumber = date.getDate();
@@ -330,6 +342,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   onPress={() => handleDateSelect(date)}
                   style={({ pressed }) => [
                     styles.dayCell,
+                    cellMargin,
                     {
                       // background color logic:
                       // pressed = temporary highlight
@@ -364,7 +377,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         ? themeColors.text.primary()
                         : themeColors.text.tertiary?.() || themeColors.text.secondary(),
                       // today's date gets bold font weight
-                      fontWeight: isTodayDate ? '700' : '400',
+                      fontWeight: isTodayDate ? '600' : '600',
                     }
                   ]}>
                     {dayNumber}
@@ -397,10 +410,12 @@ const styles = StyleSheet.create({
   
   // calendar header - contains month/year text and navigation arrows
   header: {
+    
     flexDirection: 'row',      // horizontal layout
     justifyContent: 'space-between', // text on left, arrows on right
     alignItems: 'center',      // vertically center all elements
     marginBottom: 8,           // space below header
+    marginLeft: 12,
   },
   
   // month/year text styling
@@ -438,8 +453,8 @@ const styles = StyleSheet.create({
   
   // day header text styling
   dayHeaderText: {
-    fontWeight: '600',         // semi-bold for readability
-    textTransform: 'uppercase', // SUN, MON, TUE format
+    fontWeight: '600',         // normal weight
+    // no textTransform - displays as-is: Sun, Mon, Tue format
   },
   
   // calendar grid container - holds all the date cells
@@ -460,12 +475,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',      // center date number horizontally
     justifyContent: 'center',  // center date number vertically
     borderRadius: 24,          // rounded corners for modern look
-    marginHorizontal: 4,       // space between cells
+    // margin is applied conditionally based on column position (first/last/middle)
   },
   
   // day number text styling
   dayText: {
-    fontWeight: '400',         // normal weight (bold applied conditionally)
+         // normal weight (bold applied conditionally)
   },
 });
 
