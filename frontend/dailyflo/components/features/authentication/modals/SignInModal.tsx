@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { useFadeZoomAnimation } from '@/hooks';
 import { useUI } from '@/store/hooks';
 import { useAppDispatch } from '@/store';
 import { loginUser } from '@/store/slices/auth/authSlice';
@@ -101,13 +102,6 @@ export function SignInModal() {
   const emailLinkOpacity = useRef(new Animated.Value(0)).current;
   const emailLinkScale = useRef(new Animated.Value(0.8)).current;
   
-  // animated values for email auth section sequential fade-in
-  // email auth section and sign in button animate sequentially when email view loads
-  const emailAuthSectionOpacity = useRef(new Animated.Value(0)).current;
-  const emailAuthSectionScale = useRef(new Animated.Value(0.8)).current;
-  const signInButtonOpacity = useRef(new Animated.Value(0)).current;
-  const signInButtonScale = useRef(new Animated.Value(0.8)).current;
-  
   // get modal visibility state from Redux UI slice
   // modals.emailAuthSignIn controls whether this modal is visible
   // closeModal is a Redux action that closes the modal
@@ -169,59 +163,21 @@ export function SignInModal() {
     }
   }, [emailAuthSignIn, emailLinkOpacity, emailLinkScale]);
   
-  // animate email auth section sequentially when viewMode switches to 'email'
-  // email auth section fades in first, then sign in button fades in after delay
-  useEffect(() => {
-    if (viewMode === 'email') {
-      // reset animation values when email view loads
-      // start all elements invisible and slightly smaller
-      emailAuthSectionOpacity.setValue(0);
-      emailAuthSectionScale.setValue(0.8);
-      signInButtonOpacity.setValue(0);
-      signInButtonScale.setValue(0.8);
-      
-      // animate email auth section first (no delay) - fade in and scale up simultaneously
-      Animated.parallel([
-        Animated.timing(emailAuthSectionOpacity, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(emailAuthSectionScale, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-      
-      // animate sign in button second (after delay) - fade in and scale up simultaneously
-      Animated.parallel([
-        Animated.timing(signInButtonOpacity, {
-          toValue: 1,
-          duration: 400,
-          delay: SEQUENTIAL_FADE_DELAY,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(signInButtonScale, {
-          toValue: 1,
-          duration: 400,
-          delay: SEQUENTIAL_FADE_DELAY,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // reset animation values when switching away from email view
-      // this ensures fresh animations when email view loads again
-      emailAuthSectionOpacity.setValue(0);
-      emailAuthSectionScale.setValue(0.8);
-      signInButtonOpacity.setValue(0);
-      signInButtonScale.setValue(0.8);
-    }
-  }, [viewMode, emailAuthSectionOpacity, emailAuthSectionScale, signInButtonOpacity, signInButtonScale]);
+  // use shared fade zoom animation hook for email auth section (no delay - animates first)
+  // animations trigger when viewMode switches to 'email'
+  const { opacityValue: emailAuthSectionOpacity, scaleValue: emailAuthSectionScale } = useFadeZoomAnimation({
+    enabled: viewMode === 'email', // animate when view mode is 'email'
+    delay: 0, // no delay - animates first
+    dependencies: [viewMode], // trigger animation when view mode changes
+  });
+  
+  // use shared fade zoom animation hook for sign in button (with delay - animates second)
+  // animations trigger when viewMode switches to 'email'
+  const { opacityValue: signInButtonOpacity, scaleValue: signInButtonScale } = useFadeZoomAnimation({
+    enabled: viewMode === 'email', // animate when view mode is 'email'
+    delay: SEQUENTIAL_FADE_DELAY, // delay - animates after email auth section
+    dependencies: [viewMode], // trigger animation when view mode changes
+  });
   
   /**
    * Handle modal close

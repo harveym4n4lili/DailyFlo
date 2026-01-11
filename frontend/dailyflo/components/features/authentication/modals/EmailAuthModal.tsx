@@ -12,13 +12,14 @@
  * - Clears form fields when closed
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated, Easing } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { useFadeZoomAnimation } from '@/hooks';
 import { useUI } from '@/store/hooks';
 import { useAppDispatch } from '@/store';
 import { registerUser, loginUser } from '@/store/slices/auth/authSlice';
@@ -52,14 +53,6 @@ export function EmailAuthRegisterModal({ variant = 'register' }: { variant?: 're
   // this prevents multiple button presses while authentication is happening
   const [emailAuthInProgress, setEmailAuthInProgress] = useState(false);
   
-  // animated values for sequential fade-in and scale (start invisible and smaller)
-  // these animations trigger when the modal becomes visible
-  // close button does not have animation - it's always visible and functional
-  const emailAuthOpacity = useRef(new Animated.Value(0)).current;
-  const emailAuthScale = useRef(new Animated.Value(0.8)).current;
-  const registerButtonOpacity = useRef(new Animated.Value(0)).current;
-  const registerButtonScale = useRef(new Animated.Value(0.8)).current;
-  
   // get modal visibility state from Redux UI slice
   // modals.emailAuth controls whether this modal is visible
   // closeModal is a Redux action that closes the modal
@@ -73,60 +66,21 @@ export function EmailAuthRegisterModal({ variant = 'register' }: { variant?: 're
     onboarding: { emailAuthEmail, emailAuthPassword, emailAuthFirstName, emailAuthLastName },
   } = useUI();
   
-  // animate elements sequentially when modal becomes visible
-  // elements fade in and scale up one after another (top to bottom)
-  // close button does not animate - it's always visible and functional
-  useEffect(() => {
-    if (emailAuth) {
-      // reset animation values when modal opens
-      // start all elements invisible and slightly smaller
-      emailAuthOpacity.setValue(0);
-      emailAuthScale.setValue(0.8);
-      registerButtonOpacity.setValue(0);
-      registerButtonScale.setValue(0.8);
-      
-      // animate email auth component first (no delay) - fade in and scale up simultaneously
-      Animated.parallel([
-        Animated.timing(emailAuthOpacity, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(emailAuthScale, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-      
-      // animate register button second (after delay) - fade in and scale up simultaneously
-      Animated.parallel([
-        Animated.timing(registerButtonOpacity, {
-          toValue: 1,
-          duration: 400,
-          delay: SEQUENTIAL_FADE_DELAY,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(registerButtonScale, {
-          toValue: 1,
-          duration: 400,
-          delay: SEQUENTIAL_FADE_DELAY,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // reset animation values when modal closes
-      // this ensures fresh animations when modal opens again
-      emailAuthOpacity.setValue(0);
-      emailAuthScale.setValue(0.8);
-      registerButtonOpacity.setValue(0);
-      registerButtonScale.setValue(0.8);
-    }
-  }, [emailAuth, emailAuthOpacity, emailAuthScale, registerButtonOpacity, registerButtonScale]);
+  // use shared fade zoom animation hook for email auth component (no delay - animates first)
+  // animations trigger when modal becomes visible (emailAuth is true)
+  const { opacityValue: emailAuthOpacity, scaleValue: emailAuthScale } = useFadeZoomAnimation({
+    enabled: emailAuth, // animate when modal is visible
+    delay: 0, // no delay - animates first
+    dependencies: [emailAuth], // trigger animation when modal visibility changes
+  });
+  
+  // use shared fade zoom animation hook for register button (with delay - animates second)
+  // animations trigger when modal becomes visible (emailAuth is true)
+  const { opacityValue: registerButtonOpacity, scaleValue: registerButtonScale } = useFadeZoomAnimation({
+    enabled: emailAuth, // animate when modal is visible
+    delay: SEQUENTIAL_FADE_DELAY, // delay - animates after email auth component
+    dependencies: [emailAuth], // trigger animation when modal visibility changes
+  });
   
   /**
    * Handle email/password authentication

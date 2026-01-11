@@ -11,11 +11,12 @@
  * - Disabled state (social auth not implemented yet)
  */
 
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated, Easing } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { useFadeZoomAnimation } from '@/hooks';
 
 // animation configuration - adjust delay between sequential fade-ins (in milliseconds)
 const SEQUENTIAL_FADE_DELAY = 200; // time between each element fading in
@@ -71,95 +72,26 @@ export function SocialAuthActions({
   // determine if this is sign in variant (changes button text)
   const isSignIn = variant === 'signin';
   
-  // animated values for sequential fade-in and scale (start invisible and smaller)
-  // these animations trigger when the component mounts or animate prop changes
-  const facebookButtonOpacity = useRef(new Animated.Value(animate ? 0 : 1)).current;
-  const facebookButtonScale = useRef(new Animated.Value(animate ? 0.8 : 1)).current;
-  const googleButtonOpacity = useRef(new Animated.Value(animate ? 0 : 1)).current;
-  const googleButtonScale = useRef(new Animated.Value(animate ? 0.8 : 1)).current;
-  const appleButtonOpacity = useRef(new Animated.Value(animate ? 0 : 1)).current;
-  const appleButtonScale = useRef(new Animated.Value(animate ? 0.8 : 1)).current;
+  // use shared fade zoom animation hook for Facebook button (first button with delay)
+  const { opacityValue: facebookButtonOpacity, scaleValue: facebookButtonScale } = useFadeZoomAnimation({
+    enabled: animate, // use animate prop to enable/disable animations
+    delay: SEQUENTIAL_FADE_DELAY, // delay - animates first after initial delay
+    dependencies: [animate], // trigger animation when animate prop changes
+  });
   
-  // animate buttons sequentially when animate prop becomes true
-  // buttons fade in and scale up one after another (Facebook → Google → Apple)
-  // when animate is false, buttons are immediately visible (no animation)
-  useEffect(() => {
-    if (!animate) {
-      // if animations are disabled, set all buttons to visible immediately
-      facebookButtonOpacity.setValue(1);
-      facebookButtonScale.setValue(1);
-      googleButtonOpacity.setValue(1);
-      googleButtonScale.setValue(1);
-      appleButtonOpacity.setValue(1);
-      appleButtonScale.setValue(1);
-      return;
-    }
-    
-    // reset animation values when animations start
-    // start all buttons invisible and slightly smaller
-    facebookButtonOpacity.setValue(0);
-    facebookButtonScale.setValue(0.8);
-    googleButtonOpacity.setValue(0);
-    googleButtonScale.setValue(0.8);
-    appleButtonOpacity.setValue(0);
-    appleButtonScale.setValue(0.8);
-    
-    // Facebook button first (no delay) - fade in and scale up simultaneously
-    Animated.parallel([
-      Animated.timing(facebookButtonOpacity, {
-        toValue: 1,
-        duration: 400,
-        delay: SEQUENTIAL_FADE_DELAY,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(facebookButtonScale, {
-        toValue: 1,
-        duration: 400,
-        delay: SEQUENTIAL_FADE_DELAY,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-    
-    // Google button second (after delay) - fade in and scale up simultaneously
-    Animated.parallel([
-      Animated.timing(googleButtonOpacity, {
-        toValue: 1,
-        duration: 400,
-        delay: SEQUENTIAL_FADE_DELAY * 2,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(googleButtonScale, {
-        toValue: 1,
-        duration: 400,
-        delay: SEQUENTIAL_FADE_DELAY * 2,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
-    
-    // Apple button third (if iOS) - fade in and scale up simultaneously
-    if (Platform.OS === 'ios') {
-      Animated.parallel([
-        Animated.timing(appleButtonOpacity, {
-          toValue: 1,
-          duration: 400,
-          delay: SEQUENTIAL_FADE_DELAY * 3,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(appleButtonScale, {
-          toValue: 1,
-          duration: 400,
-          delay: SEQUENTIAL_FADE_DELAY * 3,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [animate, facebookButtonOpacity, facebookButtonScale, googleButtonOpacity, googleButtonScale, appleButtonOpacity, appleButtonScale]);
+  // use shared fade zoom animation hook for Google button (second button with longer delay)
+  const { opacityValue: googleButtonOpacity, scaleValue: googleButtonScale } = useFadeZoomAnimation({
+    enabled: animate, // use animate prop to enable/disable animations
+    delay: SEQUENTIAL_FADE_DELAY * 2, // longer delay - animates after Facebook button
+    dependencies: [animate], // trigger animation when animate prop changes
+  });
+  
+  // use shared fade zoom animation hook for Apple button (third button with longest delay, iOS only)
+  const { opacityValue: appleButtonOpacity, scaleValue: appleButtonScale } = useFadeZoomAnimation({
+    enabled: animate, // use animate prop to enable/disable animations
+    delay: SEQUENTIAL_FADE_DELAY * 3, // longest delay - animates after Google button
+    dependencies: [animate], // trigger animation when animate prop changes
+  });
   
   /**
    * Handle social authentication button press
