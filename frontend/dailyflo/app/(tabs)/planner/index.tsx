@@ -239,6 +239,7 @@ export default function PlannerScreen() {
             onRefresh={handleRefresh}
             refreshing={isLoading}
             paddingTop={20}
+            paddingHorizontal={14}
           />
         </View>
 
@@ -284,7 +285,8 @@ export default function PlannerScreen() {
         task={selectedTask || undefined}
       />
       
-      {/* Task Creation Modal */}
+      {/* Task Creation Modal - rendered last to ensure proper z-ordering */}
+      {/* this modal has its own built-in backdrop via WrappedFullScreenModal */}
       <TaskCreationModal
         visible={isCreateTaskModalVisible}
         onClose={() => setIsCreateTaskModalVisible(false)}
