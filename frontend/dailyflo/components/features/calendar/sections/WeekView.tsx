@@ -471,7 +471,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
                       <Text 
                         numberOfLines={1}
                         style={[
-                          getTextStyle('body-large'),
+                          getTextStyle('body-medium'),
                           styles.dayHeaderText,
                           { 
                             color: themeColors.text.tertiary?.() || themeColors.text.secondary()
@@ -564,15 +564,16 @@ const createStyles = (
   
   // day header pressable - clickable area for day header
   dayHeaderPressable: {
-    marginBottom: 0,
-    paddingVertical: 4,
+    marginBottom: 4,
+    paddingVertical: 0,
     paddingHorizontal: 8,
   },
   
   // day header text styling
   dayHeaderText: {
-    fontWeight: '400',
+    fontWeight: '600',
     textAlign: 'center',
+    letterSpacing: 0.8,
   },
   
   // date cell container - holds background and pressable
@@ -587,9 +588,9 @@ const createStyles = (
   // animated background highlight
   dateCellBackground: {
     position: 'absolute',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   
   // date cell pressable - clickable area
