@@ -92,14 +92,6 @@ export default function PlannerScreen() {
   // handle date selection from calendar modal or week view
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
-    // print the selected day to console
-    const selectedDay = new Date(date);
-    console.log('Selected day:', selectedDay.toLocaleDateString('en-US', { 
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }));
   };
   
   // filter tasks for the selected date

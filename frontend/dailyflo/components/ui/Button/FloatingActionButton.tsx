@@ -35,6 +35,11 @@ import { Ionicons } from '@expo/vector-icons';
 // provides subtle vibration feedback on supported devices
 import * as Haptics from 'expo-haptics';
 
+// EXPO ROUTER IMPORTS
+// useSegments: hook that provides the current route segments (path parts)
+// this allows us to detect which screen/tab is currently active
+import { useSegments } from 'expo-router';
+
 // CUSTOM HOOKS IMPORTS
 // useThemeColors: hook that provides theme-aware colors
 // this allows the FAB to adapt to theme changes and use design system colors
@@ -144,6 +149,25 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   // - rounded corners
   // flow: device provides insets → hook reads them → we use them for positioning
   const insets = useSafeAreaInsets();
+  
+  // SCREEN DETECTION
+  // useSegments: hook that provides an array of route segments (path parts)
+  // segments will be like ["(tabs)", "today"] or ["(tabs)", "planner"] or ["(tabs)", "browse"] or ["(tabs)", "settings"]
+  // we get the last segment to determine which screen/tab is currently active
+  // flow: user navigates to tab → expo router updates segments → hook detects change → we log current screen
+  const segments = useSegments();
+  
+  // detect current screen from route segments
+  // the last segment in the array is the current screen name
+  // e.g., segments = ["(tabs)", "today"] → currentScreen = "today"
+  const currentScreen = segments[segments.length - 1] || 'unknown';
+  
+  // log current screen to console whenever it changes
+  // useEffect runs after render and whenever dependencies change
+  // flow: screen changes → segments update → useEffect runs → console logs new screen
+  React.useEffect(() => {
+    console.log('FAB detected current screen:', currentScreen);
+  }, [currentScreen]);
   
   // pulse animation values
   // using two animated values: one for scale and one for opacity
