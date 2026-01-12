@@ -477,8 +477,7 @@ export default function TodayScreen() {
       {/* Floating Action Button for quick task creation */}
       <FloatingActionButton
         onPress={() => {
-          console.log('FAB Pressed - Ready to create new task!');
-          // TODO: Navigate to task creation modal
+          setIsCreateTaskModalVisible(true);
         }}
         accessibilityLabel="Add new task"
         accessibilityHint="Double tap to create a new task"
