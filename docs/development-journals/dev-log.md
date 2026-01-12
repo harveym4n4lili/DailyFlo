@@ -1139,13 +1139,26 @@ Updated User app, models, serializers, views and urls
 ### Notes
 - no notes
 ---
-## [03/12/2025] - [Monday]
+## [03/01/2026] - [Monday]
 ### Today's Goals
 - [X] Further learning on types and TypeScript
 
 ### Plans For Future
 - get better understanding of async thunk, redux slice state
 - do a deep run manual integration test, and ensure backlog is COMPLETELY up to date
+
+### Notes
+- no notes
+---
+## [11/01/2026] - [Sunday]
+### Today's Goals
+- [X] Started calendar planner screen, in a new branch
+- [X] Implemented a weekly view scroll feature
+- [X] Implemnted a new month view modal
+- [X] Modularised animations
+
+### Plans For Future
+- Plan how to implement task card views in the planner page
 
 ### Notes
 - no notes
