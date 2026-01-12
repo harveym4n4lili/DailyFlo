@@ -95,6 +95,7 @@ export interface ListCardProps {
   
   // padding support
   paddingTop?: number; // top padding for the list container
+  paddingHorizontal?: number; // horizontal padding for the list container
   
   // dropdown menu support
   // array of menu items to display in the dropdown menu (shown as ellipse button in header)
@@ -141,6 +142,7 @@ export default function ListCard({
   headerTitle,
   headerSubtitle,
   paddingTop,
+  paddingHorizontal = 20, // default horizontal padding (20px)
   dropdownItems,
   dropdownAnchorPosition = 'top-right',
   dropdownTopOffset = 0,
@@ -200,8 +202,8 @@ export default function ListCard({
 
   // create dynamic styles using the color palette system and typography system
   const styles = useMemo(
-    () => createStyles(themeColors, semanticColors, typography, insets, paddingTop),
-    [themeColors, semanticColors, typography, insets, paddingTop]
+    () => createStyles(themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal),
+    [themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal]
   );
 
   // use custom hooks for animation management
@@ -477,7 +479,8 @@ const createStyles = (
   semanticColors: ReturnType<typeof useSemanticColors>,
   typography: ReturnType<typeof useTypography>,
   insets: { top: number; bottom: number; left: number; right: number },
-  paddingTop?: number
+  paddingTop?: number,
+  paddingHorizontal?: number
 ) =>
   StyleSheet.create({
     // main container
@@ -492,7 +495,7 @@ const createStyles = (
     listContainer: {
       paddingTop: paddingTop ?? 0, // top padding for list container (optional, defaults to 0)
       paddingBottom: 58 + 80 + 16 + insets.bottom + 40, // FAB height (58px) + navbar height (80px) + spacing (16px) + safe area bottom + extra space (40px)
-      paddingHorizontal: 20, // horizontal padding for task cards
+      paddingHorizontal: paddingHorizontal ?? 20, // horizontal padding for task cards (optional, defaults to 20px)
       // ensure content can scroll all the way to bottom of screen
       flexGrow: 1, // allow content to grow and fill available space
     },
