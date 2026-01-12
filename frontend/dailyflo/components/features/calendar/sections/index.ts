@@ -13,3 +13,7 @@ export type { CalendarViewProps } from './CalendarView';
 export { QuickDateOptions } from './QuickDateOptions';
 export type { QuickDateOptionsProps } from './QuickDateOptions';
 
+// export the week view component
+export { WeekView } from './WeekView';
+export type { WeekViewProps } from './WeekView';
+
