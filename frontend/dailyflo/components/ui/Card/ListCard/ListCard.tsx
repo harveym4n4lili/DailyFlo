@@ -11,7 +11,7 @@
  * This component demonstrates the flow from Redux store → ListCard → TaskCard → User interaction.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, ListRenderItem, RefreshControl, Animated, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UIManager } from 'react-native';
@@ -160,6 +160,43 @@ export default function ListCard({
   // DROPDOWN STATE - Controls the visibility of the dropdown menu
   // when dropdownItems are provided, this state manages whether the dropdown is visible
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  
+  // FLATLIST REFS - Create refs for FlatList instances to control scroll position
+  // using refs ensures each ListCard instance has independent scroll control
+  const flatListRef = useRef<FlatList>(null);
+  const groupedFlatListRef = useRef<FlatList>(null);
+  
+  // UNIQUE INSTANCE ID - Generate a unique ID for this ListCard instance
+  // this ensures React treats each instance as completely separate
+  const instanceId = useRef(Math.random().toString(36).substring(7)).current;
+  
+  // RESET SCROLL POSITION ON MOUNT - Ensure each ListCard starts at the top
+  // this prevents scroll position from being shared between instances
+  useEffect(() => {
+    // reset scroll position to top when component mounts
+    // small delay ensures FlatList is fully rendered before scrolling
+    const timer = setTimeout(() => {
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+      groupedFlatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // RESET SCROLL POSITION AFTER REFRESH - Ensure scroll position resets after refresh completes
+  // this prevents scroll position from accumulating between refresh cycles
+  useEffect(() => {
+    if (!refreshing) {
+      // when refreshing becomes false, reset scroll position to top
+      // small delay ensures refresh animation completes first
+      const timer = setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+        groupedFlatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [refreshing]);
 
   // create dynamic styles using the color palette system and typography system
   const styles = useMemo(
@@ -310,14 +347,11 @@ export default function ListCard({
   }
 
   // create refresh control for pull-to-refresh functionality
-  // progressViewOffset accounts for contentInset top to ensure refresh indicator appears correctly
   const refreshControl = onRefresh ? (
     <RefreshControl
       refreshing={refreshing}
       onRefresh={onRefresh}
       tintColor="#007AFF" // iOS blue color for pull-to-refresh indicator
-      progressViewOffset={insets.top} // offset from top to account for contentInset
-      style={{ paddingTop: 32 }}
     />
   ) : undefined;
 
@@ -339,22 +373,18 @@ export default function ListCard({
           />
         )}
         <FlatList
+          ref={flatListRef}
           data={processedTasks}
           renderItem={renderTaskCard}
-          keyExtractor={(task) => task.id}
+          keyExtractor={(task) => `${instanceId}-${task.id}`} // add instance ID to ensure unique keys
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           refreshControl={refreshControl}
           onScroll={onScroll}
           scrollEventThrottle={scrollEventThrottle}
           ListHeaderComponent={renderHeader}
-          // contentInset allows scrolling past the top safe area insets
-          // this ensures content can scroll all the way to the top without being cut off
-          // the top inset creates extra scrollable space above the content
-          contentInset={{ top: insets.top }}
-          // initial scroll offset matches the position after refresh control completes
-          // this ensures the header title doesn't touch the top edge initially
-          contentOffset={{ x: 0, y: -insets.top }}
+          // prevent scroll position restoration between instances
+          maintainVisibleContentPosition={null}
         />
       </View>
     );
@@ -425,20 +455,16 @@ export default function ListCard({
               </View>
             );
           }}
-          keyExtractor={([groupTitle]) => groupTitle}
+          ref={groupedFlatListRef}
+          keyExtractor={([groupTitle]) => `${instanceId}-${groupTitle}`} // add instance ID to ensure unique keys
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           refreshControl={refreshControl}
           onScroll={onScroll}
           scrollEventThrottle={scrollEventThrottle}
           ListHeaderComponent={renderHeader}
-          // contentInset allows scrolling past the top safe area insets
-          // this ensures content can scroll all the way to the top without being cut off
-          // the top inset creates extra scrollable space above the content
-          contentInset={{ top: insets.top }}
-          // initial scroll offset matches the position after refresh control completes
-          // this ensures the header title doesn't touch the top edge initially
-          contentOffset={{ x: 0, y: -insets.top }}
+          // prevent scroll position restoration between instances
+          maintainVisibleContentPosition={null}
         />
       </View>
     );

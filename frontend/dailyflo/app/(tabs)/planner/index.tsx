@@ -1,6 +1,6 @@
 
-import React, { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useMemo, useState, useEffect } from 'react';
+import { StyleSheet, View, Platform } from 'react-native';
 
 // import our custom layout components
 import { ScreenContainer } from '@/components';
@@ -8,6 +8,8 @@ import { FloatingActionButton } from '@/components/ui/Button';
 import { ModalBackdrop } from '@/components/layout/ModalLayout';
 import { CalendarNavigationModal } from '@/components/features/calendar/modals';
 import { WeekView } from '@/components/features/calendar/sections';
+import { ListCard } from '@/components/ui/Card';
+import { TaskViewModal, TaskCreationModal } from '@/components/features/tasks';
 
 // import color palette system for consistent theming
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -17,6 +19,14 @@ import { useTypography } from '@/hooks/useTypography';
 
 // safe area context for handling devices with notches/home indicators
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// redux store hooks for task management
+import { useTasks } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
+
+// types for tasks
+import { Task, TaskColor } from '@/types';
 
 export default function PlannerScreen() {
   // CALENDAR MODAL STATE - Controls the visibility of the calendar modal
@@ -28,6 +38,14 @@ export default function PlannerScreen() {
     return new Date().toISOString();
   });
   
+  // TASK DETAIL MODAL STATE - Controls the visibility of task detail modal
+  const [isTaskDetailModalVisible, setIsTaskDetailModalVisible] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTaskColor, setSelectedTaskColor] = useState<TaskColor>('blue');
+  
+  // TASK CREATION MODAL STATE - Controls the visibility of task creation modal
+  const [isCreateTaskModalVisible, setIsCreateTaskModalVisible] = useState(false);
+  
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
   
@@ -37,8 +55,33 @@ export default function PlannerScreen() {
   // SAFE AREA INSETS - Get safe area insets for proper positioning
   const insets = useSafeAreaInsets();
   
+  // REDUX STORE - Accessing task state from Redux store
+  const dispatch = useAppDispatch();
+  const { tasks, isLoading } = useTasks();
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  
+  // calculate border radius based on iOS version to match modal styling
+  // iOS 15+ (liquid glass UI): uses 26px border radius for liquid glass UI design
+  // iOS < 15 (pre-glass UI): uses smaller border radius (20px)
+  // Android/web: uses default border radius (12px)
+  const getModalBorderRadius = (): number => {
+    if (Platform.OS !== 'ios') return 12; // Android/web default
+    const version = Platform.Version as string;
+    const majorVersion = typeof version === 'string' 
+      ? parseInt(version.split('.')[0], 10) 
+      : Math.floor(version as number);
+    if (majorVersion >= 15) {
+      return 50; // iOS 15+ liquid glass UI - 26px border radius
+    } else if (majorVersion > 0) {
+      return 20; // iOS < 15
+    }
+    return 12; // fallback
+  };
+  
+  const modalBorderRadius = getModalBorderRadius();
+  
   // create dynamic styles using the color palette system and typography system
-  const styles = useMemo(() => createStyles(themeColors, typography, insets), [themeColors, typography, insets]);
+  const styles = useMemo(() => createStyles(themeColors, typography, insets, modalBorderRadius), [themeColors, typography, insets, modalBorderRadius]);
 
   // CALENDAR HANDLERS
   // handle calendar modal close
@@ -57,6 +100,97 @@ export default function PlannerScreen() {
       month: 'long',
       day: 'numeric'
     }));
+  };
+  
+  // filter tasks for the selected date
+  // useMemo ensures this calculation only runs when tasks or selectedDate changes
+  const selectedDateTasks = useMemo(() => {
+    if (!selectedDate) return [];
+    
+    // convert selected date to date string for comparison (YYYY-MM-DD format)
+    const selectedDateObj = new Date(selectedDate);
+    const selectedDateString = selectedDateObj.toDateString(); // "Mon Jan 15 2024" format
+    
+    // filter tasks that match the selected date
+    return tasks.filter(task => {
+      if (!task.dueDate) return false;
+      const taskDate = new Date(task.dueDate);
+      return taskDate.toDateString() === selectedDateString;
+    });
+  }, [tasks, selectedDate]);
+  
+  // fetch tasks when component mounts or when authentication state changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(fetchTasks());
+    }
+  }, [isAuthenticated, dispatch]);
+  
+  // TASK HANDLERS - Functions to handle task interactions
+  // handle when user taps on a task card to view details
+  const handleTaskPress = (task: Task) => {
+    setSelectedTask(task);
+    setSelectedTaskColor(task.color || 'blue');
+    setIsTaskDetailModalVisible(true);
+  };
+  
+  // handle closing the task detail modal
+  const handleTaskDetailModalClose = () => {
+    setIsTaskDetailModalVisible(false);
+    // delay clearing selected task to allow modal close animation
+    setTimeout(() => {
+      setSelectedTask(null);
+    }, 300);
+  };
+  
+  // handle marking a task as complete
+  const handleTaskComplete = async (task: Task) => {
+    try {
+      await dispatch(updateTask({ 
+        id: task.id, 
+        updates: { 
+          id: task.id,
+          isCompleted: !task.isCompleted
+        } 
+      })).unwrap();
+    } catch (error) {
+      console.error('Failed to update task:', error);
+    }
+  };
+  
+  // handle editing a task (opens task detail modal)
+  const handleTaskEdit = (task: Task) => {
+    setSelectedTask(task);
+    setSelectedTaskColor(task.color || 'blue');
+    setIsTaskDetailModalVisible(true);
+  };
+  
+  // handle deleting a task
+  const handleTaskDelete = async (task: Task) => {
+    try {
+      await dispatch(deleteTask(task.id)).unwrap();
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+    }
+  };
+  
+  // handle swipe left gesture (complete task)
+  const handleTaskSwipeLeft = async (task: Task) => {
+    if (!task.isCompleted) {
+      await handleTaskComplete(task);
+    }
+  };
+  
+  // handle swipe right gesture (delete task)
+  const handleTaskSwipeRight = async (task: Task) => {
+    await handleTaskDelete(task);
+  };
+  
+  // handle refresh - reload tasks from server
+  const handleRefresh = async () => {
+    if (isAuthenticated) {
+      await dispatch(fetchTasks());
+    }
   };
 
   // render main content
@@ -79,26 +213,56 @@ export default function PlannerScreen() {
           />
         </View>
         
-        {/* Content area */}
+        {/* Content area with rounded top and left corners */}
         <View style={styles.contentContainer}>
-          {/* Planner content will go here */}
+          {/* ListCard component displays tasks for the selected date */}
+          {/* key prop ensures this ListCard instance is completely independent from today screen */}
+          <ListCard
+            key="planner-screen-listcard"
+            tasks={selectedDateTasks}
+            onTaskPress={handleTaskPress}
+            onTaskComplete={handleTaskComplete}
+            onTaskEdit={handleTaskEdit}
+            onTaskDelete={handleTaskDelete}
+            onTaskSwipeLeft={handleTaskSwipeLeft}
+            onTaskSwipeRight={handleTaskSwipeRight}
+            showCategory={false}
+            compact={false}
+            emptyMessage={`No tasks for ${new Date(selectedDate).toLocaleDateString('en-US', { 
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric'
+            })}. Tap the + button to add a task!`}
+            loading={isLoading && selectedDateTasks.length === 0}
+            sortBy="dueDate"
+            sortDirection="asc"
+            onRefresh={handleRefresh}
+            refreshing={isLoading}
+            paddingTop={20}
+          />
         </View>
 
         {/* Floating Action Button for quick task creation */}
         <FloatingActionButton
           onPress={() => {
-            console.log('FAB Pressed - Ready to create new task!');
-            // TODO: Navigate to task creation modal
+            setIsCreateTaskModalVisible(true);
           }}
           accessibilityLabel="Add new task"
           accessibilityHint="Double tap to create a new task"
         />
       </ScreenContainer>
 
-      {/* separate backdrop that fades in independently behind the modal */}
+      {/* separate backdrop that fades in independently behind the calendar modal */}
       <ModalBackdrop
         isVisible={isCalendarModalVisible}
         onPress={handleCalendarClose}
+        zIndex={10000}
+      />
+      
+      {/* separate backdrop that fades in independently behind the task detail modal */}
+      <ModalBackdrop
+        isVisible={isTaskDetailModalVisible}
+        onPress={handleTaskDetailModalClose}
         zIndex={10000}
       />
       
@@ -110,6 +274,24 @@ export default function PlannerScreen() {
         onSelectDate={handleDateSelect}
         title="Select Date"
       />
+      
+      {/* Task Detail Modal - displays task details using TaskViewModal */}
+      <TaskViewModal
+        visible={isTaskDetailModalVisible}
+        onClose={handleTaskDetailModalClose}
+        taskColor={selectedTaskColor}
+        taskId={selectedTask?.id}
+        task={selectedTask || undefined}
+      />
+      
+      {/* Task Creation Modal */}
+      <TaskCreationModal
+        visible={isCreateTaskModalVisible}
+        onClose={() => setIsCreateTaskModalVisible(false)}
+        initialValues={{
+          dueDate: selectedDate, // pre-fill with selected date
+        }}
+      />
     </View>
   );
 }
@@ -118,7 +300,8 @@ export default function PlannerScreen() {
 const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>, 
   typography: ReturnType<typeof useTypography>,
-  insets: ReturnType<typeof useSafeAreaInsets>
+  insets: ReturnType<typeof useSafeAreaInsets>,
+  modalBorderRadius: number // border radius value that matches modal styling
 ) => StyleSheet.create({
   // week view container - positioned at top with safe area padding
   weekViewContainer: {
@@ -126,8 +309,20 @@ const createStyles = (
     backgroundColor: themeColors.background.primary(),
   },
 
-  // content container
+  // content container - styled with top border radius matching modal styling
+  // uses conditional border radius based on iOS version to match DraggableModal appearance
+  // has 8px spacing from screen edges on all sides
+  // uses 1px border with primary border color matching task creation styling
+  // uses primary secondary blend background color for subtle visual distinction
   contentContainer: {
     flex: 1,
+    backgroundColor: themeColors.background.primarySecondaryBlend(), // primary secondary blend background color
+    borderRadius: modalBorderRadius,
+    borderWidth: 1, // 1px border matching task creation border width
+    borderColor: themeColors.border.primary(), // border color matching task creation border color
+    margin: 4, // 8px spacing from all screen edges
+    paddingHorizontal: 0, // remove horizontal padding since ListCard handles its own padding
+    paddingTop: 0, // top padding for content spacing
+    overflow: 'hidden', // ensure content respects border radius
   },
 });
