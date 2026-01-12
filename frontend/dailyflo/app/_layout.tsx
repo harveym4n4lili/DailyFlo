@@ -45,16 +45,19 @@ export default function RootLayout() {
   });
 
   /**
-   * Check authentication status and onboarding completion on app launch
+   * Check onboarding completion and authentication status on app launch
    * This determines whether user is logged in and where to route them
    * 
-   * Flow:
-   * 1. Check if user is authenticated (has valid tokens)
-   * 2. If authenticated → load user data from backend
-   * 3. Check AsyncStorage for onboarding completion flag
-   * 4. If onboarding complete → route to main app (tabs)
-   * 5. If not complete → route to onboarding welcome screen
+   * Flow (PRIORITIZES ONBOARDING):
+   * 1. FIRST: Check AsyncStorage for onboarding completion flag
+   * 2. If onboarding NOT complete → route to onboarding welcome screen immediately
+   * 3. If onboarding IS complete → check authentication status
+   * 4. If authenticated → load user data and route to main app (tabs)
+   * 5. If not authenticated → route to onboarding (where they can sign in)
    * 6. On error → default to onboarding (safer for new users)
+   * 
+   * We prioritize onboarding check first so that users who haven't completed
+   * onboarding will always see onboarding screens, regardless of auth status.
    * 
    * We use a ref to ensure this only runs once, preventing flashing
    * We only depend on 'loaded' to avoid re-running when segments change
@@ -67,17 +70,9 @@ export default function RootLayout() {
     
     const checkOnboardingStatus = async () => {
       try {
-        // First, check authentication status
-        // This checks if user has valid tokens and loads user data if authenticated
-        // checkAuthStatus is a Redux async thunk that:
-        // - Checks SecureStore for tokens
-        // - Validates tokens with backend
-        // - Refreshes tokens if expired
-        // - Loads user data if tokens are valid
-        await store.dispatch(checkAuthStatus());
-        
-        // check if user has completed onboarding by reading from AsyncStorage
+        // FIRST: check if user has completed onboarding by reading from AsyncStorage
         // AsyncStorage is a simple key-value storage system for React Native
+        // We check this FIRST to prioritize onboarding over authentication
         const onboardingComplete = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY);
         
         // mark that we've started navigation check to prevent re-running
@@ -90,15 +85,9 @@ export default function RootLayout() {
         // segments will be like ["(onboarding)", "welcome"] or ["(tabs)", "today"]
         const currentGroup = segments[0];
         
-        if (onboardingComplete === 'true') {
-          // user has completed onboarding, route to main app
-          // only navigate if we're not already on the tabs route
-          if (currentGroup !== '(tabs)') {
-            // use replace instead of push to prevent going back to onboarding
-            router.replace('/(tabs)');
-          }
-        } else {
-          // user hasn't completed onboarding, they are a first-time user
+        if (onboardingComplete !== 'true') {
+          // user hasn't completed onboarding - prioritize showing onboarding screens
+          // this happens regardless of authentication status - onboarding comes first
           // ensure no account is logged in - clear any existing auth state
           // this ensures first-time users start with a clean slate
           const authState = store.getState().auth;
@@ -112,6 +101,38 @@ export default function RootLayout() {
           if (currentGroup !== '(onboarding)') {
             // this is the first screen in the onboarding flow
             router.replace('/(onboarding)/welcome');
+          }
+        } else {
+          // user has completed onboarding, now check authentication status
+          // This checks if user has valid tokens and loads user data if authenticated
+          // checkAuthStatus is a Redux async thunk that:
+          // - Checks SecureStore for tokens
+          // - Validates tokens with backend
+          // - Refreshes tokens if expired
+          // - Loads user data if tokens are valid
+          await store.dispatch(checkAuthStatus());
+          
+          // after checking auth status, verify user is actually authenticated
+          // this handles the case where onboarding is complete but user is not logged in
+          // (can happen if user skipped onboarding without logging in)
+          const authState = store.getState().auth;
+          
+          if (authState.isAuthenticated) {
+            // user has completed onboarding AND is authenticated - route to main app
+            // only navigate if we're not already on the tabs route
+            if (currentGroup !== '(tabs)') {
+              // use replace instead of push to prevent going back to onboarding
+              router.replace('/(tabs)');
+            }
+          } else {
+            // onboarding is complete but user is not authenticated
+            // this can happen if user skipped onboarding without logging in
+            // route them to the first onboarding screen (welcome) so they can complete the flow
+            // only navigate if we're not already on the onboarding route
+            if (currentGroup !== '(onboarding)') {
+              // route to welcome screen (first onboarding screen)
+              router.replace('/(onboarding)/welcome');
+            }
           }
         }
       } catch (error) {

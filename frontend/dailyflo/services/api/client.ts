@@ -13,6 +13,7 @@
  */
 
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // redux store imports - access auth state and dispatch actions
 // store: the main redux store that holds all app state
 // logout: action that logs out the user
@@ -27,6 +28,11 @@ import {
   storeRefreshToken,
   clearAllTokens,
 } from '../auth/tokenStorage';
+
+// storage key for tracking onboarding completion status
+// this key is used to check if the user has completed the onboarding flow
+// when user logs out, we reset this so they see onboarding screens again
+const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
 
 /**
  * Configuration for the API client
@@ -180,6 +186,18 @@ const createApiClient = (): AxiosInstance => {
           await clearAllTokens();
           // Dispatch logout action to clear Redux state
           store.dispatch(logout());
+          
+          // Reset onboarding status when user is logged out due to token refresh failure
+          // This ensures that after logout, the user will see onboarding screens again
+          // This is important because a logged-out user should be treated as a new user
+          try {
+            await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+          } catch (onboardingError) {
+            // If resetting onboarding fails, log it but don't fail the logout
+            // The logout should still succeed even if onboarding reset fails
+            console.error('Error resetting onboarding during token refresh failure:', onboardingError);
+          }
+          
           return Promise.reject(refreshError);
         }
       }
