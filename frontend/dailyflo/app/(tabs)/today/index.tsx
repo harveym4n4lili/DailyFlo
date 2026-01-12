@@ -163,7 +163,7 @@ export default function TodayScreen() {
     const handleScrollChange = (scrollY: number) => {
       // lower threshold (more negative) makes the title appear earlier when scrolling up
       // changed from -30 to -50 to activate the top section sooner
-      const titleThreshold = insets.top - 60;
+      const titleThreshold = insets.top + 12;
       
       if (scrollY >= titleThreshold && !showTitle && !isAnimatingRef.current) {
         setShowTitle(true);
@@ -445,7 +445,9 @@ export default function TodayScreen() {
       >
       {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
       {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
+      {/* key prop ensures this ListCard instance is completely independent from planner screen */}
       <ListCard
+        key="today-screen-listcard"
         tasks={todaysTasks}
         onTaskPress={handleTaskPress}
         onTaskComplete={handleTaskComplete}
@@ -470,7 +472,7 @@ export default function TodayScreen() {
         }}
         scrollEventThrottle={16}
         headerTitle="Today"
-       
+        paddingTop={insets.top+ 64} // add top padding equal to safe area inset
       />
       {/* Floating Action Button for quick task creation */}
       <FloatingActionButton
