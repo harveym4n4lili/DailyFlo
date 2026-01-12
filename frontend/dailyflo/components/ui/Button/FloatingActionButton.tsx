@@ -8,7 +8,7 @@
 
 // REACT IMPORTS
 // react: core react library for building components
-import React, { useState } from 'react';
+import React from 'react';
 
 // REACT NATIVE IMPORTS
 // these are the building blocks from react native that we use to create the FAB
@@ -43,10 +43,10 @@ import { useTypography } from '@/hooks/useTypography';
 // useThemeColor: hook that provides the global theme color selected by the user
 import { useThemeColor } from '@/hooks/useThemeColor';
 
-// TASK CREATION MODAL IMPORT
-// TaskCreationModal: full-screen modal for creating new tasks
-// import directly from TaskCreationModal to avoid require cycle with TaskCreation barrel
-import { TaskCreationModal } from '@/components/features/tasks/TaskCreation/TaskCreationModal';
+// TASK CREATION MODAL IMPORT - REMOVED
+// TaskCreationModal is now managed by parent screens, not inside FAB
+// this prevents duplicate modals and touch blocking issues
+// import { TaskCreationModal } from '@/components/features/tasks/TaskCreation/TaskCreationModal';
 
 /**
  * Props for the FloatingActionButton component
@@ -116,10 +116,9 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   accessibilityLabel = 'Add new task',                  // screen reader label (default provided)
   accessibilityHint = 'Double tap to create a new task', // screen reader hint (default provided)
 }) => {
-  // MODAL STATE MANAGEMENT
-  // state to control whether the modal is visible
-  // useState hook manages local component state for modal visibility
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  // MODAL STATE MANAGEMENT - REMOVED
+  // modal is now managed by parent screens to prevent duplicate modals
+  // const [isModalVisible, setIsModalVisible] = useState(false);
   
   // COLOR PALETTE USAGE
   // get theme-aware colors from the design system
@@ -199,38 +198,23 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   
   /**
    * Handle FAB press
-   * Opens the modal for task creation
+   * Calls the parent's onPress callback to handle modal opening
    */
   // PRESS HANDLER FUNCTION
   // this function runs when the user taps the FAB button
-  // flow: user taps FAB → TouchableOpacity calls this function → we show modal → we call parent's onPress
+  // flow: user taps FAB → TouchableOpacity calls this function → we call parent's onPress
+  // parent screen manages the modal, not the FAB component
   const handlePress = () => {
     // give light haptic feedback on tap (no-op on unsupported platforms)
     Haptics.impactAsync?.(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
 
-    // first, log to console as requested in requirements
-    // this helps with debugging and shows that the button is working
-    console.log('FAB Pressed - Opening modal');
+    // log to console for debugging
+    console.log('FAB Pressed');
     
-    // show the modal
-    setIsModalVisible(true);
-    
-    // then call the parent's onPress callback if it was provided
+    // call the parent's onPress callback to handle modal opening
     // the ?. is optional chaining - only calls onPress if it exists
-    // this allows the parent component to handle what happens next
+    // parent screen will manage opening/closing the TaskCreationModal
     onPress?.();
-  };
-
-  /**
-   * Handle modal close
-   * Closes the modal
-   */
-  // MODAL CLOSE HANDLER
-  // this function runs when the user wants to close the modal
-  // flow: user taps close button → this function is called → modal is hidden
-  const handleModalClose = () => {
-    console.log('Modal closed');
-    setIsModalVisible(false);
   };
 
   // COMPONENT RENDER
@@ -299,12 +283,6 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
           />
         </TouchableOpacity>
       </Animated.View>
-
-      {/* Task Creation Modal - full-screen modal for creating new tasks */}
-      <TaskCreationModal 
-        visible={isModalVisible}
-        onClose={handleModalClose}
-      />
     </>
   );
 };
