@@ -123,12 +123,10 @@ export function formatTimeRange(startTime: string, durationMinutes: number): str
   const endMinutes = startMinutes + durationMinutes;
   const endTime = minutesToTime(endMinutes);
   
-  // format times for display (convert 24h to 12h with AM/PM)
+  // format times for display (24-hour format)
   const formatTime = (time: string): string => {
     const [hours, minutes] = time.split(':').map(Number);
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   };
   
   if (durationMinutes > 0) {
@@ -167,15 +165,13 @@ export function positionToTime(
 }
 
 /**
- * Formats a time string for display (e.g., "9:00 AM")
+ * Formats a time string for display (24-hour format, e.g., "09:00")
  * 
  * @param time - Time string in HH:MM format
- * @returns Formatted time string with AM/PM
+ * @returns Formatted time string in 24-hour format
  */
 export function formatTimeForDisplay(time: string): string {
   const [hours, minutes] = time.split(':').map(Number);
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const displayHours = hours % 12 || 12;
-  return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 

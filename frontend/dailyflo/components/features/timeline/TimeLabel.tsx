@@ -35,12 +35,10 @@ export default function TimeLabel({ time, position, isEndTime = false, isDragLab
   // create dynamic styles using theme colors and typography
   const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
 
-  // format time for display (convert 24h to 12h with AM/PM)
+  // format time for display (24-hour format)
   const formattedTime = useMemo(() => {
     const [hours, minutes] = time.split(':').map(Number);
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }, [time]);
 
   return (
@@ -65,23 +63,31 @@ const createStyles = (
     alignItems: 'flex-end',
     justifyContent: 'center',
     paddingRight: 4,
-    minHeight: 20,
+    minHeight: 16,
   },
 
-  // time text styling
+  // time text styling - more compact
   timeText: {
-    // use body-small text style from typography system
-    ...typography.getTextStyle('body-small'),
+    // use smaller font size for compact display
+    fontSize: 11,
     color: themeColors.text.tertiary(),
     fontWeight: '600',
+    lineHeight: 14,
   },
 
- 
+  // end time text styling (lighter/smaller for end times)
+  endTimeText: {
+    fontSize: 9,
+    opacity: 0.7,
+    lineHeight: 12,
+  },
+
   // drag time text styling (highlighted during drag)
   dragTimeText: {
     color: themeColors.interactive.primary(),
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 11,
+    lineHeight: 14,
   },
 });
 

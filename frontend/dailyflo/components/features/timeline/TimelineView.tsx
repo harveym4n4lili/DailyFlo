@@ -58,20 +58,14 @@ export default function TimelineView({
   // track actual card heights measured from TimelineItem components
   const [taskCardHeights, setTaskCardHeights] = useState<Map<string, number>>(new Map());
 
-  // format drag time for display (snap to 5-minute intervals)
+  // format drag time for display (24-hour format)
   const formatDragTime = useCallback((time: string): string => {
     const [hours, minutes] = time.split(':').map(Number);
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }, []);
 
   // create dynamic styles using theme colors and typography
   const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
-
-  // generate time slots for the timeline (e.g., 6:00, 7:00, 8:00, etc.)
-  // these are used to display time labels on the left side
-  const timeSlots = useMemo(() => generateTimeSlots(startHour, endHour, timeInterval), [startHour, endHour, timeInterval]);
 
   // filter tasks that have a time set (required for timeline positioning)
   // tasks without time won't appear on the timeline
@@ -79,8 +73,64 @@ export default function TimelineView({
     return tasks.filter(task => task.time && task.dueDate);
   }, [tasks]);
 
+  // calculate dynamic start time - use earliest task time or fallback to startHour
+  // round down to the hour and subtract 1 hour for buffer to allow scrolling up
+  const dynamicStartHour = useMemo(() => {
+    if (tasksWithTime.length === 0) return startHour;
+    
+    const earliestTask = tasksWithTime.reduce((earliest, task) => {
+      if (!task.time) return earliest;
+      if (!earliest) return task;
+      
+      const taskMinutes = timeToMinutes(task.time);
+      const earliestMinutes = timeToMinutes(earliest.time!);
+      
+      return taskMinutes < earliestMinutes ? task : earliest;
+    }, null as Task | null);
+    
+    if (!earliestTask?.time) return startHour;
+    
+    // get the hour of the earliest task, rounding down to the hour
+    const earliestMinutes = timeToMinutes(earliestTask.time);
+    const earliestHour = Math.floor(earliestMinutes / 60);
+    // subtract 1 hour for buffer to allow scrolling up to see earlier times
+    return Math.max(0, earliestHour - 1);
+  }, [tasksWithTime, startHour]);
+
+  // generate time slots for the timeline (e.g., 6:00, 7:00, 8:00, etc.)
+  // these are used to display time labels on the left side
+  // use dynamic start hour once tasks are loaded, otherwise use default startHour
+  const timeSlots = useMemo(() => {
+    // calculate effective end hour based on latest task or default endHour
+    let effectiveEndHour = endHour;
+    if (tasksWithTime.length > 0) {
+      const latestTask = tasksWithTime.reduce((latest, task) => {
+        if (!task.time) return latest;
+        if (!latest) return task;
+        
+        const taskMinutes = timeToMinutes(task.time);
+        const latestMinutes = timeToMinutes(latest.time!);
+        
+        const taskEndMinutes = taskMinutes + (task.duration || 0);
+        const latestEndMinutes = latestMinutes + (latest.duration || 0);
+        
+        return taskEndMinutes > latestEndMinutes ? task : latest;
+      }, null as Task | null);
+      
+      if (latestTask?.time) {
+        const latestMinutes = timeToMinutes(latestTask.time);
+        const latestEndMinutes = latestMinutes + (latestTask.duration || 0);
+        const latestHour = Math.ceil(latestEndMinutes / 60);
+        effectiveEndHour = Math.max(latestHour + 1, endHour); // add 1 hour buffer
+      }
+    }
+    
+    const effectiveStartHour = tasksWithTime.length > 0 ? dynamicStartHour : startHour;
+    return generateTimeSlots(effectiveStartHour, effectiveEndHour, timeInterval);
+  }, [dynamicStartHour, startHour, endHour, timeInterval, tasksWithTime]);
+
   // use compact spacing - 0.5 pixels per minute for tight timeline
-  const basePixelsPerMinute = 0.5;
+  const basePixelsPerMinute = 0.3;
 
   // detect task time ranges and their required heights
   // uses actual card heights measured from TimelineItem components
@@ -108,7 +158,7 @@ export default function TimelineView({
   // uses actual card heights for task time ranges, base spacing elsewhere
   const calculatePositionWithOffsets = useCallback((time: string): number => {
     const timeMinutes = timeToMinutes(time);
-    const startMinutes = startHour * 60;
+    const startMinutes = dynamicStartHour * 60;
     
     // check if this time is within any task's time range
     for (const [taskId, range] of taskTimeRanges.entries()) {
@@ -151,20 +201,144 @@ export default function TimelineView({
     }
     
     return basePosition + cumulativeOffset;
-  }, [startHour, basePixelsPerMinute, taskTimeRanges]);
+  }, [dynamicStartHour, basePixelsPerMinute, taskTimeRanges]);
 
   // calculate total height of timeline using task-aware spacing
   const timelineHeight = useMemo(() => {
+    // if no tasks, use default end hour
+    if (tasksWithTime.length === 0) {
+      const endTime = `${String(endHour).padStart(2, '0')}:00`;
+      return calculatePositionWithOffsets(endTime);
+    }
+    
     // calculate position of the end hour using the same logic
-    const endTime = `${String(endHour).padStart(2, '0')}:00`;
-    return calculatePositionWithOffsets(endTime);
-  }, [startHour, endHour, calculatePositionWithOffsets]);
+    // use the latest task time or endHour, whichever is later
+    let latestTime = endHour;
+    const latestTask = tasksWithTime.reduce((latest, task) => {
+      if (!task.time) return latest;
+      if (!latest) return task;
+      
+      const taskMinutes = timeToMinutes(task.time);
+      const latestMinutes = timeToMinutes(latest.time!);
+      
+      // if task has duration, use end time
+      const taskEndMinutes = taskMinutes + (task.duration || 0);
+      const latestEndMinutes = latestMinutes + (latest.duration || 0);
+      
+      return taskEndMinutes > latestEndMinutes ? task : latest;
+    }, null as Task | null);
+    
+    if (latestTask?.time) {
+      const latestMinutes = timeToMinutes(latestTask.time);
+      const latestEndMinutes = latestMinutes + (latestTask.duration || 0);
+      const latestHour = Math.ceil(latestEndMinutes / 60);
+      latestTime = Math.max(latestHour + 1, endHour); // add 1 hour buffer
+    }
+    
+    const endTime = `${String(latestTime).padStart(2, '0')}:00`;
+    const calculatedHeight = calculatePositionWithOffsets(endTime);
+    
+    // ensure minimum height
+    return Math.max(calculatedHeight, 200);
+  }, [tasksWithTime, endHour, calculatePositionWithOffsets]);
+
+  // calculate timeline line start and end positions (between first and last task)
+  const timelineLineBounds = useMemo(() => {
+    if (tasksWithTime.length === 0) {
+      return { top: 0, height: timelineHeight };
+    }
+    
+    // find first task (earliest time)
+    const firstTask = tasksWithTime.reduce((earliest, task) => {
+      if (!task.time) return earliest;
+      if (!earliest) return task;
+      
+      const taskMinutes = timeToMinutes(task.time);
+      const earliestMinutes = timeToMinutes(earliest.time!);
+      
+      return taskMinutes < earliestMinutes ? task : earliest;
+    }, null as Task | null);
+    
+    // find last task (latest end time)
+    const lastTask = tasksWithTime.reduce((latest, task) => {
+      if (!task.time) return latest;
+      if (!latest) return task;
+      
+      const taskMinutes = timeToMinutes(task.time);
+      const latestMinutes = timeToMinutes(latest.time!);
+      
+      const taskEndMinutes = taskMinutes + (task.duration || 0);
+      const latestEndMinutes = latestMinutes + (latest.duration || 0);
+      
+      return taskEndMinutes > latestEndMinutes ? task : latest;
+    }, null as Task | null);
+    
+    if (!firstTask?.time || !lastTask?.time) {
+      return { top: 0, height: timelineHeight };
+    }
+    
+    // calculate start position (first task start time)
+    const firstTaskStartPosition = calculatePositionWithOffsets(firstTask.time);
+    
+    // calculate end position (last task end time)
+    const lastTaskMinutes = timeToMinutes(lastTask.time);
+    const lastTaskEndMinutes = lastTaskMinutes + (lastTask.duration || 0);
+    const lastTaskEndTime = minutesToTime(lastTaskEndMinutes);
+    const lastTaskEndPosition = calculatePositionWithOffsets(lastTaskEndTime);
+    
+    return {
+      top: firstTaskStartPosition,
+      height: lastTaskEndPosition - firstTaskStartPosition,
+    };
+  }, [tasksWithTime, calculatePositionWithOffsets, timelineHeight]);
 
   // generate time labels - only show start and end times for tasks
   // hide regular time labels that fall within a task's duration range
   const allTimeLabels = useMemo(() => {
     const labels: Array<{ time: string; position: number; isEndTime: boolean }> = [];
     const seenTimes = new Set<string>();
+
+    // find the first task's start position to hide labels before it
+    let firstTaskStartPosition: number | null = null;
+    if (tasksWithTime.length > 0) {
+      const firstTask = tasksWithTime.reduce((earliest, task) => {
+        if (!task.time) return earliest;
+        if (!earliest) return task;
+        
+        const taskMinutes = timeToMinutes(task.time);
+        const earliestMinutes = timeToMinutes(earliest.time!);
+        
+        return taskMinutes < earliestMinutes ? task : earliest;
+      }, null as Task | null);
+      
+      if (firstTask?.time) {
+        firstTaskStartPosition = calculatePositionWithOffsets(firstTask.time);
+      }
+    }
+
+    // find the last task's end position to hide labels after it
+    let lastTaskEndPosition: number | null = null;
+    if (tasksWithTime.length > 0) {
+      const lastTask = tasksWithTime.reduce((latest, task) => {
+        if (!task.time) return latest;
+        if (!latest) return task;
+        
+        const taskMinutes = timeToMinutes(task.time);
+        const latestMinutes = timeToMinutes(latest.time!);
+        
+        const taskEndMinutes = taskMinutes + (task.duration || 0);
+        const latestEndMinutes = latestMinutes + (latest.duration || 0);
+        
+        return taskEndMinutes > latestEndMinutes ? task : latest;
+      }, null as Task | null);
+      
+      if (lastTask?.time) {
+        const lastTaskMinutes = timeToMinutes(lastTask.time);
+        const lastTaskEndMinutes = lastTaskMinutes + (lastTask.duration || 0);
+        const lastTaskEndTime = minutesToTime(lastTaskEndMinutes);
+        lastTaskEndPosition = calculatePositionWithOffsets(lastTaskEndTime);
+      }
+    }
 
     // create a set of time ranges for tasks (to check if a time falls within a task)
     const taskTimeRanges = tasksWithTime.map((task) => {
@@ -209,9 +383,21 @@ export default function TimelineView({
     };
 
     // add regular time slot labels only if they don't fall within task duration ranges
+    // and are not before the first task or past the last task
     timeSlots.forEach((time) => {
       if (shouldShowRegularLabel(time)) {
         const position = calculatePositionWithOffsets(time);
+        
+        // hide if before the first task
+        if (firstTaskStartPosition !== null && position < firstTaskStartPosition) {
+          return;
+        }
+        
+        // hide if past the last task
+        if (lastTaskEndPosition !== null && position > lastTaskEndPosition) {
+          return;
+        }
+        
         labels.push({ time, position, isEndTime: false });
         seenTimes.add(time);
       }
@@ -222,6 +408,17 @@ export default function TimelineView({
       if (!task.time) return;
       
       const startPosition = calculatePositionWithOffsets(task.time);
+      
+      // hide if before the first task (shouldn't happen for start times, but check anyway)
+      if (firstTaskStartPosition !== null && startPosition < firstTaskStartPosition) {
+        return;
+      }
+      
+      // hide if past the last task (shouldn't happen for start times, but check anyway)
+      if (lastTaskEndPosition !== null && startPosition > lastTaskEndPosition) {
+        return;
+      }
+      
       if (!seenTimes.has(task.time)) {
         labels.push({ time: task.time, position: startPosition, isEndTime: false });
         seenTimes.add(task.time);
@@ -243,6 +440,11 @@ export default function TimelineView({
       // this ensures the end label aligns with the timeline position for that time
       const endPosition = calculatePositionWithOffsets(endTime);
 
+      // hide if past the last task (shouldn't happen for the last task's end time, but check anyway)
+      if (lastTaskEndPosition !== null && endPosition > lastTaskEndPosition) {
+        return;
+      }
+
       // only add if not already added
       if (!seenTimes.has(endTime)) {
         labels.push({ time: endTime, position: endPosition, isEndTime: true });
@@ -252,31 +454,41 @@ export default function TimelineView({
 
     // sort labels by position
     return labels.sort((a, b) => a.position - b.position);
-  }, [timeSlots, tasksWithTime, startHour, basePixelsPerMinute, calculatePositionWithOffsets]);
+  }, [timeSlots, tasksWithTime, dynamicStartHour, basePixelsPerMinute, calculatePositionWithOffsets]);
 
   // reverse calculate position to time - accounts for task-aware spacing offsets
   // finds the time that corresponds to a given Y position
+  // constrained to 00:05 (earliest) and 23:55 (latest)
   const positionToTimeWithOffsets = useCallback((yPosition: number): string => {
     // find the time that corresponds to this position
     // iterate through possible times (every 5 minutes) and find the closest match
     let closestTime = '';
     let minDiff = Infinity;
     
-    for (let hour = startHour; hour <= endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 5) {
-        const testTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-        const testPosition = calculatePositionWithOffsets(testTime);
-        const diff = Math.abs(testPosition - yPosition);
-        
-        if (diff < minDiff) {
-          minDiff = diff;
-          closestTime = testTime;
-        }
+    // constrain to valid drag times: 00:05 to 23:55
+    const minDragTime = '00:05';
+    const maxDragTime = '23:55';
+    const minDragMinutes = timeToMinutes(minDragTime); // 5 minutes
+    const maxDragMinutes = timeToMinutes(maxDragTime); // 1435 minutes (23*60 + 55)
+    
+    // iterate through all possible times between min and max drag times
+    for (let minutes = minDragMinutes; minutes <= maxDragMinutes; minutes += 5) {
+      const testTime = minutesToTime(minutes);
+      const testPosition = calculatePositionWithOffsets(testTime);
+      const diff = Math.abs(testPosition - yPosition);
+      
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestTime = testTime;
       }
     }
     
-    return closestTime;
-  }, [startHour, endHour, calculatePositionWithOffsets]);
+    // clamp the result to ensure it's within bounds
+    const closestMinutes = timeToMinutes(closestTime);
+    const clampedMinutes = Math.max(minDragMinutes, Math.min(maxDragMinutes, closestMinutes));
+    
+    return minutesToTime(clampedMinutes);
+  }, [calculatePositionWithOffsets]);
 
   // handle when a task is dragged to a new position
   // converts the Y position to a time and updates the task
@@ -309,7 +521,10 @@ export default function TimelineView({
       {/* scrollable timeline content */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { height: timelineHeight }]}
+        contentContainerStyle={[
+          styles.scrollContent, 
+          { minHeight: timelineHeight + 220 } // timelineHeight + paddingTop (20) + paddingBottom (200)
+        ]}
         showsVerticalScrollIndicator={true}
       >
         {/* time labels column on the left */}
@@ -336,8 +551,14 @@ export default function TimelineView({
 
         {/* tasks column on the right */}
         <View style={styles.tasksContainer}>
-          {/* vertical line connecting all time slots */}
-          <View style={[styles.timelineLine, { height: timelineHeight }]} />
+          {/* vertical line connecting all time slots - extends only between first and last task */}
+          <View style={[
+            styles.timelineLine, 
+            { 
+              top: timelineLineBounds.top,
+              height: timelineLineBounds.height 
+            }
+          ]} />
 
           {/* render each task at its position */}
           {tasksWithTime.length === 0 ? (
@@ -373,7 +594,7 @@ export default function TimelineView({
                   position={position}
                   duration={duration}
                   pixelsPerMinute={basePixelsPerMinute}
-                  startHour={startHour}
+                  startHour={dynamicStartHour}
                   onHeightMeasured={(height: number) => handleHeightMeasured(task.id, height)}
                   onDrag={(newY) => {
                     // newY is the top position of the task
@@ -426,13 +647,13 @@ const createStyles = (
   scrollContent: {
     flexDirection: 'row',
     paddingTop: 20,
-    paddingBottom: 40,
+    paddingBottom: 200, // increased bottom padding to allow scrolling further down
   },
 
-  // time labels container on the left side
+  // time labels container on the left side - more compact
   timeLabelsContainer: {
-    marginLeft: 36,
-    paddingRight: 12,
+    marginLeft: 28,
+    paddingRight: 20,
     alignItems: 'flex-end',
   },
 
@@ -449,7 +670,7 @@ const createStyles = (
     position: 'absolute',
     left: 26,
     top: 0,
-    width: 3,
+    width: 4,
     backgroundColor: themeColors.border.secondary(),
   },
 
