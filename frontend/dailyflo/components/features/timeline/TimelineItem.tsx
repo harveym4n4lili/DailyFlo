@@ -11,6 +11,7 @@
 import React, { useMemo, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -85,14 +86,15 @@ export default function TimelineItem({
   // use ref to track dragging state for listener
   const isDraggingRef = React.useRef(false);
 
-  // animated value for task content opacity (for fade effect on press)
-  const taskContentOpacity = useRef(new Animated.Value(1)).current;
-
-  // calculate card height based on content
-  // for tasks with duration, use calculated height; for tasks without duration, use minimal height
-  const cardHeight = useMemo(() => {
+  // state to store measured content height (includes padding)
+  const [measuredContentHeight, setMeasuredContentHeight] = React.useState<number | null>(null);
+  
+  // calculate minimum card height based on duration
+  // this ensures tasks with duration have appropriate minimum height
+  const minCardHeight = useMemo(() => {
     if (duration > 0) {
       // for tasks with duration, calculate based on duration with minimum
+      // this height should include padding, so we add 32px (16 top + 16 bottom)
       return Math.max(80, calculateTaskHeight(duration, pixelsPerMinute));
     } else {
       // tasks without duration: minimal height (just content)
@@ -100,6 +102,11 @@ export default function TimelineItem({
       return 56;
     }
   }, [duration, pixelsPerMinute]);
+
+  // use measured height if available, otherwise use minimum for initial render
+  // measured height already includes padding from the combinedContainer
+  // once measured, always use measured height to let content determine size
+  const cardHeight = measuredContentHeight ?? minCardHeight;
 
   // notify parent of card height when it changes
   // use ref to track last reported height to avoid infinite loops
@@ -121,6 +128,25 @@ export default function TimelineItem({
 
   // use the calculated card height
   const taskHeight = cardHeight;
+
+  // handle layout measurement to get actual content height
+  const handleContentLayout = (event: any) => {
+    const { height } = event.nativeEvent.layout;
+    // height includes padding (16 top + 16 bottom = 32px padding)
+    // use actual measured height without enforcing minimum - let content determine size
+    if (measuredContentHeight !== height) {
+      setMeasuredContentHeight(height);
+      // notify parent of new height
+      if (onHeightMeasuredRef.current) {
+        onHeightMeasuredRef.current(height);
+      }
+    }
+  };
+
+  // reset measured height when task content changes (e.g., subtasks added/removed)
+  useEffect(() => {
+    setMeasuredContentHeight(null);
+  }, [task.metadata?.subtasks, task.title]);
 
   // update base position when prop changes
   useEffect(() => {
@@ -220,58 +246,54 @@ export default function TimelineItem({
           styles.container,
           {
             top: position, // no offset needed since padding is removed
-            height: taskHeight, // use exact height instead of minHeight to enforce card size
+            // no height constraint - let content determine height naturally
             transform: [{ translateY }],
           },
         ]}
       >
-         {/* wrapper for both icon and task content */}
+         {/* combined container for icon and task content */}
          <TouchableOpacity
-           style={styles.touchableWrapper}
+           style={styles.combinedContainer}
            onPress={onPress}
-           activeOpacity={1}
-           onPressIn={() => {
-             // fade task content when pressed
-             Animated.timing(taskContentOpacity, {
-               toValue: 0.7,
-               duration: 100,
-               useNativeDriver: true,
-             }).start();
-           }}
-           onPressOut={() => {
-             // restore task content opacity when released
-             Animated.timing(taskContentOpacity, {
-               toValue: 1,
-               duration: 100,
-               useNativeDriver: true,
-             }).start();
-           }}
+           activeOpacity={0.7}
+           onLayout={handleContentLayout}
          >
-           {/* icon container - separate container next to task content */}
-           {/* no fade effect on icon */}
+           {/* icon - inside the combined container */}
            {task.icon && (
-             <View style={styles.iconContainer}>
+             <View style={styles.iconWrapper}>
                <TaskIcon icon={task.icon} color={taskColor} />
              </View>
            )}
 
-           {/* task content container - text only */}
-           {/* animated opacity for fade effect */}
-           <Animated.View
-             style={[
-               styles.taskContent,
-               { opacity: taskContentOpacity }
-             ]}
-           >
+           {/* task content - inside the combined container */}
+           <View style={styles.taskContent}>
              {/* text content container */}
              <View style={[
                styles.textContainer,
                duration === 0 && styles.textContainerCentered // center content for tasks without duration
              ]}>
-               {/* time range display */}
-               {timeRangeText && (
-                 <Text style={styles.timeRange}>{timeRangeText}</Text>
-               )}
+               {/* time range row - time range on left, list indicator on right */}
+               <View style={styles.timeRangeRow}>
+                 {/* time range display */}
+                 {timeRangeText && (
+                   <Text style={styles.timeRange}>{timeRangeText}</Text>
+                 )}
+                 
+                 {/* list group indicator - same row as time range, aligned right */}
+                 <View style={styles.listIndicator}>
+                   {/* folder icon for list/inbox indication */}
+                   <Ionicons
+                     name="folder-outline"
+                     size={12}
+                     color={themeColors.text.tertiary()}
+                     style={styles.listIndicatorIcon}
+                   />
+                   {/* list/inbox text - conditionally shows 'List' or 'Inbox' based on listId */}
+                   <Text style={styles.listIndicatorText}>
+                     {task.listId ? 'List' : 'Inbox'}
+                   </Text>
+                 </View>
+               </View>
                
                {/* task title - matches TaskCard styling */}
                <Text
@@ -284,8 +306,25 @@ export default function TimelineItem({
                >
                  {task.title}
                </Text>
+
+               {/* subtask indicator - shows completion count if subtasks exist */}
+               {task.metadata?.subtasks && task.metadata.subtasks.length > 0 && (
+                 <View style={styles.subtaskIndicator}>
+                   {/* checkmark icon */}
+                   <Ionicons
+                     name="checkmark"
+                     size={12}
+                     color={themeColors.text.secondary()}
+                     style={styles.subtaskIcon}
+                   />
+                   {/* subtask count text */}
+                   <Text style={styles.subtaskText}>
+                     {task.metadata.subtasks.filter(st => st.isCompleted).length}/{task.metadata.subtasks.length} Subtasks
+                   </Text>
+                 </View>
+               )}
              </View>
-           </Animated.View>
+           </View>
          </TouchableOpacity>
       </Animated.View>
     </PanGestureHandler>
@@ -305,42 +344,86 @@ const createStyles = (
     left: 0,
     right: 0,
     flexDirection: 'row',
-    alignItems: 'stretch', // stretch items to fill container height
+    alignItems: 'flex-start', // align to top, let content determine height
     paddingLeft: 0,
     paddingRight: 16,
   },
 
-  // touchable wrapper that includes both icon and task content
-  touchableWrapper: {
+  // combined container for icon and task content
+  combinedContainer: {
     flexDirection: 'row',
     flex: 1,
     alignItems: 'stretch',
-  },
-
-  // icon container - separate container next to task content
-  // stretches to match task card height
-  iconContainer: {
     backgroundColor: themeColors.background.elevated(),
     borderRadius: 28, // matches TaskCard borderRadius (increased by 8px)
-    paddingTop: 12, // vertical padding
-    paddingBottom: 12, // vertical padding
-    paddingLeft: 16, // horizontal padding (increased)
-    paddingRight: 16, // horizontal padding (increased)
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12, // spacing between icon container and task content
-    alignSelf: 'stretch', // stretch to match task card height
-  },
-
-  // task content container (text only)
-  // matches TaskCard spacing exactly
-  taskContent: {
-    flex: 1,
     paddingTop: 16, // matches TaskCard vertical padding
     paddingBottom: 16, // matches TaskCard vertical padding
-    paddingLeft: 0, // no left padding
+    paddingLeft: 16, // matches TaskCard horizontal padding
     paddingRight: 20, // right padding
-    alignSelf: 'stretch', // ensure content fills the container height
+  },
+
+  // icon wrapper - inside combined container
+  iconWrapper: {
+    marginRight: 16, // spacing between icon and content (matches TaskCard)
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // task content container (text only) - inside combined container
+  taskContent: {
+    flex: 1,
+    // no height constraints - let content determine height naturally
+  },
+
+  // time range row - contains time range and list indicator side by side
+  timeRangeRow: {
+    flexDirection: 'row', // horizontal layout
+    alignItems: 'center',
+    justifyContent: 'space-between', // time range on left, list indicator on right
+    marginBottom: 2, // spacing between time range row and title
+  },
+
+  // list group indicator - in same row as time range, aligned right
+  listIndicator: {
+    flexDirection: 'row', // horizontal layout for icon and text
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+
+  // list indicator icon styling
+  listIndicatorIcon: {
+    marginRight: 4,
+  },
+
+  // list indicator text styling - matches TaskIndicators styling
+  listIndicatorText: {
+    // use the body-medium text style from typography system (12px, regular, satoshi font)
+    ...typography.getTextStyle('body-medium'),
+    // use tertiary text color for list indicator - matches TaskIndicators
+    color: themeColors.text.tertiary(),
+    fontWeight: '900', // match TaskIndicators font weight
+  },
+
+  // subtask indicator - shows completion count
+  subtaskIndicator: {
+    flexDirection: 'row', // horizontal layout for icon and text
+    alignItems: 'center',
+    marginTop: 4, // spacing from title
+  },
+
+  // subtask icon styling
+  subtaskIcon: {
+    marginRight: 4,
+  },
+
+  // subtask text styling - matches TaskMetadata styling
+  subtaskText: {
+    // use the body-medium text style from typography system (12px, regular, satoshi font)
+    ...typography.getTextStyle('body-medium'),
+    // use secondary text color - lighter than tertiary
+    color: themeColors.text.secondary(),
+    fontWeight: '900', // match TaskMetadata font weight
   },
 
   // text content container (time range + title)
@@ -360,7 +443,6 @@ const createStyles = (
     // use body-medium text style from typography system (matches TaskMetadata)
     ...typography.getTextStyle('body-medium'),
     color: themeColors.text.tertiary(),
-    marginBottom: 2, // spacing between time range and title (matches TaskCard)
     fontWeight: '900',
   },
 

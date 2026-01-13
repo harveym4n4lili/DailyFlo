@@ -1162,3 +1162,13 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - no notes
+---
+## [12/01/2026] - [Monday]
+### Today's Goals
+- [X] 
+
+### Plans For Future
+- Implement set heights for timeline connectors between tasks.
+
+### Notes
+- no notes
