@@ -133,7 +133,8 @@ export default function TimelineView({
   const basePixelsPerMinute = 0.3;
 
   // detect task time ranges and their required heights
-  // uses actual card heights measured from TimelineItem components
+  // uses actual card heights measured from TimelineItem components via onLayout
+  // tracks ALL tasks (with and without duration) to properly position labels
   const taskTimeRanges = useMemo(() => {
     const ranges = new Map<string, { startMinutes: number; endMinutes: number; requiredHeight: number }>();
     
@@ -141,13 +142,22 @@ export default function TimelineView({
       if (!task.time) return;
       const startMinutes = timeToMinutes(task.time);
       const duration = task.duration || 0;
+      const endMinutes = startMinutes + duration;
       
-      if (duration > 0) {
-        // use actual card height from TimelineItem, or fallback to calculated height
-        const measuredHeight = taskCardHeights.get(task.id);
-        const requiredHeight = measuredHeight || calculateTaskHeight(duration, basePixelsPerMinute);
-        const endMinutes = startMinutes + duration;
-        ranges.set(task.id, { startMinutes, endMinutes, requiredHeight });
+      // use actual measured height from TimelineItem (via onLayout)
+      // this height includes padding and all content (subtasks, etc.)
+      const measuredHeight = taskCardHeights.get(task.id);
+      
+      if (measuredHeight) {
+        // use measured height - this is the actual rendered height including padding
+        ranges.set(task.id, { startMinutes, endMinutes, requiredHeight: measuredHeight });
+      } else {
+        // fallback to estimated height if not yet measured
+        // for tasks with duration, use calculated height; for tasks without duration, use minimal estimate
+        const estimatedHeight = duration > 0 
+          ? calculateTaskHeight(duration, basePixelsPerMinute)
+          : 56; // minimal height estimate for tasks without duration
+        ranges.set(task.id, { startMinutes, endMinutes, requiredHeight: estimatedHeight });
       }
     });
     
@@ -155,17 +165,20 @@ export default function TimelineView({
   }, [tasksWithTime, basePixelsPerMinute, taskCardHeights]);
 
   // helper function to calculate position with task-aware spacing
-  // uses actual card heights for task time ranges, base spacing elsewhere
+  // uses actual measured card heights for all tasks (with and without duration)
+  // accounts for tasks without duration by treating them as having a height at their time position
   const calculatePositionWithOffsets = useCallback((time: string): number => {
     const timeMinutes = timeToMinutes(time);
     const startMinutes = dynamicStartHour * 60;
     
-    // check if this time is within any task's time range
+    // check if this time is within any task's time range (for tasks with duration)
     for (const [taskId, range] of taskTimeRanges.entries()) {
-      if (timeMinutes >= range.startMinutes && timeMinutes <= range.endMinutes) {
+      const totalTaskMinutes = range.endMinutes - range.startMinutes;
+      
+      // only check range for tasks with duration (endMinutes > startMinutes)
+      if (totalTaskMinutes > 0 && timeMinutes >= range.startMinutes && timeMinutes <= range.endMinutes) {
         // time is within this task's range - calculate position proportionally
         const minutesIntoTask = timeMinutes - range.startMinutes;
-        const totalTaskMinutes = range.endMinutes - range.startMinutes;
         
         // calculate base position of task start (without offsets)
         const taskStartBasePosition = (range.startMinutes - startMinutes) * basePixelsPerMinute;
@@ -173,9 +186,19 @@ export default function TimelineView({
         // calculate cumulative offset from tasks that end before this task starts
         let offsetBeforeTask = 0;
         for (const [otherTaskId, otherRange] of taskTimeRanges.entries()) {
-          if (otherRange.endMinutes < range.startMinutes) {
-            const baseHeight = (otherRange.endMinutes - otherRange.startMinutes) * basePixelsPerMinute;
+          const otherEndMinutes = otherRange.endMinutes;
+          const otherStartMinutes = otherRange.startMinutes;
+          
+          // for tasks with duration, check if they end before this task starts
+          if (otherEndMinutes > otherStartMinutes && otherEndMinutes < range.startMinutes) {
+            const baseHeight = (otherEndMinutes - otherStartMinutes) * basePixelsPerMinute;
             offsetBeforeTask += otherRange.requiredHeight - baseHeight;
+          }
+          // for tasks without duration, check if their time is before this task starts
+          else if (otherEndMinutes === otherStartMinutes && otherStartMinutes < range.startMinutes) {
+            // task without duration takes up its measured height centered at its time
+            // add half the height as offset since it extends above and below its time position
+            offsetBeforeTask += otherRange.requiredHeight / 2;
           }
         }
         
@@ -194,9 +217,21 @@ export default function TimelineView({
     // add cumulative offset from all tasks that end before this time
     let cumulativeOffset = 0;
     for (const [taskId, range] of taskTimeRanges.entries()) {
-      if (range.endMinutes < timeMinutes) {
-        const baseHeight = (range.endMinutes - range.startMinutes) * basePixelsPerMinute;
-        cumulativeOffset += range.requiredHeight - baseHeight;
+      const rangeEndMinutes = range.endMinutes;
+      const rangeStartMinutes = range.startMinutes;
+      
+      if (rangeEndMinutes > rangeStartMinutes) {
+        // task with duration - ends at endMinutes
+        if (rangeEndMinutes < timeMinutes) {
+          const baseHeight = (rangeEndMinutes - rangeStartMinutes) * basePixelsPerMinute;
+          cumulativeOffset += range.requiredHeight - baseHeight;
+        }
+      } else {
+        // task without duration - centered at startMinutes
+        // if task time is before this time, add half its height as offset
+        if (rangeStartMinutes < timeMinutes) {
+          cumulativeOffset += range.requiredHeight / 2;
+        }
       }
     }
     
@@ -407,20 +442,36 @@ export default function TimelineView({
     tasksWithTime.forEach((task) => {
       if (!task.time) return;
       
+      const duration = task.duration || 0;
       const startPosition = calculatePositionWithOffsets(task.time);
       
+      // get card height to calculate label position
+      const cardHeight = taskCardHeights.get(task.id) || (duration > 0 ? 80 : 56);
+      
+      // for tasks without duration, center the label at the task's center position
+      // task is positioned at startPosition - (cardHeight / 2), so its center is at startPosition
+      // label should be at startPosition to align with the task's center
+      let labelPosition = startPosition;
+      if (duration === 0) {
+        // task's center is at startPosition (task top is at startPosition - cardHeight/2)
+        // label should be at startPosition to align with task center
+        labelPosition = startPosition;
+      }
+      
       // hide if before the first task (shouldn't happen for start times, but check anyway)
+      // use startPosition for comparison, not labelPosition
       if (firstTaskStartPosition !== null && startPosition < firstTaskStartPosition) {
         return;
       }
       
       // hide if past the last task (shouldn't happen for start times, but check anyway)
+      // use startPosition for comparison, not labelPosition
       if (lastTaskEndPosition !== null && startPosition > lastTaskEndPosition) {
         return;
       }
       
       if (!seenTimes.has(task.time)) {
-        labels.push({ time: task.time, position: startPosition, isEndTime: false });
+        labels.push({ time: task.time, position: labelPosition, isEndTime: false });
         seenTimes.add(task.time);
       }
     });
@@ -454,7 +505,7 @@ export default function TimelineView({
 
     // sort labels by position
     return labels.sort((a, b) => a.position - b.position);
-  }, [timeSlots, tasksWithTime, dynamicStartHour, basePixelsPerMinute, calculatePositionWithOffsets]);
+  }, [timeSlots, tasksWithTime, dynamicStartHour, basePixelsPerMinute, calculatePositionWithOffsets, taskCardHeights]);
 
   // reverse calculate position to time - accounts for task-aware spacing offsets
   // finds the time that corresponds to a given Y position
