@@ -10,6 +10,7 @@ import { CalendarNavigationModal } from '@/components/features/calendar/modals';
 import { WeekView } from '@/components/features/calendar/sections';
 import { ListCard } from '@/components/ui/Card';
 import { TaskViewModal, TaskCreationModal } from '@/components/features/tasks';
+import { TimelineView } from '@/components/features/timeline';
 
 // import color palette system for consistent theming
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -185,6 +186,33 @@ export default function PlannerScreen() {
     }
   };
 
+  // handle when a task's time is changed via dragging on the timeline
+  // updates the task's time and optionally duration
+  const handleTaskTimeChange = async (taskId: string, newTime: string, newDuration?: number) => {
+    try {
+      // find the task to update
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      // prepare update data with new time
+      const updates: any = {
+        id: taskId,
+        time: newTime,
+      };
+
+      // include duration if provided
+      if (newDuration !== undefined) {
+        updates.duration = newDuration;
+      }
+
+      // dispatch updateTask action to Redux store
+      // this will trigger the async thunk that updates the task via API
+      await dispatch(updateTask({ id: taskId, updates })).unwrap();
+    } catch (error) {
+      console.error('Failed to update task time:', error);
+    }
+  };
+
   // render main content
   return (
     <View style={{ flex: 1 }}>
@@ -207,31 +235,15 @@ export default function PlannerScreen() {
         
         {/* Content area with rounded top and left corners */}
         <View style={styles.contentContainer}>
-          {/* ListCard component displays tasks for the selected date */}
-          {/* key prop ensures this ListCard instance is completely independent from today screen */}
-          <ListCard
-            key="planner-screen-listcard"
+          {/* TimelineView component displays tasks in a timeline format */}
+          {/* shows tasks positioned at their scheduled times with drag functionality */}
+          <TimelineView
             tasks={selectedDateTasks}
+            onTaskTimeChange={handleTaskTimeChange}
             onTaskPress={handleTaskPress}
-            onTaskComplete={handleTaskComplete}
-            onTaskEdit={handleTaskEdit}
-            onTaskDelete={handleTaskDelete}
-            onTaskSwipeLeft={handleTaskSwipeLeft}
-            onTaskSwipeRight={handleTaskSwipeRight}
-            showCategory={false}
-            compact={false}
-            emptyMessage={`No tasks for ${new Date(selectedDate).toLocaleDateString('en-US', { 
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric'
-            })}. Tap the + button to add a task!`}
-            loading={isLoading && selectedDateTasks.length === 0}
-            sortBy="dueDate"
-            sortDirection="asc"
-            onRefresh={handleRefresh}
-            refreshing={isLoading}
-            paddingTop={20}
-            paddingHorizontal={14}
+            startHour={6}
+            endHour={23}
+            timeInterval={60}
           />
         </View>
 
