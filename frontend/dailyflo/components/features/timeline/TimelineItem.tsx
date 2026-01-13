@@ -85,6 +85,9 @@ export default function TimelineItem({
   // use ref to track dragging state for listener
   const isDraggingRef = React.useRef(false);
 
+  // animated value for task content opacity (for fade effect on press)
+  const taskContentOpacity = useRef(new Animated.Value(1)).current;
+
   // calculate card height based on content
   // for tasks with duration, use calculated height; for tasks without duration, use minimal height
   const cardHeight = useMemo(() => {
@@ -212,54 +215,80 @@ export default function TimelineItem({
       onHandlerStateChange={handleHandlerStateChange}
       activeOffsetY={[-10, 10]} // require 10px movement before activating
     >
-        <Animated.View
-          style={[
-            styles.container,
-            {
-              top: position, // no offset needed since padding is removed
-              height: taskHeight, // use exact height instead of minHeight to enforce card size
-              transform: [{ translateY }],
-            },
-          ]}
-        >
-          {/* task content container */}
-          <TouchableOpacity
-            style={styles.taskContent}
-            onPress={onPress}
-            activeOpacity={0.7}
-          >
-            {/* icon - matches TaskCard styling (no circular container) */}
-            {task.icon && (
-              <View style={styles.iconWrapper}>
-                <TaskIcon icon={task.icon} color={taskColor} />
-              </View>
-            )}
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            top: position, // no offset needed since padding is removed
+            height: taskHeight, // use exact height instead of minHeight to enforce card size
+            transform: [{ translateY }],
+          },
+        ]}
+      >
+         {/* wrapper for both icon and task content */}
+         <TouchableOpacity
+           style={styles.touchableWrapper}
+           onPress={onPress}
+           activeOpacity={1}
+           onPressIn={() => {
+             // fade task content when pressed
+             Animated.timing(taskContentOpacity, {
+               toValue: 0.7,
+               duration: 100,
+               useNativeDriver: true,
+             }).start();
+           }}
+           onPressOut={() => {
+             // restore task content opacity when released
+             Animated.timing(taskContentOpacity, {
+               toValue: 1,
+               duration: 100,
+               useNativeDriver: true,
+             }).start();
+           }}
+         >
+           {/* icon container - separate container next to task content */}
+           {/* no fade effect on icon */}
+           {task.icon && (
+             <View style={styles.iconContainer}>
+               <TaskIcon icon={task.icon} color={taskColor} />
+             </View>
+           )}
 
-            {/* text content container */}
-            <View style={[
-              styles.textContainer,
-              duration === 0 && styles.textContainerCentered // center content for tasks without duration
-            ]}>
-              {/* time range display */}
-              {timeRangeText && (
-                <Text style={styles.timeRange}>{timeRangeText}</Text>
-              )}
-              
-              {/* task title - matches TaskCard styling */}
-              <Text
-                style={[
-                  styles.title,
-                  task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
-                ]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {task.title}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-      </PanGestureHandler>
+           {/* task content container - text only */}
+           {/* animated opacity for fade effect */}
+           <Animated.View
+             style={[
+               styles.taskContent,
+               { opacity: taskContentOpacity }
+             ]}
+           >
+             {/* text content container */}
+             <View style={[
+               styles.textContainer,
+               duration === 0 && styles.textContainerCentered // center content for tasks without duration
+             ]}>
+               {/* time range display */}
+               {timeRangeText && (
+                 <Text style={styles.timeRange}>{timeRangeText}</Text>
+               )}
+               
+               {/* task title - matches TaskCard styling */}
+               <Text
+                 style={[
+                   styles.title,
+                   task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
+                 ]}
+                 numberOfLines={1}
+                 ellipsizeMode="tail"
+               >
+                 {task.title}
+               </Text>
+             </View>
+           </Animated.View>
+         </TouchableOpacity>
+      </Animated.View>
+    </PanGestureHandler>
   );
 }
 
@@ -281,28 +310,37 @@ const createStyles = (
     paddingRight: 16,
   },
 
-  // connecting line from timeline to task icon
-  // positioned at icon center
-
-  // task content container (icon + text)
-  // matches TaskCard spacing exactly
-  taskContent: {
+  // touchable wrapper that includes both icon and task content
+  touchableWrapper: {
     flexDirection: 'row',
-    alignItems: 'center', // center icon vertically
     flex: 1,
-    backgroundColor: themeColors.background.elevated(),
-    borderRadius: 28, // matches TaskCard borderRadius (increased by 8px)
-    paddingTop: 16, // matches TaskCard vertical padding
-    paddingBottom: 16, // matches TaskCard vertical padding
-    paddingLeft: 16, // matches TaskCard horizontal padding
-    paddingRight: 0, // no right padding needed in timeline (no completion indicator)
-    alignSelf: 'stretch', // ensure content fills the container height
+    alignItems: 'stretch',
   },
 
+  // icon container - separate container next to task content
+  // stretches to match task card height
+  iconContainer: {
+    backgroundColor: themeColors.background.elevated(),
+    borderRadius: 28, // matches TaskCard borderRadius (increased by 8px)
+    paddingTop: 12, // vertical padding
+    paddingBottom: 12, // vertical padding
+    paddingLeft: 16, // horizontal padding (increased)
+    paddingRight: 16, // horizontal padding (increased)
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12, // spacing between icon container and task content
+    alignSelf: 'stretch', // stretch to match task card height
+  },
 
-  // icon wrapper - matches TaskCard styling (no circular container)
-  iconWrapper: {
-    marginRight: 16, // spacing between icon and content (matches TaskCard)
+  // task content container (text only)
+  // matches TaskCard spacing exactly
+  taskContent: {
+    flex: 1,
+    paddingTop: 16, // matches TaskCard vertical padding
+    paddingBottom: 16, // matches TaskCard vertical padding
+    paddingLeft: 0, // no left padding
+    paddingRight: 20, // right padding
+    alignSelf: 'stretch', // ensure content fills the container height
   },
 
   // text content container (time range + title)
