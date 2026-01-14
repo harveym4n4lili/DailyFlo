@@ -21,6 +21,8 @@ interface TimeLabelProps {
   isEndTime?: boolean;
   // whether this is a drag label (shown during drag)
   isDragLabel?: boolean;
+  // height for containerized labels (spans task card height)
+  height?: number;
 }
 
 /**
@@ -28,7 +30,7 @@ interface TimeLabelProps {
  * 
  * Renders a time label at the specified position on the timeline.
  */
-export default function TimeLabel({ time, position, isEndTime = false, isDragLabel = false }: TimeLabelProps) {
+export default function TimeLabel({ time, position, isEndTime = false, isDragLabel = false, height }: TimeLabelProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
 
@@ -41,13 +43,24 @@ export default function TimeLabel({ time, position, isEndTime = false, isDragLab
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }, [time]);
 
+  // position label at the top edge of the card
+  // position is the top edge of the card
+  // simply position container at the top edge
+  const containerStyle = height 
+    ? [styles.container, styles.containerized, { top: position, height }]
+    : [styles.container, styles.topAlignedContainer, { top: position }];
+
+  const textStyle = [
+    styles.timeText,
+    isEndTime && styles.endTimeText,
+    isDragLabel && styles.dragTimeText,
+  ];
+
   return (
-    <View style={[styles.container, { top: position - 10 }]}>
-      <Text style={[
-        styles.timeText,
-        isEndTime && styles.endTimeText,
-        isDragLabel && styles.dragTimeText
-      ]}>{formattedTime}</Text>
+    <View style={containerStyle}>
+      <Text style={textStyle}>
+        {formattedTime}
+      </Text>
     </View>
   );
 }
@@ -63,7 +76,29 @@ const createStyles = (
     alignItems: 'flex-end',
     justifyContent: 'center',
     paddingRight: 4,
-    minHeight: 16,
+  },
+
+  // top-aligned container - positions label at top edge of card
+  topAlignedContainer: {
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start', // align text to top
+    paddingRight: 4,
+  },
+
+  // containerized label that spans task card height
+  containerized: {
+    justifyContent: 'center',
+    paddingRight: 4,
+  },
+
+  // end time container - aligns bottom edge of label with bottom edge of task card
+  // position is already adjusted to account for text lineHeight (12px)
+  // so we just need to ensure the text aligns to the bottom
+  endTimeContainer: {
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+    paddingRight: 4,
+    height: 12, // match lineHeight of end time text for precise alignment
   },
 
   // time text styling - more compact

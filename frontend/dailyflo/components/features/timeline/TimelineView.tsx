@@ -129,8 +129,206 @@ export default function TimelineView({
     return generateTimeSlots(effectiveStartHour, effectiveEndHour, timeInterval);
   }, [dynamicStartHour, startHour, endHour, timeInterval, tasksWithTime]);
 
-  // use compact spacing - 0.5 pixels per minute for tight timeline
-  const basePixelsPerMinute = 0.3;
+  // spacing constants - adjust these values to change spacing between tasks
+  const SPACING_LESS_THAN_30_MIN = 25; // spacing for time differences less than 30 minutes
+  const SPACING_30_MIN_TO_1_HOUR = 75; // spacing for time differences between 30 minutes and 1 hour
+  const SPACING_MORE_THAN_1_HOUR = 75; // spacing for time differences more than 1 hour
+  
+  // time thresholds for spacing (in minutes)
+  const THRESHOLD_30_MINUTES = 30; // threshold for less than 30 minutes spacing
+  const THRESHOLD_1_HOUR = 60; // threshold for 30 minutes to 1 hour spacing
+  
+  // dynamic spacing between tasks based on time difference
+  const getTaskSpacing = (timeDifferenceMinutes: number): number => {
+    if (timeDifferenceMinutes < THRESHOLD_30_MINUTES) {
+      return SPACING_LESS_THAN_30_MIN;
+    } else if (timeDifferenceMinutes <= THRESHOLD_1_HOUR) {
+      return SPACING_30_MIN_TO_1_HOUR;
+    } else {
+      return SPACING_MORE_THAN_1_HOUR;
+    }
+  };
+
+  // sort tasks by time to calculate equal spacing positions
+  const sortedTasks = useMemo(() => {
+    return [...tasksWithTime].sort((a, b) => {
+      if (!a.time || !b.time) return 0;
+      return timeToMinutes(a.time) - timeToMinutes(b.time);
+    });
+  }, [tasksWithTime]);
+
+  // calculate equal spacing positions for tasks with dynamic spacing based on time differences
+  // returns a map of taskId -> { equalSpacingPosition, cardHeight }
+  const equalSpacingPositions = useMemo(() => {
+    const positions = new Map<string, { equalSpacingPosition: number; cardHeight: number }>();
+    
+    if (sortedTasks.length === 0) return positions;
+    
+    // start position for first task
+    let currentPosition = 0;
+    
+    sortedTasks.forEach((task, index) => {
+      if (!task.time) return;
+      
+      const duration = task.duration || 0;
+      // cardHeight: height of the task card
+      // for tasks with duration: this is the visual height of the task card
+      // for tasks without duration: this is just the card's content height
+      const cardHeight = taskCardHeights.get(task.id) || (duration > 0 ? 80 : 56);
+      
+      // check if tasks overlap in time
+      // if overlapping, use time-based positioning (natural positioning)
+      // if not overlapping, use spacing constants
+      let isOverlapping = false;
+      let gapSpacing = 200; // default gap spacing between tasks
+      if (index < sortedTasks.length - 1) {
+        const nextTask = sortedTasks[index + 1];
+        if (nextTask.time) {
+          const taskMinutes = timeToMinutes(task.time);
+          const taskEndMinutes = taskMinutes + duration;
+          const nextTaskMinutes = timeToMinutes(nextTask.time);
+          const nextTaskDuration = nextTask.duration || 0;
+          const nextTaskEndMinutes = nextTaskMinutes + nextTaskDuration;
+          
+          // check if tasks overlap in time
+          isOverlapping = taskEndMinutes > nextTaskMinutes || 
+            taskMinutes === nextTaskMinutes ||
+            taskMinutes === nextTaskEndMinutes ||
+            nextTaskMinutes === taskEndMinutes;
+          
+          if (!isOverlapping) {
+            // tasks don't overlap - use spacing constants
+            const timeDifference = nextTaskMinutes - taskEndMinutes;
+            gapSpacing = getTaskSpacing(timeDifference);
+          }
+          // if overlapping, gapSpacing stays 0 (will use time-based positioning)
+        }
+      }
+      
+      // calculate task position - ALWAYS use CENTER position for all tasks
+      // equalSpacingPosition is always the CENTER of the card (for both duration and no duration)
+      // this ensures labels can be positioned at the center
+      const taskPosition = currentPosition; // currentPosition is always the center
+      
+      positions.set(task.id, { equalSpacingPosition: taskPosition, cardHeight });
+      
+      // calculate next task's position
+      // if tasks overlap in time: use time-based positioning (natural positioning)
+      // if tasks don't overlap: use spacing constants
+      if (index < sortedTasks.length - 1) {
+        const nextTask = sortedTasks[index + 1];
+        const nextDuration = nextTask.duration || 0;
+        const nextCardHeight = taskCardHeights.get(nextTask.id) || (nextDuration > 0 ? 80 : 56);
+        
+        if (isOverlapping && nextTask.time) {
+          // tasks overlap in time - use time-based positioning (natural positioning)
+          // calculate position based on time difference from current task
+          const nextTaskMinutes = timeToMinutes(nextTask.time);
+          const currentTaskMinutes = timeToMinutes(task.time);
+          const timeDifference = nextTaskMinutes - currentTaskMinutes;
+          
+          // use base pixels per minute for time-based positioning
+          const basePixelsPerMinute = 0.3;
+          const timeBasedOffset = timeDifference * basePixelsPerMinute;
+          
+          // position next task center relative to current task center
+          // currentPosition is always the center, so next center = current center + time offset
+          currentPosition = currentPosition + timeBasedOffset;
+        } else {
+          // tasks don't overlap - use spacing constants
+          // calculate current task's visual bottom edge (center + half height)
+          const storedPosition = positions.get(task.id);
+          if (!storedPosition) {
+            // fallback (shouldn't happen, but safety check)
+            const currentTaskBottomEdge = taskPosition + (cardHeight / 2);
+            const nextTaskTopEdge = currentTaskBottomEdge + gapSpacing;
+            // next task center = top edge + half height
+            currentPosition = nextTaskTopEdge + (nextCardHeight / 2);
+          } else {
+            // use stored values for consistency
+            // equalSpacingPosition is always the CENTER
+            const taskCenterPosition = storedPosition.equalSpacingPosition;
+            const taskCardHeight = storedPosition.cardHeight;
+            // bottom edge = center + half height
+            const currentTaskBottomEdge = taskCenterPosition + (taskCardHeight / 2);
+            
+            // calculate where next task's visual top edge should be
+            const nextTaskTopEdge = currentTaskBottomEdge + gapSpacing;
+            
+            // next task center = top edge + half height (for all task types)
+            currentPosition = nextTaskTopEdge + (nextCardHeight / 2);
+          }
+        }
+      }
+    });
+    
+    return positions;
+  }, [sortedTasks, taskCardHeights]);
+
+  // calculate dynamic pixelsPerMinute for each segment between tasks
+  // returns a map of segment index -> pixelsPerMinute
+  const segmentPixelsPerMinute = useMemo(() => {
+    const segments = new Map<number, number>();
+    
+    if (sortedTasks.length < 2) return segments;
+    
+    // calculate pixelsPerMinute for each segment between consecutive tasks
+    for (let i = 0; i < sortedTasks.length - 1; i++) {
+      const currentTask = sortedTasks[i];
+      const nextTask = sortedTasks[i + 1];
+      
+      if (!currentTask.time || !nextTask.time) continue;
+      
+      const currentMinutes = timeToMinutes(currentTask.time);
+      const currentDuration = currentTask.duration || 0;
+      const currentEndMinutes = currentMinutes + currentDuration;
+      const nextMinutes = timeToMinutes(nextTask.time);
+      const timeDifference = nextMinutes - currentEndMinutes;
+      
+      // if time difference is 0 or negative, skip
+      if (timeDifference <= 0) continue;
+      
+      // get dynamic spacing for this time difference
+      const spacing = getTaskSpacing(timeDifference);
+      
+      // pixelsPerMinute = spacing / timeDifferenceInMinutes
+      const pixelsPerMin = spacing / timeDifference;
+      segments.set(i, pixelsPerMin);
+    }
+    
+    return segments;
+  }, [sortedTasks]);
+
+  // calculate pixelsPerMinute for each task based on its allocated space
+  // this ensures consistency between tasks with duration and tasks without duration
+  // returns a map of taskId -> pixelsPerMinute
+  const taskPixelsPerMinute = useMemo(() => {
+    const taskPpm = new Map<string, number>();
+    
+    sortedTasks.forEach((task) => {
+      if (!task.time) return;
+      
+      const duration = task.duration || 0;
+      const equalSpacing = equalSpacingPositions.get(task.id);
+      if (!equalSpacing) return;
+      
+      if (duration > 0) {
+        // for tasks with duration, calculate pixelsPerMinute based on allocated card height
+        // this ensures the task's internal pixelsPerMinute matches its visual space
+        const allocatedHeight = equalSpacing.cardHeight;
+        const pixelsPerMin = allocatedHeight / duration;
+        taskPpm.set(task.id, pixelsPerMin);
+      } else {
+        // for tasks without duration, use a default pixelsPerMinute
+        // since they don't have duration-based height, use average segment pixelsPerMinute
+        const taskIndex = sortedTasks.findIndex(t => t.id === task.id);
+        const segmentPpm = segmentPixelsPerMinute.get(taskIndex) || 0.3;
+        taskPpm.set(task.id, segmentPpm);
+      }
+    });
+    
+    return taskPpm;
+  }, [sortedTasks, equalSpacingPositions, segmentPixelsPerMinute]);
 
   // detect task time ranges and their required heights
   // uses actual card heights measured from TimelineItem components via onLayout
@@ -154,219 +352,197 @@ export default function TimelineView({
       } else {
         // fallback to estimated height if not yet measured
         // for tasks with duration, use calculated height; for tasks without duration, use minimal estimate
-        const estimatedHeight = duration > 0 
-          ? calculateTaskHeight(duration, basePixelsPerMinute)
-          : 56; // minimal height estimate for tasks without duration
+        const estimatedHeight = duration > 0 ? 80 : 56;
         ranges.set(task.id, { startMinutes, endMinutes, requiredHeight: estimatedHeight });
       }
     });
     
     return ranges;
-  }, [tasksWithTime, basePixelsPerMinute, taskCardHeights]);
+  }, [tasksWithTime, taskCardHeights]);
 
-  // helper function to calculate position with task-aware spacing
-  // uses actual measured card heights for all tasks (with and without duration)
-  // accounts for tasks without duration by treating them as having a height at their time position
+  // helper function to calculate position for a time using dynamic pixelsPerMinute per segment
+  // tasks are positioned with dynamic spacing (100px/200px/300px based on time difference), time labels use dynamic scaling
   const calculatePositionWithOffsets = useCallback((time: string): number => {
     const timeMinutes = timeToMinutes(time);
-    const startMinutes = dynamicStartHour * 60;
     
-    // check if this time is within any task's time range (for tasks with duration)
-    for (const [taskId, range] of taskTimeRanges.entries()) {
-      const totalTaskMinutes = range.endMinutes - range.startMinutes;
-      
-      // only check range for tasks with duration (endMinutes > startMinutes)
-      if (totalTaskMinutes > 0 && timeMinutes >= range.startMinutes && timeMinutes <= range.endMinutes) {
-        // time is within this task's range - calculate position proportionally
-        const minutesIntoTask = timeMinutes - range.startMinutes;
-        
-        // calculate base position of task start (without offsets)
-        const taskStartBasePosition = (range.startMinutes - startMinutes) * basePixelsPerMinute;
-        
-        // calculate cumulative offset from tasks that end before this task starts
-        let offsetBeforeTask = 0;
-        for (const [otherTaskId, otherRange] of taskTimeRanges.entries()) {
-          const otherEndMinutes = otherRange.endMinutes;
-          const otherStartMinutes = otherRange.startMinutes;
-          
-          // for tasks with duration, check if they end before this task starts
-          if (otherEndMinutes > otherStartMinutes && otherEndMinutes < range.startMinutes) {
-            const baseHeight = (otherEndMinutes - otherStartMinutes) * basePixelsPerMinute;
-            offsetBeforeTask += otherRange.requiredHeight - baseHeight;
-          }
-          // for tasks without duration, check if their time is before this task starts
-          else if (otherEndMinutes === otherStartMinutes && otherStartMinutes < range.startMinutes) {
-            // task without duration takes up its measured height centered at its time
-            // add half the height as offset since it extends above and below its time position
-            offsetBeforeTask += otherRange.requiredHeight / 2;
-          }
-        }
-        
-        // task start position with offsets
-        const taskStartPosition = taskStartBasePosition + offsetBeforeTask;
-        
-        // calculate position within task range proportionally
-        const proportion = totalTaskMinutes > 0 ? minutesIntoTask / totalTaskMinutes : 0;
-        return taskStartPosition + (proportion * range.requiredHeight);
-      }
-    }
+    // if no tasks, return 0
+    if (sortedTasks.length === 0) return 0;
     
-    // time is not within any task range - use base spacing with offsets
-    const basePosition = (timeMinutes - startMinutes) * basePixelsPerMinute;
-    
-    // add cumulative offset from all tasks that end before this time
-    let cumulativeOffset = 0;
-    for (const [taskId, range] of taskTimeRanges.entries()) {
-      const rangeEndMinutes = range.endMinutes;
-      const rangeStartMinutes = range.startMinutes;
-      
-      if (rangeEndMinutes > rangeStartMinutes) {
-        // task with duration - ends at endMinutes
-        if (rangeEndMinutes < timeMinutes) {
-          const baseHeight = (rangeEndMinutes - rangeStartMinutes) * basePixelsPerMinute;
-          cumulativeOffset += range.requiredHeight - baseHeight;
-        }
-      } else {
-        // task without duration - centered at startMinutes
-        // if task time is before this time, add half its height as offset
-        if (rangeStartMinutes < timeMinutes) {
-          cumulativeOffset += range.requiredHeight / 2;
-        }
-      }
-    }
-    
-    return basePosition + cumulativeOffset;
-  }, [dynamicStartHour, basePixelsPerMinute, taskTimeRanges]);
-
-  // calculate total height of timeline using task-aware spacing
-  const timelineHeight = useMemo(() => {
-    // if no tasks, use default end hour
-    if (tasksWithTime.length === 0) {
-      const endTime = `${String(endHour).padStart(2, '0')}:00`;
-      return calculatePositionWithOffsets(endTime);
-    }
-    
-    // calculate position of the end hour using the same logic
-    // use the latest task time or endHour, whichever is later
-    let latestTime = endHour;
-    const latestTask = tasksWithTime.reduce((latest, task) => {
-      if (!task.time) return latest;
-      if (!latest) return task;
+    // find which segment this time falls into
+    for (let i = 0; i < sortedTasks.length; i++) {
+      const task = sortedTasks[i];
+      if (!task.time) continue;
       
       const taskMinutes = timeToMinutes(task.time);
-      const latestMinutes = timeToMinutes(latest.time!);
+      const duration = task.duration || 0;
+      const taskEndMinutes = taskMinutes + duration;
       
-      // if task has duration, use end time
-      const taskEndMinutes = taskMinutes + (task.duration || 0);
-      const latestEndMinutes = latestMinutes + (latest.duration || 0);
+      // check if time is within this task's duration range
+      if (timeMinutes >= taskMinutes && timeMinutes <= taskEndMinutes) {
+        const equalSpacing = equalSpacingPositions.get(task.id);
+        if (!equalSpacing) continue;
+        
+        // if task has duration, calculate position proportionally within the task
+        // equalSpacingPosition is the CENTER, so start from center - half height
+        if (duration > 0) {
+          const minutesIntoTask = timeMinutes - taskMinutes;
+          const proportion = minutesIntoTask / duration;
+          const taskTop = equalSpacing.equalSpacingPosition - (equalSpacing.cardHeight / 2);
+          return taskTop + (proportion * equalSpacing.cardHeight);
+        } else {
+          // task without duration - time is at the center
+          return equalSpacing.equalSpacingPosition;
+        }
+      }
       
-      return taskEndMinutes > latestEndMinutes ? task : latest;
-    }, null as Task | null);
-    
-    if (latestTask?.time) {
-      const latestMinutes = timeToMinutes(latestTask.time);
-      const latestEndMinutes = latestMinutes + (latestTask.duration || 0);
-      const latestHour = Math.ceil(latestEndMinutes / 60);
-      latestTime = Math.max(latestHour + 1, endHour); // add 1 hour buffer
+      // check if time is between this task and the next task
+      if (i < sortedTasks.length - 1) {
+        const nextTask = sortedTasks[i + 1];
+        if (!nextTask.time) continue;
+        
+        const nextTaskMinutes = timeToMinutes(nextTask.time);
+        
+        // if time is between this task's end and next task's start
+        if (timeMinutes > taskEndMinutes && timeMinutes < nextTaskMinutes) {
+          const equalSpacing = equalSpacingPositions.get(task.id);
+          const nextEqualSpacing = equalSpacingPositions.get(nextTask.id);
+          if (!equalSpacing || !nextEqualSpacing) continue;
+          
+          // get the segment pixelsPerMinute
+          const segmentPpm = segmentPixelsPerMinute.get(i);
+          if (!segmentPpm) continue;
+          
+          // calculate position in the segment
+          // equalSpacingPosition is the CENTER, so end position = center + half height
+          const taskEndPosition = equalSpacing.equalSpacingPosition + (equalSpacing.cardHeight / 2);
+          
+          // next task start position is also at center, so start = center - half height
+          const nextTaskStartPosition = nextEqualSpacing.equalSpacingPosition - (nextEqualSpacing.cardHeight / 2);
+          
+          // calculate how many minutes into the segment this time is
+          const minutesIntoSegment = timeMinutes - taskEndMinutes;
+          
+          // calculate position using segment pixelsPerMinute
+          return taskEndPosition + (minutesIntoSegment * segmentPpm);
+        }
+      }
     }
     
-    const endTime = `${String(latestTime).padStart(2, '0')}:00`;
-    const calculatedHeight = calculatePositionWithOffsets(endTime);
+    // time is before first task or after last task
+    // use the first/last task's position as reference
+    if (timeMinutes < timeToMinutes(sortedTasks[0].time!)) {
+      // before first task - use first task's position minus spacing
+      const firstEqualSpacing = equalSpacingPositions.get(sortedTasks[0].id);
+      if (firstEqualSpacing) {
+        const firstTaskMinutes = timeToMinutes(sortedTasks[0].time!);
+        const minutesBefore = firstTaskMinutes - timeMinutes;
+        // use a default pixelsPerMinute for before first task
+        const defaultPpm = 0.3;
+        return firstEqualSpacing.equalSpacingPosition - (minutesBefore * defaultPpm);
+      }
+    } else {
+      // after last task - use last task's position plus spacing
+      const lastTask = sortedTasks[sortedTasks.length - 1];
+      const lastEqualSpacing = equalSpacingPositions.get(lastTask.id!);
+      if (lastEqualSpacing && lastTask.time) {
+        const lastTaskMinutes = timeToMinutes(lastTask.time);
+        const lastTaskDuration = lastTask.duration || 0;
+        const lastTaskEndMinutes = lastTaskMinutes + lastTaskDuration;
+        const minutesAfter = timeMinutes - lastTaskEndMinutes;
+        // use a default pixelsPerMinute for after last task
+        const defaultPpm = 0.3;
+        // equalSpacingPosition is the CENTER, so end position = center + half height
+        const lastTaskEndPosition = lastEqualSpacing.equalSpacingPosition + (lastEqualSpacing.cardHeight / 2);
+        return lastTaskEndPosition + (minutesAfter * defaultPpm);
+      }
+    }
     
-    // ensure minimum height
-    return Math.max(calculatedHeight, 200);
-  }, [tasksWithTime, endHour, calculatePositionWithOffsets]);
+    return 0;
+  }, [sortedTasks, equalSpacingPositions, segmentPixelsPerMinute]);
+
+  // calculate total height of timeline using equal spacing
+  // height is based on number of tasks and spacing between them
+  const timelineHeight = useMemo(() => {
+    if (sortedTasks.length === 0) {
+      return 200; // minimum height when no tasks
+    }
+    
+    // calculate height based on equal spacing positions
+    // get the last task's position and add its height plus some padding
+    const lastTask = sortedTasks[sortedTasks.length - 1];
+    const lastEqualSpacing = equalSpacingPositions.get(lastTask.id);
+    
+    if (lastEqualSpacing) {
+      // equalSpacingPosition is the CENTER, so end position = center + half height
+      const lastTaskEndPosition = lastEqualSpacing.equalSpacingPosition + (lastEqualSpacing.cardHeight / 2);
+      
+      // add padding at the bottom
+      return lastTaskEndPosition + 100;
+    }
+    
+    return 200;
+  }, [sortedTasks, equalSpacingPositions]);
 
   // calculate timeline line start and end positions (between first and last task)
+  // uses equal spacing positions
   const timelineLineBounds = useMemo(() => {
-    if (tasksWithTime.length === 0) {
+    if (sortedTasks.length === 0) {
       return { top: 0, height: timelineHeight };
     }
     
-    // find first task (earliest time)
-    const firstTask = tasksWithTime.reduce((earliest, task) => {
-      if (!task.time) return earliest;
-      if (!earliest) return task;
-      
-      const taskMinutes = timeToMinutes(task.time);
-      const earliestMinutes = timeToMinutes(earliest.time!);
-      
-      return taskMinutes < earliestMinutes ? task : earliest;
-    }, null as Task | null);
-    
-    // find last task (latest end time)
-    const lastTask = tasksWithTime.reduce((latest, task) => {
-      if (!task.time) return latest;
-      if (!latest) return task;
-      
-      const taskMinutes = timeToMinutes(task.time);
-      const latestMinutes = timeToMinutes(latest.time!);
-      
-      const taskEndMinutes = taskMinutes + (task.duration || 0);
-      const latestEndMinutes = latestMinutes + (latest.duration || 0);
-      
-      return taskEndMinutes > latestEndMinutes ? task : latest;
-    }, null as Task | null);
+    const firstTask = sortedTasks[0];
+    const lastTask = sortedTasks[sortedTasks.length - 1];
     
     if (!firstTask?.time || !lastTask?.time) {
       return { top: 0, height: timelineHeight };
     }
     
-    // calculate start position (first task start time)
-    const firstTaskStartPosition = calculatePositionWithOffsets(firstTask.time);
+    const firstEqualSpacing = equalSpacingPositions.get(firstTask.id);
+    const lastEqualSpacing = equalSpacingPositions.get(lastTask.id);
     
-    // calculate end position (last task end time)
-    const lastTaskMinutes = timeToMinutes(lastTask.time);
-    const lastTaskEndMinutes = lastTaskMinutes + (lastTask.duration || 0);
-    const lastTaskEndTime = minutesToTime(lastTaskEndMinutes);
-    const lastTaskEndPosition = calculatePositionWithOffsets(lastTaskEndTime);
+    if (!firstEqualSpacing || !lastEqualSpacing) {
+      return { top: 0, height: timelineHeight };
+    }
+    
+    // equalSpacingPosition is the CENTER, so:
+    // start position = center - half height
+    const firstTaskStartPosition = firstEqualSpacing.equalSpacingPosition - (firstEqualSpacing.cardHeight / 2);
+    
+    // end position = center + half height
+    const lastTaskEndPosition = lastEqualSpacing.equalSpacingPosition + (lastEqualSpacing.cardHeight / 2);
     
     return {
       top: firstTaskStartPosition,
       height: lastTaskEndPosition - firstTaskStartPosition,
     };
-  }, [tasksWithTime, calculatePositionWithOffsets, timelineHeight]);
+  }, [sortedTasks, equalSpacingPositions, timelineHeight]);
 
-  // generate time labels - only show start and end times for tasks
+  // generate time labels - only show start times for tasks
   // hide regular time labels that fall within a task's duration range
   const allTimeLabels = useMemo(() => {
-    const labels: Array<{ time: string; position: number; isEndTime: boolean }> = [];
+    const labels: Array<{ time: string; position: number; isEndTime: false; taskId: string }> = [];
     const seenTimes = new Set<string>();
 
     // find the first task's start position to hide labels before it
+    // use equalSpacingPosition for consistency with label positioning
     let firstTaskStartPosition: number | null = null;
-    if (tasksWithTime.length > 0) {
-      const firstTask = tasksWithTime.reduce((earliest, task) => {
-        if (!task.time) return earliest;
-        if (!earliest) return task;
-        
-        const taskMinutes = timeToMinutes(task.time);
-        const earliestMinutes = timeToMinutes(earliest.time!);
-        
-        return taskMinutes < earliestMinutes ? task : earliest;
-      }, null as Task | null);
-      
+    if (sortedTasks.length > 0) {
+      const firstTask = sortedTasks[0];
       if (firstTask?.time) {
-        firstTaskStartPosition = calculatePositionWithOffsets(firstTask.time);
+        const firstEqualSpacing = equalSpacingPositions.get(firstTask.id);
+        if (firstEqualSpacing) {
+          // use the top edge of the first task (same as label positioning)
+          const firstCardHeight = firstEqualSpacing.cardHeight;
+          const firstCardCenter = firstEqualSpacing.equalSpacingPosition;
+          firstTaskStartPosition = firstCardCenter - (firstCardHeight / 2);
+        }
       }
     }
 
     // find the last task's end position to hide labels after it
     let lastTaskEndPosition: number | null = null;
-    if (tasksWithTime.length > 0) {
-      const lastTask = tasksWithTime.reduce((latest, task) => {
-        if (!task.time) return latest;
-        if (!latest) return task;
-        
-        const taskMinutes = timeToMinutes(task.time);
-        const latestMinutes = timeToMinutes(latest.time!);
-        
-        const taskEndMinutes = taskMinutes + (task.duration || 0);
-        const latestEndMinutes = latestMinutes + (latest.duration || 0);
-        
-        return taskEndMinutes > latestEndMinutes ? task : latest;
-      }, null as Task | null);
-      
+    if (sortedTasks.length > 0) {
+      const lastTask = sortedTasks[sortedTasks.length - 1];
       if (lastTask?.time) {
         const lastTaskMinutes = timeToMinutes(lastTask.time);
         const lastTaskEndMinutes = lastTaskMinutes + (lastTask.duration || 0);
@@ -388,10 +564,9 @@ export default function TimelineView({
     const shouldShowRegularLabel = (time: string): boolean => {
       const timeMinutes = timeToMinutes(time);
       
-      // check if this time is exactly a task start or end time
+      // check if this time is exactly a task start time
       for (const range of taskTimeRanges) {
         if (range.startTime === time) return false; // it's a task start, will be added separately
-        if (range.end === timeMinutes) return false; // it's a task end, will be added separately
       }
       
       // check if this time falls within any task's duration range
@@ -400,112 +575,74 @@ export default function TimelineView({
         if (timeMinutes > range.start && timeMinutes < range.end) {
           return false;
         }
-        
-        // hide if within 2 hours (120 minutes) before task start time
-        const minutesBeforeStart = range.start - timeMinutes;
-        if (minutesBeforeStart > 0 && minutesBeforeStart <= 120) {
-          return false;
-        }
-        
-        // hide if within 2 hours (120 minutes) after task end time
-        const minutesAfterEnd = timeMinutes - range.end;
-        if (minutesAfterEnd > 0 && minutesAfterEnd <= 120) {
-          return false;
-        }
       }
       
-      return true; // show regular label if it's not within any task range or 2-hour buffer
+      return true; // show regular label if it's not within any task range
     };
 
-    // add regular time slot labels only if they don't fall within task duration ranges
-    // and are not before the first task or past the last task
-    timeSlots.forEach((time) => {
-      if (shouldShowRegularLabel(time)) {
-        const position = calculatePositionWithOffsets(time);
-        
-        // hide if before the first task
-        if (firstTaskStartPosition !== null && position < firstTaskStartPosition) {
-          return;
-        }
-        
-        // hide if past the last task
-        if (lastTaskEndPosition !== null && position > lastTaskEndPosition) {
-          return;
-        }
-        
-        labels.push({ time, position, isEndTime: false });
-        seenTimes.add(time);
-      }
-    });
+    // hide all regular time slot labels - only show task start time labels
+    // timeSlots.forEach((time) => {
+    //   if (shouldShowRegularLabel(time)) {
+    //     const position = calculatePositionWithOffsets(time);
+    //     
+    //     // hide if before the first task
+    //     if (firstTaskStartPosition !== null && position < firstTaskStartPosition) {
+    //       return;
+    //     }
+    //     
+    //     // hide if past the last task
+    //     if (lastTaskEndPosition !== null && position > lastTaskEndPosition) {
+    //       return;
+    //     }
+    //     
+    //     labels.push({ time, position, isEndTime: false });
+    //     seenTimes.add(time);
+    //   }
+    // });
 
-    // add start time labels for all tasks
+    // add time labels for all tasks - positioned at the center of each card
+    // use equalSpacingPosition which is always the CENTER of the card
     tasksWithTime.forEach((task) => {
       if (!task.time) return;
       
-      const duration = task.duration || 0;
-      const startPosition = calculatePositionWithOffsets(task.time);
+      // get the task's equal spacing position (always the CENTER of the card)
+      const equalSpacing = equalSpacingPositions.get(task.id);
+      if (!equalSpacing) return;
       
-      // get card height to calculate label position
-      const cardHeight = taskCardHeights.get(task.id) || (duration > 0 ? 80 : 56);
+      // position label at the top edge of the card
+      // equalSpacingPosition is the center of the card
+      // top edge = center - half card height
+      const cardHeight = equalSpacing.cardHeight;
+      const cardCenter = equalSpacing.equalSpacingPosition;
+      const cardTop = cardCenter - (cardHeight / 2);
+      const labelPosition = cardTop;
       
-      // for tasks without duration, center the label at the task's center position
-      // task is positioned at startPosition - (cardHeight / 2), so its center is at startPosition
-      // label should be at startPosition to align with the task's center
-      let labelPosition = startPosition;
-      if (duration === 0) {
-        // task's center is at startPosition (task top is at startPosition - cardHeight/2)
-        // label should be at startPosition to align with task center
-        labelPosition = startPosition;
-      }
-      
-      // hide if before the first task (shouldn't happen for start times, but check anyway)
-      // use startPosition for comparison, not labelPosition
-      if (firstTaskStartPosition !== null && startPosition < firstTaskStartPosition) {
+      // hide if before the first task (but always show the first task's label)
+      if (firstTaskStartPosition !== null && labelPosition < firstTaskStartPosition && task.id !== sortedTasks[0]?.id) {
         return;
       }
       
-      // hide if past the last task (shouldn't happen for start times, but check anyway)
-      // use startPosition for comparison, not labelPosition
-      if (lastTaskEndPosition !== null && startPosition > lastTaskEndPosition) {
+      // hide if past the last task
+      if (lastTaskEndPosition !== null && labelPosition > lastTaskEndPosition) {
         return;
       }
       
-      if (!seenTimes.has(task.time)) {
-        labels.push({ time: task.time, position: labelPosition, isEndTime: false });
-        seenTimes.add(task.time);
-      }
-    });
-
-    // add end time labels for tasks with duration
-    // position is calculated based on the actual end time with offsets
-    // the space between start and end positions will be used as the card height
-    tasksWithTime.forEach((task) => {
-      if (!task.time || !task.duration || task.duration === 0) return;
-
-      // calculate end time based on start time + duration
-      const startMinutes = timeToMinutes(task.time);
-      const endMinutes = startMinutes + task.duration;
-      const endTime = minutesToTime(endMinutes);
-      
-      // calculate end position using the end time with offsets
-      // this ensures the end label aligns with the timeline position for that time
-      const endPosition = calculatePositionWithOffsets(endTime);
-
-      // hide if past the last task (shouldn't happen for the last task's end time, but check anyway)
-      if (lastTaskEndPosition !== null && endPosition > lastTaskEndPosition) {
-        return;
-      }
-
-      // only add if not already added
-      if (!seenTimes.has(endTime)) {
-        labels.push({ time: endTime, position: endPosition, isEndTime: true });
-        seenTimes.add(endTime);
+      // always add/update label for each task
+      // use task.id to track labels so they update correctly when tasks move
+      const existingLabelIndex = labels.findIndex(l => l.taskId === task.id);
+      if (existingLabelIndex >= 0) {
+        // update existing label position and time
+        labels[existingLabelIndex].position = labelPosition;
+        labels[existingLabelIndex].time = task.time;
+      } else {
+        // add new label with task.id for proper keying
+        labels.push({ time: task.time, position: labelPosition, isEndTime: false, taskId: task.id });
       }
     });
 
     // sort labels by position
     return labels.sort((a, b) => a.position - b.position);
-  }, [timeSlots, tasksWithTime, dynamicStartHour, basePixelsPerMinute, calculatePositionWithOffsets, taskCardHeights]);
+  }, [timeSlots, sortedTasks, tasksWithTime, dynamicStartHour, calculatePositionWithOffsets, taskCardHeights, equalSpacingPositions]);
 
   // reverse calculate position to time - accounts for task-aware spacing offsets
   // finds the time that corresponds to a given Y position
@@ -576,16 +713,17 @@ export default function TimelineView({
           styles.scrollContent, 
           { minHeight: timelineHeight + 220 } // timelineHeight + paddingTop (20) + paddingBottom (200)
         ]}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={true}
       >
         {/* time labels column on the left */}
         <View style={styles.timeLabelsContainer}>
-          {allTimeLabels.map((label, index) => (
+          {allTimeLabels.map((label) => (
             <TimeLabel
-              key={`${label.time}-${index}-${label.isEndTime ? 'end' : 'start'}`}
+              key={`${label.taskId}-${label.time}`}
               time={label.time}
               position={label.position}
-              isEndTime={label.isEndTime}
+              isEndTime={false}
             />
           ))}
           
@@ -623,20 +761,23 @@ export default function TimelineView({
               </Text>
             </View>
           ) : (
-            tasksWithTime.map((task) => {
-              const startPosition = calculatePositionWithOffsets(task.time!);
+            sortedTasks.map((task) => {
               const duration = task.duration || 0;
               
-              // get card height from state (measured by TimelineItem)
-              // fallback to estimated height if not yet measured
-              const cardHeight = taskCardHeights.get(task.id) || (duration > 0 ? 80 : 56);
+              // get equal spacing position for this task
+              const equalSpacing = equalSpacingPositions.get(task.id);
+              if (!equalSpacing) return null;
               
-              // calculate position based on duration
-              let position = startPosition; // position for tasks with duration (top-aligned)
-              if (duration === 0) {
-                // center-align: position the task so its vertical center aligns with timeline
-                position = startPosition - (cardHeight / 2);
-              }
+              // equalSpacingPosition is the CENTER of the card
+              // convert to top position for rendering (top = center - half height)
+              const centerPosition = equalSpacing.equalSpacingPosition;
+              const cardHeight = equalSpacing.cardHeight;
+              const position = centerPosition - (cardHeight / 2);
+              
+              // get pixelsPerMinute for this task (consistent for height calculations)
+              // for tasks with duration: based on allocated height / duration
+              // for tasks without duration: use segment pixelsPerMinute
+              const taskPpm = taskPixelsPerMinute.get(task.id) || 0.3;
               
               return (
                 <TimelineItem
@@ -644,25 +785,25 @@ export default function TimelineView({
                   task={task}
                   position={position}
                   duration={duration}
-                  pixelsPerMinute={basePixelsPerMinute}
+                  pixelsPerMinute={taskPpm}
                   startHour={dynamicStartHour}
                   onHeightMeasured={(height: number) => handleHeightMeasured(task.id, height)}
-                  onDrag={(newY) => {
-                    // newY is the top position of the task
-                    // for tasks without duration, convert top position to center position (timeline position)
-                    const timelineY = duration > 0 ? newY : newY + (cardHeight / 2);
-                    handleTaskDrag(task.id, timelineY);
-                  }}
+                    onDrag={(newY) => {
+                      // newY is the top position of the task from TimelineItem
+                      // convert top position to center position (equalSpacingPosition is always center)
+                      const centerY = newY + (cardHeight / 2);
+                      handleTaskDrag(task.id, centerY);
+                    }}
                   onDragStart={() => {
                     // drag started - will be updated by onDragPositionChange
                   }}
                   onDragPositionChange={(yPosition) => {
-                    // yPosition is the top position of the task
-                    // for tasks without duration, convert top position to center position (timeline position)
-                    const timelineY = duration > 0 ? yPosition : yPosition + (cardHeight / 2);
-                    // calculate time from timeline position using offset-aware function
-                    const time = positionToTimeWithOffsets(timelineY);
-                    setDragState({ yPosition: timelineY, time });
+                    // yPosition is the top position of the task from TimelineItem
+                    // convert top position to center position (equalSpacingPosition is always center)
+                    const centerY = yPosition + (cardHeight / 2);
+                    // calculate time from center position using offset-aware function
+                    const time = positionToTimeWithOffsets(centerY);
+                    setDragState({ yPosition: centerY, time });
                   }}
                   onDragEnd={() => {
                     setDragState(null);
@@ -697,8 +838,8 @@ const createStyles = (
   // scroll content container with calculated height
   scrollContent: {
     flexDirection: 'row',
-    paddingTop: 20,
-    paddingBottom: 200, // increased bottom padding to allow scrolling further down
+    paddingTop: 80, // increased top padding to see just the top
+    paddingBottom: 200, // bottom padding
   },
 
   // time labels container on the left side - more compact
