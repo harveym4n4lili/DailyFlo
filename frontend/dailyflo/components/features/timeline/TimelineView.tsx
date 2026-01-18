@@ -528,7 +528,7 @@ export default function TimelineView({
   // generate time labels - show start times for all tasks, and end times for tasks with duration
   // hide regular time labels that fall within a task's duration range
   const allTimeLabels = useMemo(() => {
-    const labels: Array<{ time: string; position: number; isEndTime: false; taskId: string; endTime?: string; endPosition?: number }> = [];
+    const labels: Array<{ time: string; position: number; isEndTime: boolean; taskId: string; endTime?: string; endPosition?: number }> = [];
     const seenTimes = new Set<string>();
 
     // find the first task's start position to hide labels before it
