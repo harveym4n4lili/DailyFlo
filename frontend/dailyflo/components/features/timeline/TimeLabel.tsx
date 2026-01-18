@@ -43,11 +43,13 @@ export default function TimeLabel({ time, position, isEndTime = false, isDragLab
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }, [time]);
 
-  // position label at the top edge of the card
-  // position is the top edge of the card
-  // simply position container at the top edge
+  // position label at the top edge of the card (or bottom edge for end time labels)
+  // position is the top edge of the card (or bottom edge for end time labels)
+  // for end time labels, use endTimeContainer to align text to bottom
   const containerStyle = height 
     ? [styles.container, styles.containerized, { top: position, height }]
+    : isEndTime
+    ? [styles.container, styles.endTimeContainer, { top: position }]
     : [styles.container, styles.topAlignedContainer, { top: position }];
 
   const textStyle = [
@@ -92,8 +94,8 @@ const createStyles = (
   },
 
   // end time container - aligns bottom edge of label with bottom edge of task card
-  // position is already adjusted to account for text lineHeight (12px)
-  // so we just need to ensure the text aligns to the bottom
+  // position is the bottom edge of the card, container aligns text to its bottom
+  // use fixed height matching text lineHeight and justifyContent: 'flex-end'
   endTimeContainer: {
     justifyContent: 'flex-end',
     alignItems: 'flex-end',

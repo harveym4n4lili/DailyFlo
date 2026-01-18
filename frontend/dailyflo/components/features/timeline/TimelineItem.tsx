@@ -89,19 +89,14 @@ export default function TimelineItem({
   // state to store measured content height (includes padding)
   const [measuredContentHeight, setMeasuredContentHeight] = React.useState<number | null>(null);
   
-  // calculate minimum card height based on duration
-  // this ensures tasks with duration have appropriate minimum height
+  // calculate minimum card height - same for all tasks (with or without duration)
+  // use fixed minimum (56px) to avoid circular dependency with pixelsPerMinute
+  // pixelsPerMinute depends on cardHeight which creates a loop - use fixed value for initial render instead
   const minCardHeight = useMemo(() => {
-    if (duration > 0) {
-      // for tasks with duration, calculate based on duration with minimum
-      // this height should include padding, so we add 32px (16 top + 16 bottom)
-      return Math.max(80, calculateTaskHeight(duration, pixelsPerMinute));
-    } else {
-      // tasks without duration: minimal height (just content)
-      // padding (16 top + 16 bottom) + icon height (~24) + some margin = ~56
-      return 56;
-    }
-  }, [duration, pixelsPerMinute]);
+    // same minimum height for all tasks regardless of duration
+    // padding (16 top + 16 bottom) + icon height (~24) + some margin = ~56
+    return 56;
+  }, [duration]);
 
   // use measured height if available, otherwise use minimum for initial render
   // measured height already includes padding from the combinedContainer
@@ -144,9 +139,10 @@ export default function TimelineItem({
   };
 
   // reset measured height when task content changes (e.g., subtasks added/removed)
+  // also reset when duration changes to ensure height is remeasured for spacing calculations
   useEffect(() => {
     setMeasuredContentHeight(null);
-  }, [task.metadata?.subtasks, task.title]);
+  }, [task.metadata?.subtasks, task.title, duration]);
 
   // update base position when prop changes
   useEffect(() => {
