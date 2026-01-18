@@ -8,7 +8,7 @@
  * This component is used by the Planner screen to show tasks in a timeline view.
  */
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, ScrollView, Text } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -57,6 +57,7 @@ export default function TimelineView({
 
   // track actual card heights measured from TimelineItem components
   const [taskCardHeights, setTaskCardHeights] = useState<Map<string, number>>(new Map());
+  
 
   // format drag time for display (24-hour format)
   const formatDragTime = useCallback((time: string): string => {
@@ -174,7 +175,9 @@ export default function TimelineView({
       // cardHeight: height of the task card
       // for tasks with duration: this is the visual height of the task card
       // for tasks without duration: this is just the card's content height
-      const cardHeight = taskCardHeights.get(task.id) || (duration > 0 ? 80 : 56);
+      const measuredHeight = taskCardHeights.get(task.id);
+      const fallbackHeight = 56; // same fallback height for all tasks (with or without duration)
+      const cardHeight = measuredHeight || fallbackHeight;
       
       // check if tasks overlap in time
       // if overlapping, use time-based positioning (natural positioning)
@@ -218,7 +221,7 @@ export default function TimelineView({
       if (index < sortedTasks.length - 1) {
         const nextTask = sortedTasks[index + 1];
         const nextDuration = nextTask.duration || 0;
-        const nextCardHeight = taskCardHeights.get(nextTask.id) || (nextDuration > 0 ? 80 : 56);
+        const nextCardHeight = taskCardHeights.get(nextTask.id) || 56;
         
         if (isOverlapping && nextTask.time) {
           // tasks overlap in time - use time-based positioning (natural positioning)
@@ -236,12 +239,15 @@ export default function TimelineView({
           currentPosition = currentPosition + timeBasedOffset;
         } else {
           // tasks don't overlap - use spacing constants
-          // calculate current task's visual bottom edge (center + half height)
+          // calculate spacing from top edge to top edge (since labels are at top edges)
           const storedPosition = positions.get(task.id);
           if (!storedPosition) {
             // fallback (shouldn't happen, but safety check)
-            const currentTaskBottomEdge = taskPosition + (cardHeight / 2);
-            const nextTaskTopEdge = currentTaskBottomEdge + gapSpacing;
+            // current task top edge = center - half height
+            const currentTaskTopEdge = taskPosition - (cardHeight / 2);
+            // next task top edge = current top edge + current card height + gap spacing
+            // this ensures gapSpacing is the gap between card bottom and next card top
+            const nextTaskTopEdge = currentTaskTopEdge + cardHeight + gapSpacing;
             // next task center = top edge + half height
             currentPosition = nextTaskTopEdge + (nextCardHeight / 2);
           } else {
@@ -249,11 +255,13 @@ export default function TimelineView({
             // equalSpacingPosition is always the CENTER
             const taskCenterPosition = storedPosition.equalSpacingPosition;
             const taskCardHeight = storedPosition.cardHeight;
-            // bottom edge = center + half height
-            const currentTaskBottomEdge = taskCenterPosition + (taskCardHeight / 2);
+            // current task top edge = center - half height (where label is positioned)
+            const currentTaskTopEdge = taskCenterPosition - (taskCardHeight / 2);
             
-            // calculate where next task's visual top edge should be
-            const nextTaskTopEdge = currentTaskBottomEdge + gapSpacing;
+            // calculate next task's top edge: current top + current height + gap spacing
+            // gapSpacing represents the gap between bottom of current card and top of next card
+            // this ensures labels (at top edges) align with spacing calculation
+            const nextTaskTopEdge = currentTaskTopEdge + taskCardHeight + gapSpacing;
             
             // next task center = top edge + half height (for all task types)
             currentPosition = nextTaskTopEdge + (nextCardHeight / 2);
@@ -351,8 +359,8 @@ export default function TimelineView({
         ranges.set(task.id, { startMinutes, endMinutes, requiredHeight: measuredHeight });
       } else {
         // fallback to estimated height if not yet measured
-        // for tasks with duration, use calculated height; for tasks without duration, use minimal estimate
-        const estimatedHeight = duration > 0 ? 80 : 56;
+        // same estimated height for all tasks (with or without duration)
+        const estimatedHeight = 56;
         ranges.set(task.id, { startMinutes, endMinutes, requiredHeight: estimatedHeight });
       }
     });
@@ -517,10 +525,10 @@ export default function TimelineView({
     };
   }, [sortedTasks, equalSpacingPositions, timelineHeight]);
 
-  // generate time labels - only show start times for tasks
+  // generate time labels - show start times for all tasks, and end times for tasks with duration
   // hide regular time labels that fall within a task's duration range
   const allTimeLabels = useMemo(() => {
-    const labels: Array<{ time: string; position: number; isEndTime: false; taskId: string }> = [];
+    const labels: Array<{ time: string; position: number; isEndTime: false; taskId: string; endTime?: string; endPosition?: number }> = [];
     const seenTimes = new Set<string>();
 
     // find the first task's start position to hide labels before it
@@ -600,7 +608,7 @@ export default function TimelineView({
     //   }
     // });
 
-    // add time labels for all tasks - positioned at the center of each card
+    // add time labels for all tasks - positioned at the top edge of each card
     // use equalSpacingPosition which is always the CENTER of the card
     tasksWithTime.forEach((task) => {
       if (!task.time) return;
@@ -617,6 +625,25 @@ export default function TimelineView({
       const cardTop = cardCenter - (cardHeight / 2);
       const labelPosition = cardTop;
       
+      // check if task has duration - if so, calculate end time and position
+      // end position is calculated independently from timeline scales, purely based on card height
+      const duration = task.duration || 0;
+      let endTime: string | undefined;
+      let endPosition: number | undefined;
+      
+      if (duration > 0) {
+        // calculate end time: task start time + duration
+        const startMinutes = timeToMinutes(task.time);
+        const endMinutes = startMinutes + duration;
+        endTime = minutesToTime(endMinutes);
+        
+        // calculate end position: top edge + card height - bottom padding
+        // this positions the end time label at the content bottom edge (inside padding)
+        // this is independent of timeline scales - purely based on measured card height
+        const bottomPadding = 16; // matches combinedContainer paddingBottom in TimelineItem
+        endPosition = cardTop + cardHeight;
+      }
+      
       // hide if before the first task (but always show the first task's label)
       if (firstTaskStartPosition !== null && labelPosition < firstTaskStartPosition && task.id !== sortedTasks[0]?.id) {
         return;
@@ -627,16 +654,24 @@ export default function TimelineView({
         return;
       }
       
+      // create label object with optional end time/position
+      const labelObject = {
+        time: task.time,
+        position: labelPosition,
+        isEndTime: false,
+        taskId: task.id,
+        ...(endTime && endPosition !== undefined ? { endTime, endPosition } : {})
+      };
+      
       // always add/update label for each task
       // use task.id to track labels so they update correctly when tasks move
       const existingLabelIndex = labels.findIndex(l => l.taskId === task.id);
       if (existingLabelIndex >= 0) {
-        // update existing label position and time
-        labels[existingLabelIndex].position = labelPosition;
-        labels[existingLabelIndex].time = task.time;
+        // update existing label with all fields (including end time/position if they exist)
+        labels[existingLabelIndex] = labelObject;
       } else {
         // add new label with task.id for proper keying
-        labels.push({ time: task.time, position: labelPosition, isEndTime: false, taskId: task.id });
+        labels.push(labelObject);
       }
     });
 
@@ -694,15 +729,17 @@ export default function TimelineView({
   const handleHeightMeasured = useCallback((taskId: string, height: number) => {
     setTaskCardHeights(prev => {
       const currentHeight = prev.get(taskId);
+      
       // only update if height actually changed to avoid infinite loops
       if (currentHeight === height) {
         return prev;
       }
       const newMap = new Map(prev);
       newMap.set(taskId, height);
+      
       return newMap;
     });
-  }, []);
+  }, [tasks]);
 
   return (
     <View style={styles.container}>
@@ -719,12 +756,24 @@ export default function TimelineView({
         {/* time labels column on the left */}
         <View style={styles.timeLabelsContainer}>
           {allTimeLabels.map((label) => (
-            <TimeLabel
-              key={`${label.taskId}-${label.time}`}
-              time={label.time}
-              position={label.position}
-              isEndTime={false}
-            />
+            <React.Fragment key={`${label.taskId}-${label.time}`}>
+              {/* start time label - always rendered */}
+              <TimeLabel
+                time={label.time}
+                position={label.position}
+                isEndTime={false}
+              />
+              
+              {/* end time label - only rendered if task has duration */}
+              {label.endTime && label.endPosition !== undefined && (
+                <TimeLabel
+                  key={`${label.taskId}-${label.endTime}-end`}
+                  time={label.endTime}
+                  position={label.endPosition}
+                  isEndTime={true}
+                />
+              )}
+            </React.Fragment>
           ))}
           
           {/* drag time label - shows current drag position */}
@@ -770,6 +819,8 @@ export default function TimelineView({
               
               // equalSpacingPosition is the CENTER of the card
               // convert to top position for rendering (top = center - half height)
+              // MUST use same cardHeight that was used in spacing calculation
+              // (equalSpacing.cardHeight) to ensure positions match spacing calculations
               const centerPosition = equalSpacing.equalSpacingPosition;
               const cardHeight = equalSpacing.cardHeight;
               const position = centerPosition - (cardHeight / 2);
