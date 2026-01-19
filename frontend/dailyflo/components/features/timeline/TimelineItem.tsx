@@ -121,28 +121,20 @@ export default function TimelineItem({
     }
   }, [cardHeight]);
 
-  // use the calculated card height
-  const taskHeight = cardHeight;
 
-  // handle layout measurement to get actual content height
+  // measure card height when layout is calculated
   const handleContentLayout = (event: any) => {
     const { height } = event.nativeEvent.layout;
-    // height includes padding (16 top + 16 bottom = 32px padding)
-    // use actual measured height without enforcing minimum - let content determine size
     if (measuredContentHeight !== height) {
       setMeasuredContentHeight(height);
-      // notify parent of new height
-      if (onHeightMeasuredRef.current) {
-        onHeightMeasuredRef.current(height);
-      }
     }
   };
 
-  // reset measured height when task content changes (e.g., subtasks added/removed)
-  // also reset when duration changes to ensure height is remeasured for spacing calculations
+  // reset height when task content changes (triggers remeasurement)
   useEffect(() => {
     setMeasuredContentHeight(null);
-  }, [task.metadata?.subtasks, task.title, duration]);
+    lastReportedHeight.current = null;
+  }, [task.metadata?.subtasks, task.title, duration, task.id]);
 
   // update base position when prop changes
   useEffect(() => {
