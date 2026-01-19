@@ -6,7 +6,10 @@
  * - Generating time slots for labels
  * - Calculating task positions on the timeline
  * - Snapping times to intervals
+ * - Drag handling for timeline tasks
  */
+
+import { useState, useCallback } from 'react';
 
 /**
  * Converts a time string (HH:MM) to minutes from midnight
@@ -173,5 +176,208 @@ export function positionToTime(
 export function formatTimeForDisplay(time: string): string {
   const [hours, minutes] = time.split(':').map(Number);
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+/**
+ * Position Conversion Utilities
+ * 
+ * These functions convert between different position representations:
+ * - Top position: top edge of the card (used for rendering)
+ * - Center position: center of the card (used for calculations)
+ * - Time: time string (used for data)
+ */
+
+/**
+ * Converts center position to top position
+ * Used when rendering tasks - center position is converted to top for absolute positioning
+ * 
+ * @param centerPosition - Center position of the card in pixels
+ * @param cardHeight - Height of the card in pixels
+ * @returns Top position of the card in pixels
+ */
+export function centerToTopPosition(centerPosition: number, cardHeight: number): number {
+  return centerPosition - (cardHeight / 2);
+}
+
+/**
+ * Converts top position to center position
+ * Used during drag operations - top position from TimelineItem is converted to center for time calculations
+ * 
+ * @param topPosition - Top position of the card in pixels
+ * @param cardHeight - Height of the card in pixels
+ * @returns Center position of the card in pixels
+ */
+export function topToCenterPosition(topPosition: number, cardHeight: number): number {
+  return topPosition + (cardHeight / 2);
+}
+
+/**
+ * Task Render Properties
+ * 
+ * Calculates all properties needed to render a task on the timeline.
+ * This unifies the calculation logic used across all three states:
+ * - After drag and drop
+ * - After updating a task
+ * - After initially loading
+ */
+
+export interface TaskRenderProperties {
+  // top position for rendering (absolute positioning)
+  position: number;
+  // center position (used for calculations)
+  centerPosition: number;
+  // height to use for spacing calculations (always fallback)
+  spacingHeight: number;
+  // actual measured height (for rendering and drag)
+  measuredHeight: number;
+  // pixels per minute for this task
+  pixelsPerMinute: number;
+}
+
+/**
+ * Calculates render properties for a task
+ * This function centralizes the position calculation logic used in all states
+ * 
+ * @param taskId - ID of the task
+ * @param equalSpacingPosition - Center position from equal spacing calculations
+ * @param spacingHeight - Fallback height used for spacing (always 56px)
+ * @param measuredHeight - Actual measured height of the card (or fallback if not measured)
+ * @param taskPixelsPerMinute - Pixels per minute for this task
+ * @returns TaskRenderProperties object with all render properties
+ */
+export function calculateTaskRenderProperties(
+  taskId: string,
+  equalSpacingPosition: number,
+  spacingHeight: number,
+  measuredHeight: number,
+  taskPixelsPerMinute: number
+): TaskRenderProperties {
+  // convert center position to top position for rendering
+  // this is the same calculation used in all three states
+  const position = centerToTopPosition(equalSpacingPosition, spacingHeight);
+  
+  return {
+    position,
+    centerPosition: equalSpacingPosition,
+    spacingHeight,
+    measuredHeight,
+    pixelsPerMinute: taskPixelsPerMinute,
+  };
+}
+
+/**
+ * Timeline Drag Hook
+ * 
+ * Handles drag operations for timeline tasks.
+ * Provides unified drag handling logic that works across all states:
+ * - During drag: shows visual feedback and converts positions
+ * - After drag: updates task time and triggers recalculation
+ * 
+ * This hook modularizes the drag-specific logic that was previously
+ * duplicated in TimelineView.
+ */
+
+export interface DragState {
+  yPosition: number;
+  time: string;
+}
+
+export interface UseTimelineDragOptions {
+  // function to convert center Y position to time string
+  positionToTime: (centerY: number) => string;
+  // callback when drag ends and task time should be updated
+  onTaskTimeChange?: (taskId: string, newTime: string) => void;
+}
+
+export interface UseTimelineDragReturn {
+  // current drag state (null when not dragging)
+  dragState: DragState | null;
+  // handler for drag start (with initial position)
+  handleDragStart: (taskId: string, topY: number, measuredHeight: number) => void;
+  // handler for drag position change (during drag)
+  handleDragPositionChange: (taskId: string, topY: number, measuredHeight: number) => void;
+  // handler for drag end
+  handleDragEnd: (taskId: string, topY: number, measuredHeight: number) => void;
+}
+
+/**
+ * Hook for handling timeline drag operations
+ * 
+ * Provides unified drag handling that:
+ * - Shows visual feedback during drag (drag label)
+ * - Converts top position to center position using measured height
+ * - Converts center position to time for display and updates
+ * - Clears drag state when drag ends
+ * 
+ * @param options - Configuration options for drag handling
+ * @returns Drag state and handlers
+ */
+export function useTimelineDrag({
+  positionToTime,
+  onTaskTimeChange,
+}: UseTimelineDragOptions): UseTimelineDragReturn {
+  // track drag state for showing time label during drag
+  const [dragState, setDragState] = useState<DragState | null>(null);
+
+  // handle drag start - initialize drag state with initial position
+  // sets initial drag state so drag label appears immediately
+  const handleDragStart = useCallback(
+    (taskId: string, topY: number, measuredHeight: number) => {
+      // convert top position to center position using actual measured height
+      const centerY = topToCenterPosition(topY, measuredHeight);
+      
+      // calculate time from center position
+      const time = positionToTime(centerY);
+      
+      // set initial drag state for visual feedback
+      setDragState({ yPosition: centerY, time });
+    },
+    [positionToTime]
+  );
+
+  // handle drag position change - update visual feedback
+  // converts top position to center position using measured height
+  // then converts center position to time for display
+  const handleDragPositionChange = useCallback(
+    (taskId: string, topY: number, measuredHeight: number) => {
+      // convert top position to center position using actual measured height
+      // this ensures drag calculations use the actual card height, not fallback
+      const centerY = topToCenterPosition(topY, measuredHeight);
+      
+      // calculate time from center position using offset-aware function
+      const time = positionToTime(centerY);
+      
+      // update drag state for visual feedback
+      setDragState({ yPosition: centerY, time });
+    },
+    [positionToTime]
+  );
+
+  // handle drag end - update task time and clear drag state
+  // converts top position to center position, then to time, then updates task
+  const handleDragEnd = useCallback(
+    (taskId: string, topY: number, measuredHeight: number) => {
+      // convert top position to center position using actual measured height
+      // this ensures drag calculations use the actual card height, not fallback
+      const centerY = topToCenterPosition(topY, measuredHeight);
+      
+      // convert center position to time
+      const newTime = positionToTime(centerY);
+      
+      // update task time via callback
+      onTaskTimeChange?.(taskId, newTime);
+      
+      // clear drag state
+      setDragState(null);
+    },
+    [positionToTime, onTaskTimeChange]
+  );
+
+  return {
+    dragState,
+    handleDragStart,
+    handleDragPositionChange,
+    handleDragEnd,
+  };
 }
 

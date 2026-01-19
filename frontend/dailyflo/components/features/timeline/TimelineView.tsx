@@ -15,7 +15,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { Task } from '@/types';
 import TimelineItem from './TimelineItem';
 import TimeLabel from './TimeLabel';
-import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight } from './timelineUtils';
+import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag } from './timelineUtils';
 
 interface TimelineViewProps {
   // array of tasks to display on the timeline
@@ -48,12 +48,6 @@ export default function TimelineView({
 }: TimelineViewProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
-
-  // track drag state for showing time label during drag
-  const [dragState, setDragState] = useState<{
-    yPosition: number;
-    time: string;
-  } | null>(null);
 
   // track measured card heights (used for rendering, not spacing)
   // spacing always uses fallback height to prevent jumps
@@ -519,7 +513,8 @@ export default function TimelineView({
 
   // convert Y position to time (for drag operations)
   // finds closest time by testing every 5 minutes between 00:05 and 23:55
-  const positionToTimeWithOffsets = useCallback((yPosition: number): string => {
+  // this function is used by the drag hook to convert center positions to time
+  const positionToTimeWithOffsets = useCallback((centerY: number): string => {
     const minDragMinutes = timeToMinutes('00:05');
     const maxDragMinutes = timeToMinutes('23:55');
     
@@ -529,7 +524,7 @@ export default function TimelineView({
     for (let minutes = minDragMinutes; minutes <= maxDragMinutes; minutes += 5) {
       const testTime = minutesToTime(minutes);
       const testPosition = calculatePositionWithOffsets(testTime);
-      const diff = Math.abs(testPosition - yPosition);
+      const diff = Math.abs(testPosition - centerY);
       
       if (diff < minDiff) {
         minDiff = diff;
@@ -542,11 +537,19 @@ export default function TimelineView({
     return minutesToTime(clampedMinutes);
   }, [calculatePositionWithOffsets]);
 
-  // handle task drag - convert position to time and update task
-  const handleTaskDrag = useCallback((taskId: string, newY: number) => {
-    const newTime = positionToTimeWithOffsets(newY);
-    onTaskTimeChange?.(taskId, newTime);
-  }, [onTaskTimeChange, positionToTimeWithOffsets]);
+  // use drag hook for unified drag handling across all states
+  // this modularizes the drag logic that was previously duplicated
+  const {
+    dragState,
+    handleDragStart,
+    handleDragPositionChange,
+    handleDragEnd,
+  } = useTimelineDrag({
+    positionToTime: positionToTimeWithOffsets,
+    onTaskTimeChange: (taskId: string, newTime: string) => {
+      onTaskTimeChange?.(taskId, newTime);
+    },
+  });
 
   // handle height measurement from TimelineItem
   // measured heights used for rendering only, not spacing (spacing uses fallback)
@@ -645,49 +648,54 @@ export default function TimelineView({
               const equalSpacing = equalSpacingPositions.get(task.id);
               if (!equalSpacing) return null;
               
-              // convert center position to top position for rendering
-              const centerPosition = equalSpacing.equalSpacingPosition;
+              // use modular function to calculate all render properties
+              // this unifies the calculation logic used across all three states:
+              // - After drag and drop
+              // - After updating a task
+              // - After initially loading
               const spacingHeight = equalSpacing.cardHeight; // always 56px (fallback)
-              const position = centerPosition - (spacingHeight / 2);
-              
-              // use measured height for drag calculations (card renders at actual height)
               const measuredHeight = taskCardHeights.get(task.id) || spacingHeight;
-              
-              // get pixelsPerMinute for this task (consistent for height calculations)
-              // for tasks with duration: based on allocated height / duration
-              // for tasks without duration: use segment pixelsPerMinute
               const taskPpm = taskPixelsPerMinute.get(task.id) || 0.3;
+              
+              const renderProps = calculateTaskRenderProperties(
+                task.id,
+                equalSpacing.equalSpacingPosition,
+                spacingHeight,
+                measuredHeight,
+                taskPpm
+              );
               
               return (
                 <TimelineItem
                   key={task.id}
                   task={task}
-                  position={position}
+                  position={renderProps.position}
                   duration={duration}
-                  pixelsPerMinute={taskPpm}
+                  pixelsPerMinute={renderProps.pixelsPerMinute}
                   startHour={dynamicStartHour}
                   onHeightMeasured={(height: number) => handleHeightMeasured(task.id, height)}
-                    onDrag={(newY) => {
-                      // newY is the top position of the task from TimelineItem
-                      // convert top position to center position using actual measured height
-                      // this ensures drag calculations use the actual card height, not fallback
-                      const centerY = newY + (measuredHeight / 2);
-                      handleTaskDrag(task.id, centerY);
-                    }}
+                  onDrag={(newY) => {
+                    // newY is the top position from TimelineItem when drag ends
+                    // use modular drag handler which converts top to center and updates task
+                    // this handles the "after drag and drop" state
+                    handleDragEnd(task.id, newY, renderProps.measuredHeight);
+                  }}
                   onDragStart={() => {
-                    // drag started - will be updated by onDragPositionChange
+                    // drag started - use modular drag handler with initial position
+                    // this initializes drag state for visual feedback
+                    // get initial position from basePosition (current top position)
+                    const initialTopY = renderProps.position;
+                    handleDragStart(task.id, initialTopY, renderProps.measuredHeight);
                   }}
                   onDragPositionChange={(yPosition) => {
-                    // yPosition is the top position of the task from TimelineItem
-                    // convert top position to center position using actual measured height
-                    // this ensures drag calculations use the actual card height, not fallback
-                    const centerY = yPosition + (measuredHeight / 2);
-                    // calculate time from center position using offset-aware function
-                    const time = positionToTimeWithOffsets(centerY);
-                    setDragState({ yPosition: centerY, time });
+                    // yPosition is the top position from TimelineItem during drag
+                    // use modular drag handler which converts top to center and updates drag state
+                    // this provides visual feedback during drag
+                    handleDragPositionChange(task.id, yPosition, renderProps.measuredHeight);
                   }}
                   onDragEnd={() => {
-                    setDragState(null);
+                    // drag ended - cleanup handled by handleDragEnd in onDrag callback
+                    // this is called after onDrag, so state is already cleared
                   }}
                   onPress={() => onTaskPress?.(task)}
                 />
