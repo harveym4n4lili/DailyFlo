@@ -1165,10 +1165,37 @@ Updated User app, models, serializers, views and urls
 ---
 ## [12/01/2026] - [Monday]
 ### Today's Goals
-- [X] 
+- [X] Started basic timeline that displays tasks
+- [X] Styled timeline task cards
+- [X] Added date sensitive task creation modal
+- [X] Functioning FAB
 
 ### Plans For Future
 - Implement set heights for timeline connectors between tasks.
+
+### Notes
+- no notes
+---
+## [13/01/2026] - [Tuesday]
+### Today's Goals
+- [X] Styled timeline labels and time labels for tasks
+- [X] Implemented a constant spacing feature between tasks for UX
+- [X] Tasks are draggable for time adjustments
+
+### Plans For Future
+- Improve constant spacing consistency between tasks with duration, tasks without duration
+
+### Notes
+- no notes
+---
+## [18/01/2026] - [Sunday]
+### Today's Goals
+- [X] Fixed constant spacing inconsistency [SOLUTION: set all task card heights equally for now]
+- [X] Ensured consistent timeline, timeline item styling and spacing between states: initial load, task update and task drag n drop
+
+### Plans For Future
+- Work towards a solution for varying heights but keeping constant spacing
+- plan styling for overlapping tasks
 
 ### Notes
 - no notes
