@@ -539,11 +539,19 @@ export default function TodayScreen() {
         accessibilityHint="Double tap to create a new task"
       />
       
-      {/* separate backdrop that fades in independently behind the modal */}
+      {/* separate backdrop that fades in independently behind the task detail modal */}
       {/* rendered at screen level, behind the modal in z-index */}
       <ModalBackdrop
         isVisible={isTaskDetailModalVisible}
         onPress={handleTaskDetailModalClose}
+        zIndex={10000}
+      />
+      
+      {/* separate backdrop for overdue date picker modal - fades in independently */}
+      {/* rendered at screen level, behind the modal in z-index */}
+      <ModalBackdrop
+        isVisible={isOverdueDatePickerVisible}
+        onPress={handleOverdueDatePickerClose}
         zIndex={10000}
       />
       
@@ -563,6 +571,7 @@ export default function TodayScreen() {
       />
 
       {/* Overdue date picker modal - used to bulk move all overdue tasks to a new date */}
+      {/* uses WrappedDraggableModal for slide-up animation with separate backdrop */}
       <DatePickerModal
         visible={isOverdueDatePickerVisible}
         // use the first overdue task's due date as the selected date when available, otherwise default to today
@@ -574,6 +583,7 @@ export default function TodayScreen() {
         onSelectDate={handleOverdueDateSelect}
         title="Reschedule Overdue"
         // we don't have a single task color for the whole group, so leave this undefined
+        useWrappedModal={true} // use WrappedDraggableModal for slide animation (backdrop handled separately)
       />
       </ScreenContainer>
     </View>

@@ -28,7 +28,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // modal layout components
-import { DraggableModal, ModalHeader, LockableScrollView } from '@/components/layout/ModalLayout';
+import { DraggableModal, WrappedDraggableModal, ModalHeader, LockableScrollView } from '@/components/layout/ModalLayout';
 
 // quick date options component
 import { QuickDateOptions } from '../sections/QuickDateOptions';
@@ -84,6 +84,14 @@ export interface DatePickerModalProps {
    * Task category color for button styling
    */
   taskCategoryColor?: TaskColor;
+  
+  /**
+   * Whether to use WrappedDraggableModal (with slide animation) instead of DraggableModal
+   * When true, use WrappedDraggableModal which provides slide-up animation from Modal component
+   * When false (default), use DraggableModal directly for custom animation
+   * @default false
+   */
+  useWrappedModal?: boolean;
 }
 
 /**
@@ -98,6 +106,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   onSelectDate,
   title = 'Select Date',
   taskCategoryColor,
+  useWrappedModal = false,
 }) => {
   // CONSOLE DEBUGGING
   // console.log('📅 DatePickerModal - visible:', visible);
@@ -194,6 +203,65 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
     </View>
   );
   
+  // modal content - shared between both modal types
+  const modalContent = (
+    <>
+      {/* custom header for date picker modal - no action buttons needed (changes apply instantly) */}
+      <ModalHeader
+        title={title}
+        showActionButtons={false}
+        showCloseButton={true}
+        onClose={onClose}
+        showDragIndicator={true}
+        showBorder={true}
+        taskCategoryColor={taskCategoryColor}
+      />
+        
+        {/* LockableScrollView automatically locks scrolling when modal is not at top anchor */}
+        <LockableScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* quick date options */}
+          <QuickDateOptions
+            selectedDate={selectedDate || ''}
+            onSelectDate={handleQuickDateSelect}
+          />
+          
+          {/* calendar view for specific date selection */}
+          <CalendarView
+            selectedDate={selectedDate || ''}
+            onSelectDate={handleCalendarDateSelect}
+            initialMonth={selectedDate ? new Date(selectedDate) : undefined}
+          />
+        
+        </LockableScrollView>
+    </>
+  );
+
+  // use WrappedDraggableModal when useWrappedModal prop is true (for slide animation)
+  // use DraggableModal directly when false (for custom animation, default behavior)
+  if (useWrappedModal) {
+    return (
+      <WrappedDraggableModal
+        visible={visible}
+        onClose={handleModalClose}
+        // snap points: close at 30%, initial at 60%, expanded at 95%
+        // lowest snap point (30%) will dismiss the modal
+        snapPoints={[0.3, 0.6, 0.9]}
+        // start at the middle snap point (60%)
+        initialSnapPoint={1}
+        // pass the repeating container as sticky footer - stays fixed at bottom while modal drags
+        stickyFooter={repeatingContainer}
+        // backdrop is handled separately by ModalBackdrop component in parent
+        backgroundColor={themeColors.background.elevated()}
+      >
+        {modalContent}
+      </WrappedDraggableModal>
+    );
+  }
+
   return (
     <>
       <DraggableModal
@@ -209,37 +277,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
         // showBackdrop=true: DraggableModal handles its own backdrop
         showBackdrop={true}
       >
-        {/* custom header for date picker modal - no action buttons needed (changes apply instantly) */}
-        <ModalHeader
-          title={title}
-          showActionButtons={false}
-          showCloseButton={true}
-          onClose={onClose}
-          showDragIndicator={true}
-          showBorder={true}
-          taskCategoryColor={taskCategoryColor}
-        />
-          
-          {/* LockableScrollView automatically locks scrolling when modal is not at top anchor */}
-          <LockableScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.contentContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* quick date options */}
-            <QuickDateOptions
-              selectedDate={selectedDate || ''}
-              onSelectDate={handleQuickDateSelect}
-            />
-            
-            {/* calendar view for specific date selection */}
-            <CalendarView
-              selectedDate={selectedDate || ''}
-              onSelectDate={handleCalendarDateSelect}
-              initialMonth={selectedDate ? new Date(selectedDate) : undefined}
-            />
-          
-          </LockableScrollView>
+        {modalContent}
       </DraggableModal>
     </>
   );
