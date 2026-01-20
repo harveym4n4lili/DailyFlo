@@ -59,6 +59,10 @@ export default function TimelineView({
   // create dynamic styles using theme colors and typography
   const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
 
+  // track which tasks have their subtasks expanded so spacing can use expanded heights
+  // this state is local to the timeline view and keeps layout in sync with card ui
+  const [expandedSubtasks, setExpandedSubtasks] = useState<Map<string, boolean>>(new Map());
+
   // filter tasks that have a time set (required for timeline positioning)
   // tasks without time won't appear on the timeline
   const tasksWithTime = useMemo(() => {
@@ -160,8 +164,19 @@ export default function TimelineView({
       
       const duration = task.duration || 0;
       const hasSubtasks = task.metadata?.subtasks && task.metadata.subtasks.length > 0;
+      const isExpanded = expandedSubtasks.get(task.id) ?? false;
+
       // use centralized height calculation function for consistency
-      const cardHeight = getTaskCardHeight(duration, hasSubtasks);
+      // and switch to the explicit expanded heights when subtasks are opened
+      // this keeps the spacing map aligned with the visual card height
+      let cardHeight = getTaskCardHeight(duration, hasSubtasks);
+      if (hasSubtasks && isExpanded) {
+        if (duration > 0) {
+          cardHeight = TASK_CARD_HEIGHTS.WITH_DURATION_WITH_SUBTASK_EXPANDED;
+        } else {
+          cardHeight = TASK_CARD_HEIGHTS.NO_DURATION_WITH_SUBTASK_EXPANDED;
+        }
+      }
       
       // store center position for this task
       positions.set(task.id, { equalSpacingPosition: currentPosition, cardHeight });
@@ -198,14 +213,25 @@ export default function TimelineView({
           // use next task's fallback height for positioning
           const nextTaskDuration = nextTask.duration || 0;
           const nextTaskHasSubtasks = nextTask.metadata?.subtasks && nextTask.metadata.subtasks.length > 0;
-          const nextTaskFallbackHeight = getTaskCardHeight(nextTaskDuration, nextTaskHasSubtasks);
+          const nextTaskIsExpanded = expandedSubtasks.get(nextTask.id) ?? false;
+
+          // compute the fallback/spacing height for the next task,
+          // again respecting the expanded card heights when subtasks are open
+          let nextTaskFallbackHeight = getTaskCardHeight(nextTaskDuration, nextTaskHasSubtasks);
+          if (nextTaskHasSubtasks && nextTaskIsExpanded) {
+            if (nextTaskDuration > 0) {
+              nextTaskFallbackHeight = TASK_CARD_HEIGHTS.WITH_DURATION_WITH_SUBTASK_EXPANDED;
+            } else {
+              nextTaskFallbackHeight = TASK_CARD_HEIGHTS.NO_DURATION_WITH_SUBTASK_EXPANDED;
+            }
+          }
           currentPosition = nextTop + (nextTaskFallbackHeight / 2);
         }
       }
     });
     
     return positions;
-  }, [sortedTasks]); // only recalculate when tasks change - spacing heights are always fallback
+  }, [sortedTasks, expandedSubtasks]); // recalc when tasks or expanded states change so spacing matches card heights
 
   // calculate dynamic pixelsPerMinute for each segment between tasks
   // returns a map of segment index -> pixelsPerMinute
@@ -578,8 +604,19 @@ export default function TimelineView({
   );
   
   useEffect(() => {
+    // reset measured heights when the set of tasks changes
     setTaskCardHeights(new Map());
-  }, [taskIdsString]);
+    // also reset expansion map for tasks that are no longer present
+    setExpandedSubtasks(prev => {
+      const next = new Map<string, boolean>();
+      sortedTasks.forEach(t => {
+        if (prev.has(t.id)) {
+          next.set(t.id, prev.get(t.id)!);
+        }
+      });
+      return next;
+    });
+  }, [taskIdsString, sortedTasks]);
 
   return (
     <View style={styles.container}>
@@ -710,6 +747,14 @@ export default function TimelineView({
                   }}
                   onPress={() => onTaskPress?.(task)}
                   onTaskComplete={onTaskComplete}
+                  onSubtasksToggle={(isExpanded) => {
+                    // update local map so spacing logic can use expanded card heights
+                    setExpandedSubtasks(prev => {
+                      const next = new Map(prev);
+                      next.set(task.id, isExpanded);
+                      return next;
+                    });
+                  }}
                 />
               );
             })

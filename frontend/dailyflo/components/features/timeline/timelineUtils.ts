@@ -9,26 +9,35 @@
  * - Drag handling for timeline tasks
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 /**
  * Task Card Height Constants
  * 
- * Defines the height for different task card types based on duration and subtask presence.
- * These constants ensure consistent spacing calculations and visual rendering.
+ * defines the base and expanded heights for different task card types.
+ * these values are used by both the timeline spacing logic and the card
+ * rendering logic so that visual height and spacing stay in sync.
  */
 export const TASK_CARD_HEIGHTS = {
   // base height for tasks without duration and without subtasks
   NO_DURATION_NO_SUBTASK: 64,
   
-  // height for tasks without duration but with subtasks
-  NO_DURATION_WITH_SUBTASK: 88, // same as base (subtasks don't add height without duration)
+  // base height for tasks without duration but with subtasks (collapsed)
+  NO_DURATION_WITH_SUBTASK: 88,
   
-  // height for tasks with duration but without subtasks
-  WITH_DURATION_NO_SUBTASK: 88, // base (64) + duration boost (16)
+  // base height for tasks with duration but without subtasks
+  WITH_DURATION_NO_SUBTASK: 88,
   
-  // height for tasks with duration and with subtasks
-  WITH_DURATION_WITH_SUBTASK: 88, // base (64) + duration boost (16) + subtask boost (8)
+  // base height for tasks with duration and with subtasks (collapsed)
+  WITH_DURATION_WITH_SUBTASK: 88,
+
+  // expanded height for tasks without duration but with subtasks
+  // this represents the full height once the subtask section is opened
+  NO_DURATION_WITH_SUBTASK_EXPANDED: 138,
+
+  // expanded height for tasks with duration and with subtasks
+  // this also represents the full height once the subtask section is opened
+  WITH_DURATION_WITH_SUBTASK_EXPANDED: 138,
 } as const;
 
 /**
@@ -357,6 +366,9 @@ export function useTimelineDrag({
 }: UseTimelineDragOptions): UseTimelineDragReturn {
   // track drag state for showing time label during drag
   const [dragState, setDragState] = useState<DragState | null>(null);
+  // keep an immediate ref of the latest drag state so drag end can use the exact time
+  // this avoids any tiny re-calculation differences between the aim label and saved time
+  const dragStateRef = useRef<DragState | null>(null);
 
   // handle drag start - initialize drag state with initial position
   // sets initial drag state so drag label appears immediately
@@ -369,7 +381,9 @@ export function useTimelineDrag({
       const time = positionToTime(centerY);
       
       // set initial drag state for visual feedback
-      setDragState({ yPosition: centerY, time });
+      const nextState: DragState = { yPosition: centerY, time };
+      dragStateRef.current = nextState;
+      setDragState(nextState);
     },
     [positionToTime]
   );
@@ -387,7 +401,9 @@ export function useTimelineDrag({
       const time = positionToTime(centerY);
       
       // update drag state for visual feedback
-      setDragState({ yPosition: centerY, time });
+      const nextState: DragState = { yPosition: centerY, time };
+      dragStateRef.current = nextState;
+      setDragState(nextState);
     },
     [positionToTime]
   );
@@ -396,18 +412,24 @@ export function useTimelineDrag({
   // converts top position to center position, then to time, then updates task
   const handleDragEnd = useCallback(
     (taskId: string, topY: number, measuredHeight: number) => {
-      // convert top position to center position using actual measured height
-      // this ensures drag calculations use the actual card height, not fallback
-      const centerY = topToCenterPosition(topY, measuredHeight);
-      
-      // convert center position to time
-      const newTime = positionToTime(centerY);
+      // prefer the last computed drag state time so saved time matches the aim label exactly
+      // this ensures the user sees the same time during drag and after release
+      let newTime: string;
+      if (dragStateRef.current) {
+        newTime = dragStateRef.current.time;
+      } else {
+        // fallback: convert top position to center position using actual measured height
+        // then convert center position to time
+        const centerY = topToCenterPosition(topY, measuredHeight);
+        newTime = positionToTime(centerY);
+      }
       
       // update task time via callback
       onTaskTimeChange?.(taskId, newTime);
       
       // clear drag state
       setDragState(null);
+      dragStateRef.current = null;
     },
     [positionToTime, onTaskTimeChange]
   );
