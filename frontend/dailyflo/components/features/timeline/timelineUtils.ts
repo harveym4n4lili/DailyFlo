@@ -229,10 +229,9 @@ export function formatTimeForDisplay(time: string): string {
 /**
  * Position Conversion Utilities
  * 
- * These functions convert between different position representations:
- * - Top position: top edge of the card (used for rendering)
- * - Center position: center of the card (used for calculations)
- * - Time: time string (used for data)
+ * these helpers keep our math clear when we need to work with the card center
+ * instead of the top edge. for the drag "aim" behaviour we now anchor times to
+ * the top edge of the task card, but these helpers are still useful for spacing.
  */
 
 /**
@@ -331,8 +330,9 @@ export interface DragState {
 }
 
 export interface UseTimelineDragOptions {
-  // function to convert center Y position to time string
-  positionToTime: (centerY: number) => string;
+  // function to convert a card's TOP Y position to a time string
+  // this keeps the "aim" anchored to the top edge of the task card
+  positionToTime: (topY: number) => string;
   // callback when drag ends and task time should be updated
   onTaskTimeChange?: (taskId: string, newTime: string) => void;
 }
@@ -374,14 +374,12 @@ export function useTimelineDrag({
   // sets initial drag state so drag label appears immediately
   const handleDragStart = useCallback(
     (taskId: string, topY: number, measuredHeight: number) => {
-      // convert top position to center position using actual measured height
-      const centerY = topToCenterPosition(topY, measuredHeight);
-      
-      // calculate time from center position
-      const time = positionToTime(centerY);
+      // for drag "aim" we anchor the time to the TOP edge of the task card
+      // so moving one card's top to another card's top gives the same time
+      const time = positionToTime(topY);
       
       // set initial drag state for visual feedback
-      const nextState: DragState = { yPosition: centerY, time };
+      const nextState: DragState = { yPosition: topY, time };
       dragStateRef.current = nextState;
       setDragState(nextState);
     },
@@ -393,15 +391,12 @@ export function useTimelineDrag({
   // then converts center position to time for display
   const handleDragPositionChange = useCallback(
     (taskId: string, topY: number, measuredHeight: number) => {
-      // convert top position to center position using actual measured height
-      // this ensures drag calculations use the actual card height, not fallback
-      const centerY = topToCenterPosition(topY, measuredHeight);
-      
-      // calculate time from center position using offset-aware function
-      const time = positionToTime(centerY);
+      // during drag we keep using the TOP edge as the anchor for time
+      // this keeps the aim label stuck to the top of the card
+      const time = positionToTime(topY);
       
       // update drag state for visual feedback
-      const nextState: DragState = { yPosition: centerY, time };
+      const nextState: DragState = { yPosition: topY, time };
       dragStateRef.current = nextState;
       setDragState(nextState);
     },
@@ -418,10 +413,8 @@ export function useTimelineDrag({
       if (dragStateRef.current) {
         newTime = dragStateRef.current.time;
       } else {
-        // fallback: convert top position to center position using actual measured height
-        // then convert center position to time
-        const centerY = topToCenterPosition(topY, measuredHeight);
-        newTime = positionToTime(centerY);
+        // fallback: convert from the TOP edge position if we have no drag state
+        newTime = positionToTime(topY);
       }
       
       // update task time via callback
