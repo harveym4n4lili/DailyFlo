@@ -57,8 +57,13 @@ export function formatDateWithTags(
   const parts: string[] = [dateText];
   
   // add time if available (format: XX:XX)
+  // format time to HH:MM (remove seconds if present, e.g., "09:00:00" -> "09:00")
   if (time) {
-    parts.push(time);
+    // if time includes seconds (HH:MM:SS format), remove them to show only HH:MM
+    const formattedTime = time.includes(':') && time.split(':').length === 3
+      ? time.substring(0, 5) // take first 5 characters (HH:MM)
+      : time; // already in HH:MM format, use as-is
+    parts.push(formattedTime);
   }
   
   // add duration if available (format: XX min)

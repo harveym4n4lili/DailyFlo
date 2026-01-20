@@ -220,7 +220,7 @@ const createStyles = (themeColors: ReturnType<typeof useThemeColors>) =>
     // row container for icon and content - ensures proper alignment
     contentRow: {
       flexDirection: 'row', // horizontal layout for icon and content
-      alignItems: 'flex-start', // align to top
+      alignItems: 'center', // vertically center icon with content
     },
 
     // icon wrapper - provides spacing for icon
