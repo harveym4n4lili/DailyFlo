@@ -20,6 +20,9 @@ import { getTaskColorValue } from '@/utils/taskColors';
 import TaskIcon from '@/components/ui/Card/TaskCard/TaskIcon';
 import { formatTimeRange, calculateTaskHeight, getTaskCardHeight, TASK_CARD_HEIGHTS } from './timelineUtils';
 import { useDropdownArrowAnimation } from '@/hooks/useDropdownArrowAnimation';
+// Redux imports for updating subtasks
+import { useAppDispatch } from '@/store';
+import { updateTask } from '@/store/slices/tasks/tasksSlice';
 
 interface TimelineItemProps {
   // task to display
@@ -71,6 +74,9 @@ export default function TimelineItem({
 }: TimelineItemProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
+  
+  // get Redux dispatch function for updating tasks
+  const dispatch = useAppDispatch();
 
   // get task color value from color palette system
   const taskColor = useMemo(() => getTaskColorValue(task.color), [task.color]);
@@ -108,7 +114,7 @@ export default function TimelineItem({
   // animated value for card height expansion - initialized with default height, will be updated when minCardHeight is calculated
   const cardHeightAnimation = useRef(new Animated.Value(64)).current; // default to 64px, will be updated
   
-  // animated value for expanded area height (0 when collapsed, 50px when expanded)
+  // animated value for expanded area height (0 when collapsed, 32px per subtask + 12px padding when expanded)
   const expandedAreaHeightAnimation = useRef(new Animated.Value(0)).current;
   
   // update animation when task completion status changes
@@ -131,6 +137,42 @@ export default function TimelineItem({
     
     // the card height will automatically update via cardHeight calculation
     // and this will be reported to parent via animation listener below
+  };
+  
+  // handle subtask toggle - complete/uncomplete a subtask
+  const handleSubtaskToggle = async (subtaskId: string) => {
+    // provide light haptic feedback when subtask is toggled
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    // check if task has subtasks
+    if (!task.metadata?.subtasks) return;
+    
+    // create updated subtasks array with the toggled subtask
+    const updatedSubtasks = task.metadata.subtasks.map(subtask =>
+      subtask.id === subtaskId
+        ? { ...subtask, isCompleted: !subtask.isCompleted }
+        : subtask
+    );
+    
+    // prepare updates object with modified subtasks
+    const updates = {
+      id: task.id,
+      metadata: {
+        ...task.metadata,
+        subtasks: updatedSubtasks,
+      },
+    };
+    
+    // dispatch updateTask action to Redux store to update the subtask
+    // this will trigger the async thunk that updates the task via API
+    try {
+      await dispatch(updateTask({
+        id: task.id,
+        updates,
+      })).unwrap();
+    } catch (error) {
+      console.error('Failed to update subtask:', error);
+    }
   };
   
   // handle checkbox press - complete/uncomplete task and all subtasks
@@ -181,6 +223,12 @@ export default function TimelineItem({
     task.metadata?.subtasks ? JSON.stringify(task.metadata.subtasks) : 'no-subtasks'
   ]);
   
+  // calculate subtask count for dynamic expansion height
+  // each subtask adds 32px to the expanded height
+  const subtasksCount = useMemo(() => {
+    return task.metadata?.subtasks?.length ?? 0;
+  }, [task.metadata?.subtasks?.length]);
+  
   // calculate minimum card height based on duration and subtask presence
   // use fixed minimum to avoid circular dependency with pixelsPerMinute
   // pixelsPerMinute depends on cardHeight which creates a loop - use fixed value for initial render instead
@@ -189,14 +237,15 @@ export default function TimelineItem({
     return getTaskCardHeight(duration, hasSubtasks);
   }, [duration, hasSubtasks]);
 
-  // calculate card height - base height plus 50px when subtasks are expanded
-  // allow expansion above 88px when subtasks are expanded (base can be 88px, so expanded would be 138px)
+  // calculate card height - base height plus 32px per subtask plus 12px padding when subtasks are expanded
+  // allow expansion above 88px when subtasks are expanded (base can be 88px, so expanded would be base + (subtasksCount * 32) + 12)
   const cardHeight = useMemo(() => {
     const baseHeight = minCardHeight;
-    const expandedHeight = isSubtasksExpanded ? baseHeight + 50 : baseHeight;
+    // calculate expanded height: 32px per subtask + 12px padding when expanded
+    const expandedHeight = isSubtasksExpanded ? baseHeight + (subtasksCount * 36) + 4 : baseHeight;
     // no cap - allow expansion above 88px when subtasks are expanded
     return expandedHeight;
-  }, [minCardHeight, isSubtasksExpanded]);
+  }, [minCardHeight, isSubtasksExpanded, subtasksCount]);
   
   // update animation value when minCardHeight changes (for initial render or when task properties change)
   useEffect(() => {
@@ -212,24 +261,26 @@ export default function TimelineItem({
     if (typeof cardHeight === 'number' && cardHeight > 0) {
       Animated.timing(cardHeightAnimation, {
         toValue: cardHeight,
-        duration: 200, // smooth animation duration
+        duration: 100, // smooth animation duration
         useNativeDriver: false, // height animation doesn't support native driver
       }).start();
     }
   }, [cardHeight, cardHeightAnimation]);
   
   // animate expanded area height when expansion state changes
+  // height is calculated as 32px per subtask + 12px padding
   useEffect(() => {
+    const expandedHeight = isSubtasksExpanded ? (subtasksCount * 32) + 12 : 0;
     Animated.timing(expandedAreaHeightAnimation, {
-      toValue: isSubtasksExpanded ? 50 : 0, // 50px when expanded, 0 when collapsed
-      duration: 200, // smooth animation duration
+      toValue: expandedHeight, // (32px per subtask + 12px padding) when expanded, 0 when collapsed
+      duration: 100, // smooth animation duration
       useNativeDriver: false, // height animation doesn't support native driver
     }).start();
-  }, [isSubtasksExpanded, expandedAreaHeightAnimation]);
+  }, [isSubtasksExpanded, expandedAreaHeightAnimation, subtasksCount]);
 
   // notify parent of card height when it changes
   // use ref to track last reported height to avoid infinite loops
-  // report the expanded height (including 50px when subtasks are expanded) so timeline spacing adjusts
+  // report the expanded height (including 32px per subtask + 12px padding when subtasks are expanded) so timeline spacing adjusts
   const lastReportedHeight = useRef<number | null>(null);
   const onHeightMeasuredRef = useRef(onHeightMeasured);
   
@@ -390,7 +441,7 @@ export default function TimelineItem({
            style={[
              styles.cardWrapper,
              { 
-               height: cardHeightAnimation, // animated height: base + 50px when expanded
+               height: cardHeightAnimation, // animated height: base + (32px per subtask + 12px padding) when expanded
              }
            ]}
            onLayout={handleContentLayout}
@@ -560,16 +611,63 @@ export default function TimelineItem({
            </Animated.View>
            
            {/* expanded area below the card - appears when subtasks are expanded */}
-           {/* this creates the extra 50px space below the main card content */}
-           {/* animated height from 0 to 50px for smooth expansion */}
+           {/* this creates the extra space below the main card content (32px per subtask + 12px padding) */}
+           {/* animated height from 0 to (subtasksCount * 32px + 12px) for smooth expansion */}
            <Animated.View
              style={[
                styles.expandedArea,
                {
-                 height: expandedAreaHeightAnimation, // animate from 0 to 50px
+                 height: expandedAreaHeightAnimation, // animate from 0 to (subtasksCount * 32px + 12px)
+                 overflow: 'hidden', // hide subtasks when collapsed
                }
              ]}
-           />
+           >
+             {/* render each subtask in a 32px tall row */}
+             {isSubtasksExpanded && task.metadata?.subtasks && task.metadata.subtasks.length > 0 && (
+               <View style={[
+                 styles.subtasksList,
+                 // align with task content left edge: 16px (padding) + 24px (icon) + 16px (margin) = 56px when icon present, or 16px when no icon
+                 task.icon ? { paddingLeft: 56 } : { paddingLeft: 16 }
+               ]}>
+                 {/* sort subtasks by sortOrder before rendering */}
+                 {[...task.metadata.subtasks]
+                   .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+                   .map((subtask, index) => (
+                     <TouchableOpacity
+                       key={subtask.id}
+                       style={[
+                         styles.subtaskRow,
+                         // first subtask (index 0) should not have a top border
+                         index === 0 && styles.subtaskRowFirst
+                       ]}
+                       onPress={() => handleSubtaskToggle(subtask.id)}
+                       activeOpacity={0.7}
+                     >
+                       {/* checkbox icon - shows completed state */}
+                       {/* unchecked state uses square-outline (box), checked state uses checkbox */}
+                       {/* unchecked box color matches subtask title color (text.primary) */}
+                       <Ionicons
+                         name={subtask.isCompleted ? "checkbox" : "square-outline"}
+                         size={14}
+                         color={subtask.isCompleted ? taskColor : themeColors.text.primary()}
+                         style={styles.subtaskCheckbox}
+                       />
+                       {/* subtask title text */}
+                       <Text
+                         style={[
+                           styles.subtaskTitle,
+                           subtask.isCompleted && styles.subtaskTitleCompleted
+                         ]}
+                         numberOfLines={1}
+                         ellipsizeMode="tail"
+                       >
+                         {subtask.title}
+                       </Text>
+                     </TouchableOpacity>
+                   ))}
+               </View>
+             )}
+           </Animated.View>
          </Animated.View>
       </Animated.View>
     </PanGestureHandler>
@@ -614,7 +712,7 @@ const createStyles = (
     position: 'relative', // needed for absolute positioning of subtask button and checkbox
     backgroundColor: themeColors.background.elevated(),
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 12, // top padding only (bottom padding moved to subtask space)
   },
   
   // touchable content area inside combined container
@@ -626,13 +724,58 @@ const createStyles = (
   },
   
   // expanded area below the card - appears when subtasks are expanded
-  // creates the extra 50px space below the main card content
+  // creates the extra space below the main card content (32px per subtask + 12px padding)
   // seamlessly connects with the card above (no gap, same background)
   // positioned as the bottom row in cardWrapper
   expandedArea: {
     width: '100%',
-    backgroundColor: themeColors.background.elevated(), // match card background for seamless look
+    backgroundColor: themeColors.background.primarySecondaryBlend(), // match card background for seamless look
     // no border radius - cardWrapper handles all border radius
+  },
+
+  // subtasks list container - holds all subtask rows
+  // includes 12px bottom padding for the expansion height calculation
+  // padding matches task content edges: left edge alignment is handled conditionally, right edge is 16px (matches combinedContainer paddingHorizontal)
+  subtasksList: {
+    width: '100%',
+    paddingHorizontal: 64,
+  },
+
+  // individual subtask row - exactly 32px tall
+  subtaskRow: {
+    flexDirection: 'row', // horizontal layout for checkbox and text
+    alignItems: 'center', // vertically center checkbox and text
+    height: 36, // exactly 32px per subtask as requested
+    paddingVertical: 0, // no vertical padding to maintain exact 32px height
+    borderTopWidth: 1, // top border to separate each subtask row
+    borderTopColor: themeColors.border.primary(), // use theme border color for consistency
+  },
+
+  // first subtask row - no top border
+  subtaskRowFirst: {
+    borderTopWidth: 0, // remove top border for the first subtask
+  },
+
+  // subtask checkbox icon - positioned on the left
+  subtaskCheckbox: {
+    marginRight: 8, // spacing between checkbox and text
+  },
+
+  // subtask title text styling
+  subtaskTitle: {
+    flex: 1, // take up remaining space
+    // use body-medium text style from typography system (12px, regular, satoshi font)
+    ...typography.getTextStyle('body-large'),
+    color: themeColors.text.primary(), // primary text color for uncompleted subtasks
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+  },
+
+  // completed subtask title styling - strikethrough and dimmed
+  subtaskTitleCompleted: {
+    textDecorationLine: 'line-through', // strikethrough for completed subtasks
+    color: themeColors.text.tertiary(), // dimmed color for completed subtasks
   },
 
   // icon wrapper - inside combined container
@@ -733,6 +876,7 @@ const createStyles = (
     // use secondary text color - lighter than tertiary
     color: themeColors.text.secondary(),
     fontWeight: '900', // match TaskMetadata font weight
+
   },
 
   // text content container (time range + title)
