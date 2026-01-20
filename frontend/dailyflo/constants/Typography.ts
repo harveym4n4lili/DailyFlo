@@ -98,7 +98,7 @@ export const TextStyles = {
     fontFamily: 'Satoshi',  // specific font family for react native
   },
   'body-medium': {
-    fontSize: 12,        // smaller body text
+    fontSize: 13,        // smaller body text
     lineHeight: 16,      // tighter line height
     fontWeight: FontWeight.regular,  // regular weight
     fontFamily: 'Satoshi',  // specific font family for react native
