@@ -15,7 +15,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { Task } from '@/types';
 import TimelineItem from './TimelineItem';
 import TimeLabel from './TimeLabel';
-import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag, getTaskCardHeight, TASK_CARD_HEIGHTS } from './timelineUtils';
+import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag, getTaskCardHeight } from './timelineUtils';
 
 interface TimelineViewProps {
   // array of tasks to display on the timeline
@@ -52,16 +52,12 @@ export default function TimelineView({
   const themeColors = useThemeColors();
   const typography = useTypography();
 
-  // track measured card heights (used for rendering, not spacing)
-  // spacing always uses fallback height to prevent jumps
+  // track measured/animated card heights (used for both rendering and spacing)
+  // spacing now follows the animated height so the whole timeline moves smoothly
   const [taskCardHeights, setTaskCardHeights] = useState<Map<string, number>>(new Map());
 
   // create dynamic styles using theme colors and typography
   const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
-
-  // track which tasks have their subtasks expanded so spacing can use expanded heights
-  // this state is local to the timeline view and keeps layout in sync with card ui
-  const [expandedSubtasks, setExpandedSubtasks] = useState<Map<string, boolean>>(new Map());
 
   // filter tasks that have a time set (required for timeline positioning)
   // tasks without time won't appear on the timeline
@@ -150,9 +146,8 @@ export default function TimelineView({
   }, [tasksWithTime]);
 
   // calculate task positions with consistent spacing
-  // always uses fallback height for spacing to prevent jumps
-  // uses centralized height constants for different task types
-  // returns map of taskId -> { equalSpacingPosition (center), cardHeight (fallback) }
+  // uses the latest measured/animated card heights so spacing animates with cards
+  // returns map of taskId -> { equalSpacingPosition (center), cardHeight }
   const equalSpacingPositions = useMemo(() => {
     const positions = new Map<string, { equalSpacingPosition: number; cardHeight: number }>();
     if (sortedTasks.length === 0) return positions;
@@ -164,19 +159,12 @@ export default function TimelineView({
       
       const duration = task.duration || 0;
       const hasSubtasks = task.metadata?.subtasks && task.metadata.subtasks.length > 0;
-      const isExpanded = expandedSubtasks.get(task.id) ?? false;
 
-      // use centralized height calculation function for consistency
-      // and switch to the explicit expanded heights when subtasks are opened
-      // this keeps the spacing map aligned with the visual card height
-      let cardHeight = getTaskCardHeight(duration, hasSubtasks);
-      if (hasSubtasks && isExpanded) {
-        if (duration > 0) {
-          cardHeight = TASK_CARD_HEIGHTS.WITH_DURATION_WITH_SUBTASK_EXPANDED;
-        } else {
-          cardHeight = TASK_CARD_HEIGHTS.NO_DURATION_WITH_SUBTASK_EXPANDED;
-        }
-      }
+      // prefer the live measured/animated height so spacing animates with the card
+      // fall back to the base height from centralized helper if we don't have it yet
+      const measuredHeight = taskCardHeights.get(task.id);
+      const fallbackHeight = getTaskCardHeight(duration, hasSubtasks);
+      const cardHeight = measuredHeight ?? fallbackHeight;
       
       // store center position for this task
       positions.set(task.id, { equalSpacingPosition: currentPosition, cardHeight });
@@ -210,28 +198,21 @@ export default function TimelineView({
           // calculate next task position: current top + current height + gap
           const currentTop = currentPosition - (cardHeight / 2);
           const nextTop = currentTop + cardHeight + gapSpacing;
-          // use next task's fallback height for positioning
+
+          // compute the spacing height for the next task using its live height when available
           const nextTaskDuration = nextTask.duration || 0;
           const nextTaskHasSubtasks = nextTask.metadata?.subtasks && nextTask.metadata.subtasks.length > 0;
-          const nextTaskIsExpanded = expandedSubtasks.get(nextTask.id) ?? false;
+          const nextMeasuredHeight = taskCardHeights.get(nextTask.id);
+          const nextFallbackHeight = getTaskCardHeight(nextTaskDuration, nextTaskHasSubtasks);
+          const nextTaskSpacingHeight = nextMeasuredHeight ?? nextFallbackHeight;
 
-          // compute the fallback/spacing height for the next task,
-          // again respecting the expanded card heights when subtasks are open
-          let nextTaskFallbackHeight = getTaskCardHeight(nextTaskDuration, nextTaskHasSubtasks);
-          if (nextTaskHasSubtasks && nextTaskIsExpanded) {
-            if (nextTaskDuration > 0) {
-              nextTaskFallbackHeight = TASK_CARD_HEIGHTS.WITH_DURATION_WITH_SUBTASK_EXPANDED;
-            } else {
-              nextTaskFallbackHeight = TASK_CARD_HEIGHTS.NO_DURATION_WITH_SUBTASK_EXPANDED;
-            }
-          }
-          currentPosition = nextTop + (nextTaskFallbackHeight / 2);
+          currentPosition = nextTop + (nextTaskSpacingHeight / 2);
         }
       }
     });
     
     return positions;
-  }, [sortedTasks, expandedSubtasks]); // recalc when tasks or expanded states change so spacing matches card heights
+  }, [sortedTasks, taskCardHeights]); // recalc when tasks or heights change so spacing matches animated card heights
 
   // calculate dynamic pixelsPerMinute for each segment between tasks
   // returns a map of segment index -> pixelsPerMinute
@@ -617,7 +598,7 @@ export default function TimelineView({
   });
 
   // handle height measurement from TimelineItem
-  // measured heights used for rendering only, not spacing (spacing uses fallback)
+  // measured heights now drive both rendering and spacing so the timeline animates with cards
   const handleHeightMeasured = useCallback((taskId: string, height: number) => {
     setTaskCardHeights(prev => {
       if (prev.get(taskId) === height) return prev;
@@ -634,14 +615,14 @@ export default function TimelineView({
   );
   
   useEffect(() => {
-    // reset measured heights when the set of tasks changes
-    setTaskCardHeights(new Map());
-    // also reset expansion map for tasks that are no longer present
-    setExpandedSubtasks(prev => {
-      const next = new Map<string, boolean>();
-      sortedTasks.forEach(t => {
-        if (prev.has(t.id)) {
-          next.set(t.id, prev.get(t.id)!);
+    // when the visible task set changes, keep heights for tasks that still exist
+    // this preserves expanded heights across reordering (e.g. after drag)
+    setTaskCardHeights(prev => {
+      const next = new Map<string, number>();
+      sortedTasks.forEach(task => {
+        const existing = prev.get(task.id);
+        if (existing !== undefined) {
+          next.set(task.id, existing);
         }
       });
       return next;
@@ -777,14 +758,6 @@ export default function TimelineView({
                   }}
                   onPress={() => onTaskPress?.(task)}
                   onTaskComplete={onTaskComplete}
-                  onSubtasksToggle={(isExpanded) => {
-                    // update local map so spacing logic can use expanded card heights
-                    setExpandedSubtasks(prev => {
-                      const next = new Map(prev);
-                      next.set(task.id, isExpanded);
-                      return next;
-                    });
-                  }}
                 />
               );
             })
