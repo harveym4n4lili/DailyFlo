@@ -47,6 +47,8 @@ interface TimelineItemProps {
   onPress?: () => void;
   // callback when task completion checkbox is pressed
   onTaskComplete?: (task: Task) => void;
+  // callback when subtask expand / collapse is toggled so parent can update spacing
+  onSubtasksToggle?: (isExpanded: boolean) => void;
 }
 
 /**
@@ -68,6 +70,7 @@ export default function TimelineItem({
   onDragEnd,
   onPress,
   onTaskComplete,
+  onSubtasksToggle,
 }: TimelineItemProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -120,7 +123,7 @@ export default function TimelineItem({
     }).start();
   }, [task.isCompleted, checkboxFillAnimation]);
   
-  // handle subtask button press - toggle expansion and expand card height
+  // handle subtask button press - toggle expansion and notify parent about state change
   const handleSubtaskPress = () => {
     // provide light haptic feedback when subtask button is pressed
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -129,8 +132,14 @@ export default function TimelineItem({
     setIsSubtasksExpanded(willBeExpanded);
     toggleArrow(willBeExpanded);
     
+    // notify parent so timeline spacing can use the correct expanded height
+    // this keeps the vertical spacing map in sync with the visual expansion
+    if (onSubtasksToggle) {
+      onSubtasksToggle(willBeExpanded);
+    }
+
     // the card height will automatically update via cardHeight calculation
-    // which adds 50px when expanded, and this will be reported to parent via useEffect
+    // and this will be reported to parent via useEffect
   };
   
   // handle checkbox press - complete/uncomplete task and all subtasks
