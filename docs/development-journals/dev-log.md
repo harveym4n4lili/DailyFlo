@@ -1199,3 +1199,18 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - no notes
+---
+## [19/01/2026] - [Monday]
+### Today's Goals
+- [X] Fixed constant spacing inconsistency completely []
+- [X] Constant spacing remains for different task card heights
+- [X] added better subtask styling
+- [X] restyled task content styling and added checkbox
+
+### Plans For Future
+- Add functionality to checkbox
+- plan styling for overlapping tasks
+- Add functionality to subtask button
+
+### Notes
+- no notes
