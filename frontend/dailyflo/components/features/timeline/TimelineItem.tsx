@@ -8,7 +8,7 @@
  * This component is used by TimelineView to render individual tasks.
  */
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,7 +18,8 @@ import { useTypography } from '@/hooks/useTypography';
 import { Task } from '@/types';
 import { getTaskColorValue } from '@/utils/taskColors';
 import TaskIcon from '@/components/ui/Card/TaskCard/TaskIcon';
-import { formatTimeRange, calculateTaskHeight } from './timelineUtils';
+import { formatTimeRange, calculateTaskHeight, getTaskCardHeight, TASK_CARD_HEIGHTS } from './timelineUtils';
+import { useDropdownArrowAnimation } from '@/hooks/useDropdownArrowAnimation';
 
 interface TimelineItemProps {
   // task to display
@@ -89,19 +90,41 @@ export default function TimelineItem({
   // state to store measured content height (includes padding)
   const [measuredContentHeight, setMeasuredContentHeight] = React.useState<number | null>(null);
   
-  // calculate minimum card height - same for all tasks (with or without duration)
-  // use fixed minimum (56px) to avoid circular dependency with pixelsPerMinute
+  // state for subtask dropdown expansion
+  const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(false);
+  
+  // dropdown arrow animation hook
+  const { arrowRotation, toggle: toggleArrow } = useDropdownArrowAnimation(false);
+  
+  // handle subtask button press
+  const handleSubtaskPress = () => {
+    const willBeExpanded = !isSubtasksExpanded;
+    setIsSubtasksExpanded(willBeExpanded);
+    toggleArrow(willBeExpanded);
+  };
+  
+  // memoized check for subtasks presence - ensures component re-renders when subtasks load
+  const hasSubtasks = useMemo(() => {
+    return !!(task.metadata?.subtasks && Array.isArray(task.metadata.subtasks) && task.metadata.subtasks.length > 0);
+  }, [
+    task.metadata?.subtasks?.length ?? 0,
+    task.id,
+    // stringify subtasks array to detect when it changes from undefined/empty to populated
+    task.metadata?.subtasks ? JSON.stringify(task.metadata.subtasks) : 'no-subtasks'
+  ]);
+  
+  // calculate minimum card height based on duration and subtask presence
+  // use fixed minimum to avoid circular dependency with pixelsPerMinute
   // pixelsPerMinute depends on cardHeight which creates a loop - use fixed value for initial render instead
   const minCardHeight = useMemo(() => {
-    // same minimum height for all tasks regardless of duration
-    // padding (16 top + 16 bottom) + icon height (~24) + some margin = ~56
-    return 56;
-  }, [duration]);
+    // use centralized height calculation function for consistency
+    return getTaskCardHeight(duration, hasSubtasks);
+  }, [duration, hasSubtasks]);
 
-  // use measured height if available, otherwise use minimum for initial render
-  // measured height already includes padding from the combinedContainer
-  // once measured, always use measured height to let content determine size
-  const cardHeight = measuredContentHeight ?? minCardHeight;
+  // use explicit height to fill entire space - always use minimum height to match spacing calculations
+  // height varies based on duration and subtask presence (64px, 80px, or 88px)
+  // this ensures visual consistency with spacing calculations
+  const cardHeight = minCardHeight;
 
   // notify parent of card height when it changes
   // use ref to track last reported height to avoid infinite loops
@@ -131,10 +154,12 @@ export default function TimelineItem({
   };
 
   // reset height when task content changes (triggers remeasurement)
+  // use subtasks length instead of array reference to avoid unnecessary re-renders during hot reload
+  // include task.metadata to ensure re-render when metadata is loaded
   useEffect(() => {
     setMeasuredContentHeight(null);
     lastReportedHeight.current = null;
-  }, [task.metadata?.subtasks, task.title, duration, task.id]);
+  }, [task.metadata?.subtasks?.length ?? 0, task.title, duration, task.id, task.metadata]);
 
   // update base position when prop changes
   useEffect(() => {
@@ -241,7 +266,10 @@ export default function TimelineItem({
       >
          {/* combined container for icon and task content */}
          <TouchableOpacity
-           style={styles.combinedContainer}
+           style={[
+             styles.combinedContainer,
+             { height: cardHeight } // use explicit height to fill entire space (64px for duration, 56px without)
+           ]}
            onPress={onPress}
            activeOpacity={0.7}
            onLayout={handleContentLayout}
@@ -255,64 +283,112 @@ export default function TimelineItem({
 
            {/* task content - inside the combined container */}
            <View style={styles.taskContent}>
-             {/* text content container */}
-             <View style={[
-               styles.textContainer,
-               duration === 0 && styles.textContainerCentered // center content for tasks without duration
-             ]}>
-               {/* time range row - time range on left, list indicator on right */}
-               <View style={styles.timeRangeRow}>
-                 {/* time range display */}
-                 {timeRangeText && (
-                   <Text style={styles.timeRange}>{timeRangeText}</Text>
-                 )}
-                 
-                 {/* list group indicator - same row as time range, aligned right */}
-                 <View style={styles.listIndicator}>
-                   {/* folder icon for list/inbox indication */}
-                   <Ionicons
-                     name="folder-outline"
-                     size={12}
-                     color={themeColors.text.tertiary()}
-                     style={styles.listIndicatorIcon}
-                   />
-                   {/* list/inbox text - conditionally shows 'List' or 'Inbox' based on listId */}
-                   <Text style={styles.listIndicatorText}>
-                     {task.listId ? 'List' : 'Inbox'}
+             {/* text content container - layout depends on subtask presence */}
+             {hasSubtasks ? (
+               // tasks with subtasks: centered layout (subtask button is positioned absolutely above)
+               <View style={styles.textContainerWithSubtasks}>
+                 {/* top content - time range and title */}
+                 <View style={styles.topContent}>
+                   {/* time range row - time range only */}
+                   <View style={styles.timeRangeRow}>
+                     {/* time range display */}
+                     {timeRangeText && (
+                       <Text style={styles.timeRange}>{timeRangeText}</Text>
+                     )}
+                   </View>
+                   
+                   {/* task title - matches TaskCard styling */}
+                   <Text
+                     style={[
+                       styles.title,
+                       task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
+                     ]}
+                     numberOfLines={1}
+                     ellipsizeMode="tail"
+                   >
+                     {task.title}
                    </Text>
                  </View>
                </View>
-               
-               {/* task title - matches TaskCard styling */}
-               <Text
-                 style={[
-                   styles.title,
-                   task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
-                 ]}
-                 numberOfLines={1}
-                 ellipsizeMode="tail"
-               >
-                 {task.title}
-               </Text>
-
-               {/* subtask indicator - shows completion count if subtasks exist */}
-               {task.metadata?.subtasks && task.metadata.subtasks.length > 0 && (
-                 <View style={styles.subtaskIndicator}>
-                   {/* checkmark icon */}
+             ) : (
+               // tasks without subtasks: centered layout (original layout)
+               <View style={styles.textContainer}>
+                 {/* time range row - time range only */}
+                 <View style={styles.timeRangeRow}>
+                   {/* time range display */}
+                   {timeRangeText && (
+                     <Text style={styles.timeRange}>{timeRangeText}</Text>
+                   )}
+                 </View>
+                 
+                 {/* task title - matches TaskCard styling */}
+                 <Text
+                   style={[
+                     styles.title,
+                     task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
+                   ]}
+                   numberOfLines={1}
+                   ellipsizeMode="tail"
+                 >
+                   {task.title}
+                 </Text>
+               </View>
+             )}
+           </View>
+           
+           {/* checkbox container - on the right side */}
+           <View style={styles.checkboxContainer}>
+             <View 
+               style={[
+                 styles.checkboxCircle, 
+                 // use tertiary color for unchecked border, task color for checked fill
+                 task.isCompleted 
+                   ? { backgroundColor: taskColor, borderColor: taskColor }
+                   : { borderColor: themeColors.text.tertiary() }
+               ]}
+             />
+           </View>
+           
+           {/* subtask button - absolutely positioned layer above task card */}
+           {hasSubtasks && (
+             <TouchableOpacity
+               style={[
+                 styles.subtaskButton,
+                 { left: task.icon ? 56 : 16 }, // align with task content: paddingLeft (16) + icon (24) + marginRight (16) = 56px, or just padding (16) if no icon
+               ]}
+               onPress={handleSubtaskPress}
+               activeOpacity={0.7}
+             >
+               <View style={styles.subtaskContainer}>
+                 {/* checkbox icon on the left */}
+                 <Ionicons
+                   name="checkbox-outline"
+                   size={14}
+                   color={themeColors.text.secondary()}
+                   style={styles.subtaskIcon}
+                 />
+                 {/* subtask count text */}
+                 <Text style={styles.subtaskText}>
+                   {task.metadata.subtasks.filter(st => st.isCompleted).length}/{task.metadata.subtasks.length}
+                 </Text>
+                 {/* dropdown arrow icon on the right - animated */}
+                 <Animated.View
+                   style={[
+                     styles.subtaskDropdownIconContainer,
+                     {
+                       transform: [{ rotate: arrowRotation }],
+                     },
+                   ]}
+                 >
                    <Ionicons
-                     name="checkmark"
+                     name="chevron-down"
                      size={12}
                      color={themeColors.text.secondary()}
-                     style={styles.subtaskIcon}
                    />
-                   {/* subtask count text */}
-                   <Text style={styles.subtaskText}>
-                     {task.metadata.subtasks.filter(st => st.isCompleted).length}/{task.metadata.subtasks.length} Subtasks
-                   </Text>
-                 </View>
-               )}
-             </View>
-           </View>
+                 </Animated.View>
+               </View>
+             </TouchableOpacity>
+           )}
          </TouchableOpacity>
       </Animated.View>
     </PanGestureHandler>
@@ -342,12 +418,11 @@ const createStyles = (
     flexDirection: 'row',
     flex: 1,
     alignItems: 'stretch',
+    position: 'relative', // needed for absolute positioning of subtask button
     backgroundColor: themeColors.background.elevated(),
     borderRadius: 28, // matches TaskCard borderRadius (increased by 8px)
-    paddingTop: 16, // matches TaskCard vertical padding
-    paddingBottom: 16, // matches TaskCard vertical padding
-    paddingLeft: 16, // matches TaskCard horizontal padding
-    paddingRight: 20, // right padding
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
 
   // icon wrapper - inside combined container
@@ -360,49 +435,66 @@ const createStyles = (
   // task content container (text only) - inside combined container
   taskContent: {
     flex: 1,
-    // no height constraints - let content determine height naturally
+    position: 'relative', // needed for absolute positioning of list indicator
+    justifyContent: 'center', // vertically center content to align with icon
   },
 
-  // time range row - contains time range and list indicator side by side
+  // checkbox container - on the right side of task content
+  checkboxContainer: {
+    marginLeft: 0, // spacing between task content and checkbox
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // checkbox circle - same size as icon (24px) with border
+  // unchecked: border with tertiary color, no fill
+  // checked: solid circle filled with task color
+  checkboxCircle: {
+    width: 18, // same size as TaskIcon default size
+    height: 18,
+    borderRadius: 9, // make it circular (half of width/height)
+    borderWidth: 1.5,
+    // backgroundColor and borderColor are set dynamically based on completion state
+  },
+
+  // time range row - contains time range only
   timeRangeRow: {
     flexDirection: 'row', // horizontal layout
     alignItems: 'center',
-    justifyContent: 'space-between', // time range on left, list indicator on right
     marginBottom: 2, // spacing between time range row and title
   },
 
-  // list group indicator - in same row as time range, aligned right
-  listIndicator: {
-    flexDirection: 'row', // horizontal layout for icon and text
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+
+  // subtask button - absolutely positioned layer above task card
+  subtaskButton: {
+    position: 'absolute',
+    bottom: 12, // position at bottom with padding
+    right: 0, // match container paddingRight
+    zIndex: 10, // layer above task card
+    // left is set dynamically based on icon presence
   },
 
-  // list indicator icon styling
-  listIndicatorIcon: {
-    marginRight: 4,
+  // subtask container - wraps subtask count text with border radius, padding, and border
+  subtaskContainer: {
+    flexDirection: 'row', // horizontal layout for checkbox, text, and dropdown arrow
+    alignItems: 'center', // vertically center all items
+    alignSelf: 'flex-start', // align to start (left)
+    paddingVertical: 4, // vertical padding
+    paddingHorizontal: 8, // horizontal padding
+    borderRadius: 16, // border radius for rounded container
+    borderWidth: 0, // no border
+    borderColor: themeColors.text.tertiary(), // border color (not used when borderWidth is 0)
+    backgroundColor: themeColors.background.tertiary(), // use tertiary background color from theme
   },
 
-  // list indicator text styling - matches TaskIndicators styling
-  listIndicatorText: {
-    // use the body-medium text style from typography system (12px, regular, satoshi font)
-    ...typography.getTextStyle('body-medium'),
-    // use tertiary text color for list indicator - matches TaskIndicators
-    color: themeColors.text.tertiary(),
-    fontWeight: '900', // match TaskIndicators font weight
-  },
-
-  // subtask indicator - shows completion count
-  subtaskIndicator: {
-    flexDirection: 'row', // horizontal layout for icon and text
-    alignItems: 'center',
-    marginTop: 4, // spacing from title
-  },
-
-  // subtask icon styling
+  // subtask icon styling (checkbox on the left)
   subtaskIcon: {
-    marginRight: 4,
+    marginRight: 4, // spacing between checkbox and text
+  },
+
+  // subtask dropdown icon container - for animation
+  subtaskDropdownIconContainer: {
+    marginLeft: 2, // spacing between text and dropdown arrow
   },
 
   // subtask text styling - matches TaskMetadata styling
@@ -417,13 +509,21 @@ const createStyles = (
   // text content container (time range + title)
   textContainer: {
     flex: 1,
-    justifyContent: 'flex-start', // align content to top for tasks with duration
+    justifyContent: 'center', // vertically center time range and title to align with icon (for tasks without duration)
     alignSelf: 'stretch', // ensure text container fills available height
   },
 
-  // centered text container for tasks without duration
-  textContainerCentered: {
-    justifyContent: 'center', // center content vertically for tasks without duration
+  // text container for tasks WITH subtasks - top-aligned layout (subtask button is positioned absolutely at bottom)
+  // applies to tasks with subtasks regardless of duration
+  textContainerWithSubtasks: {
+    flex: 1,
+    justifyContent: 'flex-start', // align content to top (subtask button is separate layer at bottom)
+    alignSelf: 'stretch', // ensure text container fills available height
+  },
+
+  // top content container - groups time range and title
+  topContent: {
+    // content flows naturally, no flex needed
   },
 
   // time range text styling - matches TaskCard metadata styling

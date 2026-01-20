@@ -31,7 +31,7 @@ class TaskListSerializer(serializers.ModelSerializer):
             'id', 'title', 'description', 'icon', 'time', 'duration', 'due_date', 'is_completed',
             'completed_at', 'priority_level', 'priority_display', 'color',
             'routine_type', 'list', 'list_name', 'list_color', 'is_overdue',
-            'created_at', 'updated_at'
+            'metadata', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'completed_at']
 
