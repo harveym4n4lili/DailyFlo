@@ -329,8 +329,10 @@ export default function TimelineView({
           const taskTop = equalSpacing.equalSpacingPosition - (equalSpacing.cardHeight / 2);
           return taskTop + (proportion * equalSpacing.cardHeight);
         } else {
-          // task without duration - time is at the center
-          return equalSpacing.equalSpacingPosition;
+          // task without duration - anchor the time to the TOP edge of the card
+          // so aligning top edges of zero-duration tasks gives matching times
+          const taskTop = equalSpacing.equalSpacingPosition - (equalSpacing.cardHeight / 2);
+          return taskTop;
         }
       }
       
@@ -546,20 +548,42 @@ export default function TimelineView({
     return labels.sort((a, b) => a.position - b.position);
   }, [sortedTasks, tasksWithTime, calculatePositionWithOffsets, equalSpacingPositions]);
 
-  // convert Y position to time (for drag operations)
+  // convert Y position (TOP edge of the card) to time for drag operations
   // finds closest time by testing every 5 minutes between 00:05 and 23:55
-  // this function is used by the drag hook to convert center positions to time
-  const positionToTimeWithOffsets = useCallback((centerY: number): string => {
-    const minDragMinutes = timeToMinutes('00:05');
-    const maxDragMinutes = timeToMinutes('23:55');
+  // this function is used by the drag hook to convert top positions to time
+  const positionToTimeWithOffsets = useCallback((topY: number): string => {
+    const globalMinDragMinutes = timeToMinutes('00:05');
+    const globalMaxDragMinutes = timeToMinutes('23:55');
+
+    // derive a tighter clamp window from the actual first and last tasks
+    // so positions at or above the first task's top never map to earlier times
+    let earliestTaskMinutes = globalMinDragMinutes;
+    let latestTaskEndMinutes = globalMaxDragMinutes;
+
+    if (sortedTasks.length > 0) {
+      const firstTask = sortedTasks[0];
+      if (firstTask.time) {
+        earliestTaskMinutes = Math.max(
+          globalMinDragMinutes,
+          timeToMinutes(firstTask.time)
+        );
+      }
+
+      const lastTask = sortedTasks[sortedTasks.length - 1];
+      if (lastTask.time) {
+        const lastMinutes = timeToMinutes(lastTask.time);
+        const lastEnd = lastMinutes + (lastTask.duration || 0);
+        latestTaskEndMinutes = Math.min(globalMaxDragMinutes, lastEnd);
+      }
+    }
     
     let closestTime = '';
     let minDiff = Infinity;
     
-    for (let minutes = minDragMinutes; minutes <= maxDragMinutes; minutes += 5) {
+    for (let minutes = globalMinDragMinutes; minutes <= globalMaxDragMinutes; minutes += 5) {
       const testTime = minutesToTime(minutes);
       const testPosition = calculatePositionWithOffsets(testTime);
-      const diff = Math.abs(testPosition - centerY);
+      const diff = Math.abs(testPosition - topY);
       
       if (diff < minDiff) {
         minDiff = diff;
@@ -568,9 +592,15 @@ export default function TimelineView({
     }
     
     const closestMinutes = timeToMinutes(closestTime);
-    const clampedMinutes = Math.max(minDragMinutes, Math.min(maxDragMinutes, closestMinutes));
+    // clamp to the first task's start and the last task's end so
+    // aligning a later card's top with the first card's top always
+    // yields the same start time as that first task
+    const clampedMinutes = Math.max(
+      earliestTaskMinutes,
+      Math.min(latestTaskEndMinutes, closestMinutes)
+    );
     return minutesToTime(clampedMinutes);
-  }, [calculatePositionWithOffsets]);
+  }, [calculatePositionWithOffsets, sortedTasks]);
 
   // use drag hook for unified drag handling across all states
   // this modularizes the drag logic that was previously duplicated
