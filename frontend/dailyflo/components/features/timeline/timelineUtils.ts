@@ -325,6 +325,7 @@ export function calculateTaskRenderProperties(
  */
 
 export interface DragState {
+  taskId: string; // track which task is being dragged for z-index management
   yPosition: number;
   time: string;
 }
@@ -372,6 +373,7 @@ export function useTimelineDrag({
 
   // handle drag start - initialize drag state with initial position
   // sets initial drag state so drag label appears immediately
+  // also tracks which task is being dragged for z-index management
   const handleDragStart = useCallback(
     (taskId: string, topY: number, measuredHeight: number) => {
       // for drag "aim" we anchor the time to the TOP edge of the task card
@@ -379,7 +381,8 @@ export function useTimelineDrag({
       const time = positionToTime(topY);
       
       // set initial drag state for visual feedback
-      const nextState: DragState = { yPosition: topY, time };
+      // include taskId so we can apply higher z-index to the dragged task
+      const nextState: DragState = { taskId, yPosition: topY, time };
       dragStateRef.current = nextState;
       setDragState(nextState);
     },
@@ -396,7 +399,9 @@ export function useTimelineDrag({
       const time = positionToTime(topY);
       
       // update drag state for visual feedback
-      const nextState: DragState = { yPosition: topY, time };
+      // preserve taskId from current drag state or use the one passed in
+      const currentTaskId = dragStateRef.current?.taskId || taskId;
+      const nextState: DragState = { taskId: currentTaskId, yPosition: topY, time };
       dragStateRef.current = nextState;
       setDragState(nextState);
     },

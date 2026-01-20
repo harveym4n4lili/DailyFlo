@@ -50,6 +50,9 @@ interface TimelineItemProps {
   onPress?: () => void;
   // callback when task completion checkbox is pressed
   onTaskComplete?: (task: Task) => void;
+  // whether this task is currently being dragged (for z-index management)
+  // this prop comes from parent to track which task should be on top layer
+  isDraggedTask?: boolean;
 }
 
 /**
@@ -71,6 +74,7 @@ export default function TimelineItem({
   onDragEnd,
   onPress,
   onTaskComplete,
+  isDraggedTask = false,
 }: TimelineItemProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -95,6 +99,10 @@ export default function TimelineItem({
   
   // use ref to track dragging state for listener
   const isDraggingRef = React.useRef(false);
+  
+  // track if a drag just ended to prevent modal from opening after drag release
+  // this prevents the task modal from opening when user releases after dragging
+  const justFinishedDragRef = React.useRef(false);
 
   // state to store measured content height (includes padding)
   const [measuredContentHeight, setMeasuredContentHeight] = React.useState<number | null>(null);
@@ -116,6 +124,20 @@ export default function TimelineItem({
   
   // animated value for expanded area height (0 when collapsed, 32px per subtask + 12px padding when expanded)
   const expandedAreaHeightAnimation = useRef(new Animated.Value(0)).current;
+  
+  // animated value for fade-in animation when task repositions after drag
+  // starts at 1 (fully visible), fades to 0 on drag end, then fades back to 1 when position updates
+  const fadeAnimation = useRef(new Animated.Value(1)).current;
+  
+  // track previous position to detect when position updates after drag
+  const previousPositionRef = useRef(position);
+  
+  // track if we're waiting for position update after drag to trigger fade-in
+  const waitingForRepositionRef = useRef(false);
+  
+  // store timeout ref for fallback fade-in animation
+  // this ensures animation always plays even if position doesn't change
+  const fadeInTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // update animation when task completion status changes
   useEffect(() => {
@@ -202,7 +224,16 @@ export default function TimelineItem({
 
   // handle main task press - open task detail view with haptic feedback
   // this wrapper ensures haptic feedback fires even if PanGestureHandler intercepts the touch
+  // prevents modal from opening if user just finished dragging the task
   const handleTaskPress = () => {
+    // if a drag just finished, don't open the modal
+    // this prevents accidental modal opening when releasing after dragging
+    if (justFinishedDragRef.current) {
+      // reset the flag so future taps work normally
+      justFinishedDragRef.current = false;
+      return;
+    }
+    
     // provide medium haptic feedback when tapping the main timeline task card
     // this mirrors the subtask and checkbox haptics so the whole card feels responsive
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
@@ -333,10 +364,44 @@ export default function TimelineItem({
   }, [task.metadata?.subtasks?.length ?? 0, task.title, duration, task.id, task.metadata, isSubtasksExpanded]);
 
   // update base position when prop changes
+  // also trigger fade-in animation if we're waiting for reposition after drag
   useEffect(() => {
+    const positionChanged = previousPositionRef.current !== position;
+    previousPositionRef.current = position;
+    
     basePosition.current = position;
     translateY.setValue(0); // reset translation when position changes
-  }, [position, translateY]);
+    
+    // if we're waiting for reposition after drag, trigger fade-in
+    // this happens when the timeline recalculates and updates the task's position
+    // we trigger even if position didn't change (in case dragged back to same spot)
+    if (waitingForRepositionRef.current) {
+      waitingForRepositionRef.current = false; // clear the flag
+      
+      // clear fallback timeout since position update happened
+      if (fadeInTimeoutRef.current) {
+        clearTimeout(fadeInTimeoutRef.current);
+        fadeInTimeoutRef.current = null;
+      }
+      
+      // fade in from 0 to 1 when the card repositions after drag
+      // this provides visual feedback that the drag completed and card is in new position
+      Animated.timing(fadeAnimation, {
+        toValue: 1, // fade to fully visible
+        duration: 500, // smooth 300ms fade-in animation
+        useNativeDriver: true, // use native driver for better performance
+      }).start();
+    }
+  }, [position, translateY, fadeAnimation]);
+  
+  // cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (fadeInTimeoutRef.current) {
+        clearTimeout(fadeInTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // listen to translateY changes to update drag position
   useEffect(() => {
@@ -401,6 +466,10 @@ export default function TimelineItem({
       // ensure position is not negative
       const clampedY = Math.max(0, newY);
       
+      // check if this was actually a drag (not just a tap)
+      // if translationY is significant, it was a drag
+      const wasDrag = Math.abs(event.nativeEvent.translationY) > 5;
+      
       // call onDrag callback with new position
       // TimelineView will handle converting to timeline position if needed
       onDrag(clampedY);
@@ -408,6 +477,43 @@ export default function TimelineItem({
       // reset drag state
       setIsDragging(false);
       isDraggingRef.current = false;
+      
+      // if this was a drag, set flag to prevent modal from opening on release
+      // this prevents the task modal from opening when user releases after dragging
+      // also fade out the card and wait for position update to fade back in
+      if (wasDrag) {
+        justFinishedDragRef.current = true;
+        // clear the flag after a short delay so future taps work normally
+        // use setTimeout to reset after the press event would have fired
+        setTimeout(() => {
+          justFinishedDragRef.current = false;
+        }, 100);
+        
+        // fade out the card immediately on drag end
+        // we'll fade it back in when the position prop updates (after timeline recalculates)
+        fadeAnimation.setValue(0); // fade to invisible
+        waitingForRepositionRef.current = true; // mark that we're waiting for reposition
+        
+        // set fallback timeout to ensure fade-in always plays
+        // if position doesn't change (e.g., dragged back to same spot), still fade in after delay
+        // clear any existing timeout first
+        if (fadeInTimeoutRef.current) {
+          clearTimeout(fadeInTimeoutRef.current);
+        }
+        fadeInTimeoutRef.current = setTimeout(() => {
+          // if we're still waiting for reposition, trigger fade-in anyway
+          // this ensures the card never stays invisible
+          if (waitingForRepositionRef.current) {
+            waitingForRepositionRef.current = false;
+            Animated.timing(fadeAnimation, {
+              toValue: 1, // fade to fully visible
+              duration: 500, // smooth 300ms fade-in animation
+              useNativeDriver: true, // use native driver for better performance
+            }).start();
+          }
+          fadeInTimeoutRef.current = null;
+        }, 100); // wait 100ms for position update, then trigger fallback
+      }
       
       // notify parent that drag ended
       if (onDragEnd) {
@@ -432,6 +538,13 @@ export default function TimelineItem({
             top: position, // no offset needed since padding is removed
             // no height constraint - let content determine height naturally
             transform: [{ translateY }],
+            // apply higher z-index when this task is being dragged so it appears above all others
+            // reset to default (undefined) when drag ends
+            // isDraggedTask prop comes from parent to track which task should be on top layer
+            zIndex: isDraggedTask ? 1000 : undefined,
+            // apply fade animation opacity - animates on drag release
+            // starts at 1 (fully visible), fades to 0.7 then back to 1 when drag ends
+            opacity: fadeAnimation,
           },
         ]}
       >

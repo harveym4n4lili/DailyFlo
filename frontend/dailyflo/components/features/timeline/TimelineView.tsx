@@ -763,6 +763,9 @@ export default function TimelineView({
                   }}
                   onPress={() => onTaskPress?.(task)}
                   onTaskComplete={onTaskComplete}
+                  // pass isDraggedTask prop so this task can apply higher z-index when being dragged
+                  // this ensures the dragged task appears above all other tasks on the timeline
+                  isDraggedTask={dragState?.taskId === task.id}
                 />
               );
             })
