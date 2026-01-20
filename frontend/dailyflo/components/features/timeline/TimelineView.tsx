@@ -15,7 +15,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { Task } from '@/types';
 import TimelineItem from './TimelineItem';
 import TimeLabel from './TimeLabel';
-import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag } from './timelineUtils';
+import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag, getTaskCardHeight, TASK_CARD_HEIGHTS } from './timelineUtils';
 
 interface TimelineViewProps {
   // array of tasks to display on the timeline
@@ -119,9 +119,9 @@ export default function TimelineView({
   }, [dynamicStartHour, startHour, endHour, timeInterval, tasksWithTime]);
 
   // spacing constants - adjust these to change spacing between tasks
-  const SPACING_LESS_THAN_30_MIN = 25;
-  const SPACING_30_MIN_TO_1_HOUR = 75;
-  const SPACING_MORE_THAN_1_HOUR = 75;
+  const SPACING_LESS_THAN_30_MIN = 30;
+  const SPACING_30_MIN_TO_1_HOUR = 90;
+  const SPACING_MORE_THAN_1_HOUR = 90;
   
   // calculate spacing between tasks based on time difference
   const getTaskSpacing = (timeDifferenceMinutes: number): number => {
@@ -143,20 +143,22 @@ export default function TimelineView({
   }, [tasksWithTime]);
 
   // calculate task positions with consistent spacing
-  // always uses fallback height (56px) for spacing to prevent jumps
+  // always uses fallback height for spacing to prevent jumps
+  // uses centralized height constants for different task types
   // returns map of taskId -> { equalSpacingPosition (center), cardHeight (fallback) }
   const equalSpacingPositions = useMemo(() => {
     const positions = new Map<string, { equalSpacingPosition: number; cardHeight: number }>();
     if (sortedTasks.length === 0) return positions;
     
-    const FALLBACK_HEIGHT = 56; // consistent height for spacing calculations
     let currentPosition = 0; // start at top
     
     sortedTasks.forEach((task, index) => {
       if (!task.time) return;
       
       const duration = task.duration || 0;
-      const cardHeight = FALLBACK_HEIGHT; // always use fallback for spacing
+      const hasSubtasks = task.metadata?.subtasks && task.metadata.subtasks.length > 0;
+      // use centralized height calculation function for consistency
+      const cardHeight = getTaskCardHeight(duration, hasSubtasks);
       
       // store center position for this task
       positions.set(task.id, { equalSpacingPosition: currentPosition, cardHeight });
@@ -190,7 +192,11 @@ export default function TimelineView({
           // calculate next task position: current top + current height + gap
           const currentTop = currentPosition - (cardHeight / 2);
           const nextTop = currentTop + cardHeight + gapSpacing;
-          currentPosition = nextTop + (FALLBACK_HEIGHT / 2);
+          // use next task's fallback height for positioning
+          const nextTaskDuration = nextTask.duration || 0;
+          const nextTaskHasSubtasks = nextTask.metadata?.subtasks && nextTask.metadata.subtasks.length > 0;
+          const nextTaskFallbackHeight = getTaskCardHeight(nextTaskDuration, nextTaskHasSubtasks);
+          currentPosition = nextTop + (nextTaskFallbackHeight / 2);
         }
       }
     });
@@ -653,7 +659,9 @@ export default function TimelineView({
               // - After drag and drop
               // - After updating a task
               // - After initially loading
-              const spacingHeight = equalSpacing.cardHeight; // always 56px (fallback)
+              // spacingHeight uses fallback height from TASK_CARD_HEIGHTS constants
+              // values: 64px (no duration), 80px (duration), 88px (duration + subtasks)
+              const spacingHeight = equalSpacing.cardHeight;
               const measuredHeight = taskCardHeights.get(task.id) || spacingHeight;
               const taskPpm = taskPixelsPerMinute.get(task.id) || 0.3;
               

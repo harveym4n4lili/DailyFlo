@@ -12,6 +12,45 @@
 import { useState, useCallback } from 'react';
 
 /**
+ * Task Card Height Constants
+ * 
+ * Defines the height for different task card types based on duration and subtask presence.
+ * These constants ensure consistent spacing calculations and visual rendering.
+ */
+export const TASK_CARD_HEIGHTS = {
+  // base height for tasks without duration and without subtasks
+  NO_DURATION_NO_SUBTASK: 64,
+  
+  // height for tasks without duration but with subtasks
+  NO_DURATION_WITH_SUBTASK: 88, // same as base (subtasks don't add height without duration)
+  
+  // height for tasks with duration but without subtasks
+  WITH_DURATION_NO_SUBTASK: 88, // base (64) + duration boost (16)
+  
+  // height for tasks with duration and with subtasks
+  WITH_DURATION_WITH_SUBTASK: 88, // base (64) + duration boost (16) + subtask boost (8)
+} as const;
+
+/**
+ * Calculates the appropriate task card height based on duration and subtask presence
+ * 
+ * @param duration - Task duration in minutes (0 if no duration)
+ * @param hasSubtasks - Whether the task has subtasks
+ * @returns Height in pixels for the task card
+ */
+export function getTaskCardHeight(duration: number, hasSubtasks: boolean): number {
+  if (duration > 0) {
+    return hasSubtasks 
+      ? TASK_CARD_HEIGHTS.WITH_DURATION_WITH_SUBTASK 
+      : TASK_CARD_HEIGHTS.WITH_DURATION_NO_SUBTASK;
+  } else {
+    return hasSubtasks 
+      ? TASK_CARD_HEIGHTS.NO_DURATION_WITH_SUBTASK 
+      : TASK_CARD_HEIGHTS.NO_DURATION_NO_SUBTASK;
+  }
+}
+
+/**
  * Converts a time string (HH:MM) to minutes from midnight
  * 
  * @param time - Time string in HH:MM format
