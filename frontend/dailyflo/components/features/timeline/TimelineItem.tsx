@@ -105,6 +105,12 @@ export default function TimelineItem({
   // animated value for checkbox scale animation (for tap feedback)
   const checkboxScaleAnimation = useRef(new Animated.Value(1)).current;
   
+  // animated value for card height expansion - initialized with default height, will be updated when minCardHeight is calculated
+  const cardHeightAnimation = useRef(new Animated.Value(64)).current; // default to 64px, will be updated
+  
+  // animated value for expanded area height (0 when collapsed, 50px when expanded)
+  const expandedAreaHeightAnimation = useRef(new Animated.Value(0)).current;
+  
   // update animation when task completion status changes
   useEffect(() => {
     Animated.timing(checkboxFillAnimation, {
@@ -114,11 +120,17 @@ export default function TimelineItem({
     }).start();
   }, [task.isCompleted, checkboxFillAnimation]);
   
-  // handle subtask button press
+  // handle subtask button press - toggle expansion and expand card height
   const handleSubtaskPress = () => {
+    // provide light haptic feedback when subtask button is pressed
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
     const willBeExpanded = !isSubtasksExpanded;
     setIsSubtasksExpanded(willBeExpanded);
     toggleArrow(willBeExpanded);
+    
+    // the card height will automatically update via cardHeight calculation
+    // which adds 50px when expanded, and this will be reported to parent via useEffect
   };
   
   // handle checkbox press - complete/uncomplete task and all subtasks
@@ -164,13 +176,47 @@ export default function TimelineItem({
     return getTaskCardHeight(duration, hasSubtasks);
   }, [duration, hasSubtasks]);
 
-  // use explicit height to fill entire space - always use minimum height to match spacing calculations
-  // height varies based on duration and subtask presence (64px, 80px, or 88px)
-  // this ensures visual consistency with spacing calculations
-  const cardHeight = minCardHeight;
+  // calculate card height - base height plus 50px when subtasks are expanded
+  // allow expansion above 88px when subtasks are expanded (base can be 88px, so expanded would be 138px)
+  const cardHeight = useMemo(() => {
+    const baseHeight = minCardHeight;
+    const expandedHeight = isSubtasksExpanded ? baseHeight + 50 : baseHeight;
+    // no cap - allow expansion above 88px when subtasks are expanded
+    return expandedHeight;
+  }, [minCardHeight, isSubtasksExpanded]);
+  
+  // update animation value when minCardHeight changes (for initial render or when task properties change)
+  useEffect(() => {
+    // only update if minCardHeight is a valid number
+    if (typeof minCardHeight === 'number' && minCardHeight > 0) {
+      cardHeightAnimation.setValue(minCardHeight);
+    }
+  }, [minCardHeight, cardHeightAnimation]);
+  
+  // animate card height when expansion state changes
+  useEffect(() => {
+    // only animate if cardHeight is a valid number
+    if (typeof cardHeight === 'number' && cardHeight > 0) {
+      Animated.timing(cardHeightAnimation, {
+        toValue: cardHeight,
+        duration: 200, // smooth animation duration
+        useNativeDriver: false, // height animation doesn't support native driver
+      }).start();
+    }
+  }, [cardHeight, cardHeightAnimation]);
+  
+  // animate expanded area height when expansion state changes
+  useEffect(() => {
+    Animated.timing(expandedAreaHeightAnimation, {
+      toValue: isSubtasksExpanded ? 50 : 0, // 50px when expanded, 0 when collapsed
+      duration: 200, // smooth animation duration
+      useNativeDriver: false, // height animation doesn't support native driver
+    }).start();
+  }, [isSubtasksExpanded, expandedAreaHeightAnimation]);
 
   // notify parent of card height when it changes
   // use ref to track last reported height to avoid infinite loops
+  // report the expanded height (including 50px when subtasks are expanded) so timeline spacing adjusts
   const lastReportedHeight = useRef<number | null>(null);
   const onHeightMeasuredRef = useRef(onHeightMeasured);
   
@@ -180,29 +226,40 @@ export default function TimelineItem({
   }, [onHeightMeasured]);
   
   useEffect(() => {
+    // report the full card height including expansion when subtasks are expanded
+    // this ensures the timeline spacing accounts for the expanded card
+    const heightToReport = cardHeight;
+    
     // only report if height actually changed
-    if (onHeightMeasuredRef.current && cardHeight !== lastReportedHeight.current) {
-      lastReportedHeight.current = cardHeight;
-      onHeightMeasuredRef.current(cardHeight);
+    if (onHeightMeasuredRef.current && heightToReport !== lastReportedHeight.current) {
+      lastReportedHeight.current = heightToReport;
+      onHeightMeasuredRef.current(heightToReport);
     }
   }, [cardHeight]);
 
 
   // measure card height when layout is calculated
+  // this measures the actual rendered height of the combinedContainer
   const handleContentLayout = (event: any) => {
     const { height } = event.nativeEvent.layout;
     if (measuredContentHeight !== height) {
       setMeasuredContentHeight(height);
+      // report the measured height to parent so timeline spacing adjusts
+      // this includes the expanded height when subtasks are expanded
+      if (onHeightMeasuredRef.current) {
+        onHeightMeasuredRef.current(height);
+        lastReportedHeight.current = height;
+      }
     }
   };
 
   // reset height when task content changes (triggers remeasurement)
   // use subtasks length instead of array reference to avoid unnecessary re-renders during hot reload
-  // include task.metadata to ensure re-render when metadata is loaded
+  // include task.metadata and isSubtasksExpanded to ensure re-render when expansion state changes
   useEffect(() => {
     setMeasuredContentHeight(null);
     lastReportedHeight.current = null;
-  }, [task.metadata?.subtasks?.length ?? 0, task.title, duration, task.id, task.metadata]);
+  }, [task.metadata?.subtasks?.length ?? 0, task.title, duration, task.id, task.metadata, isSubtasksExpanded]);
 
   // update base position when prop changes
   useEffect(() => {
@@ -307,31 +364,72 @@ export default function TimelineItem({
           },
         ]}
       >
-         {/* combined container for icon and task content */}
-         <TouchableOpacity
+         {/* outer container that expands when subtasks are expanded */}
+         {/* contains the fixed-height card and the expandable area below */}
+         <Animated.View
            style={[
-             styles.combinedContainer,
-             { height: cardHeight } // use explicit height to fill entire space (64px for duration, 56px without)
+             styles.cardWrapper,
+             { 
+               height: cardHeightAnimation, // animated height: base + 50px when expanded
+             }
            ]}
-           onPress={onPress}
-           activeOpacity={0.7}
            onLayout={handleContentLayout}
          >
-           {/* icon - inside the combined container */}
-           {task.icon && (
-             <View style={styles.iconWrapper}>
-               <TaskIcon icon={task.icon} color={taskColor} />
-             </View>
-           )}
+           {/* combined container for icon and task content - fixed height, stays at top */}
+           {/* when expanded, remove bottom border radius to connect with expanded area */}
+           {/* wrap in Animated.View to animate border radius smoothly */}
+           <Animated.View
+             style={[
+               styles.combinedContainer,
+               { 
+                 height: minCardHeight, // fixed height at base height, doesn't expand
+               }
+             ]}
+           >
+             <TouchableOpacity
+               style={styles.touchableContent}
+               onPress={onPress}
+               activeOpacity={0.7}
+             >
+             {/* icon - inside the combined container */}
+             {task.icon && (
+               <View style={styles.iconWrapper}>
+                 <TaskIcon icon={task.icon} color={taskColor} />
+               </View>
+             )}
 
-           {/* task content - inside the combined container */}
-           <View style={styles.taskContent}>
-             {/* text content container - layout depends on subtask presence */}
-             {hasSubtasks ? (
-               // tasks with subtasks: centered layout (subtask button is positioned absolutely above)
-               <View style={styles.textContainerWithSubtasks}>
-                 {/* top content - time range and title */}
-                 <View style={styles.topContent}>
+             {/* task content - inside the combined container */}
+             <View style={styles.taskContent}>
+               {/* text content container - layout depends on subtask presence */}
+               {hasSubtasks ? (
+                 // tasks with subtasks: centered layout (subtask button is positioned absolutely above)
+                 <View style={styles.textContainerWithSubtasks}>
+                   {/* top content - time range and title */}
+                   <View style={styles.topContent}>
+                     {/* time range row - time range only */}
+                     <View style={styles.timeRangeRow}>
+                       {/* time range display */}
+                       {timeRangeText && (
+                         <Text style={styles.timeRange}>{timeRangeText}</Text>
+                       )}
+                     </View>
+                     
+                     {/* task title - matches TaskCard styling */}
+                     <Text
+                       style={[
+                         styles.title,
+                         task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
+                       ]}
+                       numberOfLines={1}
+                       ellipsizeMode="tail"
+                     >
+                       {task.title}
+                     </Text>
+                   </View>
+                 </View>
+               ) : (
+                 // tasks without subtasks: centered layout (original layout)
+                 <View style={styles.textContainer}>
                    {/* time range row - time range only */}
                    <View style={styles.timeRangeRow}>
                      {/* time range display */}
@@ -352,116 +450,107 @@ export default function TimelineItem({
                      {task.title}
                    </Text>
                  </View>
-               </View>
-             ) : (
-               // tasks without subtasks: centered layout (original layout)
-               <View style={styles.textContainer}>
-                 {/* time range row - time range only */}
-                 <View style={styles.timeRangeRow}>
-                   {/* time range display */}
-                   {timeRangeText && (
-                     <Text style={styles.timeRange}>{timeRangeText}</Text>
-                   )}
+               )}
+             </View>
+             
+             {/* checkbox container - on the right side */}
+             <View style={styles.checkboxContainer} />
+             </TouchableOpacity>
+             
+             {/* subtask button - absolutely positioned layer above task card */}
+             {hasSubtasks && (
+               <TouchableOpacity
+                 style={[
+                   styles.subtaskButton,
+                   { left: task.icon ? 56 : 16 }, // align with task content: paddingLeft (16) + icon (24) + marginRight (16) = 56px, or just padding (16) if no icon
+                 ]}
+                 onPress={handleSubtaskPress}
+                 activeOpacity={0.7}
+               >
+                 <View style={styles.subtaskContainer}>
+                   {/* checkbox icon on the left */}
+                   <Ionicons
+                     name="checkbox-outline"
+                     size={14}
+                     color={themeColors.text.secondary()}
+                     style={styles.subtaskIcon}
+                   />
+                   {/* subtask count text */}
+                   <Text style={styles.subtaskText}>
+                     {task.metadata.subtasks.filter(st => st.isCompleted).length}/{task.metadata.subtasks.length}
+                   </Text>
+                   {/* dropdown arrow icon on the right - animated */}
+                   <Animated.View
+                     style={[
+                       styles.subtaskDropdownIconContainer,
+                       {
+                         transform: [{ rotate: arrowRotation }],
+                       },
+                     ]}
+                   >
+                     <Ionicons
+                       name="chevron-down"
+                       size={12}
+                       color={themeColors.text.secondary()}
+                     />
+                   </Animated.View>
                  </View>
-                 
-                 {/* task title - matches TaskCard styling */}
-                 <Text
-                   style={[
-                     styles.title,
-                     task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
-                   ]}
-                   numberOfLines={1}
-                   ellipsizeMode="tail"
-                 >
-                   {task.title}
-                 </Text>
-               </View>
+               </TouchableOpacity>
              )}
-           </View>
-           
-           {/* checkbox container - on the right side */}
-           <View style={styles.checkboxContainer} />
-           
-           {/* subtask button - absolutely positioned layer above task card */}
-           {hasSubtasks && (
+             
+             {/* checkbox - absolutely positioned layer above task card for easy tapping */}
+             {/* positioned relative to combinedContainer, inside the card's padding area */}
+             {/* larger tap area (44x44) for better touch target, visual checkbox remains 18x18 */}
+             {/* checkbox stays centered at base height (minCardHeight), not expanded height */}
              <TouchableOpacity
                style={[
-                 styles.subtaskButton,
-                 { left: task.icon ? 56 : 16 }, // align with task content: paddingLeft (16) + icon (24) + marginRight (16) = 56px, or just padding (16) if no icon
+                 styles.checkboxTouchable,
+                 { top: minCardHeight / 2 - 22 } // center vertically at base height (half base height minus half tap area height)
                ]}
-               onPress={handleSubtaskPress}
-               activeOpacity={0.7}
+               onPress={handleCheckboxPress}
+               activeOpacity={1} // disable default opacity change since we're using custom scale animation
              >
-               <View style={styles.subtaskContainer}>
-                 {/* checkbox icon on the left */}
-                 <Ionicons
-                   name="checkbox-outline"
-                   size={14}
-                   color={themeColors.text.secondary()}
-                   style={styles.subtaskIcon}
-                 />
-                 {/* subtask count text */}
-                 <Text style={styles.subtaskText}>
-                   {task.metadata.subtasks.filter(st => st.isCompleted).length}/{task.metadata.subtasks.length}
-                 </Text>
-                 {/* dropdown arrow icon on the right - animated */}
+               {/* outer animated view for scale animation (uses native driver) */}
+               <Animated.View
+                 style={{
+                   // animate scale for tap feedback - uses native driver for better performance
+                   transform: [{ scale: checkboxScaleAnimation }],
+                 }}
+               >
+                 {/* inner animated view for color animations (doesn't use native driver) */}
                  <Animated.View
                    style={[
-                     styles.subtaskDropdownIconContainer,
+                     styles.checkboxCircle,
                      {
-                       transform: [{ rotate: arrowRotation }],
+                       // animate border color from tertiary (grey) to task color
+                       borderColor: checkboxFillAnimation.interpolate({
+                         inputRange: [0, 1],
+                         outputRange: [themeColors.text.tertiary(), taskColor],
+                       }),
+                       // animate background color from transparent to task color
+                       backgroundColor: checkboxFillAnimation.interpolate({
+                         inputRange: [0, 1],
+                         outputRange: ['transparent', taskColor],
+                       }),
                      },
                    ]}
-                 >
-                   <Ionicons
-                     name="chevron-down"
-                     size={12}
-                     color={themeColors.text.secondary()}
-                   />
-                 </Animated.View>
-               </View>
+                 />
+               </Animated.View>
              </TouchableOpacity>
-           )}
+           </Animated.View>
            
-           {/* checkbox - absolutely positioned layer above task card for easy tapping */}
-           {/* positioned relative to combinedContainer, inside the card's padding area */}
-           {/* larger tap area (44x44) for better touch target, visual checkbox remains 18x18 */}
-           <TouchableOpacity
+           {/* expanded area below the card - appears when subtasks are expanded */}
+           {/* this creates the extra 50px space below the main card content */}
+           {/* animated height from 0 to 50px for smooth expansion */}
+           <Animated.View
              style={[
-               styles.checkboxTouchable,
-               { top: cardHeight / 2 - 22 } // center vertically: half card height minus half tap area height (44/2 = 22)
+               styles.expandedArea,
+               {
+                 height: expandedAreaHeightAnimation, // animate from 0 to 50px
+               }
              ]}
-             onPress={handleCheckboxPress}
-             activeOpacity={1} // disable default opacity change since we're using custom scale animation
-           >
-             {/* outer animated view for scale animation (uses native driver) */}
-             <Animated.View
-               style={{
-                 // animate scale for tap feedback - uses native driver for better performance
-                 transform: [{ scale: checkboxScaleAnimation }],
-               }}
-             >
-               {/* inner animated view for color animations (doesn't use native driver) */}
-               <Animated.View
-                 style={[
-                   styles.checkboxCircle,
-                   {
-                     // animate border color from tertiary (grey) to task color
-                     borderColor: checkboxFillAnimation.interpolate({
-                       inputRange: [0, 1],
-                       outputRange: [themeColors.text.tertiary(), taskColor],
-                     }),
-                     // animate background color from transparent to task color
-                     backgroundColor: checkboxFillAnimation.interpolate({
-                       inputRange: [0, 1],
-                       outputRange: ['transparent', taskColor],
-                     }),
-                   },
-                 ]}
-               />
-             </Animated.View>
-           </TouchableOpacity>
-         </TouchableOpacity>
+           />
+         </Animated.View>
       </Animated.View>
     </PanGestureHandler>
   );
@@ -485,16 +574,45 @@ const createStyles = (
     paddingRight: 16,
   },
 
-  // combined container for icon and task content
+  // card wrapper - outer container that expands when subtasks are expanded
+  // contains the fixed-height card and the expandable area below
+  // structured as a column with combinedContainer as top row and expandedArea as bottom row
+  cardWrapper: {
+    flex: 1, // take up full available width within container
+    flexDirection: 'column', // stack combinedContainer and expandedArea vertically
+    position: 'relative',
+    overflow: 'hidden', // ensure content doesn't overflow during animation
+    borderRadius: 28, // outer border radius for the entire card
+  },
+  
+  // combined container for icon and task content - fixed height, stays at top
+  // this is the main card that doesn't expand
   combinedContainer: {
     flexDirection: 'row',
-    flex: 1,
+    width: '100%', // ensure it takes full width of cardWrapper
     alignItems: 'stretch',
-    position: 'relative', // needed for absolute positioning of subtask button
+    position: 'relative', // needed for absolute positioning of subtask button and checkbox
     backgroundColor: themeColors.background.elevated(),
-    borderRadius: 28, // matches TaskCard borderRadius (increased by 8px)
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  
+  // touchable content area inside combined container
+  // fills the container and handles touch events
+  touchableContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  
+  // expanded area below the card - appears when subtasks are expanded
+  // creates the extra 50px space below the main card content
+  // seamlessly connects with the card above (no gap, same background)
+  // positioned as the bottom row in cardWrapper
+  expandedArea: {
+    width: '100%',
+    backgroundColor: themeColors.background.elevated(), // match card background for seamless look
+    // no border radius - cardWrapper handles all border radius
   },
 
   // icon wrapper - inside combined container
