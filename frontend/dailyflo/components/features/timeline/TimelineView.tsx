@@ -807,9 +807,19 @@ const createStyles = (
   },
 
   // vertical line connecting all time slots
+  // positioned to be horizontally centered with icon container
+  // icon container: 44px wide, center at 22px from its left edge
+  // icon container starts at tasksContainer paddingLeft (20px)
+  // icon container center from tasksContainer left: 20 + 22 = 42px
+  // timeline line is 4px wide, so to center it: left = 42 - (4/2) = 40px
+  // but if appearing on right edge, recalculate: icon container right edge is at 20 + 44 = 64px
+  // to center: left should be at icon container center minus half line width
   timelineLine: {
     position: 'absolute',
-    left: 26,
+    // icon container: starts at tasksContainer.paddingLeft (20px), width 44px, center at 22px from start
+    // icon container center from tasksContainer left: 20 + 22 = 42px
+    // timeline line width: 4px, so to center: left = 42 - 2 = 40px
+    left: 21,
     top: 0,
     width: 4,
     backgroundColor: themeColors.border.secondary(),
