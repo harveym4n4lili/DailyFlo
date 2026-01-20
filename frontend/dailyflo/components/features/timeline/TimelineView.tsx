@@ -24,6 +24,8 @@ interface TimelineViewProps {
   onTaskTimeChange?: (taskId: string, newTime: string, newDuration?: number) => void;
   // callback when a task is pressed
   onTaskPress?: (task: Task) => void;
+  // callback when a task's completion status is toggled
+  onTaskComplete?: (task: Task) => void;
   // start hour for the timeline (default: 6 AM)
   startHour?: number;
   // end hour for the timeline (default: 23 = 11 PM)
@@ -42,6 +44,7 @@ export default function TimelineView({
   tasks,
   onTaskTimeChange,
   onTaskPress,
+  onTaskComplete,
   startHour = 6,
   endHour = 23,
   timeInterval = 60,
@@ -706,6 +709,7 @@ export default function TimelineView({
                     // this is called after onDrag, so state is already cleared
                   }}
                   onPress={() => onTaskPress?.(task)}
+                  onTaskComplete={onTaskComplete}
                 />
               );
             })

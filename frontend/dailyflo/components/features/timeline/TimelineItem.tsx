@@ -45,6 +45,8 @@ interface TimelineItemProps {
   onDragEnd?: () => void;
   // callback when task is pressed
   onPress?: () => void;
+  // callback when task completion checkbox is pressed
+  onTaskComplete?: (task: Task) => void;
 }
 
 /**
@@ -65,6 +67,7 @@ export default function TimelineItem({
   onDragStart,
   onDragEnd,
   onPress,
+  onTaskComplete,
 }: TimelineItemProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -96,11 +99,51 @@ export default function TimelineItem({
   // dropdown arrow animation hook
   const { arrowRotation, toggle: toggleArrow } = useDropdownArrowAnimation(false);
   
+  // animated value for checkbox fill animation (0 = unchecked/grey, 1 = checked/task color)
+  const checkboxFillAnimation = useRef(new Animated.Value(task.isCompleted ? 1 : 0)).current;
+  
+  // animated value for checkbox scale animation (for tap feedback)
+  const checkboxScaleAnimation = useRef(new Animated.Value(1)).current;
+  
+  // update animation when task completion status changes
+  useEffect(() => {
+    Animated.timing(checkboxFillAnimation, {
+      toValue: task.isCompleted ? 1 : 0,
+      duration: 200, // animation duration in milliseconds
+      useNativeDriver: false, // backgroundColor animation doesn't support native driver
+    }).start();
+  }, [task.isCompleted, checkboxFillAnimation]);
+  
   // handle subtask button press
   const handleSubtaskPress = () => {
     const willBeExpanded = !isSubtasksExpanded;
     setIsSubtasksExpanded(willBeExpanded);
     toggleArrow(willBeExpanded);
+  };
+  
+  // handle checkbox press - complete/uncomplete task and all subtasks
+  const handleCheckboxPress = () => {
+    // provide light haptic feedback when checkbox is pressed
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    // animate scale down and back up for visual feedback
+    // scale down to 0.85 (15% smaller) then back to 1.0
+    Animated.sequence([
+      Animated.timing(checkboxScaleAnimation, {
+        toValue: 0.85,
+        duration: 100, // quick scale down
+        useNativeDriver: true, // scale animation supports native driver for better performance
+      }),
+      Animated.timing(checkboxScaleAnimation, {
+        toValue: 1.0,
+        duration: 100, // quick scale back up
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    if (onTaskComplete) {
+      onTaskComplete(task);
+    }
   };
   
   // memoized check for subtasks presence - ensures component re-renders when subtasks load
@@ -337,17 +380,7 @@ export default function TimelineItem({
            </View>
            
            {/* checkbox container - on the right side */}
-           <View style={styles.checkboxContainer}>
-             <View 
-               style={[
-                 styles.checkboxCircle, 
-                 // use tertiary color for unchecked border, task color for checked fill
-                 task.isCompleted 
-                   ? { backgroundColor: taskColor, borderColor: taskColor }
-                   : { borderColor: themeColors.text.tertiary() }
-               ]}
-             />
-           </View>
+           <View style={styles.checkboxContainer} />
            
            {/* subtask button - absolutely positioned layer above task card */}
            {hasSubtasks && (
@@ -389,6 +422,45 @@ export default function TimelineItem({
                </View>
              </TouchableOpacity>
            )}
+           
+           {/* checkbox - absolutely positioned layer above task card for easy tapping */}
+           {/* positioned relative to combinedContainer, inside the card's padding area */}
+           {/* larger tap area (44x44) for better touch target, visual checkbox remains 18x18 */}
+           <TouchableOpacity
+             style={[
+               styles.checkboxTouchable,
+               { top: cardHeight / 2 - 22 } // center vertically: half card height minus half tap area height (44/2 = 22)
+             ]}
+             onPress={handleCheckboxPress}
+             activeOpacity={1} // disable default opacity change since we're using custom scale animation
+           >
+             {/* outer animated view for scale animation (uses native driver) */}
+             <Animated.View
+               style={{
+                 // animate scale for tap feedback - uses native driver for better performance
+                 transform: [{ scale: checkboxScaleAnimation }],
+               }}
+             >
+               {/* inner animated view for color animations (doesn't use native driver) */}
+               <Animated.View
+                 style={[
+                   styles.checkboxCircle,
+                   {
+                     // animate border color from tertiary (grey) to task color
+                     borderColor: checkboxFillAnimation.interpolate({
+                       inputRange: [0, 1],
+                       outputRange: [themeColors.text.tertiary(), taskColor],
+                     }),
+                     // animate background color from transparent to task color
+                     backgroundColor: checkboxFillAnimation.interpolate({
+                       inputRange: [0, 1],
+                       outputRange: ['transparent', taskColor],
+                     }),
+                   },
+                 ]}
+               />
+             </Animated.View>
+           </TouchableOpacity>
          </TouchableOpacity>
       </Animated.View>
     </PanGestureHandler>
@@ -439,22 +511,41 @@ const createStyles = (
     justifyContent: 'center', // vertically center content to align with icon
   },
 
-  // checkbox container - on the right side of task content
+  // checkbox container - on the right side of task content (spacer for layout)
   checkboxContainer: {
     marginLeft: 0, // spacing between task content and checkbox
     alignItems: 'center',
     justifyContent: 'center',
+    width: 18, // same width as checkbox circle to maintain layout spacing
   },
 
-  // checkbox circle - same size as icon (24px) with border
-  // unchecked: border with tertiary color, no fill
+  // checkbox touchable - absolutely positioned layer above task card for easy tapping
+  // positioned relative to combinedContainer (the task card)
+  // top position is set dynamically in component to center it vertically
+  // positioned inside the card's padding area with proper spacing from the right edge
+  // using 12px instead of 16px to give it some breathing room from the edge
+  // larger tap area (44x44) for better touch target, visual checkbox remains 18x18
+  // the tap area is centered, and the visual checkbox is centered within it using alignItems/justifyContent
+  checkboxTouchable: {
+    position: 'absolute',
+    right: 12, // position inside card padding area with spacing from right edge (card has 16px padding)
+    zIndex: 20, // layer above task card (higher than subtask button which is zIndex 10)
+    width: 44, // larger tap area for better touch target (iOS/Android recommended minimum is 44x44)
+    height: 44,
+    alignItems: 'center', // center the visual checkbox horizontally within the tap area
+    justifyContent: 'center', // center the visual checkbox vertically within the tap area
+  },
+
+  // checkbox circle - same size as icon (18px) with border
+  // unchecked: border with tertiary color (grey), no fill
   // checked: solid circle filled with task color
+  // animation interpolates between these states
   checkboxCircle: {
     width: 18, // same size as TaskIcon default size
     height: 18,
     borderRadius: 9, // make it circular (half of width/height)
     borderWidth: 1.5,
-    // backgroundColor and borderColor are set dynamically based on completion state
+    // backgroundColor and borderColor are animated based on completion state
   },
 
   // time range row - contains time range only

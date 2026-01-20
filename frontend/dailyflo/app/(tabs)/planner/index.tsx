@@ -136,15 +136,39 @@ export default function PlannerScreen() {
     }, 300);
   };
   
-  // handle marking a task as complete
+  // handle marking a task as complete/uncomplete
+  // when completing a task, also completes all its subtasks
+  // when uncompleting a task, also uncompletes all its subtasks
   const handleTaskComplete = async (task: Task) => {
     try {
+      const newCompletionStatus = !task.isCompleted;
+      
+      // prepare updates object
+      const updates: any = {
+        id: task.id,
+        isCompleted: newCompletionStatus,
+      };
+      
+      // if task has subtasks, update all subtasks to match the task's completion status
+      if (task.metadata?.subtasks && task.metadata.subtasks.length > 0) {
+        // create updated subtasks array with all subtasks matching the task's completion status
+        const updatedSubtasks = task.metadata.subtasks.map(subtask => ({
+          ...subtask,
+          isCompleted: newCompletionStatus, // match the task's new completion status
+        }));
+        
+        // include updated subtasks in metadata
+        updates.metadata = {
+          ...task.metadata,
+          subtasks: updatedSubtasks,
+        };
+      }
+      
+      // dispatch updateTask action to Redux store
+      // this will trigger the async thunk that updates the task via API
       await dispatch(updateTask({ 
         id: task.id, 
-        updates: { 
-          id: task.id,
-          isCompleted: !task.isCompleted
-        } 
+        updates 
       })).unwrap();
     } catch (error) {
       console.error('Failed to update task:', error);
@@ -241,6 +265,7 @@ export default function PlannerScreen() {
             tasks={selectedDateTasks}
             onTaskTimeChange={handleTaskTimeChange}
             onTaskPress={handleTaskPress}
+            onTaskComplete={handleTaskComplete}
             startHour={6}
             endHour={23}
             timeInterval={60}
