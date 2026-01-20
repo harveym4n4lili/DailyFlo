@@ -47,8 +47,6 @@ interface TimelineItemProps {
   onPress?: () => void;
   // callback when task completion checkbox is pressed
   onTaskComplete?: (task: Task) => void;
-  // callback when subtask expand / collapse is toggled so parent can update spacing
-  onSubtasksToggle?: (isExpanded: boolean) => void;
 }
 
 /**
@@ -70,7 +68,6 @@ export default function TimelineItem({
   onDragEnd,
   onPress,
   onTaskComplete,
-  onSubtasksToggle,
 }: TimelineItemProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -123,7 +120,7 @@ export default function TimelineItem({
     }).start();
   }, [task.isCompleted, checkboxFillAnimation]);
   
-  // handle subtask button press - toggle expansion and notify parent about state change
+  // handle subtask button press - toggle expansion and animate card height
   const handleSubtaskPress = () => {
     // provide light haptic feedback when subtask button is pressed
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -132,14 +129,8 @@ export default function TimelineItem({
     setIsSubtasksExpanded(willBeExpanded);
     toggleArrow(willBeExpanded);
     
-    // notify parent so timeline spacing can use the correct expanded height
-    // this keeps the vertical spacing map in sync with the visual expansion
-    if (onSubtasksToggle) {
-      onSubtasksToggle(willBeExpanded);
-    }
-
     // the card height will automatically update via cardHeight calculation
-    // and this will be reported to parent via useEffect
+    // and this will be reported to parent via animation listener below
   };
   
   // handle checkbox press - complete/uncomplete task and all subtasks
@@ -233,21 +224,28 @@ export default function TimelineItem({
   useEffect(() => {
     onHeightMeasuredRef.current = onHeightMeasured;
   }, [onHeightMeasured]);
-  
+
+  // listen to the animated card height value and stream changes to parent
+  // so the timeline can smoothly update spacing while the card is expanding/collapsing
   useEffect(() => {
-    // report the full card height including expansion when subtasks are expanded
-    // this ensures the timeline spacing accounts for the expanded card
-    const heightToReport = cardHeight;
-    
-    // only report if height actually changed
-    if (onHeightMeasuredRef.current && heightToReport !== lastReportedHeight.current) {
-      lastReportedHeight.current = heightToReport;
-      onHeightMeasuredRef.current(heightToReport);
-    }
-  }, [cardHeight]);
+    const id = cardHeightAnimation.addListener(({ value }) => {
+      if (!onHeightMeasuredRef.current) return;
+      
+      // avoid spamming identical values to parent
+      if (lastReportedHeight.current === value) return;
+      lastReportedHeight.current = value;
+      
+      // report the animated card height on every meaningful tick
+      // this lets the timeline spacing animate in sync with the card
+      onHeightMeasuredRef.current(value);
+    });
 
+    return () => {
+      cardHeightAnimation.removeListener(id);
+    };
+  }, [cardHeightAnimation]);
 
-  // measure card height when layout is calculated
+  // measure card height when layout is calculated (fallback / initial measurement)
   // this measures the actual rendered height of the combinedContainer
   const handleContentLayout = (event: any) => {
     const { height } = event.nativeEvent.layout;
