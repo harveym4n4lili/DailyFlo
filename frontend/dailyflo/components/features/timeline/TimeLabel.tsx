@@ -46,10 +46,14 @@ export default function TimeLabel({ time, position, isEndTime = false, isDragLab
   // position label at the top edge of the card (or bottom edge for end time labels)
   // position is the top edge of the card (or bottom edge for end time labels)
   // for end time labels, use endTimeContainer to align text to bottom
+  // apply a small upward offset so labels visually align with the icon container bottom edge
+  // this keeps logic simple: all labels (start, end, drag) share the same vertical nudge
+  const verticalOffset = -8;
+
   const containerStyle = height 
-    ? [styles.container, styles.containerized, { top: position, height }]
+    ? [styles.container, styles.containerized, { top: position + verticalOffset, height }]
     : isEndTime
-    ? [styles.container, styles.endTimeContainer, { top: position }]
+    ? [styles.container, styles.endTimeContainer, { top: position + verticalOffset }]
     : [styles.container, styles.topAlignedContainer, { top: position }];
 
   const textStyle = [
