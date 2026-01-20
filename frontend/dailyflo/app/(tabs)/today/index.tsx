@@ -242,7 +242,7 @@ export default function TodayScreen() {
     console.log('📱 Task pressed:', task.title);
     
     // provide medium haptic feedback
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
     
     // show task detail modal
     // store both task and color separately to maintain color during close animation

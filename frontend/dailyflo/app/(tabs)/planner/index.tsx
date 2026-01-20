@@ -1,6 +1,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 // import our custom layout components
 import { ScreenContainer } from '@/components';
@@ -122,6 +123,8 @@ export default function PlannerScreen() {
   // TASK HANDLERS - Functions to handle task interactions
   // handle when user taps on a task card to view details
   const handleTaskPress = (task: Task) => {
+    // provide medium haptic feedback when opening task detail 
+    
     setSelectedTask(task);
     setSelectedTaskColor(task.color || 'blue');
     setIsTaskDetailModalVisible(true);

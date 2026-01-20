@@ -157,6 +157,19 @@ export default function TimelineItem({
       onTaskComplete(task);
     }
   };
+
+  // handle main task press - open task detail view with haptic feedback
+  // this wrapper ensures haptic feedback fires even if PanGestureHandler intercepts the touch
+  const handleTaskPress = () => {
+    // provide medium haptic feedback when tapping the main timeline task card
+    // this mirrors the subtask and checkbox haptics so the whole card feels responsive
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
+
+    // call parent callback so planner screen can open the task detail modal
+    if (onPress) {
+      onPress();
+    }
+  };
   
   // memoized check for subtasks presence - ensures component re-renders when subtasks load
   const hasSubtasks = useMemo(() => {
@@ -393,11 +406,11 @@ export default function TimelineItem({
                }
              ]}
            >
-             <TouchableOpacity
-               style={styles.touchableContent}
-               onPress={onPress}
-               activeOpacity={0.7}
-             >
+            <TouchableOpacity
+              style={styles.touchableContent}
+              onPress={handleTaskPress}
+              activeOpacity={0.7}
+            >
              {/* icon - inside the combined container */}
              {task.icon && (
                <View style={styles.iconWrapper}>
