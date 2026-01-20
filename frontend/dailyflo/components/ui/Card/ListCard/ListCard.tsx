@@ -110,6 +110,11 @@ export interface ListCardProps {
   dropdownTopOffset?: number; // top offset for dropdown positioning
   dropdownRightOffset?: number; // right offset for dropdown positioning
   dropdownLeftOffset?: number; // left offset for dropdown positioning
+
+  // optional handler for overdue group bulk reschedule (used on Today screen)
+  // when provided, the "Overdue" group header will show a "Reschedule" action
+  // that calls this handler with all tasks in the Overdue group
+  onOverdueReschedule?: (tasks: Task[]) => void;
 }
 
 /**
@@ -148,6 +153,7 @@ export default function ListCard({
   dropdownTopOffset = 0,
   dropdownRightOffset = 20,
   dropdownLeftOffset = 20,
+  onOverdueReschedule,
 }: ListCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -274,7 +280,7 @@ export default function ListCard({
   };
 
   // render group header with dropdown arrow for expand/collapse functionality
-  const renderGroupHeader = (title: string, count: number) => {
+  const renderGroupHeader = (title: string, count: number, groupTasks: Task[]) => {
     const isCollapsed = isGroupCollapsed(title);
     const animatedValuesForGroup = getAnimatedValuesForGroup(title);
 
@@ -284,12 +290,23 @@ export default function ListCard({
       outputRange: ['90deg', '0deg'], // output range: rotate from 90 degrees (right) to 0 degrees (down) for arrow transition
     });
 
+    // determine if this group should show a secondary "Reschedule" action
+    // we only show it for the Overdue group when a handler is provided
+    const showSecondaryAction =
+      title === 'Overdue' && typeof onOverdueReschedule === 'function';
+
     return (
       <GroupHeader
         title={title}
         count={count}
         isCollapsed={isCollapsed}
         arrowRotation={arrowRotation}
+        showSecondaryAction={showSecondaryAction}
+        onSecondaryActionPress={
+          showSecondaryAction && onOverdueReschedule
+            ? () => onOverdueReschedule(groupTasks)
+            : undefined
+        }
         onPress={() => handleGroupToggle(title)}
       />
     );
@@ -443,7 +460,7 @@ export default function ListCard({
 
             return (
               <View style={styles.group}>
-                {renderGroupHeader(groupTitle, groupTasks.length)}
+                {renderGroupHeader(groupTitle, groupTasks.length, groupTasks as Task[])}
                 {/* conditionally render tasks based on collapse state */}
                 {!isCollapsed && (
                   <FlatList
