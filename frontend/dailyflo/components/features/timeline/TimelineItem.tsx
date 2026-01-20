@@ -435,240 +435,242 @@ export default function TimelineItem({
           },
         ]}
       >
-         {/* outer container that expands when subtasks are expanded */}
-         {/* contains the fixed-height card and the expandable area below */}
-         <Animated.View
-           style={[
-             styles.cardWrapper,
-             { 
-               height: cardHeightAnimation, // animated height: base + (32px per subtask + 12px padding) when expanded
-             }
-           ]}
-           onLayout={handleContentLayout}
-         >
-           {/* combined container for icon and task content - fixed height, stays at top */}
-           {/* when expanded, remove bottom border radius to connect with expanded area */}
-           {/* wrap in Animated.View to animate border radius smoothly */}
-           <Animated.View
-             style={[
-               styles.combinedContainer,
-               { 
-                 height: minCardHeight, // fixed height at base height, doesn't expand
-               }
-             ]}
-           >
+        {/* icon container - separate background for the icon */}
+        {/* positioned on the left side in the row layout */}
+        {/* height is fixed at base height, does not expand with subtasks */}
+        {/* background color is task color, icon color is primary */}
+        {task.icon && (
+          <Animated.View style={[styles.iconContainer, { height: minCardHeight }]}>
+            <TaskIcon icon={task.icon} color={themeColors.background.invertedPrimary()} size={20} />
+          </Animated.View>
+        )}
+
+        {/* content column - contains combined container and subtask list */}
+        {/* positioned on the right side in the row layout */}
+        <Animated.View
+          style={[
+            styles.content,
+            { 
+              height: cardHeightAnimation, // animated height: base + (32px per subtask + 12px padding) when expanded
+            }
+          ]}
+          onLayout={handleContentLayout}
+        >
+          {/* combined container for task content - fixed height, stays at top */}
+          {/* this is the main card that doesn't expand */}
+          <Animated.View
+            style={[
+              styles.combinedContainer,
+              { 
+                height: minCardHeight, // fixed height at base height, doesn't expand
+              }
+            ]}
+          >
             <TouchableOpacity
               style={styles.touchableContent}
               onPress={handleTaskPress}
               activeOpacity={0.7}
             >
-             {/* icon - inside the combined container */}
-             {task.icon && (
-               <View style={styles.iconWrapper}>
-                 <TaskIcon icon={task.icon} color={taskColor} />
-               </View>
-             )}
-
-             {/* task content - inside the combined container */}
-             <View style={styles.taskContent}>
-               {/* text content container - layout depends on subtask presence */}
-               {hasSubtasks ? (
-                 // tasks with subtasks: centered layout (subtask button is positioned absolutely above)
-                 <View style={styles.textContainerWithSubtasks}>
-                   {/* top content - time range and title */}
-                   <View style={styles.topContent}>
-                     {/* time range row - time range only */}
-                     <View style={styles.timeRangeRow}>
-                       {/* time range display */}
-                       {timeRangeText && (
-                         <Text style={styles.timeRange}>{timeRangeText}</Text>
-                       )}
-                     </View>
-                     
-                     {/* task title - matches TaskCard styling */}
-                     <Text
-                       style={[
-                         styles.title,
-                         task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
-                       ]}
-                       numberOfLines={1}
-                       ellipsizeMode="tail"
-                     >
-                       {task.title}
-                     </Text>
-                   </View>
-                 </View>
-               ) : (
-                 // tasks without subtasks: centered layout (original layout)
-                 <View style={styles.textContainer}>
-                   {/* time range row - time range only */}
-                   <View style={styles.timeRangeRow}>
-                     {/* time range display */}
-                     {timeRangeText && (
-                       <Text style={styles.timeRange}>{timeRangeText}</Text>
-                     )}
-                   </View>
-                   
-                   {/* task title - matches TaskCard styling */}
-                   <Text
-                     style={[
-                       styles.title,
-                       task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
-                     ]}
-                     numberOfLines={1}
-                     ellipsizeMode="tail"
-                   >
-                     {task.title}
-                   </Text>
-                 </View>
-               )}
-             </View>
-             
-             {/* checkbox container - on the right side */}
-             <View style={styles.checkboxContainer} />
-             </TouchableOpacity>
-             
-             {/* subtask button - absolutely positioned layer above task card */}
-             {hasSubtasks && (
-               <TouchableOpacity
-                 style={[
-                   styles.subtaskButton,
-                   { left: task.icon ? 56 : 16 }, // align with task content: paddingLeft (16) + icon (24) + marginRight (16) = 56px, or just padding (16) if no icon
-                 ]}
-                 onPress={handleSubtaskPress}
-                 activeOpacity={0.7}
-               >
-                 <View style={styles.subtaskContainer}>
-                   {/* checkbox icon on the left */}
-                   <Ionicons
-                     name="checkbox-outline"
-                     size={14}
-                     color={themeColors.text.secondary()}
-                     style={styles.subtaskIcon}
-                   />
-                   {/* subtask count text */}
-                   <Text style={styles.subtaskText}>
-                     {task.metadata.subtasks.filter(st => st.isCompleted).length}/{task.metadata.subtasks.length}
-                   </Text>
-                   {/* dropdown arrow icon on the right - animated */}
-                   <Animated.View
-                     style={[
-                       styles.subtaskDropdownIconContainer,
-                       {
-                         transform: [{ rotate: arrowRotation }],
-                       },
-                     ]}
-                   >
-                     <Ionicons
-                       name="chevron-down"
-                       size={12}
-                       color={themeColors.text.secondary()}
-                     />
-                   </Animated.View>
-                 </View>
-               </TouchableOpacity>
-             )}
-             
-             {/* checkbox - absolutely positioned layer above task card for easy tapping */}
-             {/* positioned relative to combinedContainer, inside the card's padding area */}
-             {/* larger tap area (44x44) for better touch target, visual checkbox remains 18x18 */}
-             {/* checkbox stays centered at base height (minCardHeight), not expanded height */}
-             <TouchableOpacity
-               style={[
-                 styles.checkboxTouchable,
-                 { top: minCardHeight / 2 - 22 } // center vertically at base height (half base height minus half tap area height)
-               ]}
-               onPress={handleCheckboxPress}
-               activeOpacity={1} // disable default opacity change since we're using custom scale animation
-             >
-               {/* outer animated view for scale animation (uses native driver) */}
-               <Animated.View
-                 style={{
-                   // animate scale for tap feedback - uses native driver for better performance
-                   transform: [{ scale: checkboxScaleAnimation }],
-                 }}
-               >
-                 {/* inner animated view for color animations (doesn't use native driver) */}
-                 <Animated.View
-                   style={[
-                     styles.checkboxCircle,
-                     {
-                       // animate border color from tertiary (grey) to task color
-                       borderColor: checkboxFillAnimation.interpolate({
-                         inputRange: [0, 1],
-                         outputRange: [themeColors.text.tertiary(), taskColor],
-                       }),
-                       // animate background color from transparent to task color
-                       backgroundColor: checkboxFillAnimation.interpolate({
-                         inputRange: [0, 1],
-                         outputRange: ['transparent', taskColor],
-                       }),
-                     },
-                   ]}
-                 />
-               </Animated.View>
-             </TouchableOpacity>
-           </Animated.View>
-           
-           {/* expanded area below the card - appears when subtasks are expanded */}
-           {/* this creates the extra space below the main card content (32px per subtask + 12px padding) */}
-           {/* animated height from 0 to (subtasksCount * 32px + 12px) for smooth expansion */}
-           <Animated.View
-             style={[
-               styles.expandedArea,
-               {
-                 height: expandedAreaHeightAnimation, // animate from 0 to (subtasksCount * 32px + 12px)
-                 overflow: 'hidden', // hide subtasks when collapsed
-               }
-             ]}
-           >
-             {/* render each subtask in a 32px tall row */}
-             {isSubtasksExpanded && task.metadata?.subtasks && task.metadata.subtasks.length > 0 && (
-               <View style={[
-                 styles.subtasksList,
-                 // align with task content left edge: 16px (padding) + 24px (icon) + 16px (margin) = 56px when icon present, or 16px when no icon
-                 task.icon ? { paddingLeft: 56 } : { paddingLeft: 16 }
-               ]}>
-                 {/* sort subtasks by sortOrder before rendering */}
-                 {[...task.metadata.subtasks]
-                   .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-                   .map((subtask, index) => (
-                     <TouchableOpacity
-                       key={subtask.id}
-                       style={[
-                         styles.subtaskRow,
-                         // first subtask (index 0) should not have a top border
-                         index === 0 && styles.subtaskRowFirst
-                       ]}
-                       onPress={() => handleSubtaskToggle(subtask.id)}
-                       activeOpacity={0.7}
-                     >
-                       {/* checkbox icon - shows completed state */}
-                       {/* unchecked state uses square-outline (box), checked state uses checkbox */}
-                       {/* unchecked box color matches subtask title color (text.primary) */}
-                       <Ionicons
-                         name={subtask.isCompleted ? "checkbox" : "square-outline"}
-                         size={14}
-                         color={subtask.isCompleted ? taskColor : themeColors.text.primary()}
-                         style={styles.subtaskCheckbox}
-                       />
-                       {/* subtask title text */}
-                       <Text
-                         style={[
-                           styles.subtaskTitle,
-                           subtask.isCompleted && styles.subtaskTitleCompleted
-                         ]}
-                         numberOfLines={1}
-                         ellipsizeMode="tail"
-                       >
-                         {subtask.title}
-                       </Text>
-                     </TouchableOpacity>
-                   ))}
-               </View>
-             )}
-           </Animated.View>
-         </Animated.View>
+              {/* task content - text only, no icon */}
+              <View style={styles.taskContent}>
+                {/* text content container - layout depends on subtask presence */}
+                {hasSubtasks ? (
+                  // tasks with subtasks: centered layout (subtask button is positioned absolutely above)
+                  <View style={styles.textContainerWithSubtasks}>
+                    {/* top content - time range and title */}
+                    <View style={styles.topContent}>
+                      {/* time range row - time range only */}
+                      <View style={styles.timeRangeRow}>
+                        {/* time range display */}
+                        {timeRangeText && (
+                          <Text style={styles.timeRange}>{timeRangeText}</Text>
+                        )}
+                      </View>
+                      
+                      {/* task title - matches TaskCard styling */}
+                      <Text
+                        style={[
+                          styles.title,
+                          task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
+                        ]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {task.title}
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
+                  // tasks without subtasks: centered layout (original layout)
+                  <View style={styles.textContainer}>
+                    {/* time range row - time range only */}
+                    <View style={styles.timeRangeRow}>
+                      {/* time range display */}
+                      {timeRangeText && (
+                        <Text style={styles.timeRange}>{timeRangeText}</Text>
+                      )}
+                    </View>
+                    
+                    {/* task title - matches TaskCard styling */}
+                    <Text
+                      style={[
+                        styles.title,
+                        task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
+                      ]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {task.title}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              
+              {/* checkbox container - on the right side */}
+              <View style={styles.checkboxContainer} />
+            </TouchableOpacity>
+            
+            {/* subtask button - absolutely positioned layer above task card */}
+            {hasSubtasks && (
+              <TouchableOpacity
+                style={[
+                  styles.subtaskButton,
+                  { left: 16 }, // align with task content padding (icon is now separate)
+                ]}
+                onPress={handleSubtaskPress}
+                activeOpacity={0.7}
+              >
+                <View style={styles.subtaskContainer}>
+                  {/* checkbox icon on the left */}
+                  <Ionicons
+                    name="checkbox-outline"
+                    size={14}
+                    color={themeColors.text.secondary()}
+                    style={styles.subtaskIcon}
+                  />
+                  {/* subtask count text */}
+                  <Text style={styles.subtaskText}>
+                    {task.metadata.subtasks.filter(st => st.isCompleted).length}/{task.metadata.subtasks.length}
+                  </Text>
+                  {/* dropdown arrow icon on the right - animated */}
+                  <Animated.View
+                    style={[
+                      styles.subtaskDropdownIconContainer,
+                      {
+                        transform: [{ rotate: arrowRotation }],
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name="chevron-down"
+                      size={12}
+                      color={themeColors.text.secondary()}
+                    />
+                  </Animated.View>
+                </View>
+              </TouchableOpacity>
+            )}
+            
+            {/* checkbox - absolutely positioned layer above task card for easy tapping */}
+            {/* positioned relative to combinedContainer, inside the card's padding area */}
+            {/* larger tap area (44x44) for better touch target, visual checkbox remains 18x18 */}
+            {/* checkbox stays centered at base height (minCardHeight), not expanded height */}
+            <TouchableOpacity
+              style={[
+                styles.checkboxTouchable,
+                { top: minCardHeight / 2 - 22 } // center vertically at base height (half base height minus half tap area height)
+              ]}
+              onPress={handleCheckboxPress}
+              activeOpacity={1} // disable default opacity change since we're using custom scale animation
+            >
+              {/* outer animated view for scale animation (uses native driver) */}
+              <Animated.View
+                style={{
+                  // animate scale for tap feedback - uses native driver for better performance
+                  transform: [{ scale: checkboxScaleAnimation }],
+                }}
+              >
+                {/* inner animated view for color animations (doesn't use native driver) */}
+                <Animated.View
+                  style={[
+                    styles.checkboxCircle,
+                    {
+                      // animate border color from tertiary (grey) to task color
+                      borderColor: checkboxFillAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [themeColors.text.tertiary(), taskColor],
+                      }),
+                      // animate background color from transparent to task color
+                      backgroundColor: checkboxFillAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['transparent', taskColor],
+                      }),
+                    },
+                  ]}
+                />
+              </Animated.View>
+            </TouchableOpacity>
+          </Animated.View>
+          
+          {/* expanded area below the card - appears when subtasks are expanded */}
+          {/* this creates the extra space below the main card content (32px per subtask + 12px padding) */}
+          {/* animated height from 0 to (subtasksCount * 32px + 12px) for smooth expansion */}
+          <Animated.View
+            style={[
+              styles.expandedArea,
+              {
+                height: expandedAreaHeightAnimation, // animate from 0 to (subtasksCount * 32px + 12px)
+                overflow: 'hidden', // hide subtasks when collapsed
+              }
+            ]}
+          >
+            {/* render each subtask in a 32px tall row */}
+            {isSubtasksExpanded && task.metadata?.subtasks && task.metadata.subtasks.length > 0 && (
+              <View style={[
+                styles.subtasksList,
+                // align with task content left edge: 16px padding (icon is now separate)
+                { paddingLeft: 16 }
+              ]}>
+                {/* sort subtasks by sortOrder before rendering */}
+                {[...task.metadata.subtasks]
+                  .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+                  .map((subtask, index) => (
+                    <TouchableOpacity
+                      key={subtask.id}
+                      style={[
+                        styles.subtaskRow,
+                        // first subtask (index 0) should not have a top border
+                        index === 0 && styles.subtaskRowFirst
+                      ]}
+                      onPress={() => handleSubtaskToggle(subtask.id)}
+                      activeOpacity={0.7}
+                    >
+                      {/* checkbox icon - shows completed state */}
+                      {/* unchecked state uses square-outline (box), checked state uses checkbox */}
+                      {/* unchecked box color matches subtask title color (text.primary) */}
+                      <Ionicons
+                        name={subtask.isCompleted ? "checkbox" : "square-outline"}
+                        size={14}
+                        color={subtask.isCompleted ? taskColor : themeColors.text.primary()}
+                        style={styles.subtaskCheckbox}
+                      />
+                      {/* subtask title text */}
+                      <Text
+                        style={[
+                          styles.subtaskTitle,
+                          subtask.isCompleted && styles.subtaskTitleCompleted
+                        ]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {subtask.title}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+              </View>
+            )}
+          </Animated.View>
+        </Animated.View>
       </Animated.View>
     </PanGestureHandler>
   );
@@ -681,7 +683,7 @@ const createStyles = (
   taskColor: string
 ) => StyleSheet.create({
   // main container for the task item
-  // positioned so the icon center aligns with the timeline position
+  // row layout: icon container on left, content column on right
   container: {
     position: 'absolute',
     left: 0,
@@ -692,25 +694,40 @@ const createStyles = (
     paddingRight: 16,
   },
 
-  // card wrapper - outer container that expands when subtasks are expanded
-  // contains the fixed-height card and the expandable area below
-  // structured as a column with combinedContainer as top row and expandedArea as bottom row
-  cardWrapper: {
-    flex: 1, // take up full available width within container
+  // icon container - separate background for the icon
+  // positioned on the left in the row layout
+  // background color is task color, icon color is primary
+  iconContainer: {
+    width: 44, // fixed width: 20px icon + 24px padding (12px each side)
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: taskColor, // task color background for icon container
+    borderRadius: 24, // matches task card border radius
+    paddingHorizontal: 12, // horizontal padding for icon spacing
+    marginRight: 12, // spacing between icon container and content
+  },
+
+  // content column - contains combined container and subtask list
+  // positioned on the right in the row layout
+  // expands when subtasks are expanded
+  content: {
+    flex: 1, // take up remaining available width within container
     flexDirection: 'column', // stack combinedContainer and expandedArea vertically
     position: 'relative',
     overflow: 'hidden', // ensure content doesn't overflow during animation
-    borderRadius: 28, // outer border radius for the entire card
+    borderRadius: 24, // outer border radius for the entire card
   },
   
-  // combined container for icon and task content - fixed height, stays at top
+  // combined container for task content - fixed height, stays at top
   // this is the main card that doesn't expand
+  // no icon here - icon is separate
   combinedContainer: {
     flexDirection: 'row',
-    width: '100%', // ensure it takes full width of cardWrapper
+    width: '100%', // ensure it takes full width of content
     alignItems: 'stretch',
     position: 'relative', // needed for absolute positioning of subtask button and checkbox
     backgroundColor: themeColors.background.elevated(),
+
     paddingHorizontal: 16,
     paddingVertical: 12, // top padding only (bottom padding moved to subtask space)
   },
@@ -735,10 +752,10 @@ const createStyles = (
 
   // subtasks list container - holds all subtask rows
   // includes 12px bottom padding for the expansion height calculation
-  // padding matches task content edges: left edge alignment is handled conditionally, right edge is 16px (matches combinedContainer paddingHorizontal)
+  // padding matches task content edges: left edge is 16px (matches combinedContainer paddingHorizontal)
   subtasksList: {
     width: '100%',
-    paddingHorizontal: 64,
+    paddingHorizontal: 16, // align with task content (icon is now separate)
   },
 
   // individual subtask row - exactly 32px tall
@@ -778,18 +795,12 @@ const createStyles = (
     color: themeColors.text.tertiary(), // dimmed color for completed subtasks
   },
 
-  // icon wrapper - inside combined container
-  iconWrapper: {
-    marginRight: 16, // spacing between icon and content (matches TaskCard)
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
   // task content container (text only) - inside combined container
+  // no icon wrapper needed since icon is separate
   taskContent: {
     flex: 1,
     position: 'relative', // needed for absolute positioning of list indicator
-    justifyContent: 'center', // vertically center content to align with icon
+    justifyContent: 'center', // vertically center content
   },
 
   // checkbox container - on the right side of task content (spacer for layout)
