@@ -69,9 +69,9 @@ export default function TimelineSubtaskList({
   useEffect(() => {
     const expandedHeight = isExpanded ? (subtasksCount * 32) + 12 : 0;
     // use withTiming for smooth animation - runs on native thread
-    // duration 100ms matches original animation timing
+    // duration 200ms for smooth, visible expansion animation
     expandedAreaHeightAnimation.value = withTiming(expandedHeight, {
-      duration: 100,
+      duration: 75,
     });
   }, [isExpanded, subtasksCount]);
 
