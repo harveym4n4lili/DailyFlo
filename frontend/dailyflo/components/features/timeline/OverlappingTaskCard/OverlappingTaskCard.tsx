@@ -1,9 +1,9 @@
 /**
  * OverlappingTaskCard Component
  * 
- * Displays two overlapping tasks stacked vertically as a single card on the timeline.
- * Shows both task cards with their icons, time ranges, and titles.
- * The card height is calculated from the sum of both task card heights.
+ * Displays multiple overlapping tasks stacked vertically as a single card on the timeline.
+ * Shows all task cards with their icons, time ranges, and titles.
+ * The card height is calculated from the sum of all task card heights.
  * 
  * This component is used by TimelineView to render overlapping tasks as a single card.
  */
@@ -19,10 +19,8 @@ import { formatTimeRange, getTaskCardHeight } from '../timelineUtils';
 import { TimelineCheckbox } from '../TimelineItem/sections';
 
 interface OverlappingTaskCardProps {
-  // first task (earlier start time)
-  task1: Task;
-  // second task (later start time)
-  task2: Task;
+  // array of tasks sorted by start time (earliest first)
+  tasks: Task[];
   // Y position on the timeline in pixels (start position)
   position: number;
   // combined duration in minutes (calculated from start of first to end of last)
@@ -38,11 +36,10 @@ interface OverlappingTaskCardProps {
 /**
  * OverlappingTaskCard Component
  * 
- * Renders two overlapping tasks stacked vertically as a single card.
+ * Renders multiple overlapping tasks stacked vertically as a single card.
  */
 export default function OverlappingTaskCard({
-  task1,
-  task2,
+  tasks = [],
   position,
   duration,
   pixelsPerMinute,
@@ -51,38 +48,50 @@ export default function OverlappingTaskCard({
 }: OverlappingTaskCardProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
+  
+  // ensure tasks is always an array
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
 
-  // get task colors from color palette system
-  const task1Color = useMemo(() => getTaskColorValue(task1.color), [task1.color]);
-  const task2Color = useMemo(() => getTaskColorValue(task2.color), [task2.color]);
+  // calculate task properties for each task
+  const taskProperties = useMemo(() => {
+    if (!safeTasks || safeTasks.length === 0) return [];
+    
+    return safeTasks
+      .filter(task => task != null) // filter out null/undefined tasks
+      .map((task, index) => {
+        const taskDuration = task.duration || 0;
+        const taskHasSubtasks = !!(task.metadata?.subtasks && Array.isArray(task.metadata.subtasks) && task.metadata.subtasks.length > 0);
+        const taskMinCardHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+        const taskColor = getTaskColorValue(task.color);
+        const taskTimeRange = task.time ? formatTimeRange(task.time, taskDuration) : '';
+        
+        // calculate cumulative position (sum of all previous task heights + spacing)
+        let cumulativePosition = position;
+        for (let i = 0; i < index; i++) {
+          const prevTaskDuration = safeTasks[i].duration || 0;
+          const prevTaskHasSubtasks = !!(safeTasks[i].metadata?.subtasks && Array.isArray(safeTasks[i].metadata.subtasks) && safeTasks[i].metadata.subtasks.length > 0);
+          const prevTaskHeight = getTaskCardHeight(prevTaskDuration, prevTaskHasSubtasks);
+          cumulativePosition += prevTaskHeight + 4; // 4px spacing between cards
+        }
+        
+        return {
+          task,
+          taskDuration,
+          taskHasSubtasks,
+          taskMinCardHeight,
+          taskColor,
+          taskTimeRange,
+          cumulativePosition,
+        };
+      }).filter(Boolean);
+  }, [safeTasks, position]);
 
-  // calculate individual task card heights (minCardHeight for each)
-  const task1Duration = task1.duration || 0;
-  const task1HasSubtasks = useMemo(() => {
-    return !!(task1.metadata?.subtasks && Array.isArray(task1.metadata.subtasks) && task1.metadata.subtasks.length > 0);
-  }, [task1.metadata?.subtasks]);
-  const task1MinCardHeight = getTaskCardHeight(task1Duration, task1HasSubtasks);
-
-  const task2Duration = task2.duration || 0;
-  const task2HasSubtasks = useMemo(() => {
-    return !!(task2.metadata?.subtasks && Array.isArray(task2.metadata.subtasks) && task2.metadata.subtasks.length > 0);
-  }, [task2.metadata?.subtasks]);
-  const task2MinCardHeight = getTaskCardHeight(task2Duration, task2HasSubtasks);
-
-  // format time ranges for display
-  const task1TimeRange = useMemo(() => {
-    if (!task1.time) return '';
-    return formatTimeRange(task1.time, task1Duration);
-  }, [task1.time, task1Duration]);
-
-  const task2TimeRange = useMemo(() => {
-    if (!task2.time) return '';
-    return formatTimeRange(task2.time, task2Duration);
-  }, [task2.time, task2Duration]);
-
-  // create dynamic styles using theme colors and typography
-  const styles1 = useMemo(() => createStyles(themeColors, typography, task1Color), [themeColors, typography, task1Color]);
-  const styles2 = useMemo(() => createStyles(themeColors, typography, task2Color), [themeColors, typography, task2Color]);
+  // create dynamic styles for each task
+  const taskStyles = useMemo(() => {
+    return taskProperties.map(tp => 
+      createStyles(themeColors, typography, tp.taskColor)
+    );
+  }, [taskProperties, themeColors, typography]);
   
   // create outer container style for the overlapping card wrapper
   const outerContainerStyle = useMemo(() => ({
@@ -92,218 +101,119 @@ export default function OverlappingTaskCard({
     flexDirection: 'column' as const,
   }), []);
 
-  // handle task press - pass the specific task that was pressed
-  const handleTask1Press = () => {
-    onPress?.(task1);
-  };
-
-  const handleTask2Press = () => {
-    onPress?.(task2);
-  };
-
   return (
     <View style={[outerContainerStyle, { top: position }]}>
-      {/* first task card (top) - matches TimelineItem structure exactly */}
-      <View style={styles1.container}>
-        {/* icon container - separate background for the icon */}
-        {/* positioned on the left side in the row layout */}
-        {/* height is fixed at base height, does not expand with subtasks */}
-        {/* background color is task color, icon color is primary */}
-        {task1.icon && (
-          <View style={[styles1.iconContainer, { height: task1MinCardHeight }]}>
-            <TaskIcon icon={task1.icon} color={themeColors.background.invertedPrimary()} size={20} />
-          </View>
-        )}
+      {taskProperties.map((tp, index) => {
+        const styles = taskStyles[index];
+        const isFirst = index === 0;
+        
+        // handle task press - pass the specific task that was pressed
+        const handleTaskPress = () => {
+          onPress?.(tp.task);
+        };
 
-        {/* content column - contains combined container */}
-        {/* positioned on the right side in the row layout */}
-        <View style={styles1.content}>
-          {/* combined container for task content - fixed height, stays at top */}
-          {/* this is the main card that doesn't expand */}
-          {/* no icon here - icon is separate */}
-          <View
-            style={[
-              styles1.combinedContainer,
-              { 
-                height: task1MinCardHeight, // fixed height at base height, doesn't expand
-              }
-            ]}
-          >
-            <TouchableOpacity
-              style={styles1.touchableContent}
-              onPress={handleTask1Press}
-              activeOpacity={0.7}
-            >
-              {/* task content - text only, no icon */}
-              <View style={styles1.taskContent}>
-                {/* text content container - layout depends on subtask presence */}
-                {task1HasSubtasks ? (
-                  // tasks with subtasks: centered layout (subtask button is positioned absolutely above)
-                  <View style={styles1.textContainerWithSubtasks}>
-                    {/* top content - time range and title */}
-                    <View style={styles1.topContent}>
-                      {/* time range row - time range only */}
-                      <View style={styles1.timeRangeRow}>
-                        {/* time range display */}
-                        {task1TimeRange && (
-                          <Text style={styles1.timeRange}>{task1TimeRange}</Text>
-                        )}
-                      </View>
-                      
-                      {/* task title - matches TaskCard styling */}
-                      <Text
-                        style={[
-                          styles1.title,
-                          task1.isCompleted && styles1.completedTitle, // strikethrough and dimmed color when completed
-                        ]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {task1.title}
-                      </Text>
-                    </View>
-                  </View>
-                ) : (
-                  // tasks without subtasks: centered layout (original layout)
-                  <View style={styles1.textContainer}>
-                    {/* time range row - time range only */}
-                    <View style={styles1.timeRangeRow}>
-                      {/* time range display */}
-                      {task1TimeRange && (
-                        <Text style={styles1.timeRange}>{task1TimeRange}</Text>
-                      )}
-                    </View>
-                    
-                    {/* task title - matches TaskCard styling */}
-                    <Text
-                      style={[
-                        styles1.title,
-                        task1.isCompleted && styles1.completedTitle, // strikethrough and dimmed color when completed
-                      ]}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                    >
-                      {task1.title}
-                    </Text>
-                  </View>
-                )}
+        return (
+          <View key={tp.task.id} style={[styles.container, !isFirst && { marginTop: 4 }]}>
+            {/* icon container - separate background for the icon */}
+            {/* positioned on the left side in the row layout */}
+            {/* height is fixed at base height, does not expand with subtasks */}
+            {/* background color is task color, icon color is primary */}
+            {tp.task.icon && (
+              <View style={[styles.iconContainer, { height: tp.taskMinCardHeight }]}>
+                <TaskIcon icon={tp.task.icon} color={themeColors.background.invertedPrimary()} size={20} />
               </View>
-              
-              {/* checkbox container - on the right side */}
-              <View style={styles1.checkboxContainer} />
-            </TouchableOpacity>
-            
-            {/* checkbox - absolutely positioned layer above task card for easy tapping */}
-            <TimelineCheckbox
-              task={task1}
-              taskColor={task1Color}
-              onTaskComplete={onTaskComplete}
-              minCardHeight={task1MinCardHeight}
-            />
-          </View>
-        </View>
-      </View>
+            )}
 
-      {/* second task card (bottom) - matches TimelineItem structure exactly */}
-      <View style={[styles2.container, { marginTop: 4 }]}>
-        {/* icon container - separate background for the icon */}
-        {/* positioned on the left side in the row layout */}
-        {/* height is fixed at base height, does not expand with subtasks */}
-        {/* background color is task color, icon color is primary */}
-        {task2.icon && (
-          <View style={[styles2.iconContainer, { height: task2MinCardHeight }]}>
-            <TaskIcon icon={task2.icon} color={themeColors.background.invertedPrimary()} size={20} />
-          </View>
-        )}
-
-        {/* content column - contains combined container */}
-        {/* positioned on the right side in the row layout */}
-        <View style={styles2.content}>
-          {/* combined container for task content - fixed height, stays at top */}
-          {/* this is the main card that doesn't expand */}
-          {/* no icon here - icon is separate */}
-          <View
-            style={[
-              styles2.combinedContainer,
-              { 
-                height: task2MinCardHeight, // fixed height at base height, doesn't expand
-              }
-            ]}
-          >
-            <TouchableOpacity
-              style={styles2.touchableContent}
-              onPress={handleTask2Press}
-              activeOpacity={0.7}
-            >
-              {/* task content - text only, no icon */}
-              <View style={styles2.taskContent}>
-                {/* text content container - layout depends on subtask presence */}
-                {task2HasSubtasks ? (
-                  // tasks with subtasks: centered layout (subtask button is positioned absolutely above)
-                  <View style={styles2.textContainerWithSubtasks}>
-                    {/* top content - time range and title */}
-                    <View style={styles2.topContent}>
-                      {/* time range row - time range only */}
-                      <View style={styles2.timeRangeRow}>
-                        {/* time range display */}
-                        {task2TimeRange && (
-                          <Text style={styles2.timeRange}>{task2TimeRange}</Text>
-                        )}
+            {/* content column - contains combined container */}
+            {/* positioned on the right side in the row layout */}
+            <View style={styles.content}>
+              {/* combined container for task content - fixed height, stays at top */}
+              {/* this is the main card that doesn't expand */}
+              {/* no icon here - icon is separate */}
+              <View
+                style={[
+                  styles.combinedContainer,
+                  { 
+                    height: tp.taskMinCardHeight, // fixed height at base height, doesn't expand
+                  }
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.touchableContent}
+                  onPress={handleTaskPress}
+                  activeOpacity={0.7}
+                >
+                  {/* task content - text only, no icon */}
+                  <View style={styles.taskContent}>
+                    {/* text content container - layout depends on subtask presence */}
+                    {tp.taskHasSubtasks ? (
+                      // tasks with subtasks: centered layout (subtask button is positioned absolutely above)
+                      <View style={styles.textContainerWithSubtasks}>
+                        {/* top content - time range and title */}
+                        <View style={styles.topContent}>
+                          {/* time range row - time range only */}
+                          <View style={styles.timeRangeRow}>
+                            {/* time range display */}
+                            {tp.taskTimeRange && (
+                              <Text style={styles.timeRange}>{tp.taskTimeRange}</Text>
+                            )}
+                          </View>
+                          
+                          {/* task title - matches TaskCard styling */}
+                          <Text
+                            style={[
+                              styles.title,
+                              tp.task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
+                            ]}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
+                            {tp.task.title}
+                          </Text>
+                        </View>
                       </View>
-                      
-                      {/* task title - matches TaskCard styling */}
-                      <Text
-                        style={[
-                          styles2.title,
-                          task2.isCompleted && styles2.completedTitle, // strikethrough and dimmed color when completed
-                        ]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {task2.title}
-                      </Text>
-                    </View>
+                    ) : (
+                      // tasks without subtasks: centered layout (original layout)
+                      <View style={styles.textContainer}>
+                        {/* time range row - time range only */}
+                        <View style={styles.timeRangeRow}>
+                          {/* time range display */}
+                          {tp.taskTimeRange && (
+                            <Text style={styles.timeRange}>{tp.taskTimeRange}</Text>
+                          )}
+                        </View>
+                        
+                        {/* task title - matches TaskCard styling */}
+                        <Text
+                          style={[
+                            styles.title,
+                            tp.task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
+                          ]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {tp.task.title}
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                ) : (
-                  // tasks without subtasks: centered layout (original layout)
-                  <View style={styles2.textContainer}>
-                    {/* time range row - time range only */}
-                    <View style={styles2.timeRangeRow}>
-                      {/* time range display */}
-                      {task2TimeRange && (
-                        <Text style={styles2.timeRange}>{task2TimeRange}</Text>
-                      )}
-                    </View>
-                    
-                    {/* task title - matches TaskCard styling */}
-                    <Text
-                      style={[
-                        styles2.title,
-                        task2.isCompleted && styles2.completedTitle, // strikethrough and dimmed color when completed
-                      ]}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                    >
-                      {task2.title}
-                    </Text>
-                  </View>
-                )}
+                  
+                  {/* checkbox container - on the right side */}
+                  <View style={styles.checkboxContainer} />
+                </TouchableOpacity>
+                
+                {/* checkbox - absolutely positioned layer above task card for easy tapping */}
+                <TimelineCheckbox
+                  task={tp.task}
+                  taskColor={tp.taskColor}
+                  onTaskComplete={onTaskComplete}
+                  minCardHeight={tp.taskMinCardHeight}
+                />
               </View>
-              
-              {/* checkbox container - on the right side */}
-              <View style={styles2.checkboxContainer} />
-            </TouchableOpacity>
-            
-            {/* checkbox - absolutely positioned layer above task card for easy tapping */}
-            <TimelineCheckbox
-              task={task2}
-              taskColor={task2Color}
-              onTaskComplete={onTaskComplete}
-              minCardHeight={task2MinCardHeight}
-            />
+            </View>
           </View>
-        </View>
-      </View>
+        );
+      })}
     </View>
   );
 }
