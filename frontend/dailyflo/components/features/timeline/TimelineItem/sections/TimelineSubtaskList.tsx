@@ -9,7 +9,8 @@
  */
 
 import React, { useMemo, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -50,19 +51,29 @@ export default function TimelineSubtaskList({
     return task.metadata?.subtasks?.length ?? 0;
   }, [task.metadata?.subtasks?.length]);
 
-  // animated value for expanded area height (0 when collapsed, 32px per subtask + 12px padding when expanded)
-  const expandedAreaHeightAnimation = useRef(new Animated.Value(0)).current;
+  // animated value for expanded area height using reanimated - runs on native thread for better performance
+  // 0 when collapsed, 32px per subtask + 12px padding when expanded
+  const expandedAreaHeightAnimation = useSharedValue(0);
+
+  // create animated style for expanded area height using reanimated
+  // this runs on native thread for smooth 60fps animation on iOS
+  const animatedExpandedAreaStyle = useAnimatedStyle(() => {
+    return {
+      height: expandedAreaHeightAnimation.value,
+    };
+  });
 
   // animate expanded area height when expansion state changes
   // height is calculated as 32px per subtask + 12px padding
+  // using withTiming for smooth animation - runs on native thread
   useEffect(() => {
     const expandedHeight = isExpanded ? (subtasksCount * 32) + 12 : 0;
-    Animated.timing(expandedAreaHeightAnimation, {
-      toValue: expandedHeight, // (32px per subtask + 12px padding) when expanded, 0 when collapsed
-      duration: 100, // smooth animation duration
-      useNativeDriver: false, // height animation doesn't support native driver
-    }).start();
-  }, [isExpanded, expandedAreaHeightAnimation, subtasksCount]);
+    // use withTiming for smooth animation - runs on native thread
+    // duration 100ms matches original animation timing
+    expandedAreaHeightAnimation.value = withTiming(expandedHeight, {
+      duration: 100,
+    });
+  }, [isExpanded, subtasksCount]);
 
   // handle subtask toggle - complete/uncomplete a subtask
   const handleSubtaskToggle = async (subtaskId: string) => {
@@ -110,10 +121,8 @@ export default function TimelineSubtaskList({
     <Animated.View
       style={[
         styles.expandedArea,
-        {
-          height: expandedAreaHeightAnimation, // animate from 0 to (subtasksCount * 32px + 12px)
-          overflow: 'hidden', // hide subtasks when collapsed
-        }
+        animatedExpandedAreaStyle, // animate from 0 to (subtasksCount * 32px + 12px) using reanimated
+        { overflow: 'hidden' }, // hide subtasks when collapsed
       ]}
     >
       {/* render each subtask in a 32px tall row */}
