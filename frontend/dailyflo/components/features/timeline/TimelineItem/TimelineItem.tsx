@@ -11,6 +11,7 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming, useAnimatedReaction, runOnJS } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -104,8 +105,9 @@ export default function TimelineItem({
   // state for subtask dropdown expansion
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(false);
   
-  // animated value for card height expansion - initialized with default height, will be updated when minCardHeight is calculated
-  const cardHeightAnimation = useRef(new Animated.Value(64)).current; // default to 64px, will be updated
+  // animated value for card height expansion using reanimated - runs on native thread for better performance
+  // initialized with default height, will be updated when minCardHeight is calculated
+  const cardHeightAnimation = useSharedValue(64); // default to 64px, will be updated
   
   // animated value for fade-in animation when task repositions after drag
   // starts at 1 (fully visible), fades to 0 on drag end, then fades back to 1 when position updates
@@ -186,30 +188,32 @@ export default function TimelineItem({
   }, [minCardHeight, isSubtasksExpanded, subtasksCount]);
   
   // update animation value when minCardHeight changes (for initial render or when task properties change)
+  // using reanimated shared value - runs on native thread for better performance
   useEffect(() => {
     // only update if minCardHeight is a valid number
     if (typeof minCardHeight === 'number' && minCardHeight > 0) {
-      cardHeightAnimation.setValue(minCardHeight);
+      cardHeightAnimation.value = minCardHeight;
     }
-  }, [minCardHeight, cardHeightAnimation]);
+  }, [minCardHeight]);
   
-  // animate card height when expansion state changes
+  // animate card height when expansion state changes using reanimated
+  // withTiming runs on native thread for smooth 60fps animation on iOS
   useEffect(() => {
     // only animate if cardHeight is a valid number
     if (typeof cardHeight === 'number' && cardHeight > 0) {
-      Animated.timing(cardHeightAnimation, {
-        toValue: cardHeight,
-        duration: 100, // smooth animation duration
-        useNativeDriver: false, // height animation doesn't support native driver
-      }).start();
+      // use withTiming for smooth animation - runs on native thread
+      // duration 100ms matches original animation timing
+      cardHeightAnimation.value = withTiming(cardHeight, {
+        duration: 100,
+      });
     }
-  }, [cardHeight, cardHeightAnimation]);
+  }, [cardHeight]);
   
 
   // notify parent of card height when it changes
-  // use ref to track last reported height to avoid infinite loops
+  // use shared value to track last reported height (works in worklets)
   // report the expanded height (including 32px per subtask + 12px padding when subtasks are expanded) so timeline spacing adjusts
-  const lastReportedHeight = useRef<number | null>(null);
+  const lastReportedHeight = useSharedValue<number | null>(null);
   const onHeightMeasuredRef = useRef(onHeightMeasured);
   
   // keep ref updated
@@ -217,25 +221,41 @@ export default function TimelineItem({
     onHeightMeasuredRef.current = onHeightMeasured;
   }, [onHeightMeasured]);
 
-  // listen to the animated card height value and stream changes to parent
-  // so the timeline can smoothly update spacing while the card is expanding/collapsing
-  useEffect(() => {
-    const id = cardHeightAnimation.addListener(({ value }) => {
-      if (!onHeightMeasuredRef.current) return;
-      
-      // avoid spamming identical values to parent
-      if (lastReportedHeight.current === value) return;
-      lastReportedHeight.current = value;
-      
-      // report the animated card height on every meaningful tick
-      // this lets the timeline spacing animate in sync with the card
-      onHeightMeasuredRef.current(value);
-    });
+  // callback function to report height to parent - must be defined outside worklet
+  // this function runs on JS thread and can safely access refs
+  const reportHeight = (value: number) => {
+    if (!onHeightMeasuredRef.current) return;
+    onHeightMeasuredRef.current(value);
+  };
 
-    return () => {
-      cardHeightAnimation.removeListener(id);
+  // listen to the animated card height value and stream changes to parent using reanimated reaction
+  // this runs on native thread and calls JS function to report height changes
+  // so the timeline can smoothly update spacing while the card is expanding/collapsing
+  useAnimatedReaction(
+    () => cardHeightAnimation.value,
+    (currentValue, previousValue) => {
+      // avoid spamming identical values to parent
+      // use shared value for comparison (works in worklets)
+      if (lastReportedHeight.value === currentValue) return;
+      
+      // update shared value to track last reported height
+      lastReportedHeight.value = currentValue;
+      
+      // use runOnJS to call the JS callback from native thread
+      // this reports the animated card height on every meaningful tick
+      // letting the timeline spacing animate in sync with the card
+      runOnJS(reportHeight)(currentValue);
+    },
+    []
+  );
+
+  // create animated style for card height using reanimated
+  // this runs on native thread for smooth 60fps animation on iOS
+  const animatedContentStyle = useAnimatedStyle(() => {
+    return {
+      height: cardHeightAnimation.value,
     };
-  }, [cardHeightAnimation]);
+  });
 
   // measure card height when layout is calculated (fallback / initial measurement)
   // this measures the actual rendered height of the combinedContainer
@@ -457,12 +477,11 @@ export default function TimelineItem({
 
         {/* content column - contains combined container and subtask list */}
         {/* positioned on the right side in the row layout */}
-        <Animated.View
+        {/* using reanimated for height animation - runs on native thread for better performance */}
+        <AnimatedReanimated.View
           style={[
             styles.content,
-            { 
-              height: cardHeightAnimation, // animated height: base + (32px per subtask + 12px padding) when expanded
-            }
+            animatedContentStyle, // animated height: base + (32px per subtask + 12px padding) when expanded
           ]}
           onLayout={handleContentLayout}
         >
@@ -562,7 +581,7 @@ export default function TimelineItem({
             isExpanded={isSubtasksExpanded}
             taskColor={taskColor}
           />
-        </Animated.View>
+        </AnimatedReanimated.View>
       </Animated.View>
     </PanGestureHandler>
   );
