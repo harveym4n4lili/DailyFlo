@@ -10,10 +10,11 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text } from 'react-native';
+import { useSharedValue, withTiming, makeMutable } from 'react-native-reanimated';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Task } from '@/types';
-import TimelineItem from './TimelineItem';
+import TimelineItem from './TimelineItem/TimelineItem';
 import TimeLabel from './TimeLabel';
 import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag, getTaskCardHeight } from './timelineUtils';
 
@@ -534,6 +535,67 @@ export default function TimelineView({
     return labels.sort((a, b) => a.position - b.position);
   }, [sortedTasks, tasksWithTime, calculatePositionWithOffsets, equalSpacingPositions]);
 
+  // store animated positions for time labels using reanimated
+  // this allows labels to smoothly animate when tasks expand/collapse
+  // using ref to persist shared values across renders
+  // note: we can't call useSharedValue conditionally, so we create them lazily using a helper
+  const labelPositionAnimationsRef = useRef<Map<string, ReturnType<typeof useSharedValue<number>>>>(new Map());
+
+  // helper function to get or create shared value for a label
+  // using makeMutable allows us to create shared values conditionally (inside useEffect)
+  // this is the correct way to create shared values dynamically
+  const getOrCreateLabelAnimation = useCallback((key: string, initialValue: number) => {
+    const animations = labelPositionAnimationsRef.current;
+    if (!animations.has(key)) {
+      // create shared value using makeMutable for dynamic creation
+      // makeMutable can be called conditionally, unlike useSharedValue
+      animations.set(key, makeMutable(initialValue));
+    }
+    return animations.get(key)!;
+  }, []);
+
+  // create and update animated positions for time labels
+  // this makes labels smoothly move when tasks expand/collapse
+  useEffect(() => {
+    allTimeLabels.forEach((label) => {
+      const startLabelKey = `${label.taskId}-${label.time}-start`;
+      
+      // get or create shared value for start time label
+      const positionAnimation = getOrCreateLabelAnimation(startLabelKey, label.position);
+      
+      // animate position smoothly when it changes
+      positionAnimation.value = withTiming(label.position, {
+        duration: 75, // matches card expansion animation duration
+      });
+      
+      // handle end time label if it exists
+      if (label.endTime && label.endPosition !== undefined) {
+        const endLabelKey = `${label.taskId}-${label.endTime}-end`;
+        const endPositionAnimation = getOrCreateLabelAnimation(endLabelKey, label.endPosition);
+        endPositionAnimation.value = withTiming(label.endPosition, {
+          duration: 75, // matches card expansion animation duration
+        });
+      }
+    });
+    
+    // cleanup: remove animations for labels that no longer exist
+    const labelPositionAnimations = labelPositionAnimationsRef.current;
+    const currentLabelKeys = new Set<string>();
+    allTimeLabels.forEach((label) => {
+      currentLabelKeys.add(`${label.taskId}-${label.time}-start`);
+      if (label.endTime) {
+        currentLabelKeys.add(`${label.taskId}-${label.endTime}-end`);
+      }
+    });
+    
+    // remove animations for labels that are no longer in the list
+    Array.from(labelPositionAnimations.keys()).forEach((key) => {
+      if (!currentLabelKeys.has(key)) {
+        labelPositionAnimations.delete(key);
+      }
+    });
+  }, [allTimeLabels, getOrCreateLabelAnimation]);
+
   // convert Y position (TOP edge of the card) to time for drag operations
   // finds closest time by testing every 5 minutes between 00:05 and 23:55
   // this function is used by the drag hook to convert top positions to time
@@ -648,28 +710,39 @@ export default function TimelineView({
       >
         {/* time labels column on the left */}
         <View style={styles.timeLabelsContainer}>
-          {allTimeLabels.map((label) => (
-            <React.Fragment key={`${label.taskId}-${label.time}`}>
-              {/* start time label - always rendered */}
-              <TimeLabel
-                time={label.time}
-                position={label.position}
-                isEndTime={false}
-              />
-              
-              {/* end time label - only rendered if task has duration */}
-              {label.endTime && label.endPosition !== undefined && (
+          {allTimeLabels.map((label) => {
+            // get animated position for this label from ref
+            const labelPositionAnimations = labelPositionAnimationsRef.current;
+            const startLabelKey = `${label.taskId}-${label.time}-start`;
+            const positionAnimation = labelPositionAnimations.get(startLabelKey);
+            const endLabelKey = label.endTime ? `${label.taskId}-${label.endTime}-end` : null;
+            const endPositionAnimation = endLabelKey ? labelPositionAnimations.get(endLabelKey) : null;
+            
+            return (
+              <React.Fragment key={`${label.taskId}-${label.time}`}>
+                {/* start time label - always rendered */}
                 <TimeLabel
-                  key={`${label.taskId}-${label.endTime}-end`}
-                  time={label.endTime}
-                  position={label.endPosition}
-                  isEndTime={true}
+                  time={label.time}
+                  position={label.position}
+                  animatedPosition={positionAnimation} // pass animated position for smooth animation
+                  isEndTime={false}
                 />
-              )}
-            </React.Fragment>
-          ))}
+                
+                {/* end time label - only rendered if task has duration */}
+                {label.endTime && label.endPosition !== undefined && endPositionAnimation && (
+                  <TimeLabel
+                    key={`${label.taskId}-${label.endTime}-end`}
+                    time={label.endTime}
+                    position={label.endPosition}
+                    animatedPosition={endPositionAnimation} // pass animated position for smooth animation
+                    isEndTime={true}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
           
-          {/* drag time label - shows current drag position */}
+          {/* drag time label - shows current drag position (no animation needed for drag) */}
           {dragState && (
             <TimeLabel
               key="drag-time-label"
@@ -738,7 +811,7 @@ export default function TimelineView({
                   pixelsPerMinute={renderProps.pixelsPerMinute}
                   startHour={dynamicStartHour}
                   onHeightMeasured={(height: number) => handleHeightMeasured(task.id, height)}
-                  onDrag={(newY) => {
+                  onDrag={(newY: number) => {
                     // newY is the top position from TimelineItem when drag ends
                     // use modular drag handler which converts top to center and updates task
                     // this handles the "after drag and drop" state
@@ -751,7 +824,7 @@ export default function TimelineView({
                     const initialTopY = renderProps.position;
                     handleDragStart(task.id, initialTopY, renderProps.measuredHeight);
                   }}
-                  onDragPositionChange={(yPosition) => {
+                  onDragPositionChange={(yPosition: number) => {
                     // yPosition is the top position from TimelineItem during drag
                     // use modular drag handler which converts top to center and updates drag state
                     // this provides visual feedback during drag

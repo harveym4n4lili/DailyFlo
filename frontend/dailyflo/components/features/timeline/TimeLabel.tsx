@@ -7,8 +7,9 @@
  * This component is used by TimelineView to display time markers.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Animated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 
@@ -17,6 +18,8 @@ interface TimeLabelProps {
   time: string;
   // Y position on the timeline in pixels
   position: number;
+  // animated position shared value (optional - if provided, uses animated position instead of static)
+  animatedPosition?: SharedValue<number>;
   // whether this is an end time label (for tasks with duration)
   isEndTime?: boolean;
   // whether this is a drag label (shown during drag)
@@ -30,7 +33,7 @@ interface TimeLabelProps {
  * 
  * Renders a time label at the specified position on the timeline.
  */
-export default function TimeLabel({ time, position, isEndTime = false, isDragLabel = false, height }: TimeLabelProps) {
+export default function TimeLabel({ time, position, animatedPosition, isEndTime = false, isDragLabel = false, height }: TimeLabelProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
 
@@ -50,11 +53,33 @@ export default function TimeLabel({ time, position, isEndTime = false, isDragLab
   // this keeps logic simple: all labels (start, end, drag) share the same vertical nudge
   const verticalOffset = -8;
 
-  const containerStyle = height 
-    ? [styles.container, styles.containerized, { top: position + verticalOffset, height }]
-    : isEndTime
-    ? [styles.container, styles.endTimeContainer, { top: position + verticalOffset }]
-    : [styles.container, styles.topAlignedContainer, { top: position }];
+  // create animated style for position if animatedPosition is provided
+  // this allows labels to smoothly animate when tasks expand/collapse
+  const animatedStyle = useAnimatedStyle(() => {
+    if (!animatedPosition) return {};
+    
+    // use animated position with vertical offset for end time labels
+    const animatedTop = isEndTime 
+      ? animatedPosition.value + verticalOffset 
+      : animatedPosition.value;
+    
+    return {
+      top: animatedTop,
+    };
+  }, [isEndTime, animatedPosition]);
+
+  // use static position if no animation, otherwise use animated style
+  const containerStyle = animatedPosition
+    ? (height 
+        ? [styles.container, styles.containerized, animatedStyle, { height }]
+        : isEndTime
+        ? [styles.container, styles.endTimeContainer, animatedStyle]
+        : [styles.container, styles.topAlignedContainer, animatedStyle])
+    : (height 
+        ? [styles.container, styles.containerized, { top: position + verticalOffset, height }]
+        : isEndTime
+        ? [styles.container, styles.endTimeContainer, { top: position + verticalOffset }]
+        : [styles.container, styles.topAlignedContainer, { top: position }]);
 
   const textStyle = [
     styles.timeText,
@@ -62,12 +87,15 @@ export default function TimeLabel({ time, position, isEndTime = false, isDragLab
     isDragLabel && styles.dragTimeText,
   ];
 
+  // use Animated.View if we have animated position, otherwise use regular View
+  const ContainerComponent = animatedPosition ? Animated.View : View;
+
   return (
-    <View style={containerStyle}>
+    <ContainerComponent style={containerStyle}>
       <Text style={textStyle}>
         {formattedTime}
       </Text>
-    </View>
+    </ContainerComponent>
   );
 }
 

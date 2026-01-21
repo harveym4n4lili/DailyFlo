@@ -10,7 +10,7 @@
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming, useAnimatedReaction, runOnJS } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -83,16 +83,21 @@ export default function TimelineItem({
   // create dynamic styles using theme colors and typography
   const styles = useMemo(() => createStyles(themeColors, typography, taskColor), [themeColors, typography, taskColor]);
 
-  // animated value for drag position (starts at 0, tracks drag offset)
-  const translateY = useRef(new Animated.Value(0)).current;
+  // animated value for drag position using reanimated - runs on native thread for better performance
+  // starts at 0, tracks drag offset during gesture
+  const translateY = useSharedValue(0);
   
-  // track the base position (initial position before drag)
-  const basePosition = useRef(position);
-
-  // track if currently dragging
+  // track the base position (initial position before drag) - used for calculating absolute position
+  // using shared value so it can be accessed in worklets
+  const basePosition = useSharedValue(position);
+  
+  // track drag start position - used to calculate drag offset relative to start
+  const startY = useSharedValue(0);
+  
+  // track if currently dragging - used for callbacks
   const [isDragging, setIsDragging] = React.useState(false);
   
-  // use ref to track dragging state for listener
+  // use ref to track dragging state for callbacks
   const isDraggingRef = React.useRef(false);
   
   // track if a drag just ended to prevent modal from opening after drag release
@@ -109,9 +114,13 @@ export default function TimelineItem({
   // initialized with default height, will be updated when minCardHeight is calculated
   const cardHeightAnimation = useSharedValue(64); // default to 64px, will be updated
   
-  // animated value for fade-in animation when task repositions after drag
+  // animated value for position using reanimated - runs on native thread for better performance
+  // this makes tasks smoothly move when other tasks expand/collapse
+  const positionAnimation = useSharedValue(position);
+  
+  // animated value for fade-in animation using reanimated - runs on native thread for better performance
   // starts at 1 (fully visible), fades to 0 on drag end, then fades back to 1 when position updates
-  const fadeAnimation = useRef(new Animated.Value(1)).current;
+  const fadeAnimation = useSharedValue(1);
   
   // track previous position to detect when position updates after drag
   const previousPositionRef = useRef(position);
@@ -132,7 +141,7 @@ export default function TimelineItem({
   };
 
   // handle main task press - open task detail view with haptic feedback
-  // this wrapper ensures haptic feedback fires even if PanGestureHandler intercepts the touch
+  // this wrapper ensures haptic feedback fires even if gesture handler intercepts the touch
   // prevents modal from opening if user just finished dragging the task
   const handleTaskPress = () => {
     // if a drag just finished, don't open the modal
@@ -202,9 +211,9 @@ export default function TimelineItem({
     // only animate if cardHeight is a valid number
     if (typeof cardHeight === 'number' && cardHeight > 0) {
       // use withTiming for smooth animation - runs on native thread
-      // duration 100ms matches original animation timing
+      // duration 200ms for smooth, visible expansion animation
       cardHeightAnimation.value = withTiming(cardHeight, {
-        duration: 100,
+        duration: 75,
       });
     }
   }, [cardHeight]);
@@ -257,6 +266,18 @@ export default function TimelineItem({
     };
   });
 
+  // create animated style for position, drag transform, and fade using reanimated
+  // combines position animation (when other tasks expand) with drag translation and fade
+  // this runs on native thread for smooth 60fps performance
+  const animatedContainerStyle = useAnimatedStyle(() => {
+    return {
+      top: positionAnimation.value,
+      transform: [{ translateY: translateY.value }],
+      opacity: fadeAnimation.value, // fade animation for drag feedback
+    };
+  });
+
+
   // measure card height when layout is calculated (fallback / initial measurement)
   // this measures the actual rendered height of the combinedContainer
   const handleContentLayout = (event: any) => {
@@ -267,7 +288,8 @@ export default function TimelineItem({
       // this includes the expanded height when subtasks are expanded
       if (onHeightMeasuredRef.current) {
         onHeightMeasuredRef.current(height);
-        lastReportedHeight.current = height;
+        // update shared value for tracking (used in worklet)
+        lastReportedHeight.value = height;
       }
     }
   };
@@ -277,17 +299,25 @@ export default function TimelineItem({
   // include task.metadata and isSubtasksExpanded to ensure re-render when expansion state changes
   useEffect(() => {
     setMeasuredContentHeight(null);
-    lastReportedHeight.current = null;
+    lastReportedHeight.value = null; // reset shared value for tracking
   }, [task.metadata?.subtasks?.length ?? 0, task.title, duration, task.id, task.metadata, isSubtasksExpanded]);
 
   // update base position when prop changes
   // also trigger fade-in animation if we're waiting for reposition after drag
+  // animate position smoothly when it changes (e.g., when other tasks expand)
   useEffect(() => {
     const positionChanged = previousPositionRef.current !== position;
     previousPositionRef.current = position;
     
-    basePosition.current = position;
-    translateY.setValue(0); // reset translation when position changes
+    basePosition.value = position; // update shared value for worklet access
+    translateY.value = 0; // reset translation when position changes
+    
+    // animate position smoothly when it changes using reanimated
+    // this makes tasks smoothly move when other tasks expand/collapse
+    // duration 200ms matches the card height animation for synchronized movement
+    positionAnimation.value = withTiming(position, {
+      duration: 75,
+    });
     
     // if we're waiting for reposition after drag, trigger fade-in
     // this happens when the timeline recalculates and updates the task's position
@@ -301,15 +331,13 @@ export default function TimelineItem({
         fadeInTimeoutRef.current = null;
       }
       
-      // fade in from 0 to 1 when the card repositions after drag
+      // fade in from 0 to 1 when the card repositions after drag using reanimated
       // this provides visual feedback that the drag completed and card is in new position
-      Animated.timing(fadeAnimation, {
-        toValue: 1, // fade to fully visible
-        duration: 500, // smooth 300ms fade-in animation
-        useNativeDriver: true, // use native driver for better performance
-      }).start();
+      fadeAnimation.value = withTiming(1, {
+        duration: 500, // smooth fade-in animation
+      });
     }
-  }, [position, translateY, fadeAnimation]);
+  }, [position]);
   
   // cleanup timeout on unmount
   useEffect(() => {
@@ -320,24 +348,74 @@ export default function TimelineItem({
     };
   }, []);
 
-  // listen to translateY changes to update drag position
-  useEffect(() => {
-    const listenerId = translateY.addListener(({ value }) => {
-      if (isDraggingRef.current) {
-        // calculate current Y position
-        const currentY = basePosition.current + value;
-        
-        // notify parent of drag position change - parent will calculate time with offsets
-        if (onDragPositionChange) {
-          onDragPositionChange(currentY);
-        }
-      }
-    });
+  // callback functions for drag events - must be defined outside worklets
+  // these run on JS thread and can safely access refs and call parent callbacks
+  const handleDragStartCallback = () => {
+    setIsDragging(true);
+    isDraggingRef.current = true;
+    
+    // notify parent that drag started
+    if (onDragStart) {
+      onDragStart();
+    }
+    
+    // notify parent of initial drag position
+    // use shared value to get current base position
+    if (onDragPositionChange) {
+      onDragPositionChange(basePosition.value);
+    }
+  };
 
-    return () => {
-      translateY.removeListener(listenerId);
-    };
-  }, [translateY, onDragPositionChange]);
+  const handleDragUpdateCallback = (currentY: number) => {
+    // notify parent of drag position change - parent will calculate time with offsets
+    if (onDragPositionChange && isDraggingRef.current) {
+      onDragPositionChange(currentY);
+    }
+  };
+
+  const handleDragEndCallback = (newY: number, wasDrag: boolean) => {
+    // reset drag state
+    setIsDragging(false);
+    isDraggingRef.current = false;
+    
+    // call onDrag callback with new position
+    onDrag(newY);
+    
+    // if this was a drag, set flag to prevent modal from opening on release
+    if (wasDrag) {
+      justFinishedDragRef.current = true;
+      setTimeout(() => {
+        justFinishedDragRef.current = false;
+      }, 100);
+      
+        // fade out the card immediately on drag end using reanimated
+        fadeAnimation.value = 0;
+        waitingForRepositionRef.current = true;
+        
+        // set fallback timeout to ensure fade-in always plays
+        if (fadeInTimeoutRef.current) {
+          clearTimeout(fadeInTimeoutRef.current);
+        }
+        fadeInTimeoutRef.current = setTimeout(() => {
+          if (waitingForRepositionRef.current) {
+            waitingForRepositionRef.current = false;
+            // fade in using reanimated
+            fadeAnimation.value = withTiming(1, {
+              duration: 500,
+            });
+          }
+          fadeInTimeoutRef.current = null;
+        }, 100);
+    }
+    
+    // notify parent that drag ended
+    if (onDragEnd) {
+      onDragEnd();
+    }
+    
+    // reset translation (position will be updated via prop)
+    translateY.value = 0;
+  };
 
   // format time range for display (e.g., "9:00 AM - 10:30 AM")
   const timeRangeText = useMemo(() => {
@@ -345,123 +423,57 @@ export default function TimelineItem({
     return formatTimeRange(task.time, duration);
   }, [task.time, duration]);
 
-  // handle pan gesture for dragging
-  // translationY tracks how far the user has dragged from the start
-  const handleGestureEvent = Animated.event(
-    [{ nativeEvent: { translationY: translateY } }],
-    { useNativeDriver: true }
-  );
-
-  // handle when gesture state changes
-  const handleHandlerStateChange = (event: any) => {
-    // when gesture becomes active (after hold duration), provide haptic feedback
-    if (event.nativeEvent.state === State.ACTIVE && event.nativeEvent.oldState === State.BEGAN) {
+  // pan gesture handler for dragging using reanimated
+  // runs on native thread for smooth 60fps drag performance
+  const panGesture = Gesture.Pan()
+    .activeOffsetY([-10, 10]) // require 10px movement before activating
+    .onBegin(() => {
+      'worklet';
+      // remember the starting position when drag begins
+      startY.value = translateY.value;
+    })
+    .onStart(() => {
+      'worklet';
       // provide light haptic feedback when drag activates
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setIsDragging(true);
-      isDraggingRef.current = true;
+      // use runOnJS to call haptics from native thread
+      runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
       
       // notify parent that drag started
-      if (onDragStart) {
-        onDragStart();
-      }
+      runOnJS(handleDragStartCallback)();
+    })
+    .onUpdate((event) => {
+      'worklet';
+      // apply the drag offset - translationY is relative to gesture start
+      translateY.value = event.translationY;
       
-      // notify parent of initial drag position
-      // basePosition already accounts for center alignment if no duration
-      if (onDragPositionChange) {
-        onDragPositionChange(basePosition.current);
-      }
-    }
-    
-    // when gesture ends - update task time
-    if (event.nativeEvent.oldState === State.ACTIVE) {
-      // gesture ended - calculate new absolute position
-      // basePosition is the original position (top for tasks without duration, start for tasks with duration)
-      // translationY is the drag offset
-      const newY = basePosition.current + event.nativeEvent.translationY;
-      
-      // ensure position is not negative
+      // calculate current Y position using shared value (accessible in worklets)
+      const currentY = basePosition.value + event.translationY;
+      runOnJS(handleDragUpdateCallback)(currentY);
+    })
+    .onEnd((event) => {
+      'worklet';
+      // gesture ended - calculate new absolute position using shared value
+      const newY = basePosition.value + event.translationY;
       const clampedY = Math.max(0, newY);
       
       // check if this was actually a drag (not just a tap)
-      // if translationY is significant, it was a drag
-      const wasDrag = Math.abs(event.nativeEvent.translationY) > 5;
+      const wasDrag = Math.abs(event.translationY) > 5;
       
-      // call onDrag callback with new position
-      // TimelineView will handle converting to timeline position if needed
-      onDrag(clampedY);
-      
-      // reset drag state
-      setIsDragging(false);
-      isDraggingRef.current = false;
-      
-      // if this was a drag, set flag to prevent modal from opening on release
-      // this prevents the task modal from opening when user releases after dragging
-      // also fade out the card and wait for position update to fade back in
-      if (wasDrag) {
-        justFinishedDragRef.current = true;
-        // clear the flag after a short delay so future taps work normally
-        // use setTimeout to reset after the press event would have fired
-        setTimeout(() => {
-          justFinishedDragRef.current = false;
-        }, 100);
-        
-        // fade out the card immediately on drag end
-        // we'll fade it back in when the position prop updates (after timeline recalculates)
-        fadeAnimation.setValue(0); // fade to invisible
-        waitingForRepositionRef.current = true; // mark that we're waiting for reposition
-        
-        // set fallback timeout to ensure fade-in always plays
-        // if position doesn't change (e.g., dragged back to same spot), still fade in after delay
-        // clear any existing timeout first
-        if (fadeInTimeoutRef.current) {
-          clearTimeout(fadeInTimeoutRef.current);
-        }
-        fadeInTimeoutRef.current = setTimeout(() => {
-          // if we're still waiting for reposition, trigger fade-in anyway
-          // this ensures the card never stays invisible
-          if (waitingForRepositionRef.current) {
-            waitingForRepositionRef.current = false;
-            Animated.timing(fadeAnimation, {
-              toValue: 1, // fade to fully visible
-              duration: 500, // smooth 300ms fade-in animation
-              useNativeDriver: true, // use native driver for better performance
-            }).start();
-          }
-          fadeInTimeoutRef.current = null;
-        }, 100); // wait 100ms for position update, then trigger fallback
-      }
-      
-      // notify parent that drag ended
-      if (onDragEnd) {
-        onDragEnd();
-      }
-      
-      // reset translation animation (position will be updated via prop)
-      translateY.setValue(0);
-    }
-  };
+      // notify parent and handle drag end
+      runOnJS(handleDragEndCallback)(clampedY, wasDrag);
+    });
 
   return (
-    <PanGestureHandler
-      onGestureEvent={handleGestureEvent}
-      onHandlerStateChange={handleHandlerStateChange}
-      activeOffsetY={[-10, 10]} // require 10px movement before activating
-    >
-      <Animated.View
+    <GestureDetector gesture={panGesture}>
+      <AnimatedReanimated.View
         style={[
           styles.container,
+          animatedContainerStyle, // animated position, drag transform, and fade - runs on native thread
           {
-            top: position, // no offset needed since padding is removed
-            // no height constraint - let content determine height naturally
-            transform: [{ translateY }],
             // apply higher z-index when this task is being dragged so it appears above all others
             // reset to default (undefined) when drag ends
             // isDraggedTask prop comes from parent to track which task should be on top layer
             zIndex: isDraggedTask ? 1000 : undefined,
-            // apply fade animation opacity - animates on drag release
-            // starts at 1 (fully visible), fades to 0.7 then back to 1 when drag ends
-            opacity: fadeAnimation,
           },
         ]}
       >
@@ -582,8 +594,8 @@ export default function TimelineItem({
             taskColor={taskColor}
           />
         </AnimatedReanimated.View>
-      </Animated.View>
-    </PanGestureHandler>
+      </AnimatedReanimated.View>
+    </GestureDetector>
   );
 }
 
