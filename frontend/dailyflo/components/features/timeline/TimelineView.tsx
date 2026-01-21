@@ -16,7 +16,19 @@ import { useTypography } from '@/hooks/useTypography';
 import { Task } from '@/types';
 import TimelineItem from './TimelineItem/TimelineItem';
 import TimeLabel from './TimeLabel';
+import { OverlappingTaskCard } from './OverlappingTaskCard';
 import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag, getTaskCardHeight } from './timelineUtils';
+
+// type for combined overlapping tasks
+// represents two tasks that overlap and are combined into a single card
+interface CombinedOverlappingTask {
+  id: string; // unique id for the combined task (e.g., "overlap-{task1Id}-{task2Id}")
+  task1: Task; // first task (earlier start time)
+  task2: Task; // second task (later start time)
+  time: string; // start time (from first task)
+  duration: number; // calculated duration from start of first to end of last
+  dueDate: string; // due date (from first task)
+}
 
 interface TimelineViewProps {
   // array of tasks to display on the timeline
@@ -57,14 +69,88 @@ export default function TimelineView({
   // spacing now follows the animated height so the whole timeline moves smoothly
   const [taskCardHeights, setTaskCardHeights] = useState<Map<string, number>>(new Map());
 
+  // track task IDs that should be hidden due to overlaps
+  // when a task is dragged and overlaps with others, both overlapping tasks are hidden
+  const [hiddenTaskIds, setHiddenTaskIds] = useState<Set<string>>(new Set());
+
+  // store the full task objects that are hidden due to overlaps
+  // this preserves the complete task data (including the dragged task with its new time)
+  // so they can be restored later if needed
+  // access via: hiddenOverlappingTasks.get(taskId) to get a specific task
+  // or: Array.from(hiddenOverlappingTasks.values()) to get all hidden overlapping tasks
+  const [hiddenOverlappingTasks, setHiddenOverlappingTasks] = useState<Map<string, Task>>(new Map());
+
+  // store combined overlapping tasks that replace the individual overlapping tasks
+  // these are created when tasks overlap and represent the combined card
+  const [combinedOverlappingTasks, setCombinedOverlappingTasks] = useState<Map<string, CombinedOverlappingTask>>(new Map());
+
   // create dynamic styles using theme colors and typography
   const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
 
+  // helper function to check if two tasks overlap in time
+  // returns true if the time ranges of two tasks overlap
+  const doTasksOverlap = useCallback((task1: Task, task2: Task): boolean => {
+    if (!task1.time || !task2.time) return false;
+    
+    const task1Minutes = timeToMinutes(task1.time);
+    const task1Duration = task1.duration || 0;
+    const task1EndMinutes = task1Minutes + task1Duration;
+    
+    const task2Minutes = timeToMinutes(task2.time);
+    const task2Duration = task2.duration || 0;
+    const task2EndMinutes = task2Minutes + task2Duration;
+    
+    // tasks overlap if one starts before the other ends
+    // handle edge cases: tasks that start/end at the same time are considered overlapping
+    return (
+      (task1Minutes < task2EndMinutes && task1EndMinutes > task2Minutes) ||
+      (task1Minutes === task2Minutes) ||
+      (task1EndMinutes === task2EndMinutes) ||
+      (task1Minutes === task2EndMinutes) ||
+      (task1EndMinutes === task2Minutes)
+    );
+  }, []);
+
   // filter tasks that have a time set (required for timeline positioning)
   // tasks without time won't appear on the timeline
+  // also exclude tasks that are hidden due to overlaps
+  // and include combined overlapping tasks as pseudo-tasks for rendering
   const tasksWithTime = useMemo(() => {
-    return tasks.filter(task => task.time && task.dueDate);
-  }, [tasks]);
+    const regularTasks = tasks.filter(task => 
+      task.time && 
+      task.dueDate && 
+      !hiddenTaskIds.has(task.id)
+    );
+    
+    // convert combined overlapping tasks to pseudo-tasks for rendering
+    const combinedTasksAsPseudoTasks: Task[] = Array.from(combinedOverlappingTasks.values()).map(combined => ({
+      id: combined.id,
+      userId: combined.task1.userId,
+      listId: combined.task1.listId,
+      title: `${combined.task1.title} & ${combined.task2.title}`, // combined title for display
+      description: '',
+      icon: combined.task1.icon, // use first task's icon
+      time: combined.time,
+      duration: combined.duration,
+      dueDate: combined.dueDate,
+      isCompleted: false,
+      completedAt: null,
+      priorityLevel: combined.task1.priorityLevel,
+      color: combined.task1.color,
+      routineType: combined.task1.routineType,
+      sortOrder: 0,
+      metadata: {
+        subtasks: [],
+        reminders: [],
+      },
+      softDeleted: false,
+      createdAt: combined.task1.createdAt,
+      updatedAt: combined.task1.updatedAt,
+    }));
+    
+    // combine regular tasks and combined tasks
+    return [...regularTasks, ...combinedTasksAsPseudoTasks];
+  }, [tasks, hiddenTaskIds, combinedOverlappingTasks]);
 
   // calculate dynamic start time - use earliest task time or fallback to startHour
   // round down to the hour and subtract 1 hour for buffer to allow scrolling up
@@ -158,14 +244,39 @@ export default function TimelineView({
     sortedTasks.forEach((task, index) => {
       if (!task.time) return;
       
-      const duration = task.duration || 0;
-      const hasSubtasks = task.metadata?.subtasks && task.metadata.subtasks.length > 0;
+      // check if this is a combined overlapping task
+      const combinedTask = combinedOverlappingTasks.get(task.id);
+      
+      let cardHeight: number;
+      
+      if (combinedTask) {
+        // calculate combined height for overlapping tasks
+        const task1Duration = combinedTask.task1.duration || 0;
+        const task1HasSubtasks = combinedTask.task1.metadata?.subtasks && combinedTask.task1.metadata.subtasks.length > 0;
+        const task1Height = getTaskCardHeight(task1Duration, task1HasSubtasks);
+        
+        const task2Duration = combinedTask.task2.duration || 0;
+        const task2HasSubtasks = combinedTask.task2.metadata?.subtasks && combinedTask.task2.metadata.subtasks.length > 0;
+        const task2Height = getTaskCardHeight(task2Duration, task2HasSubtasks);
+        
+        // combined height = sum of both heights + 4px spacing between cards
+        const combinedHeight = task1Height + task2Height + 4;
+        
+        // prefer the live measured/animated height so spacing animates with the card
+        // fall back to the calculated combined height if we don't have it yet
+        const measuredHeight = taskCardHeights.get(task.id);
+        cardHeight = measuredHeight ?? combinedHeight;
+      } else {
+        // regular task - use standard height calculation
+        const duration = task.duration || 0;
+        const hasSubtasks = task.metadata?.subtasks && task.metadata.subtasks.length > 0;
 
-      // prefer the live measured/animated height so spacing animates with the card
-      // fall back to the base height from centralized helper if we don't have it yet
-      const measuredHeight = taskCardHeights.get(task.id);
-      const fallbackHeight = getTaskCardHeight(duration, hasSubtasks);
-      const cardHeight = measuredHeight ?? fallbackHeight;
+        // prefer the live measured/animated height so spacing animates with the card
+        // fall back to the base height from centralized helper if we don't have it yet
+        const measuredHeight = taskCardHeights.get(task.id);
+        const fallbackHeight = getTaskCardHeight(duration, hasSubtasks);
+        cardHeight = measuredHeight ?? fallbackHeight;
+      }
       
       // store center position for this task
       positions.set(task.id, { equalSpacingPosition: currentPosition, cardHeight });
@@ -176,7 +287,8 @@ export default function TimelineView({
         if (!nextTask.time) return;
         
         const taskMinutes = timeToMinutes(task.time);
-        const taskEndMinutes = taskMinutes + duration;
+        const taskDuration = task.duration || 0;
+        const taskEndMinutes = taskMinutes + taskDuration;
         const nextTaskMinutes = timeToMinutes(nextTask.time);
         const nextTaskDuration = nextTask.duration || 0;
         const nextTaskEndMinutes = nextTaskMinutes + nextTaskDuration;
@@ -201,11 +313,31 @@ export default function TimelineView({
           const nextTop = currentTop + cardHeight + gapSpacing;
 
           // compute the spacing height for the next task using its live height when available
-          const nextTaskDuration = nextTask.duration || 0;
-          const nextTaskHasSubtasks = nextTask.metadata?.subtasks && nextTask.metadata.subtasks.length > 0;
-          const nextMeasuredHeight = taskCardHeights.get(nextTask.id);
-          const nextFallbackHeight = getTaskCardHeight(nextTaskDuration, nextTaskHasSubtasks);
-          const nextTaskSpacingHeight = nextMeasuredHeight ?? nextFallbackHeight;
+          // check if next task is a combined overlapping task
+          const nextCombinedTask = combinedOverlappingTasks.get(nextTask.id);
+          let nextTaskSpacingHeight: number;
+          
+          if (nextCombinedTask) {
+            // calculate combined height for next overlapping task
+            const nextTask1Duration = nextCombinedTask.task1.duration || 0;
+            const nextTask1HasSubtasks = nextCombinedTask.task1.metadata?.subtasks && nextCombinedTask.task1.metadata.subtasks.length > 0;
+            const nextTask1Height = getTaskCardHeight(nextTask1Duration, nextTask1HasSubtasks);
+            
+            const nextTask2Duration = nextCombinedTask.task2.duration || 0;
+            const nextTask2HasSubtasks = nextCombinedTask.task2.metadata?.subtasks && nextCombinedTask.task2.metadata.subtasks.length > 0;
+            const nextTask2Height = getTaskCardHeight(nextTask2Duration, nextTask2HasSubtasks);
+            
+            const nextCombinedHeight = nextTask1Height + nextTask2Height + 4;
+            const nextMeasuredHeight = taskCardHeights.get(nextTask.id);
+            nextTaskSpacingHeight = nextMeasuredHeight ?? nextCombinedHeight;
+          } else {
+            // regular next task
+            const nextTaskDuration = nextTask.duration || 0;
+            const nextTaskHasSubtasks = nextTask.metadata?.subtasks && nextTask.metadata.subtasks.length > 0;
+            const nextMeasuredHeight = taskCardHeights.get(nextTask.id);
+            const nextFallbackHeight = getTaskCardHeight(nextTaskDuration, nextTaskHasSubtasks);
+            nextTaskSpacingHeight = nextMeasuredHeight ?? nextFallbackHeight;
+          }
 
           currentPosition = nextTop + (nextTaskSpacingHeight / 2);
         }
@@ -213,7 +345,7 @@ export default function TimelineView({
     });
     
     return positions;
-  }, [sortedTasks, taskCardHeights]); // recalc when tasks or heights change so spacing matches animated card heights
+  }, [sortedTasks, taskCardHeights, combinedOverlappingTasks]); // recalc when tasks or heights change so spacing matches animated card heights
 
   // calculate dynamic pixelsPerMinute for each segment between tasks
   // returns a map of segment index -> pixelsPerMinute
@@ -650,6 +782,138 @@ export default function TimelineView({
     return minutesToTime(clampedMinutes);
   }, [calculatePositionWithOffsets, sortedTasks]);
 
+  // helper function to calculate combined properties for overlapping tasks
+  // calculates start time, end time, and duration for a combined overlapping task
+  const calculateCombinedTaskProperties = useCallback((task1: Task, task2: Task): {
+    time: string;
+    duration: number;
+    dueDate: string;
+  } => {
+    if (!task1.time || !task2.time) {
+      throw new Error('Both tasks must have time to calculate combined properties');
+    }
+
+    // sort tasks by start time (task1 = earlier, task2 = later)
+    const task1Minutes = timeToMinutes(task1.time);
+    const task2Minutes = timeToMinutes(task2.time);
+    
+    const firstTask = task1Minutes <= task2Minutes ? task1 : task2;
+    const secondTask = task1Minutes <= task2Minutes ? task2 : task1;
+    
+    const firstTaskMinutes = timeToMinutes(firstTask.time!);
+    const firstTaskDuration = firstTask.duration || 0;
+    const firstTaskEndMinutes = firstTaskMinutes + firstTaskDuration;
+    
+    const secondTaskMinutes = timeToMinutes(secondTask.time!);
+    const secondTaskDuration = secondTask.duration || 0;
+    const secondTaskEndMinutes = secondTaskMinutes + secondTaskDuration;
+    
+    // start time is the start time of the first task
+    const startTime = firstTask.time!;
+    
+    // end time is the end time of the last task (if duration), or start time of last task (if no duration)
+    let endTimeMinutes: number;
+    if (secondTaskDuration > 0) {
+      // last task has duration, use its end time
+      endTimeMinutes = secondTaskEndMinutes;
+    } else {
+      // last task has no duration, use its start time
+      endTimeMinutes = secondTaskMinutes;
+    }
+    
+    // duration is from start of first task to end of last task
+    const duration = endTimeMinutes - firstTaskMinutes;
+    
+    return {
+      time: startTime,
+      duration: Math.max(0, duration), // ensure non-negative
+      dueDate: firstTask.dueDate || '',
+    };
+  }, []);
+
+  // handle task time change with overlap detection
+  // when a task is dragged to a new time, check for overlaps and create combined overlapping task
+  const handleTaskTimeChangeWithOverlap = useCallback((taskId: string, newTime: string) => {
+    // update the task time via parent callback
+    onTaskTimeChange?.(taskId, newTime);
+    
+    // after updating, detect overlaps with the new time
+    // find the dragged task to get its duration
+    const draggedTask = tasks.find(t => t.id === taskId);
+    if (!draggedTask) return;
+    
+    // create a temporary task object with the new time for overlap checking
+    const draggedTaskWithNewTime: Task = {
+      ...draggedTask,
+      time: newTime,
+    };
+    
+    // find all tasks that overlap with the dragged task at its new position
+    const overlappingTaskIds = new Set<string>();
+    const overlappingTasks = new Map<string, Task>();
+    
+    tasks.forEach(task => {
+      // skip the dragged task itself (we'll add it separately)
+      if (task.id === taskId) return;
+      // skip tasks without time
+      if (!task.time) return;
+      
+      // check if this task overlaps with the dragged task at its new position
+      if (doTasksOverlap(draggedTaskWithNewTime, task)) {
+        overlappingTaskIds.add(task.id);
+        // store the full task object for later restoration
+        overlappingTasks.set(task.id, task);
+      }
+    });
+    
+    // if there are overlaps, create a combined overlapping task
+    if (overlappingTaskIds.size > 0) {
+      // get the first overlapping task (we only handle 2 tasks for now)
+      const overlappingTaskId = Array.from(overlappingTaskIds)[0];
+      const overlappingTask = overlappingTasks.get(overlappingTaskId);
+      
+      if (overlappingTask) {
+        // sort tasks by start time to ensure task1 is earlier and task2 is later
+        const draggedMinutes = timeToMinutes(draggedTaskWithNewTime.time!);
+        const overlappingMinutes = timeToMinutes(overlappingTask.time!);
+        
+        const firstTask = draggedMinutes <= overlappingMinutes ? draggedTaskWithNewTime : overlappingTask;
+        const secondTask = draggedMinutes <= overlappingMinutes ? overlappingTask : draggedTaskWithNewTime;
+        
+        // create combined task with tasks sorted by start time
+        const combinedTask: CombinedOverlappingTask = {
+          id: `overlap-${firstTask.id}-${secondTask.id}`,
+          task1: firstTask, // earlier task
+          task2: secondTask, // later task
+          ...calculateCombinedTaskProperties(firstTask, secondTask),
+        };
+        
+        // hide both the dragged task and the overlapping task
+        setHiddenTaskIds(prev => {
+          const next = new Set(prev);
+          next.add(taskId);
+          next.add(overlappingTaskId);
+          return next;
+        });
+        
+        // store the full task objects for later restoration
+        setHiddenOverlappingTasks(prev => {
+          const next = new Map(prev);
+          next.set(taskId, draggedTaskWithNewTime);
+          next.set(overlappingTaskId, overlappingTask);
+          return next;
+        });
+        
+        // store the combined overlapping task
+        setCombinedOverlappingTasks(prev => {
+          const next = new Map(prev);
+          next.set(combinedTask.id, combinedTask);
+          return next;
+        });
+      }
+    }
+  }, [tasks, doTasksOverlap, onTaskTimeChange, calculateCombinedTaskProperties]);
+
   // use drag hook for unified drag handling across all states
   // this modularizes the drag logic that was previously duplicated
   const {
@@ -659,9 +923,7 @@ export default function TimelineView({
     handleDragEnd,
   } = useTimelineDrag({
     positionToTime: positionToTimeWithOffsets,
-    onTaskTimeChange: (taskId: string, newTime: string) => {
-      onTaskTimeChange?.(taskId, newTime);
-    },
+    onTaskTimeChange: handleTaskTimeChangeWithOverlap,
   });
 
   // handle height measurement from TimelineItem
@@ -695,6 +957,47 @@ export default function TimelineView({
       return next;
     });
   }, [taskIdsString, sortedTasks]);
+
+  // clear hidden tasks that no longer exist in the tasks list
+  // this prevents stale hidden state when tasks are removed or updated
+  useEffect(() => {
+    setHiddenTaskIds(prev => {
+      const next = new Set<string>();
+      // only keep task IDs that still exist in the tasks list
+      prev.forEach(taskId => {
+        if (tasks.some(t => t.id === taskId)) {
+          next.add(taskId);
+        }
+      });
+      return next;
+    });
+    
+    // also clean up stored overlapping tasks that no longer exist
+    setHiddenOverlappingTasks(prev => {
+      const next = new Map<string, Task>();
+      // only keep task objects that still exist in the tasks list
+      prev.forEach((task, taskId) => {
+        if (tasks.some(t => t.id === taskId)) {
+          next.set(taskId, task);
+        }
+      });
+      return next;
+    });
+    
+    // clean up combined overlapping tasks if their component tasks no longer exist
+    setCombinedOverlappingTasks(prev => {
+      const next = new Map<string, CombinedOverlappingTask>();
+      prev.forEach((combinedTask, combinedId) => {
+        // keep combined task if both component tasks still exist
+        const task1Exists = tasks.some(t => t.id === combinedTask.task1.id);
+        const task2Exists = tasks.some(t => t.id === combinedTask.task2.id);
+        if (task1Exists && task2Exists) {
+          next.set(combinedId, combinedTask);
+        }
+      });
+      return next;
+    });
+  }, [tasks]);
 
   return (
     <View style={styles.container}>
@@ -779,6 +1082,55 @@ export default function TimelineView({
             sortedTasks.map((task) => {
               const duration = task.duration || 0;
               
+              // check if this is a combined overlapping task
+              const combinedTask = combinedOverlappingTasks.get(task.id);
+              
+              if (combinedTask) {
+                // render OverlappingTaskCard for combined overlapping tasks
+                // get equal spacing position for the combined task
+                const equalSpacing = equalSpacingPositions.get(task.id);
+                if (!equalSpacing) return null;
+                
+                // calculate combined height: sum of both task card heights + spacing
+                const task1Duration = combinedTask.task1.duration || 0;
+                const task1HasSubtasks = combinedTask.task1.metadata?.subtasks && combinedTask.task1.metadata.subtasks.length > 0;
+                const task1Height = getTaskCardHeight(task1Duration, task1HasSubtasks);
+                
+                const task2Duration = combinedTask.task2.duration || 0;
+                const task2HasSubtasks = combinedTask.task2.metadata?.subtasks && combinedTask.task2.metadata.subtasks.length > 0;
+                const task2Height = getTaskCardHeight(task2Duration, task2HasSubtasks);
+                
+                // combined height = sum of both heights + 4px spacing between cards
+                const combinedHeight = task1Height + task2Height + 4;
+                
+                // use the combined height for spacing calculations
+                const spacingHeight = combinedHeight;
+                const measuredHeight = taskCardHeights.get(task.id) || spacingHeight;
+                const taskPpm = taskPixelsPerMinute.get(task.id) || 0.3;
+                
+                const renderProps = calculateTaskRenderProperties(
+                  task.id,
+                  equalSpacing.equalSpacingPosition,
+                  spacingHeight,
+                  measuredHeight,
+                  taskPpm
+                );
+                
+                return (
+                  <OverlappingTaskCard
+                    key={task.id}
+                    task1={combinedTask.task1}
+                    task2={combinedTask.task2}
+                    position={renderProps.position}
+                    duration={duration}
+                    pixelsPerMinute={renderProps.pixelsPerMinute}
+                    onPress={(pressedTask) => onTaskPress?.(pressedTask)}
+                    onTaskComplete={onTaskComplete}
+                  />
+                );
+              }
+              
+              // render regular TimelineItem for non-combined tasks
               // get equal spacing position for this task
               const equalSpacing = equalSpacingPositions.get(task.id);
               if (!equalSpacing) return null;
