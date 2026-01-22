@@ -629,11 +629,6 @@ export default function TimelineView({
       
       // calculate end time label for tasks with duration
       const duration = task.duration || 0;
-      const hasSubtasks = task.metadata?.subtasks && task.metadata.subtasks.length > 0;
-
-      // use the base, non-expanded card height for end-time labels so subtask expansion
-      // does not visually extend the main task's duration on the timeline
-      const baseCardHeight = getTaskCardHeight(duration, hasSubtasks);
       let endTime: string | undefined;
       let endPosition: number | undefined;
       
@@ -641,7 +636,9 @@ export default function TimelineView({
         const startMinutes = timeToMinutes(task.time);
         const endMinutes = startMinutes + duration;
         endTime = minutesToTime(endMinutes);
-        endPosition = cardTop + baseCardHeight; // bottom edge of the main card only (exclude subtask expansion)
+        // use the actual card height from equalSpacing (includes combined height for overlapping tasks)
+        // this ensures end time label is positioned at the bottom of the card, including all stacked tasks
+        endPosition = cardTop + cardHeight; // bottom edge of the card (includes combined height for overlapping tasks)
       }
       
       // hide if before the first task (but always show the first task's label)
