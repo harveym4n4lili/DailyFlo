@@ -326,8 +326,11 @@ export function calculateTaskRenderProperties(
 
 export interface DragState {
   taskId: string; // track which task is being dragged for z-index management
-  yPosition: number;
-  time: string;
+  yPosition: number; // current Y position of the drag (where the overlay should be)
+  time: string; // calculated time at the current drag position
+  task: Task; // the task object being dragged (needed for overlay rendering)
+  cardHeight: number; // height of the task card (needed for overlay sizing)
+  cardWidth?: number; // width of the task card (optional, can be calculated from container)
 }
 
 export interface UseTimelineDragOptions {
@@ -341,8 +344,8 @@ export interface UseTimelineDragOptions {
 export interface UseTimelineDragReturn {
   // current drag state (null when not dragging)
   dragState: DragState | null;
-  // handler for drag start (with initial position)
-  handleDragStart: (taskId: string, topY: number, measuredHeight: number) => void;
+  // handler for drag start (with initial position and task info)
+  handleDragStart: (taskId: string, topY: number, measuredHeight: number, task: Task) => void;
   // handler for drag position change (during drag)
   handleDragPositionChange: (taskId: string, topY: number, measuredHeight: number) => void;
   // handler for drag end
@@ -371,18 +374,24 @@ export function useTimelineDrag({
   // this avoids any tiny re-calculation differences between the aim label and saved time
   const dragStateRef = useRef<DragState | null>(null);
 
-  // handle drag start - initialize drag state with initial position
-  // sets initial drag state so drag label appears immediately
+  // handle drag start - initialize drag state with initial position and task info
+  // sets initial drag state so drag label and overlay appear immediately
   // also tracks which task is being dragged for z-index management
   const handleDragStart = useCallback(
-    (taskId: string, topY: number, measuredHeight: number) => {
+    (taskId: string, topY: number, measuredHeight: number, task: Task) => {
       // for drag "aim" we anchor the time to the TOP edge of the task card
       // so moving one card's top to another card's top gives the same time
       const time = positionToTime(topY);
       
-      // set initial drag state for visual feedback
-      // include taskId so we can apply higher z-index to the dragged task
-      const nextState: DragState = { taskId, yPosition: topY, time };
+      // set initial drag state for visual feedback and overlay rendering
+      // include task object and card height so overlay can render correctly
+      const nextState: DragState = { 
+        taskId, 
+        yPosition: topY, 
+        time,
+        task,
+        cardHeight: measuredHeight,
+      };
       dragStateRef.current = nextState;
       setDragState(nextState);
     },
@@ -399,9 +408,24 @@ export function useTimelineDrag({
       const time = positionToTime(topY);
       
       // update drag state for visual feedback
-      // preserve taskId from current drag state or use the one passed in
+      // preserve taskId, task, and cardHeight from current drag state or use the ones passed in
       const currentTaskId = dragStateRef.current?.taskId || taskId;
-      const nextState: DragState = { taskId: currentTaskId, yPosition: topY, time };
+      const currentTask = dragStateRef.current?.task;
+      const currentCardHeight = dragStateRef.current?.cardHeight || measuredHeight;
+      
+      // ensure we have a task object - if not, we can't render the overlay
+      if (!currentTask) {
+        console.warn('Drag position change called but no task in drag state');
+        return;
+      }
+      
+      const nextState: DragState = { 
+        taskId: currentTaskId, 
+        yPosition: topY, 
+        time,
+        task: currentTask, // preserve task object from drag start
+        cardHeight: currentCardHeight, // preserve card height from drag start
+      };
       dragStateRef.current = nextState;
       setDragState(nextState);
     },
