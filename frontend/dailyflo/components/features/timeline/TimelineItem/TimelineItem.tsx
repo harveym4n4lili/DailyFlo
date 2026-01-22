@@ -11,7 +11,7 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming, useAnimatedReaction, runOnJS } from 'react-native-reanimated';
+import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming, useAnimatedReaction, runOnJS, cancelAnimation } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -121,6 +121,11 @@ export default function TimelineItem({
   // animated value for fade-in animation using reanimated - runs on native thread for better performance
   // starts at 1 (fully visible), fades to 0 on drag end, then fades back to 1 when position updates
   const fadeAnimation = useSharedValue(1);
+  
+  // animated value for drag indicator opacity using reanimated - runs on native thread for better performance
+  // starts at 1 (fully visible), smoothly fades to 0.5 when dragging starts
+  // can be interrupted if drag ends before animation completes
+  const dragIndicatorOpacity = useSharedValue(1);
   
   // track previous position to detect when position updates after drag
   const previousPositionRef = useRef(position);
@@ -266,14 +271,25 @@ export default function TimelineItem({
     };
   });
 
-  // create animated style for position, drag transform, and fade using reanimated
-  // combines position animation (when other tasks expand) with drag translation and fade
+  // create animated style for position and fade using reanimated
+  // combines position animation (when other tasks expand) with fade
+  // note: we no longer apply translateY transform - the card stays in place during drag
+  // instead, a drag overlay follows the thumb position (handled in TimelineView)
   // this runs on native thread for smooth 60fps performance
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
       top: positionAnimation.value,
-      transform: [{ translateY: translateY.value }],
+      // removed translateY transform - card stays in place during drag
       opacity: fadeAnimation.value, // fade animation for drag feedback
+    };
+  });
+  
+  // create animated style for drag indicator (reduced opacity when dragging)
+  // this provides visual feedback that the task is selected for dragging
+  // uses smooth iOS-style animation that can be interrupted if drag ends early
+  const animatedDragIndicatorStyle = useAnimatedStyle(() => {
+    return {
+      opacity: dragIndicatorOpacity.value, // use animated shared value for smooth fade
     };
   });
 
@@ -333,8 +349,10 @@ export default function TimelineItem({
       
       // fade in from 0 to 1 when the card repositions after drag using reanimated
       // this provides visual feedback that the drag completed and card is in new position
+      // cancel any ongoing animation first to allow interruption
+      cancelAnimation(fadeAnimation);
       fadeAnimation.value = withTiming(1, {
-        duration: 500, // smooth fade-in animation
+        duration: 800, // smooth 800ms fade-in animation
       });
     }
   }, [position]);
@@ -353,6 +371,13 @@ export default function TimelineItem({
   const handleDragStartCallback = () => {
     setIsDragging(true);
     isDraggingRef.current = true;
+    
+    // animate drag indicator opacity to 0.5 with smooth iOS-style animation
+    // cancel any ongoing animation first to allow interruption
+    cancelAnimation(dragIndicatorOpacity);
+    dragIndicatorOpacity.value = withTiming(0.05, {
+      duration: 800, // smooth 200ms fade
+    });
     
     // notify parent that drag started
     if (onDragStart) {
@@ -378,6 +403,13 @@ export default function TimelineItem({
     setIsDragging(false);
     isDraggingRef.current = false;
     
+    // animate drag indicator opacity back to 1 with smooth animation
+    // cancel any ongoing animation first to allow interruption
+    cancelAnimation(dragIndicatorOpacity);
+    dragIndicatorOpacity.value = withTiming(1, {
+      duration: 800, // smooth 800ms fade back to full opacity
+    });
+    
     // call onDrag callback with new position
     onDrag(newY);
     
@@ -389,6 +421,8 @@ export default function TimelineItem({
       }, 100);
       
         // fade out the card immediately on drag end using reanimated
+        // cancel any ongoing fade animation first to allow interruption
+        cancelAnimation(fadeAnimation);
         fadeAnimation.value = 0;
         waitingForRepositionRef.current = true;
         
@@ -399,9 +433,11 @@ export default function TimelineItem({
         fadeInTimeoutRef.current = setTimeout(() => {
           if (waitingForRepositionRef.current) {
             waitingForRepositionRef.current = false;
-            // fade in using reanimated
+            // fade in using reanimated with smooth 800ms animation
+            // cancel any ongoing animation first to allow interruption
+            cancelAnimation(fadeAnimation);
             fadeAnimation.value = withTiming(1, {
-              duration: 500,
+              duration: 800, // smooth 800ms fade-in animation
             });
           }
           fadeInTimeoutRef.current = null;
@@ -482,9 +518,9 @@ export default function TimelineItem({
         {/* height is fixed at base height, does not expand with subtasks */}
         {/* background color is task color, icon color is primary */}
         {task.icon && (
-          <Animated.View style={[styles.iconContainer, { height: minCardHeight }]}>
+          <AnimatedReanimated.View style={[styles.iconContainer, { height: minCardHeight }, animatedDragIndicatorStyle]}>
             <TaskIcon icon={task.icon} color={themeColors.background.invertedPrimary()} size={20} />
-          </Animated.View>
+          </AnimatedReanimated.View>
         )}
 
         {/* content column - contains combined container and subtask list */}
@@ -494,6 +530,7 @@ export default function TimelineItem({
           style={[
             styles.content,
             animatedContentStyle, // animated height: base + (32px per subtask + 12px padding) when expanded
+            animatedDragIndicatorStyle, // drag indicator: reduced opacity when dragging
           ]}
           onLayout={handleContentLayout}
         >

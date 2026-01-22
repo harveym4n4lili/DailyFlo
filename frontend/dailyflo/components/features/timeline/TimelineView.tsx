@@ -8,15 +8,16 @@
  * This component is used by the Planner screen to show tasks in a timeline view.
  */
 
-import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Text } from 'react-native';
-import { useSharedValue, withTiming, makeMutable } from 'react-native-reanimated';
+import React, { useMemo, useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
+import { View, StyleSheet, ScrollView, Text, Platform } from 'react-native';
+import { useSharedValue, withTiming, makeMutable, withSpring } from 'react-native-reanimated';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Task } from '@/types';
 import TimelineItem from './TimelineItem/TimelineItem';
 import TimeLabel from './TimeLabel';
 import { OverlappingTaskCard } from './OverlappingTaskCard';
+import DragOverlay from './DragOverlay';
 import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag, getTaskCardHeight } from './timelineUtils';
 
 // type for combined overlapping tasks
@@ -998,6 +999,59 @@ export default function TimelineView({
     positionToTime: positionToTimeWithOffsets,
     onTaskTimeChange: handleTaskTimeChangeWithOverlap,
   });
+  
+  // shared value for drag overlay position - used to anchor time label to overlay
+  // this ensures the time label moves smoothly with the overlay (especially on iOS with spring animation)
+  // initialized to 0, will be updated when drag starts and during drag
+  const dragOverlayY = useSharedValue(0);
+  
+  // track previous drag taskId to detect when a new drag starts
+  // when a new drag starts, we immediately set position without animation
+  // during the same drag, we use smooth spring animation
+  const previousDragTaskIdRef = useRef<string | null>(null);
+  const previousDragStateRef = useRef<typeof dragState>(null);
+  
+  // update drag overlay position when drag state changes
+  // use useLayoutEffect to set position synchronously before paint to prevent flicker
+  // this keeps the overlay and time label synchronized
+  useLayoutEffect(() => {
+    const wasDragging = previousDragStateRef.current !== null;
+    const isDragging = dragState !== null;
+    
+    if (dragState) {
+      const isNewDrag = previousDragTaskIdRef.current !== dragState.taskId;
+      
+      if (isNewDrag) {
+        // new drag started - immediately set position without animation
+        // useLayoutEffect ensures this happens synchronously before overlay renders
+        // this prevents overlay from flashing at old position
+        dragOverlayY.value = dragState.yPosition;
+        previousDragTaskIdRef.current = dragState.taskId;
+      } else {
+        // same drag continuing - use smooth spring animation on iOS
+        if (Platform.OS === 'ios') {
+          dragOverlayY.value = withSpring(dragState.yPosition, {
+            damping: 20, // moderate damping for smooth but not bouncy feel
+            stiffness: 400, // high stiffness for immediate, responsive movement
+            mass: 0.3, // low mass for light, quick response
+            overshootClamping: false, // allow slight overshoot for natural feel
+          });
+        } else {
+          // for Android, use direct assignment for immediate response
+          dragOverlayY.value = dragState.yPosition;
+        }
+      }
+    } else if (wasDragging && !isDragging) {
+      // drag just ended - reset position to prevent flicker on next drag
+      // set to a value that won't be visible (off-screen)
+      // this ensures overlay doesn't flash at old position when new drag starts
+      dragOverlayY.value = -1000; // move off-screen
+      previousDragTaskIdRef.current = null;
+    }
+    
+    // update previous drag state ref for next comparison
+    previousDragStateRef.current = dragState;
+  }, [dragState?.taskId, dragState?.yPosition, dragOverlayY, dragState]);
 
   // handle height measurement from TimelineItem
   // measured heights now drive both rendering and spacing so the timeline animates with cards
@@ -1119,12 +1173,14 @@ export default function TimelineView({
             );
           })}
           
-          {/* drag time label - shows current drag position (no animation needed for drag) */}
+          {/* drag time label - shows current drag position */}
+          {/* anchored to drag overlay position for smooth, synchronized movement */}
           {dragState && (
             <TimeLabel
               key="drag-time-label"
               time={dragState.time}
               position={dragState.yPosition}
+              animatedPosition={dragOverlayY}
               isDragLabel={true}
             />
           )}
@@ -1140,6 +1196,21 @@ export default function TimelineView({
               height: timelineLineBounds.height 
             }
           ]} />
+          
+          {/* drag overlay - follows thumb position during drag */}
+          {/* only rendered when dragState exists and task is available (during active drag) */}
+          {/* uses shared value for position to keep synchronized with time label */}
+          {/* key ensures overlay remounts cleanly when switching tasks to prevent flicker */}
+          {dragState && dragState.task && (
+            <DragOverlay
+              key={`drag-overlay-${dragState.taskId}`}
+              task={dragState.task}
+              yPosition={dragState.yPosition}
+              cardHeight={dragState.cardHeight}
+              duration={dragState.task.duration || 0}
+              animatedPosition={dragOverlayY}
+            />
+          )}
 
           {/* render each task at its position */}
           {tasksWithTime.length === 0 ? (
@@ -1244,11 +1315,11 @@ export default function TimelineView({
                     handleDragEnd(task.id, newY, renderProps.measuredHeight);
                   }}
                   onDragStart={() => {
-                    // drag started - use modular drag handler with initial position
-                    // this initializes drag state for visual feedback
+                    // drag started - use modular drag handler with initial position and task info
+                    // this initializes drag state for visual feedback and overlay rendering
                     // get initial position from basePosition (current top position)
                     const initialTopY = renderProps.position;
-                    handleDragStart(task.id, initialTopY, renderProps.measuredHeight);
+                    handleDragStart(task.id, initialTopY, renderProps.measuredHeight, task);
                   }}
                   onDragPositionChange={(yPosition: number) => {
                     // yPosition is the top position from TimelineItem during drag
