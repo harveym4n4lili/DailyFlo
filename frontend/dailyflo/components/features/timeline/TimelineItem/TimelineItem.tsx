@@ -372,11 +372,11 @@ export default function TimelineItem({
     setIsDragging(true);
     isDraggingRef.current = true;
     
-    // animate drag indicator opacity to 0.5 with smooth iOS-style animation
+    // animate drag indicator opacity to 0.05 with smooth iOS-style animation
     // cancel any ongoing animation first to allow interruption
     cancelAnimation(dragIndicatorOpacity);
     dragIndicatorOpacity.value = withTiming(0.05, {
-      duration: 800, // smooth 200ms fade
+      duration: 800, // smooth 800ms fade
     });
     
     // notify parent that drag started
@@ -459,35 +459,111 @@ export default function TimelineItem({
     return formatTimeRange(task.time, duration);
   }, [task.time, duration]);
 
+  // track if long press has activated - pan gesture only works after long press
+  // this allows drag to start only after holding for iOS standard duration
+  const longPressActivated = useSharedValue(false);
+  
+  // track if pan gesture is currently active
+  // this prevents canceling drag when long press ends if user is actively dragging
+  const panIsActive = useSharedValue(false);
+  
+  // long press gesture handler - iOS standard 500ms hold to start drag
+  // this provides the "pick up" interaction before dragging begins
+  const longPressGesture = Gesture.LongPress()
+    .minDuration(500) // iOS standard long press duration (500ms)
+    .onStart(() => {
+      'worklet';
+      // long press activated - enable dragging
+      longPressActivated.value = true;
+      
+      // provide medium haptic feedback when long press activates
+      // this gives tactile feedback that drag mode is now active
+      runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+      
+      // notify parent that drag started (overlay appears, card fades)
+      runOnJS(handleDragStartCallback)();
+    })
+    .onEnd(() => {
+      'worklet';
+      // if long press ends but pan is active, don't cancel - let pan handle it
+      // only cancel if user releases without starting to drag
+      // check both panIsActive and if there's been any significant movement
+      const hasMovement = Math.abs(translateY.value) >= 5;
+      if (!panIsActive.value && !hasMovement) {
+        // user released long press without dragging - cancel drag
+        longPressActivated.value = false;
+        translateY.value = 0;
+        runOnJS(handleDragEndCallback)(basePosition.value, false);
+      }
+      // if pan is active or there's movement, do nothing - pan will handle the drag end
+    });
+  
   // pan gesture handler for dragging using reanimated
+  // works after long press has activated
   // runs on native thread for smooth 60fps drag performance
   const panGesture = Gesture.Pan()
-    .activeOffsetY([-10, 10]) // require 10px movement before activating
+    .activeOffsetY([-0, 0]) // require 2px movement before activating (very sensitive)
     .onBegin(() => {
       'worklet';
-      // remember the starting position when drag begins
+      // remember the starting position when pan begins
+      // this happens even before long press activates
       startY.value = translateY.value;
     })
     .onStart(() => {
       'worklet';
-      // provide light haptic feedback when drag activates
-      // use runOnJS to call haptics from native thread
-      runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
-      
-      // notify parent that drag started
-      runOnJS(handleDragStartCallback)();
+      // pan gesture started - check if long press has already activated
+      // if so, mark pan as active immediately
+      // if not, pan will be marked active in onUpdate when long press activates
+      if (longPressActivated.value) {
+        panIsActive.value = true;
+        // provide light haptic feedback when pan activates
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+      }
     })
     .onUpdate((event) => {
       'worklet';
+      // only process drag updates if long press has activated
+      // this ensures drag only works after the hold period
+      if (!longPressActivated.value) {
+        return;
+      }
+      // mark pan as active once we start updating (user is dragging)
+      // this ensures pan is marked active even if onStart was called before long press activated
+      panIsActive.value = true;
+      
       // apply the drag offset - translationY is relative to gesture start
+      // this works correctly even if pan started before long press activated
       translateY.value = event.translationY;
       
       // calculate current Y position using shared value (accessible in worklets)
       const currentY = basePosition.value + event.translationY;
       runOnJS(handleDragUpdateCallback)(currentY);
     })
+    .onTouchesMove((event, stateManager) => {
+      'worklet';
+      // if long press has activated, allow pan to continue
+      // this ensures pan can work even if it started before long press
+      if (longPressActivated.value) {
+        stateManager.activate();
+      } else {
+        // if long press hasn't activated yet, fail the pan gesture
+        // this prevents accidental drags before the hold period
+        stateManager.fail();
+      }
+    })
     .onEnd((event) => {
       'worklet';
+      // only process drag end if long press has activated and pan was active
+      if (!longPressActivated.value || !panIsActive.value) {
+        // reset states if drag didn't complete
+        if (longPressActivated.value && !panIsActive.value) {
+          // long press activated but pan never started - cancel
+          longPressActivated.value = false;
+          translateY.value = 0;
+          runOnJS(handleDragEndCallback)(basePosition.value, false);
+        }
+        return;
+      }
       // gesture ended - calculate new absolute position using shared value
       const newY = basePosition.value + event.translationY;
       const clampedY = Math.max(0, newY);
@@ -495,12 +571,21 @@ export default function TimelineItem({
       // check if this was actually a drag (not just a tap)
       const wasDrag = Math.abs(event.translationY) > 5;
       
+      // reset activation states
+      longPressActivated.value = false;
+      panIsActive.value = false;
+      
       // notify parent and handle drag end
       runOnJS(handleDragEndCallback)(clampedY, wasDrag);
     });
+  
+  // combine long press and pan gestures using Simultaneous
+  // long press activates first, then pan takes over for dragging
+  // both gestures can be active at the same time
+  const combinedGesture = Gesture.Simultaneous(longPressGesture, panGesture);
 
   return (
-    <GestureDetector gesture={panGesture}>
+    <GestureDetector gesture={combinedGesture}>
       <AnimatedReanimated.View
         style={[
           styles.container,
