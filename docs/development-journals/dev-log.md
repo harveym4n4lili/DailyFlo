@@ -1214,3 +1214,16 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - no notes
+---
+## [23/01/2026] - [Friday]
+### Today's Goals
+- [X] Implemented smooth drag
+- [X] implemnted drag overlay
+- [X] Re designed drag to be hold-drag
+
+### Plans For Future
+- Restyle drag overlay
+- Implement overlapping tasks
+
+### Notes
+- no notes
