@@ -1219,7 +1219,17 @@ Updated User app, models, serializers, views and urls
 ### Today's Goals
 - [X] Implemented smooth drag
 - [X] implemnted drag overlay
-- [X] Re designed drag to be hold-drag
+- [X] Re designed drag to be hold-drag 
+
+### Plans For Future
+- Restyle drag overlay
+- Implement overlapping tasks
+
+### Notes
+---
+## [25/01/2026] - [Sunday]
+### Today's Goals
+- [X] Started first ios dev build
 
 ### Plans For Future
 - Restyle drag overlay
