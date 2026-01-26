@@ -847,6 +847,7 @@ export default function TimelineView({
 
   // handle task time change with overlap detection
   // when a task is dragged to a new time, check for overlaps and create combined overlapping task
+  // also handles removing tasks from combined overlapping tasks when they're dragged out
   const handleTaskTimeChangeWithOverlap = useCallback((taskId: string, newTime: string) => {
     // update the task time via parent callback
     onTaskTimeChange?.(taskId, newTime);
@@ -862,6 +863,218 @@ export default function TimelineView({
       time: newTime,
     };
     
+    // first, check if the dragged task was part of a combined overlapping task
+    // if so, remove it from that combined task
+    let wasInCombinedTask = false;
+    let sourceCombinedTaskId: string | null = null;
+    let sourceCombinedTask: CombinedOverlappingTask | null = null;
+    
+    for (const [combinedTaskId, combinedTask] of combinedOverlappingTasks.entries()) {
+      const taskIndex = combinedTask.tasks.findIndex((t: Task) => t.id === taskId);
+      if (taskIndex >= 0) {
+        wasInCombinedTask = true;
+        sourceCombinedTaskId = combinedTaskId;
+        sourceCombinedTask = combinedTask;
+        break;
+      }
+    }
+    
+    // if task was in a combined task, remove it and handle the remaining tasks
+    if (wasInCombinedTask && sourceCombinedTask && sourceCombinedTaskId) {
+      // remove the dragged task from the combined task
+      const remainingTasks = sourceCombinedTask.tasks.filter((t: Task) => t.id !== taskId);
+      
+      // remove the old combined task
+      setCombinedOverlappingTasks(prev => {
+        const next = new Map(prev);
+        next.delete(sourceCombinedTaskId!);
+        return next;
+      });
+      
+      // remove the dragged task from hidden tasks (it's now standalone with new time)
+      setHiddenTaskIds(prev => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
+      
+      // remove the dragged task from stored overlapping tasks
+      setHiddenOverlappingTasks(prev => {
+        const next = new Map(prev);
+        next.delete(taskId);
+        return next;
+      });
+      
+      // handle remaining tasks
+      if (remainingTasks.length === 0) {
+        // no tasks left - nothing to do
+        return;
+      } else if (remainingTasks.length === 1) {
+        // only one task remains - check if dragged task still overlaps with it
+        const remainingTask = remainingTasks[0];
+        const stillOverlaps = remainingTask.time && doTasksOverlap(draggedTaskWithNewTime, remainingTask);
+        
+        if (stillOverlaps) {
+          // dragged task still overlaps with the remaining task - create combined task with both
+          const allTasksIncludingDragged = [remainingTask, draggedTaskWithNewTime];
+          
+          // sort all tasks by start time
+          allTasksIncludingDragged.sort((a, b) => {
+            if (!a.time || !b.time) return 0;
+            return timeToMinutes(a.time) - timeToMinutes(b.time);
+          });
+          
+          // create new combined task id from all task ids (including dragged task)
+          const newCombinedTaskId = `overlap-${allTasksIncludingDragged.map(t => t.id).join('-')}`;
+          
+          // create new combined task with all tasks (including dragged task)
+          const newCombinedTask: CombinedOverlappingTask = {
+            id: newCombinedTaskId,
+            tasks: allTasksIncludingDragged,
+            ...calculateCombinedTaskProperties(allTasksIncludingDragged),
+          };
+          
+          // store the new combined overlapping task
+          setCombinedOverlappingTasks(prev => {
+            const next = new Map(prev);
+            next.set(newCombinedTask.id, newCombinedTask);
+            return next;
+          });
+          
+          // hide all tasks (including dragged task)
+          const allTaskIds = allTasksIncludingDragged.map(t => t.id);
+          setHiddenTaskIds(prev => {
+            const next = new Set(prev);
+            allTaskIds.forEach(id => next.add(id));
+            return next;
+          });
+          
+          // store all tasks (including dragged task)
+          setHiddenOverlappingTasks(prev => {
+            const next = new Map(prev);
+            allTasksIncludingDragged.forEach(task => {
+              next.set(task.id, task);
+            });
+            return next;
+          });
+          
+          // early return - we've handled the overlap, no need to check further
+          return;
+        } else {
+          // dragged task no longer overlaps with the remaining task
+          // convert the remaining task back to a standalone task
+          setHiddenTaskIds(prev => {
+            const next = new Set(prev);
+            next.delete(remainingTask.id);
+            return next;
+          });
+          setHiddenOverlappingTasks(prev => {
+            const next = new Map(prev);
+            next.delete(remainingTask.id);
+            return next;
+          });
+        }
+      } else {
+        // multiple tasks remain - check if dragged task still overlaps with remaining tasks
+        // if it does, merge it back into the combined task
+        const stillOverlapsWithRemaining = remainingTasks.some((task: Task) => {
+          if (!task.time) return false;
+          return doTasksOverlap(draggedTaskWithNewTime, task);
+        });
+        
+        if (stillOverlapsWithRemaining) {
+          // dragged task still overlaps with remaining tasks - merge it back in
+          const allTasksIncludingDragged = [...remainingTasks, draggedTaskWithNewTime];
+          
+          // sort all tasks by start time
+          allTasksIncludingDragged.sort((a, b) => {
+            if (!a.time || !b.time) return 0;
+            return timeToMinutes(a.time) - timeToMinutes(b.time);
+          });
+          
+          // create new combined task id from all task ids (including dragged task)
+          const newCombinedTaskId = `overlap-${allTasksIncludingDragged.map(t => t.id).join('-')}`;
+          
+          // create new combined task with all tasks (including dragged task)
+          const newCombinedTask: CombinedOverlappingTask = {
+            id: newCombinedTaskId,
+            tasks: allTasksIncludingDragged,
+            ...calculateCombinedTaskProperties(allTasksIncludingDragged),
+          };
+          
+          // store the new combined overlapping task
+          setCombinedOverlappingTasks(prev => {
+            const next = new Map(prev);
+            next.set(newCombinedTask.id, newCombinedTask);
+            return next;
+          });
+          
+          // hide all tasks (including dragged task)
+          const allTaskIds = allTasksIncludingDragged.map(t => t.id);
+          setHiddenTaskIds(prev => {
+            const next = new Set(prev);
+            allTaskIds.forEach(id => next.add(id));
+            return next;
+          });
+          
+          // store all tasks (including dragged task)
+          setHiddenOverlappingTasks(prev => {
+            const next = new Map(prev);
+            allTasksIncludingDragged.forEach(task => {
+              next.set(task.id, task);
+            });
+            return next;
+          });
+          
+          // early return - we've handled the overlap, no need to check further
+          return;
+        } else {
+          // dragged task no longer overlaps with remaining tasks
+          // create a new combined task with just the remaining tasks
+          // sort remaining tasks by start time
+          remainingTasks.sort((a, b) => {
+            if (!a.time || !b.time) return 0;
+            return timeToMinutes(a.time) - timeToMinutes(b.time);
+          });
+          
+          // create new combined task id from remaining task ids
+          const newCombinedTaskId = `overlap-${remainingTasks.map(t => t.id).join('-')}`;
+          
+          // create new combined task with remaining tasks
+          const newCombinedTask: CombinedOverlappingTask = {
+            id: newCombinedTaskId,
+            tasks: remainingTasks,
+            ...calculateCombinedTaskProperties(remainingTasks),
+          };
+          
+          // store the new combined overlapping task
+          setCombinedOverlappingTasks(prev => {
+            const next = new Map(prev);
+            next.set(newCombinedTask.id, newCombinedTask);
+            return next;
+          });
+          
+          // keep remaining tasks hidden
+          const remainingTaskIds = remainingTasks.map(t => t.id);
+          setHiddenTaskIds(prev => {
+            const next = new Set(prev);
+            remainingTaskIds.forEach(id => next.add(id));
+            return next;
+          });
+          
+          // store remaining tasks
+          setHiddenOverlappingTasks(prev => {
+            const next = new Map(prev);
+            remainingTasks.forEach(task => {
+              next.set(task.id, task);
+            });
+            return next;
+          });
+        }
+      }
+    }
+    
+    // now check if the dragged task (with its new time) overlaps with any other tasks
     // find all tasks that overlap with the dragged task at its new position
     // also check if the dragged task overlaps with any existing combined overlapping tasks
     const overlappingTaskIds = new Set<string>();
@@ -871,6 +1084,9 @@ export default function TimelineView({
     
     // first, check if dragged task overlaps with any existing combined overlapping tasks
     for (const [combinedTaskId, combinedTask] of combinedOverlappingTasks.entries()) {
+      // skip the source combined task if we just removed the task from it
+      if (combinedTaskId === sourceCombinedTaskId) continue;
+      
       // check if dragged task overlaps with any task in the combined task
       const overlapsWithCombined = combinedTask.tasks.some((task: Task) => {
         if (!task.time) return false;
@@ -986,7 +1202,7 @@ export default function TimelineView({
         return next;
       });
     }
-  }, [tasks, doTasksOverlap, onTaskTimeChange, calculateCombinedTaskProperties]);
+  }, [tasks, doTasksOverlap, onTaskTimeChange, calculateCombinedTaskProperties, combinedOverlappingTasks, hiddenTaskIds]);
 
   // use drag hook for unified drag handling across all states
   // this modularizes the drag logic that was previously duplicated
@@ -1269,8 +1485,64 @@ export default function TimelineView({
                     position={renderProps.position}
                     duration={duration}
                     pixelsPerMinute={renderProps.pixelsPerMinute}
+                    startHour={dynamicStartHour}
                     onPress={(pressedTask) => onTaskPress?.(pressedTask)}
                     onTaskComplete={onTaskComplete}
+                    onDrag={(taskId, newY) => {
+                      // handle drag from overlapping task - use modular drag handler
+                      // this converts top position to center and updates task
+                      // find the task to get its measured height
+                      const draggedTask = combinedTask.tasks.find(t => t.id === taskId);
+                      if (draggedTask) {
+                        const taskDuration = draggedTask.duration || 0;
+                        const taskHasSubtasks = !!(draggedTask.metadata?.subtasks && Array.isArray(draggedTask.metadata.subtasks) && draggedTask.metadata.subtasks.length > 0);
+                        const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+                        const measuredHeight = taskCardHeights.get(taskId) || taskHeight;
+                        handleDragEnd(taskId, newY, measuredHeight);
+                      }
+                    }}
+                    onDragStart={(taskId) => {
+                      // drag started from overlapping task - use modular drag handler
+                      // find the task and calculate its position
+                      const draggedTask = combinedTask.tasks.find(t => t.id === taskId);
+                      if (draggedTask) {
+                        const taskIndex = combinedTask.tasks.findIndex(t => t.id === taskId);
+                        let taskTopPosition = renderProps.position;
+                        for (let i = 0; i < taskIndex; i++) {
+                          const prevTask = combinedTask.tasks[i];
+                          const prevTaskDuration = prevTask.duration || 0;
+                          const prevTaskHasSubtasks = !!(prevTask.metadata?.subtasks && Array.isArray(prevTask.metadata.subtasks) && prevTask.metadata.subtasks.length > 0);
+                          const prevTaskHeight = getTaskCardHeight(prevTaskDuration, prevTaskHasSubtasks);
+                          taskTopPosition += prevTaskHeight + 4; // 4px spacing between cards
+                        }
+                        const taskDuration = draggedTask.duration || 0;
+                        const taskHasSubtasks = !!(draggedTask.metadata?.subtasks && Array.isArray(draggedTask.metadata.subtasks) && draggedTask.metadata.subtasks.length > 0);
+                        const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+                        const measuredHeight = taskCardHeights.get(taskId) || taskHeight;
+                        handleDragStart(taskId, taskTopPosition, measuredHeight, draggedTask);
+                      }
+                    }}
+                    onDragPositionChange={(taskId, yPosition) => {
+                      // drag position changed from overlapping task - use modular drag handler
+                      // this provides visual feedback during drag
+                      // find the task to get its measured height
+                      const draggedTask = combinedTask.tasks.find(t => t.id === taskId);
+                      if (draggedTask) {
+                        const taskDuration = draggedTask.duration || 0;
+                        const taskHasSubtasks = !!(draggedTask.metadata?.subtasks && Array.isArray(draggedTask.metadata.subtasks) && draggedTask.metadata.subtasks.length > 0);
+                        const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+                        const measuredHeight = taskCardHeights.get(taskId) || taskHeight;
+                        handleDragPositionChange(taskId, yPosition, measuredHeight);
+                      }
+                    }}
+                    onDragEnd={(taskId) => {
+                      // drag ended from overlapping task - cleanup handled by handleDragEnd in onDrag callback
+                    }}
+                    onHeightMeasured={(taskId, height) => {
+                      // forward height measurement to the main handler
+                      handleHeightMeasured(taskId, height);
+                    }}
+                    draggedTaskId={dragState?.taskId || null}
                   />
                 );
               }
