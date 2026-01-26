@@ -142,7 +142,7 @@ export default function TaskCard({
         swipeThreshold={60}
         leftAction={leftSwipeAction}
         rightAction={rightSwipeAction}
-        borderRadius={20}
+        borderRadius={28}
       >
         {/* main card touchable area - applies conditional styles based on compact and completion state */}
         <TouchableOpacity
@@ -210,7 +210,7 @@ const createStyles = (themeColors: ReturnType<typeof useThemeColors>) =>
     card: {
       width: '100%', // ensure full width
       backgroundColor: themeColors.background.elevated(), // use theme-aware elevated background
-      borderRadius: 20, // border radius of 20 for modern card appearance
+      borderRadius: 28, // border radius of 28 for modern card appearance (increased by 8px)
       padding: 16,
       paddingRight: 56, // add right padding to avoid overlap with completion indicator (24px indicator + 16px margin + 16px spacing)
       position: 'relative', // needed for absolute positioning of completion indicator and bottom indicators
@@ -220,7 +220,7 @@ const createStyles = (themeColors: ReturnType<typeof useThemeColors>) =>
     // row container for icon and content - ensures proper alignment
     contentRow: {
       flexDirection: 'row', // horizontal layout for icon and content
-      alignItems: 'flex-start', // align to top
+      alignItems: 'center', // vertically center icon with content
     },
 
     // icon wrapper - provides spacing for icon

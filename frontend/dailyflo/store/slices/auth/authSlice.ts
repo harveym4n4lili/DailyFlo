@@ -6,6 +6,7 @@
  */
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, RegisterUserInput, LoginUserInput, SocialAuthInput, UpdateUserInput, UserPreferences } from '../../../types';
 // auth API service - handles API calls to Django backend for authentication
 // this service makes HTTP requests to login, register, and other auth endpoints
@@ -22,6 +23,11 @@ import {
   getTokenExpiry,
   hasValidTokens,
 } from '../../../services/auth/tokenStorage';
+
+// storage key for tracking onboarding completion status
+// this key is used to check if the user has completed the onboarding flow
+// when user logs out, we reset this so they see onboarding screens again
+const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
 
 /**
  * Define the shape of the authentication state
@@ -684,6 +690,17 @@ export const logoutUser = createAsyncThunk(
       const { clearTasks } = await import('../tasks/tasksSlice');
       dispatch(clearTasks());
       
+      // Reset onboarding status when user logs out
+      // This ensures that after logout, the user will see onboarding screens again
+      // This is important because a logged-out user should be treated as a new user
+      try {
+        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+      } catch (onboardingError) {
+        // If resetting onboarding fails, log it but don't fail the logout
+        // The logout should still succeed even if onboarding reset fails
+        console.error('Error resetting onboarding during logout:', onboardingError);
+      }
+      
       // Return success - the reducer handles clearing the state
       return true;
     } catch (error) {
@@ -697,6 +714,14 @@ export const logoutUser = createAsyncThunk(
         dispatch(clearTasks());
       } catch (taskClearError) {
         console.error('Error clearing tasks during logout:', taskClearError);
+      }
+      
+      // Try to reset onboarding even if other logout steps failed
+      // This ensures onboarding is reset regardless of other errors
+      try {
+        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+      } catch (onboardingError) {
+        console.error('Error resetting onboarding during logout:', onboardingError);
       }
       
       console.error('Error during logout (tokens may not have been cleared):', error);

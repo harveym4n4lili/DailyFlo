@@ -110,6 +110,23 @@ export function TaskCreationModal({
     ...initialValues 
   });
   
+  // RESET FORM WHEN MODAL OPENS
+  // when the modal becomes visible, reset form values to defaults merged with initialValues
+  // this ensures that when user opens the modal from planner screen, it uses the currently selected date
+  // flow: modal opens (visible becomes true) → useEffect runs → form resets with current initialValues
+  useEffect(() => {
+    if (visible) {
+      // reset form values to defaults merged with current initialValues
+      // this allows the modal to always use the latest selectedDate when opened from planner
+      setValues({ 
+        ...getDefaults(themeColor), 
+        ...initialValues 
+      });
+      // also reset subtasks when modal opens for a fresh start
+      setSubtasks([]);
+    }
+  }, [visible, initialValues, themeColor]);
+  
   // PICKER VISIBILITY STATE
   // track if any form picker modal is visible for custom backdrop in TaskCreationContent
   const [isAnyPickerVisible, setIsAnyPickerVisible] = useState(false);

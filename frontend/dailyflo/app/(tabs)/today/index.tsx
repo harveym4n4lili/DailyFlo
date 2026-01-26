@@ -13,6 +13,8 @@ import { FloatingActionButton } from '@/components/ui/Button';
 import { DropdownList } from '@/components/ui/List';
 import { ModalContainer, ModalBackdrop } from '@/components/layout/ModalLayout';
 import { TaskViewModal, TaskCreationModal } from '@/components/features/tasks';
+// date picker modal for selecting a new due date when rescheduling overdue tasks
+import { DatePickerModal } from '@/components/features/calendar';
 
 // import color palette system for consistent theming
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
@@ -56,6 +58,11 @@ export default function TodayScreen() {
   
   // TASK CREATION MODAL STATE - separate state for modal controlled by Redux
   const [isCreateTaskModalVisible, setIsCreateTaskModalVisible] = useState(false);
+
+  // OVERDUE RESCHEDULE STATE - controls bulk reschedule for the "Overdue" group on Today screen
+  // we store the IDs of the overdue tasks we want to move plus modal visibility
+  const [isOverdueDatePickerVisible, setIsOverdueDatePickerVisible] = useState(false);
+  const [overdueTaskIdsToReschedule, setOverdueTaskIdsToReschedule] = useState<string[]>([]);
   
   // get UI state from Redux to check if createTask modal should be opened
   const { modals, closeModal } = useUI();
@@ -163,7 +170,7 @@ export default function TodayScreen() {
     const handleScrollChange = (scrollY: number) => {
       // lower threshold (more negative) makes the title appear earlier when scrolling up
       // changed from -30 to -50 to activate the top section sooner
-      const titleThreshold = insets.top - 60;
+      const titleThreshold = insets.top + 12;
       
       if (scrollY >= titleThreshold && !showTitle && !isAnimatingRef.current) {
         setShowTitle(true);
@@ -242,7 +249,7 @@ export default function TodayScreen() {
     console.log('📱 Task pressed:', task.title);
     
     // provide medium haptic feedback
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
     
     // show task detail modal
     // store both task and color separately to maintain color during close animation
@@ -357,6 +364,52 @@ export default function TodayScreen() {
     },
   ];
 
+  // OVERDUE RESCHEDULE HANDLERS
+  // handle press on "Reschedule" in the Overdue group header
+  // this opens the date picker modal and remembers which overdue tasks to update
+  const handleOverdueReschedulePress = (overdueTasks: Task[]) => {
+    // store the overdue task IDs so we know which tasks to update after date selection
+    setOverdueTaskIdsToReschedule(overdueTasks.map((task) => task.id));
+    // open the date picker modal so user can pick a new due date
+    setIsOverdueDatePickerVisible(true);
+  };
+
+  // handle date selection from the overdue date picker modal
+  // this will update the dueDate field for all stored overdue task IDs
+  const handleOverdueDateSelect = async (date: string) => {
+    try {
+      // dispatch an updateTask action for each overdue task to set the new due date
+      // each dispatch calls the Django API via the tasks slice async thunk
+      const updatePromises = overdueTaskIdsToReschedule.map((taskId) =>
+        dispatch(
+          updateTask({
+            id: taskId,
+            updates: {
+              id: taskId,
+              // store the ISO date string returned by the date picker as the new due date
+              // the backend expects an ISO string and the slice will transform it correctly
+              dueDate: date,
+            },
+          }),
+        ),
+      );
+
+      await Promise.all(updatePromises);
+    } catch (err) {
+      console.error('Failed to bulk reschedule overdue tasks:', err);
+    } finally {
+      // close the date picker and clear stored IDs after the operation completes
+      setIsOverdueDatePickerVisible(false);
+      setOverdueTaskIdsToReschedule([]);
+    }
+  };
+
+  // handle close for the overdue date picker without applying changes
+  const handleOverdueDatePickerClose = () => {
+    setIsOverdueDatePickerVisible(false);
+    setOverdueTaskIdsToReschedule([]);
+  };
+
   // render loading state when no tasks are loaded yet
   if (isLoading && tasks.length === 0) {
     return (
@@ -445,7 +498,9 @@ export default function TodayScreen() {
       >
       {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
       {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
+      {/* key prop ensures this ListCard instance is completely independent from planner screen */}
       <ListCard
+        key="today-screen-listcard"
         tasks={todaysTasks}
         onTaskPress={handleTaskPress}
         onTaskComplete={handleTaskComplete}
@@ -460,6 +515,9 @@ export default function TodayScreen() {
         groupBy="dueDate" // group tasks by due date to separate overdue and today's tasks
         sortBy="dueDate" // sort tasks by due date within each group
         sortDirection="asc" // show overdue tasks first, then today's tasks (ascending = oldest first)
+        // enable bulk reschedule action specifically for the "Overdue" group on the Today screen
+        // when the user taps "Reschedule", we open the date picker and then update all overdue tasks
+        onOverdueReschedule={handleOverdueReschedulePress}
         onRefresh={handleRefresh}
         refreshing={isLoading}
         onScroll={(event) => {
@@ -470,23 +528,30 @@ export default function TodayScreen() {
         }}
         scrollEventThrottle={16}
         headerTitle="Today"
-       
+        paddingTop={insets.top+ 64} // add top padding equal to safe area inset
       />
       {/* Floating Action Button for quick task creation */}
       <FloatingActionButton
         onPress={() => {
-          console.log('FAB Pressed - Ready to create new task!');
-          // TODO: Navigate to task creation modal
+          setIsCreateTaskModalVisible(true);
         }}
         accessibilityLabel="Add new task"
         accessibilityHint="Double tap to create a new task"
       />
       
-      {/* separate backdrop that fades in independently behind the modal */}
+      {/* separate backdrop that fades in independently behind the task detail modal */}
       {/* rendered at screen level, behind the modal in z-index */}
       <ModalBackdrop
         isVisible={isTaskDetailModalVisible}
         onPress={handleTaskDetailModalClose}
+        zIndex={10000}
+      />
+      
+      {/* separate backdrop for overdue date picker modal - fades in independently */}
+      {/* rendered at screen level, behind the modal in z-index */}
+      <ModalBackdrop
+        isVisible={isOverdueDatePickerVisible}
+        onPress={handleOverdueDatePickerClose}
         zIndex={10000}
       />
       
@@ -503,6 +568,22 @@ export default function TodayScreen() {
       <TaskCreationModal
         visible={isCreateTaskModalVisible}
         onClose={() => setIsCreateTaskModalVisible(false)}
+      />
+
+      {/* Overdue date picker modal - used to bulk move all overdue tasks to a new date */}
+      {/* uses WrappedDraggableModal for slide-up animation with separate backdrop */}
+      <DatePickerModal
+        visible={isOverdueDatePickerVisible}
+        // use the first overdue task's due date as the selected date when available, otherwise default to today
+        selectedDate={
+          tasks.find((task) => overdueTaskIdsToReschedule.includes(task.id))?.dueDate ||
+          new Date().toISOString()
+        }
+        onClose={handleOverdueDatePickerClose}
+        onSelectDate={handleOverdueDateSelect}
+        title="Reschedule Overdue"
+        // we don't have a single task color for the whole group, so leave this undefined
+        useWrappedModal={true} // use WrappedDraggableModal for slide animation (backdrop handled separately)
       />
       </ScreenContainer>
     </View>

@@ -1139,13 +1139,114 @@ Updated User app, models, serializers, views and urls
 ### Notes
 - no notes
 ---
-## [03/12/2025] - [Monday]
+## [03/01/2026] - [Monday]
 ### Today's Goals
 - [X] Further learning on types and TypeScript
 
 ### Plans For Future
 - get better understanding of async thunk, redux slice state
 - do a deep run manual integration test, and ensure backlog is COMPLETELY up to date
+
+### Notes
+- no notes
+---
+## [11/01/2026] - [Sunday]
+### Today's Goals
+- [X] Started calendar planner screen, in a new branch
+- [X] Implemented a weekly view scroll feature
+- [X] Implemnted a new month view modal
+- [X] Modularised animations
+
+### Plans For Future
+- Plan how to implement task card views in the planner page
+
+### Notes
+- no notes
+---
+## [12/01/2026] - [Monday]
+### Today's Goals
+- [X] Started basic timeline that displays tasks
+- [X] Styled timeline task cards
+- [X] Added date sensitive task creation modal
+- [X] Functioning FAB
+
+### Plans For Future
+- Implement set heights for timeline connectors between tasks.
+
+### Notes
+- no notes
+---
+## [13/01/2026] - [Tuesday]
+### Today's Goals
+- [X] Styled timeline labels and time labels for tasks
+- [X] Implemented a constant spacing feature between tasks for UX
+- [X] Tasks are draggable for time adjustments
+
+### Plans For Future
+- Improve constant spacing consistency between tasks with duration, tasks without duration
+
+### Notes
+- no notes
+---
+## [18/01/2026] - [Sunday]
+### Today's Goals
+- [X] Fixed constant spacing inconsistency [SOLUTION: set all task card heights equally for now]
+- [X] Ensured consistent timeline, timeline item styling and spacing between states: initial load, task update and task drag n drop
+
+### Plans For Future
+- Work towards a solution for varying heights but keeping constant spacing
+- plan styling for overlapping tasks
+
+### Notes
+- no notes
+---
+## [19/01/2026] - [Monday]
+### Today's Goals
+- [X] Fixed constant spacing inconsistency completely []
+- [X] Constant spacing remains for different task card heights
+- [X] added better subtask styling
+- [X] restyled task content styling and added checkbox
+
+### Plans For Future
+- Add functionality to checkbox
+- plan styling for overlapping tasks
+- Add functionality to subtask button
+
+### Notes
+- no notes
+---
+## [23/01/2026] - [Friday]
+### Today's Goals
+- [X] Implemented smooth drag
+- [X] implemnted drag overlay
+- [X] Re designed drag to be hold-drag 
+
+### Plans For Future
+- Restyle drag overlay
+- Implement overlapping tasks
+
+### Notes
+---
+## [25/01/2026] - [Sunday]
+### Today's Goals
+- [X] Started first ios dev build
+
+### Plans For Future
+- Restyle drag overlay
+- Implement overlapping tasks
+
+### Notes
+- no notes
+---
+## [26/01/2026] - [Monday]
+### Today's Goals
+- [X] Implemnted proper drag functionality to overlapping tasks
+- [X] Refined overlappnig task card detection in more cases
+- [X] Added subtask functionality and expansion to overlapping tasks
+ 
+### Plans For Future
+- Restyle drag overlay
+- Implement overlapping tasks
 
 ### Notes
 - no notes
