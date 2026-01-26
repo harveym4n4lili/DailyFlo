@@ -1626,22 +1626,37 @@ export default function TimelineView({
                 const measuredHeight = taskCardHeights.get(task.id) || spacingHeight;
                 const taskPpm = taskPixelsPerMinute.get(task.id) || 0.3;
                 
-                const renderProps = calculateTaskRenderProperties(
-                  task.id,
-                  equalSpacing.equalSpacingPosition,
-                  spacingHeight,
-                  measuredHeight,
-                  taskPpm
-                );
+                // for overlapping tasks, position based on the first task's time
+                // this ensures the first task aligns with its time label even when subtasks expand
+                const firstTask = combinedTask.tasks[0];
+                const firstTaskTime = firstTask?.time;
+                let overlappingCardPosition: number;
+                
+                if (firstTaskTime) {
+                  // use calculatePositionWithOffsets to get the exact position based on the first task's time
+                  // this ensures alignment with the time label regardless of expansion state
+                  overlappingCardPosition = calculatePositionWithOffsets(firstTaskTime);
+                } else {
+                  // fallback to calculated position if first task has no time
+                  const renderProps = calculateTaskRenderProperties(
+                    task.id,
+                    equalSpacing.equalSpacingPosition,
+                    spacingHeight,
+                    measuredHeight,
+                    taskPpm
+                  );
+                  overlappingCardPosition = renderProps.position;
+                }
                 
                 return (
                   <OverlappingTaskCard
                     key={task.id}
                     tasks={combinedTask.tasks}
-                    position={renderProps.position}
+                    position={overlappingCardPosition}
                     duration={duration}
-                    pixelsPerMinute={renderProps.pixelsPerMinute}
+                    pixelsPerMinute={taskPpm}
                     startHour={dynamicStartHour}
+                    combinedTaskId={task.id}
                     onPress={(pressedTask) => onTaskPress?.(pressedTask)}
                     onTaskComplete={onTaskComplete}
                     onDrag={(taskId, newY) => {
@@ -1663,12 +1678,16 @@ export default function TimelineView({
                       const draggedTask = combinedTask.tasks.find(t => t.id === taskId);
                       if (draggedTask) {
                         const taskIndex = combinedTask.tasks.findIndex(t => t.id === taskId);
-                        let taskTopPosition = renderProps.position;
+                        // use overlappingCardPosition as the base (position of first task)
+                        let taskTopPosition = overlappingCardPosition;
+                        // calculate position by summing heights of all previous tasks
                         for (let i = 0; i < taskIndex; i++) {
                           const prevTask = combinedTask.tasks[i];
+                          // use measured height if available (includes expanded subtasks)
+                          const prevMeasuredHeight = taskCardHeights.get(prevTask.id);
                           const prevTaskDuration = prevTask.duration || 0;
                           const prevTaskHasSubtasks = !!(prevTask.metadata?.subtasks && Array.isArray(prevTask.metadata.subtasks) && prevTask.metadata.subtasks.length > 0);
-                          const prevTaskHeight = getTaskCardHeight(prevTaskDuration, prevTaskHasSubtasks);
+                          const prevTaskHeight = prevMeasuredHeight ?? getTaskCardHeight(prevTaskDuration, prevTaskHasSubtasks);
                           taskTopPosition += prevTaskHeight + 4; // 4px spacing between cards
                         }
                         const taskDuration = draggedTask.duration || 0;
