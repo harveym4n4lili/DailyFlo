@@ -328,16 +328,8 @@ export default function TimelineItem({
     basePosition.value = position; // update shared value for worklet access
     translateY.value = 0; // reset translation when position changes
     
-    // animate position smoothly when it changes using reanimated
-    // this makes tasks smoothly move when other tasks expand/collapse
-    // duration 200ms matches the card height animation for synchronized movement
-    positionAnimation.value = withTiming(position, {
-      duration: 75,
-    });
-    
-    // if we're waiting for reposition after drag, trigger fade-in
-    // this happens when the timeline recalculates and updates the task's position
-    // we trigger even if position didn't change (in case dragged back to same spot)
+    // if we're waiting for reposition after drag, set position and fade immediately (no animation)
+    // this prevents the slide glitch when dragging out of overlapping tasks
     if (waitingForRepositionRef.current) {
       waitingForRepositionRef.current = false; // clear the flag
       
@@ -347,12 +339,17 @@ export default function TimelineItem({
         fadeInTimeoutRef.current = null;
       }
       
-      // fade in from 0 to 1 when the card repositions after drag using reanimated
-      // this provides visual feedback that the drag completed and card is in new position
-      // cancel any ongoing animation first to allow interruption
+      // set position and fade immediately without animation to prevent slide glitch
+      cancelAnimation(positionAnimation);
       cancelAnimation(fadeAnimation);
-      fadeAnimation.value = withTiming(1, {
-        duration: 800, // smooth 800ms fade-in animation
+      positionAnimation.value = position; // set immediately, no animation
+      fadeAnimation.value = 1; // set immediately, no fade animation
+    } else {
+      // animate position smoothly when it changes using reanimated
+      // this makes tasks smoothly move when other tasks expand/collapse
+      // duration 200ms matches the card height animation for synchronized movement
+      positionAnimation.value = withTiming(position, {
+        duration: 75,
       });
     }
   }, [position]);
