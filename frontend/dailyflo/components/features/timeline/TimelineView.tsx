@@ -69,6 +69,11 @@ export default function TimelineView({
   // spacing now follows the animated height so the whole timeline moves smoothly
   const [taskCardHeights, setTaskCardHeights] = useState<Map<string, number>>(new Map());
 
+  // track if we're currently processing a drag operation to prevent double overlap detection
+  // when a drag ends, handleTaskTimeChangeWithOverlap handles overlap detection
+  // we don't want the useEffect to also run overlap detection immediately after
+  const isProcessingDragRef = useRef(false);
+
   // track task IDs that should be hidden due to overlaps
   // when a task is dragged and overlaps with others, both overlapping tasks are hidden
   const [hiddenTaskIds, setHiddenTaskIds] = useState<Set<string>>(new Set());
@@ -942,13 +947,22 @@ export default function TimelineView({
   // when a task is dragged to a new time, check for overlaps and create combined overlapping task
   // also handles removing tasks from combined overlapping tasks when they're dragged out
   const handleTaskTimeChangeWithOverlap = useCallback((taskId: string, newTime: string) => {
+    // mark that we're processing a drag operation to prevent useEffect from running overlap detection
+    isProcessingDragRef.current = true;
+    
     // update the task time via parent callback
     onTaskTimeChange?.(taskId, newTime);
     
     // after updating, detect overlaps with the new time
     // find the dragged task to get its duration
     const draggedTask = tasks.find(t => t.id === taskId);
-    if (!draggedTask) return;
+    if (!draggedTask) {
+      // reset drag processing flag if task not found
+      setTimeout(() => {
+        isProcessingDragRef.current = false;
+      }, 50);
+      return;
+    }
     
     // create a temporary task object with the new time for overlap checking
     const draggedTaskWithNewTime: Task = {
@@ -977,17 +991,11 @@ export default function TimelineView({
       // remove the dragged task from the combined task
       const remainingTasks = sourceCombinedTask.tasks.filter((t: Task) => t.id !== taskId);
       
-      // remove the old combined task
+      // remove the old combined task FIRST
+      // this ensures the timeline recalculates positions before the task becomes visible
       setCombinedOverlappingTasks(prev => {
         const next = new Map(prev);
         next.delete(sourceCombinedTaskId!);
-        return next;
-      });
-      
-      // remove the dragged task from hidden tasks (it's now standalone with new time)
-      setHiddenTaskIds(prev => {
-        const next = new Set(prev);
-        next.delete(taskId);
         return next;
       });
       
@@ -998,9 +1006,17 @@ export default function TimelineView({
         return next;
       });
       
+      // DON'T remove from hiddenTaskIds yet - keep it hidden until we check for overlaps
+      // This prevents the slide glitch where it appears at old position first
+      // We'll remove it from hiddenTaskIds after checking if it still overlaps
+      
       // handle remaining tasks
       if (remainingTasks.length === 0) {
         // no tasks left - nothing to do
+        // reset drag processing flag after a small delay to prevent double detection
+        setTimeout(() => {
+          isProcessingDragRef.current = false;
+        }, 50);
         return;
       } else if (remainingTasks.length === 1) {
         // only one task remains - check if dragged task still overlaps with it
@@ -1052,6 +1068,10 @@ export default function TimelineView({
           });
           
           // early return - we've handled the overlap, no need to check further
+          // reset drag processing flag after a small delay to prevent double detection
+          setTimeout(() => {
+            isProcessingDragRef.current = false;
+          }, 50);
           return;
         } else {
           // dragged task no longer overlaps with the remaining task
@@ -1120,6 +1140,10 @@ export default function TimelineView({
           });
           
           // early return - we've handled the overlap, no need to check further
+          // reset drag processing flag after a small delay to prevent double detection
+          setTimeout(() => {
+            isProcessingDragRef.current = false;
+          }, 50);
           return;
         } else {
           // dragged task no longer overlaps with remaining tasks
@@ -1212,6 +1236,24 @@ export default function TimelineView({
       });
     }
     
+    // if task was dragged out of overlapping group and doesn't overlap with anything else,
+    // remove it from hiddenTaskIds now (after overlap check) to make it visible as standalone
+    // This prevents slide glitch by keeping it hidden until timeline has recalculated positions
+    // Use requestAnimationFrame to ensure timeline has recalculated before making it visible
+    if (wasInCombinedTask && !overlappingCombinedTask && overlappingTaskIds.size === 0) {
+      // dragged task doesn't overlap with anything - make it visible as standalone
+      // Delay visibility change to allow timeline to recalculate positions first
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setHiddenTaskIds(prev => {
+            const next = new Set(prev);
+            next.delete(taskId);
+            return next;
+          });
+        });
+      });
+    }
+    
     // if there are overlaps, create a combined overlapping task
     if (overlappingCombinedTask || overlappingTaskIds.size > 0) {
       let allTasksToCombine: Task[] = [];
@@ -1295,6 +1337,13 @@ export default function TimelineView({
         return next;
       });
     }
+    
+    // reset drag processing flag after overlap detection completes
+    // use a small delay to ensure the useEffect has a chance to check the flag
+    // this prevents double overlap detection when tasks prop updates after drag
+    setTimeout(() => {
+      isProcessingDragRef.current = false;
+    }, 50);
   }, [tasks, doTasksOverlap, onTaskTimeChange, calculateCombinedTaskProperties, combinedOverlappingTasks, hiddenTaskIds]);
 
   // use drag hook for unified drag handling across all states
@@ -1399,10 +1448,10 @@ export default function TimelineView({
   // uses modular detectAndCreateOverlappingTasks function for consistency
   // only runs when not dragging to avoid interfering with drag operations
   useEffect(() => {
-    // only run overlap detection if we're not currently dragging
+    // only run overlap detection if we're not currently dragging and not processing a drag operation
     // drag operations handle overlap detection themselves via handleTaskTimeChangeWithOverlap
-    // this ensures overlap detection runs on initial load and when tasks are updated (but not during drag)
-    if (dragState === null) {
+    // this ensures overlap detection runs on initial load and when tasks are updated (but not during/after drag)
+    if (dragState === null && !isProcessingDragRef.current) {
       detectAndCreateOverlappingTasks(tasks);
     }
   }, [tasks, detectAndCreateOverlappingTasks, dragState]);
