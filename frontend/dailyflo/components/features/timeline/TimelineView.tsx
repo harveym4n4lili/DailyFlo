@@ -845,6 +845,99 @@ export default function TimelineView({
     };
   }, []);
 
+  /**
+   * Modular function to detect and create overlapping task groups
+   * This function analyzes all tasks and groups overlapping tasks together
+   * Used on initial load, task updates, and any timeline refresh
+   */
+  const detectAndCreateOverlappingTasks = useCallback((tasksToAnalyze: Task[]) => {
+    // filter to only tasks with time (required for overlap detection)
+    const tasksWithTime = tasksToAnalyze.filter(task => task.time && task.dueDate);
+    
+    if (tasksWithTime.length === 0) {
+      // no tasks with time - clear all overlapping state
+      setCombinedOverlappingTasks(new Map());
+      setHiddenTaskIds(new Set());
+      setHiddenOverlappingTasks(new Map());
+      return;
+    }
+    
+    // find all overlapping groups using a union-find approach
+    // each group represents tasks that overlap with each other
+    const taskGroups: Task[][] = [];
+    const processedTaskIds = new Set<string>();
+    
+    // for each task, find all tasks that overlap with it (directly or transitively)
+    tasksWithTime.forEach(task => {
+      if (processedTaskIds.has(task.id)) return;
+      
+      // start a new group with this task
+      const group: Task[] = [task];
+      processedTaskIds.add(task.id);
+      
+      // find all tasks that overlap with any task in this group
+      // keep expanding until no more overlapping tasks are found
+      let foundNew = true;
+      while (foundNew) {
+        foundNew = false;
+        tasksWithTime.forEach(otherTask => {
+          if (processedTaskIds.has(otherTask.id)) return;
+          
+          // check if this task overlaps with any task in the current group
+          const overlapsWithGroup = group.some(groupTask => doTasksOverlap(otherTask, groupTask));
+          
+          if (overlapsWithGroup) {
+            group.push(otherTask);
+            processedTaskIds.add(otherTask.id);
+            foundNew = true;
+          }
+        });
+      }
+      
+      // only create a group if it has 2+ tasks (single tasks don't need grouping)
+      if (group.length >= 2) {
+        taskGroups.push(group);
+      }
+    });
+    
+    // create combined overlapping tasks for each group
+    const newCombinedTasks = new Map<string, CombinedOverlappingTask>();
+    const newHiddenTaskIds = new Set<string>();
+    const newHiddenOverlappingTasks = new Map<string, Task>();
+    
+    taskGroups.forEach(group => {
+      // sort tasks by start time (earliest first)
+      group.sort((a, b) => {
+        if (!a.time || !b.time) return 0;
+        return timeToMinutes(a.time) - timeToMinutes(b.time);
+      });
+      
+      // create combined task id from all task ids
+      const combinedTaskId = `overlap-${group.map(t => t.id).join('-')}`;
+      
+      // create combined task with all tasks
+      const combinedTask: CombinedOverlappingTask = {
+        id: combinedTaskId,
+        tasks: group,
+        ...calculateCombinedTaskProperties(group),
+      };
+      
+      // store the combined task
+      newCombinedTasks.set(combinedTask.id, combinedTask);
+      
+      // hide all tasks in this group
+      group.forEach(task => {
+        newHiddenTaskIds.add(task.id);
+        newHiddenOverlappingTasks.set(task.id, task);
+      });
+    });
+    
+    // update state with all detected overlapping groups
+    setCombinedOverlappingTasks(newCombinedTasks);
+    setHiddenTaskIds(newHiddenTaskIds);
+    setHiddenOverlappingTasks(newHiddenOverlappingTasks);
+  }, [doTasksOverlap, calculateCombinedTaskProperties]);
+
   // handle task time change with overlap detection
   // when a task is dragged to a new time, check for overlaps and create combined overlapping task
   // also handles removing tasks from combined overlapping tasks when they're dragged out
@@ -1301,8 +1394,22 @@ export default function TimelineView({
     });
   }, [taskIdsString, sortedTasks]);
 
+  // detect and create overlapping tasks when tasks change
+  // this runs on initial load, task updates, and any timeline refresh
+  // uses modular detectAndCreateOverlappingTasks function for consistency
+  // only runs when not dragging to avoid interfering with drag operations
+  useEffect(() => {
+    // only run overlap detection if we're not currently dragging
+    // drag operations handle overlap detection themselves via handleTaskTimeChangeWithOverlap
+    // this ensures overlap detection runs on initial load and when tasks are updated (but not during drag)
+    if (dragState === null) {
+      detectAndCreateOverlappingTasks(tasks);
+    }
+  }, [tasks, detectAndCreateOverlappingTasks, dragState]);
+
   // clear hidden tasks that no longer exist in the tasks list
   // this prevents stale hidden state when tasks are removed or updated
+  // note: this runs after detectAndCreateOverlappingTasks, so it cleans up any stale state
   useEffect(() => {
     setHiddenTaskIds(prev => {
       const next = new Set<string>();
