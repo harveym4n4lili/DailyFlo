@@ -2,7 +2,7 @@
 
 This document tracks features, improvements, and technical debt items that are planned for future implementation. Items are organized by priority and category.
 
-**Last Updated**: 2025-01-21 (Updated with task management and social auth planning items)
+**Last Updated**: 2025-01-26 (Added planner screen enhancement items)
 
 ---
 
@@ -176,6 +176,19 @@ This document tracks features, improvements, and technical debt items that are p
 - **Details**: Review and update color choices for tasks
 - **Files**: `constants/ColorPalette.ts`
 - **Reference**: Dev-log recurring TODO
+
+#### Planner Screen Enhancements
+- **Status**: Not Started
+- **Description**: Improve overlapping tasks UI and add visual enhancements to timeline view
+- **Details**:
+  - Add better styling for overlapping tasks
+  - Add in-between task messages
+  - Reimplement animations to use native animations (react-native-reanimated)
+  - Add "overlapping tasks" message between tasks in overlapping task group
+- **Files**: 
+  - `components/features/timeline/OverlappingTaskCard/OverlappingTaskCard.tsx`
+  - `components/features/timeline/TimelineView.tsx`
+  - `components/features/timeline/TimelineItem/`
 
 ### Performance & Optimization
 
