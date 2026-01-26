@@ -1237,3 +1237,16 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - no notes
+---
+## [26/01/2026] - [Monday]
+### Today's Goals
+- [X] Implemnted proper drag functionality to overlapping tasks
+- [X] Refined overlappnig task card detection in more cases
+- [X] Added subtask functionality and expansion to overlapping tasks
+ 
+### Plans For Future
+- Restyle drag overlay
+- Implement overlapping tasks
+
+### Notes
+- no notes
