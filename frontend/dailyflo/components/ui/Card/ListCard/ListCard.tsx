@@ -11,7 +11,7 @@
  * This component demonstrates the flow from Redux store → ListCard → TaskCard → User interaction.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, ListRenderItem, RefreshControl, Animated, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UIManager } from 'react-native';
@@ -95,6 +95,7 @@ export interface ListCardProps {
   
   // padding support
   paddingTop?: number; // top padding for the list container
+  paddingHorizontal?: number; // horizontal padding for the list container
   
   // dropdown menu support
   // array of menu items to display in the dropdown menu (shown as ellipse button in header)
@@ -109,6 +110,11 @@ export interface ListCardProps {
   dropdownTopOffset?: number; // top offset for dropdown positioning
   dropdownRightOffset?: number; // right offset for dropdown positioning
   dropdownLeftOffset?: number; // left offset for dropdown positioning
+
+  // optional handler for overdue group bulk reschedule (used on Today screen)
+  // when provided, the "Overdue" group header will show a "Reschedule" action
+  // that calls this handler with all tasks in the Overdue group
+  onOverdueReschedule?: (tasks: Task[]) => void;
 }
 
 /**
@@ -141,11 +147,13 @@ export default function ListCard({
   headerTitle,
   headerSubtitle,
   paddingTop,
+  paddingHorizontal = 20, // default horizontal padding (20px)
   dropdownItems,
   dropdownAnchorPosition = 'top-right',
   dropdownTopOffset = 0,
   dropdownRightOffset = 20,
   dropdownLeftOffset = 20,
+  onOverdueReschedule,
 }: ListCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -160,11 +168,48 @@ export default function ListCard({
   // DROPDOWN STATE - Controls the visibility of the dropdown menu
   // when dropdownItems are provided, this state manages whether the dropdown is visible
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  
+  // FLATLIST REFS - Create refs for FlatList instances to control scroll position
+  // using refs ensures each ListCard instance has independent scroll control
+  const flatListRef = useRef<FlatList>(null);
+  const groupedFlatListRef = useRef<FlatList>(null);
+  
+  // UNIQUE INSTANCE ID - Generate a unique ID for this ListCard instance
+  // this ensures React treats each instance as completely separate
+  const instanceId = useRef(Math.random().toString(36).substring(7)).current;
+  
+  // RESET SCROLL POSITION ON MOUNT - Ensure each ListCard starts at the top
+  // this prevents scroll position from being shared between instances
+  useEffect(() => {
+    // reset scroll position to top when component mounts
+    // small delay ensures FlatList is fully rendered before scrolling
+    const timer = setTimeout(() => {
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+      groupedFlatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // RESET SCROLL POSITION AFTER REFRESH - Ensure scroll position resets after refresh completes
+  // this prevents scroll position from accumulating between refresh cycles
+  useEffect(() => {
+    if (!refreshing) {
+      // when refreshing becomes false, reset scroll position to top
+      // small delay ensures refresh animation completes first
+      const timer = setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+        groupedFlatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [refreshing]);
 
   // create dynamic styles using the color palette system and typography system
   const styles = useMemo(
-    () => createStyles(themeColors, semanticColors, typography, insets, paddingTop),
-    [themeColors, semanticColors, typography, insets, paddingTop]
+    () => createStyles(themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal),
+    [themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal]
   );
 
   // use custom hooks for animation management
@@ -235,7 +280,7 @@ export default function ListCard({
   };
 
   // render group header with dropdown arrow for expand/collapse functionality
-  const renderGroupHeader = (title: string, count: number) => {
+  const renderGroupHeader = (title: string, count: number, groupTasks: Task[]) => {
     const isCollapsed = isGroupCollapsed(title);
     const animatedValuesForGroup = getAnimatedValuesForGroup(title);
 
@@ -245,12 +290,23 @@ export default function ListCard({
       outputRange: ['90deg', '0deg'], // output range: rotate from 90 degrees (right) to 0 degrees (down) for arrow transition
     });
 
+    // determine if this group should show a secondary "Reschedule" action
+    // we only show it for the Overdue group when a handler is provided
+    const showSecondaryAction =
+      title === 'Overdue' && typeof onOverdueReschedule === 'function';
+
     return (
       <GroupHeader
         title={title}
         count={count}
         isCollapsed={isCollapsed}
         arrowRotation={arrowRotation}
+        showSecondaryAction={showSecondaryAction}
+        onSecondaryActionPress={
+          showSecondaryAction && onOverdueReschedule
+            ? () => onOverdueReschedule(groupTasks)
+            : undefined
+        }
         onPress={() => handleGroupToggle(title)}
       />
     );
@@ -310,14 +366,11 @@ export default function ListCard({
   }
 
   // create refresh control for pull-to-refresh functionality
-  // progressViewOffset accounts for contentInset top to ensure refresh indicator appears correctly
   const refreshControl = onRefresh ? (
     <RefreshControl
       refreshing={refreshing}
       onRefresh={onRefresh}
       tintColor="#007AFF" // iOS blue color for pull-to-refresh indicator
-      progressViewOffset={insets.top} // offset from top to account for contentInset
-      style={{ paddingTop: 32 }}
     />
   ) : undefined;
 
@@ -339,22 +392,18 @@ export default function ListCard({
           />
         )}
         <FlatList
+          ref={flatListRef}
           data={processedTasks}
           renderItem={renderTaskCard}
-          keyExtractor={(task) => task.id}
+          keyExtractor={(task) => `${instanceId}-${task.id}`} // add instance ID to ensure unique keys
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           refreshControl={refreshControl}
           onScroll={onScroll}
           scrollEventThrottle={scrollEventThrottle}
           ListHeaderComponent={renderHeader}
-          // contentInset allows scrolling past the top safe area insets
-          // this ensures content can scroll all the way to the top without being cut off
-          // the top inset creates extra scrollable space above the content
-          contentInset={{ top: insets.top }}
-          // initial scroll offset matches the position after refresh control completes
-          // this ensures the header title doesn't touch the top edge initially
-          contentOffset={{ x: 0, y: -insets.top }}
+          // prevent scroll position restoration between instances
+          maintainVisibleContentPosition={null}
         />
       </View>
     );
@@ -411,7 +460,7 @@ export default function ListCard({
 
             return (
               <View style={styles.group}>
-                {renderGroupHeader(groupTitle, groupTasks.length)}
+                {renderGroupHeader(groupTitle, groupTasks.length, groupTasks as Task[])}
                 {/* conditionally render tasks based on collapse state */}
                 {!isCollapsed && (
                   <FlatList
@@ -425,20 +474,16 @@ export default function ListCard({
               </View>
             );
           }}
-          keyExtractor={([groupTitle]) => groupTitle}
+          ref={groupedFlatListRef}
+          keyExtractor={([groupTitle]) => `${instanceId}-${groupTitle}`} // add instance ID to ensure unique keys
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           refreshControl={refreshControl}
           onScroll={onScroll}
           scrollEventThrottle={scrollEventThrottle}
           ListHeaderComponent={renderHeader}
-          // contentInset allows scrolling past the top safe area insets
-          // this ensures content can scroll all the way to the top without being cut off
-          // the top inset creates extra scrollable space above the content
-          contentInset={{ top: insets.top }}
-          // initial scroll offset matches the position after refresh control completes
-          // this ensures the header title doesn't touch the top edge initially
-          contentOffset={{ x: 0, y: -insets.top }}
+          // prevent scroll position restoration between instances
+          maintainVisibleContentPosition={null}
         />
       </View>
     );
@@ -451,7 +496,8 @@ const createStyles = (
   semanticColors: ReturnType<typeof useSemanticColors>,
   typography: ReturnType<typeof useTypography>,
   insets: { top: number; bottom: number; left: number; right: number },
-  paddingTop?: number
+  paddingTop?: number,
+  paddingHorizontal?: number
 ) =>
   StyleSheet.create({
     // main container
@@ -466,7 +512,7 @@ const createStyles = (
     listContainer: {
       paddingTop: paddingTop ?? 0, // top padding for list container (optional, defaults to 0)
       paddingBottom: 58 + 80 + 16 + insets.bottom + 40, // FAB height (58px) + navbar height (80px) + spacing (16px) + safe area bottom + extra space (40px)
-      paddingHorizontal: 20, // horizontal padding for task cards
+      paddingHorizontal: paddingHorizontal ?? 20, // horizontal padding for task cards (optional, defaults to 20px)
       // ensure content can scroll all the way to bottom of screen
       flexGrow: 1, // allow content to grow and fill available space
     },
