@@ -318,6 +318,18 @@ export const ThemeColors = {
 } as const;
 
 /**
+ * FAB (Floating Action Button) Colors
+ *
+ * Constant colors for the FAB. Tint uses task-category red; icon uses primary white.
+ * glassBorder: semi-transparent white for glass-like border ring (Android fallback).
+ */
+export const FABColors = {
+  tint: PrimaryColors.light[25],
+  icon: PrimaryColors.dark[25],
+  glassBorder: 'rgba(255, 255, 255, 0.5)',
+} as const;
+
+/**
  * Color Utility Functions
  * 
  * Helper functions for working with colors in components.
