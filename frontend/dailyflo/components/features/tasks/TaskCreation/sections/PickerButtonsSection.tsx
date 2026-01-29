@@ -74,13 +74,13 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
     {
       id: 'time',
       icon: 'time-outline',
-      label: 'No Time or Duration',
+      label: 'Time',
       onPress: onShowTimeDurationPicker,
     },
     {
       id: 'alerts',
       icon: 'notifications-outline',
-      label: 'No Alerts',
+      label: 'Alerts',
       onPress: onShowAlertsPicker,
     },
   ];
@@ -92,8 +92,13 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
         horizontal
         showsHorizontalScrollIndicator={false}
         keyboardShouldPersistTaps="always"
+        // allow glass expansion to bleed out beyond scroll view bounds
+        style={{ overflow: 'visible' }}
         contentContainerStyle={{
-          width: '100%',
+          // use horizontal padding instead of fixed width so the row
+          // can grow beyond the screen and keep scrolling further
+          // while still starting/ending nicely inset from the screen edge
+          paddingHorizontal: 16,
           gap: 16,
         }}
       >
@@ -126,7 +131,15 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
               : alertsButtonHighlightOpacity;
 
           return (
-            <View key={button.id} style={{ left: 16 }}>
+            <View
+              key={button.id}
+              style={{
+                // let each picker button size itself naturally; we intentionally
+                // avoid using absolute left offsets here so the horizontal
+                // ScrollView can extend and scroll as far as needed
+                overflow: 'visible',
+              }}
+            >
               <FormPickerButton
                 icon={button.icon}
                 defaultText={button.label}
@@ -140,9 +153,10 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
                   button.id === 'icon' ? (
                     <View
                       style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: 12,
+                        // make the color-palette pill the same visual height as other picker icons
+                       
+                        height: 20,
+                        borderRadius: 10,
                         backgroundColor: 'rgba(0, 0, 0, 0.1)',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -150,7 +164,7 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
                     >
                       <Ionicons
                         name="color-palette"
-                        size={24}
+                        size={18}
                         color={themeColors.text.secondary()}
                       />
                     </View>

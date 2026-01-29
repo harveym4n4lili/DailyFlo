@@ -299,6 +299,7 @@ export function TaskCreationModal({
       backgroundColor={themeColors.background.primarySecondaryBlend()}
       showBackdrop={true}
       backdropDismiss={true}
+      fullScreen={true}
     >
       <TaskCreationContent
         visible={visible}

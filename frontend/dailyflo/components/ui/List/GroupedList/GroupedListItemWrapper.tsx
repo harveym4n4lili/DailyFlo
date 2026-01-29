@@ -26,6 +26,15 @@ export interface GroupedListItemWrapperProps {
   /** Separator color */
   separatorColor: string;
   
+  /** Optional background color override (defaults to theme elevated background) */
+  backgroundColor?: string;
+  
+  /** Optional border width (no border when undefined) */
+  borderWidth?: number;
+  
+  /** Optional border color (defaults to theme border when borderWidth is set) */
+  borderColor?: string;
+  
   /** Optional style override */
   style?: ViewStyle;
 }
@@ -42,9 +51,12 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
   showSeparator,
   borderRadius,
   separatorColor,
+  backgroundColor,
+  borderWidth,
+  borderColor,
   style,
 }) => {
-  // get theme-aware colors for default background
+  // get theme-aware colors for default background and border when props not provided
   const themeColors = useThemeColors();
 
   // determine which corners should be rounded based on item position
@@ -75,10 +87,14 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
   };
 
   // combine all container styles
-  // removed borderBottomWidth/Color from here since we're using a separate separator View
+  // use backgroundColor prop when provided, otherwise theme elevated background
+  // when borderWidth is set, apply border (borderColor defaults to theme border)
   const containerStyle: ViewStyle = {
-    backgroundColor: themeColors.background.elevated(),
+    backgroundColor: backgroundColor ?? themeColors.background.primarySecondaryBlend(),
     overflow: 'hidden', // ensure border radius is applied correctly
+    ...(borderWidth != null && borderWidth > 0
+      ? { borderWidth, borderColor: borderColor ?? themeColors.border.primary() }
+      : {}),
     ...getBorderRadiusStyle(),
     ...style, // allow parent-level override
   };

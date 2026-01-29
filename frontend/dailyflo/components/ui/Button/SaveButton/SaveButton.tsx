@@ -30,6 +30,12 @@ import { useTypography } from '@/hooks/useTypography';
 import { getTextStyle } from '@/constants/Typography';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 
+// EXPO GLASS EFFECT IMPORTS
+// GlassView: native iOS UIVisualEffectView liquid glass surface (same pattern as MainCloseButton)
+// isGlassEffectAPIAvailable: runtime check so we only use glass when the API exists
+import GlassView from 'expo-glass-effect/build/GlassView';
+import { isGlassEffectAPIAvailable } from 'expo-glass-effect';
+
 // TYPES IMPORTS
 import type { TaskColor } from '@/types';
 
@@ -72,6 +78,12 @@ export interface SaveButtonProps {
    * @default "Saving..."
    */
   loadingText?: string;
+
+  /**
+   * Button size in pixels (icon size for circular button; whole button scales with this)
+   * @default 24
+   */
+  size?: number;
 }
 
 /**
@@ -103,6 +115,7 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
   taskCategoryColor = 'blue',
   text = 'Save',
   loadingText = 'Saving...',
+  size = 24,
 }) => {
   // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
@@ -112,13 +125,27 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
   // check if running on iOS 15+ (newer glass UI design)
   const isNewerIOS = getIOSVersion() >= 15;
   
-  // determine button icon/text color based on task category color
-  // always use task category color, including white case
-  const getButtonTextColor = () => {
-    return TaskCategoryColors[taskCategoryColor][500]; // task category color
+  // check if liquid glass API is available at runtime (prevents crashes on some iOS 26 betas)
+  const glassAvailable = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
+  
+  // determine icon color
+  // always use the primary text color from the theme so the icon
+  // matches other primary text (not the user-selected task color)
+  const getIconColor = () => {
+    return themeColors.text.primary();
   };
   
-  // determine if button should be active (not disabled and not loading)
+  // background tint color for the save button glass container
+  const saveButtonGlassTintColor = themeColors.background.secondary();
+  // fallback background when glass is not used (newer iOS without glass)
+  const saveButtonBackgroundColor = themeColors.background.secondary();
+
+  // scale the whole button with size: default was icon 24 inside 42x42 (ratio 42/24)
+  // so container and border radii scale proportionally
+  const containerSize = Math.round(size * (42 / 24));
+  const outerBorderRadius = Math.round(containerSize * (24 / 42));
+  const innerBorderRadius = Math.round(containerSize / 2);
+
   const isActive = !disabled && !isLoading;
   
   // handle button press - call parent callback
@@ -128,45 +155,122 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
     }
   };
 
-  return (
+  // core button content (icon or text)
+  // wrapped so we can reuse it inside or outside GlassView
+  const buttonContent = (
     <Pressable
       onPress={handlePress}
       disabled={!isActive}
       style={({ pressed }) => ({
-        ...(isNewerIOS ? {
-          // iOS 15+: circular button with lightOverlay background (matches MainCloseButton)
-          width: 42,
-          height: 42,
-          borderRadius: 21,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: themeColors.background.lightOverlay(), // same as MainCloseButton
-          // when pressed: use inactive state opacity (0.4), no animations
-          // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
-          opacity: pressed ? 0.4 : (!isActive ? 0.4 : isLoading ? 0.6 : 1),
-        } : {
-          // iOS < 15: text button with colored background
-          paddingHorizontal: 12,
-          paddingVertical: 8,
-          borderRadius: 20,
-          backgroundColor: TaskCategoryColors[taskCategoryColor][500],
-          justifyContent: 'center',
-          alignItems: 'center',
-          // when pressed: use inactive state opacity (0.4), no animations
-          // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
-          opacity: pressed ? 0.4 : (!isActive ? 0.4 : isLoading ? 0.6 : 1),
-        }),
+        // make the pressable fill the container so the whole area is tappable
+        width: '100%',
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        // when inside a glass surface we add a subtle 1px border that hugs
+        // the circular button (same pattern as `MainCloseButton`)
+        ...(isNewerIOS && glassAvailable
+          ? {
+              borderWidth: 1,
+              borderColor: themeColors.border.primary(),
+              borderRadius: innerBorderRadius,
+            }
+          : null),
+        // when pressed: use inactive state opacity (0.4), no animations
+        // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
+        opacity: pressed ? 0.4 : (!isActive ? 0.4 : isLoading ? 0.6 : 1),
       })}
+      // hitSlop expands the tap area slightly outside the visual circle
+      // to make light taps easier to register
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
       {isNewerIOS ? (
         // iOS 15+ (newer): tick/checkmark icon button (or hourglass when saving)
         <Ionicons
           name={isLoading ? "hourglass-outline" : "checkmark"}
-          size={24}
-          color={getButtonTextColor()}
+          size={size}
+          color={getIconColor()}
         />
       ) : (
         // iOS < 15 (older): text button
+        <Text style={{
+          ...getTextStyle('button-secondary'),
+          // use white text for contrast on colored backgrounds
+          color: '#FFFFFF',
+          fontWeight: '900', // save button is bold
+        }}>
+          {isLoading ? loadingText : text}
+        </Text>
+      )}
+    </Pressable>
+  );
+
+  // when glass is available on newer iOS we wrap the pressable in a GlassView
+  // the glass background itself is visually transparent (no custom tint),
+  // and the icon always uses the primary text color
+  if (isNewerIOS && glassAvailable) {
+    return (
+      <GlassView
+        style={{
+          width: containerSize,
+          height: containerSize,
+          borderRadius: outerBorderRadius,
+          overflow: 'visible',
+        }}
+        // use the same regular glass effect + themed tint as `MainCloseButton`
+        // this is what creates the subtle, soft-glass header button look
+        tintColor={saveButtonGlassTintColor as any}
+        glassEffectStyle="regular"
+        isInteractive
+      >
+        {buttonContent}
+      </GlassView>
+    );
+  }
+
+  // fallback for Android, web, and older iOS:
+  // - newer iOS with no liquid glass: circular icon button with transparent background
+  // - older iOS: keep the original text button with colored background
+  return (
+    <Pressable
+      onPress={handlePress}
+      disabled={!isActive}
+      style={({ pressed }) => ({
+        ...(isNewerIOS
+          ? {
+              width: containerSize,
+              height: containerSize,
+              borderRadius: innerBorderRadius,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: saveButtonBackgroundColor,
+              // when pressed: use inactive state opacity (0.4), no animations
+              // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
+              opacity: pressed ? 0.4 : (!isActive ? 0.4 : isLoading ? 0.6 : 1),
+            }
+          : {
+              // iOS < 15 (older): text button with colored background (preserve old design)
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 20,
+              backgroundColor: TaskCategoryColors[taskCategoryColor][500],
+              justifyContent: 'center',
+              alignItems: 'center',
+              // when pressed: use inactive state opacity (0.4), no animations
+              // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
+              opacity: pressed ? 0.4 : (!isActive ? 0.4 : isLoading ? 0.6 : 1),
+            }),
+      })}
+    >
+      {isNewerIOS ? (
+        // newer iOS fallback: icon with primary text color, background is transparent
+        <Ionicons
+          name={isLoading ? "hourglass-outline" : "checkmark"}
+          size={size}
+          color={getIconColor()}
+        />
+      ) : (
+        // iOS < 15 (older): text button (current style)
         <Text style={{
           ...getTextStyle('button-secondary'),
           // use white text for contrast on colored backgrounds

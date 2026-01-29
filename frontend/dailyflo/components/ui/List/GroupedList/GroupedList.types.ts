@@ -27,6 +27,15 @@ export interface GroupedListProps {
   
   // custom border radius for first/last items (defaults to 12)
   borderRadius?: number;
+  
+  // optional background color for all list item wrappers (defaults to theme elevated)
+  backgroundColor?: string;
+  
+  // optional border width for list item wrappers (no border when undefined)
+  borderWidth?: number;
+  
+  // optional border color for list item wrappers (defaults to theme border when borderWidth is set)
+  borderColor?: string;
 }
 
 /**

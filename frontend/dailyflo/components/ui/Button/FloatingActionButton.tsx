@@ -115,9 +115,9 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   const { getThemeColorValue } = useThemeColor();
   const themeColors = useThemeColors();
   // backgroundColor: base surface color pulled from theme for the glass background.
-  const backgroundColor = themeColors.background.invertedElevated();
+  const backgroundColor = themeColors.background.secondary();
   // iconColor: uses the primary text color so the plus icon always matches our main text color
-  const iconColor = themeColors.text.invertedPrimary();
+  const iconColor = themeColors.text.primary();
   // tintColor: iOS uses DynamicColorIOS so the system can treat this as a "dynamic" color
   // just like the navbar; Android falls back to the plain hex value.
   const tintColor =
@@ -246,6 +246,11 @@ const styles = StyleSheet.create({
   },
 
   fabGlass: {
+    // width/height 100% makes the pressable fill the glass circle
+    // before this, only the icon area was fully pressable on iOS,
+    // which caused some light edge taps to not register opening the modal
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 29,

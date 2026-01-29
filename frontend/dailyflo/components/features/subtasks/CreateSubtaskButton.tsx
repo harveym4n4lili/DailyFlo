@@ -1,9 +1,9 @@
 /**
  * CreateSubtaskButton Component
- * 
+ *
  * A reusable button component for creating subtasks.
  * Uses GroupedListButton for consistent styling with other sections.
- * 
+ *
  * Features:
  * - GroupedListButton with plus icon on the left
  * - "Create Subtask" label
@@ -30,7 +30,7 @@ export interface CreateSubtaskButtonProps {
    * This is where the parent component handles creating a new subtask
    */
   onPress?: () => void;
-  
+
   /**
    * Whether the button is disabled
    */
@@ -39,7 +39,7 @@ export interface CreateSubtaskButtonProps {
 
 /**
  * CreateSubtaskButton Component
- * 
+ *
  * Renders a GroupedListButton for creating subtasks.
  * The button displays a plus icon on the left and "Create Subtask" label.
  */
@@ -59,26 +59,22 @@ export const CreateSubtaskButton: React.FC<CreateSubtaskButtonProps> = ({
 
   return (
     <GroupedListButton
-      icon="add" // full plus icon (not outlined)
+      icon="add"
       label="Create Subtask"
-      value="" // empty value since this is an action button
+      value=""
       onPress={handlePress}
       disabled={disabled}
-      showChevron={false} // hide the right arrow icon
+      showChevron={false}
       customStyles={{
-        // container style - match padding of list section in elevated container
-        // list section uses padding: 16 (from firstSectionWrapper/listSection styles)
-        // GroupedListButton default is paddingVertical: 12, so we override to match
         container: {
-          paddingVertical: 16, // match list section vertical padding in elevated container
+          paddingVertical: 16,
         },
-        // make text and icon a step lighter and set font weight to 700 (bold)
         label: {
-          color: themeColors.text.secondary(), // use secondary text color (one step lighter)
-          fontWeight: '700', // bold font weight for emphasis
+          color: themeColors.text.secondary(),
+          fontWeight: '700',
         },
         icon: {
-          color: themeColors.text.secondary(), // use secondary text color for icon (one step lighter)
+          color: themeColors.text.secondary(),
         },
       }}
     />
@@ -86,4 +82,3 @@ export const CreateSubtaskButton: React.FC<CreateSubtaskButtonProps> = ({
 };
 
 export default CreateSubtaskButton;
-
