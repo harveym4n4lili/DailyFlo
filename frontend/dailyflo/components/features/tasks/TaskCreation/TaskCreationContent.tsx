@@ -617,7 +617,8 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
               taskCategoryColor={(values.color as TaskColor) || 'blue'}
               text="Create"
               loadingText="Creating..."
-              size={34}
+              size={28}
+              iconSize={28}
             />
           </View>
         </KeyboardAnchoredContainer>

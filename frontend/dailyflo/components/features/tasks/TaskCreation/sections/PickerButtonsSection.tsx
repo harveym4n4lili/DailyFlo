@@ -9,6 +9,7 @@ import React from 'react';
 import { View, ScrollView, Animated } from 'react-native';
 // import directly from button files to avoid require cycle with Button barrel
 import { FormPickerButton } from '@/components/ui/Button/FormPickerButton';
+import { BellIcon, CalendarIcon, ClockIcon } from '@/components/ui/Icon';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { Ionicons } from '@expo/vector-icons';
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
@@ -149,6 +150,7 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
                 onPress={button.onPress}
                 highlightOpacity={animatedValue}
                 forceSelected={button.id === 'icon'} // force selected state for icon picker
+                customIcon={button.id === 'date' ? <CalendarIcon size={18} color={iconColor} /> : button.id === 'time' ? <ClockIcon size={18} color={iconColor} /> : button.id === 'alerts' ? <BellIcon size={18} color={iconColor} /> : undefined}
                 rightContainer={
                   button.id === 'icon' ? (
                     <View

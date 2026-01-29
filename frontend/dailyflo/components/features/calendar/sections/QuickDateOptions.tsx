@@ -11,8 +11,10 @@ import React from 'react';
 // react native components we need for the UI
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 
-// icons from expo vector icons
+// icons from expo vector icons (for options that are not calendar)
 import { Ionicons } from '@expo/vector-icons';
+// custom calendar icon for date options
+import { CalendarIcon } from '@/components/ui/Icon';
 
 // typography system for consistent text styling
 import { getTextStyle } from '@/constants/Typography';
@@ -172,11 +174,15 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
             {/* icon and label on the left with proper spacing */}
             <View style={styles.leftContent}>
               <View style={styles.iconContainer}>
-                <Ionicons 
-                  name={option.icon} 
-                  size={20} 
-                  color={option.iconColor()}
-                />
+                {option.icon === 'calendar-outline' ? (
+                  <CalendarIcon size={20} color={option.iconColor()} />
+                ) : (
+                  <Ionicons
+                    name={option.icon}
+                    size={20}
+                    color={option.iconColor()}
+                  />
+                )}
               </View>
               
               {/* option label next to the icon */}

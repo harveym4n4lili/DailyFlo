@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { AddIcon } from '@/components/ui/Icon';
 import * as Haptics from 'expo-haptics';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -153,12 +153,9 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
         accessibilityHint={accessibilityHint}
         accessibilityState={{ disabled }}
       >
-        <Ionicons
-          name="add"
-          size={28}
-          // icon uses theme primary text color so it adapts with light/dark mode
+        <AddIcon
+          size={24}
           color={iconColor}
-          style={styles.fabIcon}
         />
       </Pressable>
     </GlassView>
@@ -181,12 +178,9 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled }}
     >
-      <Ionicons
-        name="add"
+      <AddIcon
         size={20}
-        // same primary text color icon on android for consistency with iOS and the overall color system
         color={iconColor}
-        style={styles.fabIcon}
       />
     </TouchableOpacity>
   );

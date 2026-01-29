@@ -2,12 +2,12 @@
  * SaveButton Component
  * 
  * A reusable button component for saving changes.
- * Uses a tick/checkmark icon for iOS 15+ and text button for older iOS versions.
+ * Uses custom SaveIcon for iOS 15+ and text button for older iOS versions.
  * 
  * Features:
  * - Circular icon button (iOS 15+) or text button (older iOS)
- * - Tick/checkmark icon for save action
- * - Loading state with hourglass icon
+ * - Custom save icon (upward arrow) for save action
+ * - Loading state shown via reduced opacity (same icon)
  * - Disabled state when inactive
  * - Task category color styling
  */
@@ -16,8 +16,9 @@
 import React from 'react';
 import { Pressable, Text, Platform } from 'react-native';
 
-// EXPO VECTOR ICONS IMPORT
-import { Ionicons } from '@expo/vector-icons';
+// CUSTOM ICON IMPORTS
+// SaveIcon: custom SVG save/checkmark icon (replaces Ionicons checkmark)
+import { SaveIcon } from '@/components/ui/Icon';
 
 // CUSTOM HOOKS IMPORTS
 // useThemeColors: hook for accessing theme-aware colors
@@ -80,10 +81,16 @@ export interface SaveButtonProps {
   loadingText?: string;
 
   /**
-   * Button size in pixels (icon size for circular button; whole button scales with this)
+   * Button size in pixels (controls circular button container; icon scales with this when iconSize is not set)
    * @default 24
    */
   size?: number;
+
+  /**
+   * Icon size in pixels; when set, only the icon scales and the button container keeps the size from `size`.
+   * Use this to make the icon smaller or larger inside the same container.
+   */
+  iconSize?: number;
 }
 
 /**
@@ -116,6 +123,7 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
   text = 'Save',
   loadingText = 'Saving...',
   size = 24,
+  iconSize,
 }) => {
   // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
@@ -140,11 +148,12 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
   // fallback background when glass is not used (newer iOS without glass)
   const saveButtonBackgroundColor = themeColors.background.secondary();
 
-  // scale the whole button with size: default was icon 24 inside 42x42 (ratio 42/24)
-  // so container and border radii scale proportionally
+  // container size is always derived from size (keeps tap target consistent)
   const containerSize = Math.round(size * (42 / 24));
   const outerBorderRadius = Math.round(containerSize * (24 / 42));
   const innerBorderRadius = Math.round(containerSize / 2);
+  // when iconSize is set, only the icon scales; container stays at containerSize
+  const iconSizePx = iconSize ?? size;
 
   const isActive = !disabled && !isLoading;
   
@@ -185,12 +194,8 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
       {isNewerIOS ? (
-        // iOS 15+ (newer): tick/checkmark icon button (or hourglass when saving)
-        <Ionicons
-          name={isLoading ? "hourglass-outline" : "checkmark"}
-          size={size}
-          color={getIconColor()}
-        />
+        // iOS 15+ (newer): custom save icon (same icon when loading; opacity shows loading state)
+        <SaveIcon size={iconSizePx} color={getIconColor()} />
       ) : (
         // iOS < 15 (older): text button
         <Text style={{
@@ -263,12 +268,8 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
       })}
     >
       {isNewerIOS ? (
-        // newer iOS fallback: icon with primary text color, background is transparent
-        <Ionicons
-          name={isLoading ? "hourglass-outline" : "checkmark"}
-          size={size}
-          color={getIconColor()}
-        />
+        // newer iOS fallback: custom save icon
+        <SaveIcon size={iconSizePx} color={getIconColor()} />
       ) : (
         // iOS < 15 (older): text button (current style)
         <Text style={{

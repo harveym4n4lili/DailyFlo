@@ -124,6 +124,12 @@ export interface FormPickerButtonProps {
    * Allows for custom styling and content (like color palette icon)
    */
   rightContainer?: React.ReactNode;
+
+  /**
+   * Custom icon element to render instead of Ionicons (e.g. ClockIcon).
+   * When provided, this is shown in place of the icon-name-based Ionicons icon.
+   */
+  customIcon?: React.ReactNode;
 }
 
 /**
@@ -145,6 +151,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   overlayIcon,
   forceSelected = false,
   rightContainer,
+  customIcon,
 }) => {
   // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
@@ -276,7 +283,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
           // ensure content is above highlight overlay
           zIndex: 1,
         }}>
-        {/* icon on the left */}
+        {/* icon on the left - customIcon (e.g. ClockIcon) or Ionicons by name */}
         <View
           style={{
             // no extra vertical padding here; we center the whole row via InnerButton
@@ -289,24 +296,31 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
           }}
         >
           {hasValue ? (
-            <Ionicons
-              name={icon as any}
-              size={18}
-              color={finalIconColor}
-            />
-          ) : (
-            <Animated.View style={{
-              opacity: highlightOpacity ? highlightOpacity.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 0.6],
-              }) : 1,
-             
-            }}>
+            customIcon ?? (
               <Ionicons
                 name={icon as any}
                 size={18}
                 color={finalIconColor}
               />
+            )
+          ) : (
+            <Animated.View
+              style={{
+                opacity: highlightOpacity
+                  ? highlightOpacity.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 0.6],
+                    })
+                  : 1,
+              }}
+            >
+              {customIcon ?? (
+                <Ionicons
+                  name={icon as any}
+                  size={18}
+                  color={finalIconColor}
+                />
+              )}
             </Animated.View>
           )}
         </View>
