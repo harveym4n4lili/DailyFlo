@@ -34,6 +34,9 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   containerStyle,
   separatorColor,
   borderRadius = 12, // default iOS-style border radius
+  backgroundColor,
+  borderWidth,
+  borderColor,
 }) => {
   // get theme-aware colors for default separator color
   const themeColors = useThemeColors();
@@ -92,6 +95,9 @@ export const GroupedList: React.FC<GroupedListProps> = ({
             showSeparator={showSeparator}
             borderRadius={borderRadius}
             separatorColor={finalSeparatorColor}
+            backgroundColor={backgroundColor}
+            borderWidth={borderWidth}
+            borderColor={borderColor}
           >
             {child}
           </GroupedListItemWrapper>

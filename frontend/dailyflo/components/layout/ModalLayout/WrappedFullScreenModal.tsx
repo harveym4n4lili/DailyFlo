@@ -91,6 +91,13 @@ export interface WrappedFullScreenModalProps {
    * @default 0
    */
   additionalPaddingBottom?: number;
+
+  /**
+   * When true, content fills the screen edge-to-edge with no bottom safe area padding.
+   * Use for fullscreen modals where you don't want a gap or line at the bottom.
+   * @default false
+   */
+  fullScreen?: boolean;
 }
 
 /**
@@ -133,6 +140,7 @@ export const WrappedFullScreenModal: React.FC<WrappedFullScreenModalProps> = ({
   backgroundColor,
   showBackdrop = true,
   additionalPaddingBottom = 0,
+  fullScreen = false,
 }) => {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
@@ -250,7 +258,7 @@ export const WrappedFullScreenModal: React.FC<WrappedFullScreenModalProps> = ({
                 borderTopLeftRadius: calculatedBorderRadius,
                 borderTopRightRadius: calculatedBorderRadius,
                 height: height || screenHeight,
-                paddingBottom: insets.bottom + additionalPaddingBottom,
+                paddingBottom: fullScreen ? 0 : insets.bottom + additionalPaddingBottom,
               },
             ]}
           >
