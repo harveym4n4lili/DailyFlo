@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { CalendarIcon } from '@/components/ui/Icon';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { getDatePickerDisplay } from '@/components/ui/Button';
@@ -49,12 +49,9 @@ export const DateSection: React.FC<DateSectionProps> = ({ dueDate }) => {
   return (
     <View style={styles.container}>
       {/* calendar icon - displayed on the left */}
-      <Ionicons
-        name="calendar-outline"
-        size={16}
-        color={displayInfo.iconColor}
-        style={styles.icon}
-      />
+      <View style={styles.icon}>
+        <CalendarIcon size={16} color={displayInfo.iconColor} />
+      </View>
       
       {/* date text - displays dynamic message or "No Date" */}
       <Text 

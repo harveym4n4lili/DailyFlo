@@ -39,3 +39,23 @@ export type {
   DropdownListItem, 
   DropdownListAnchorPosition 
 } from './List';
+
+// export custom icon components (SVG-based; paste your SVG path d in each icon file)
+export {
+  AddIcon,
+  CloseIcon,
+  SaveIcon,
+  CalendarIcon,
+  ClockIcon,
+  BellIcon,
+  BrowseIcon,
+} from './Icon';
+export type {
+  AddIconProps,
+  CloseIconProps,
+  SaveIconProps,
+  CalendarIconProps,
+  ClockIconProps,
+  BellIconProps,
+  BrowseIconProps,
+} from './Icon';

@@ -873,6 +873,8 @@ export function TaskViewModal({
               taskCategoryColor={isEditMode ? editColor : (currentTask?.color || taskColor)}
               text="Save"
               loadingText="Saving..."
+              size={24}
+              iconSize={32}
             />
           </View>
         )}

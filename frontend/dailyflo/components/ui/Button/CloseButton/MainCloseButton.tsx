@@ -174,7 +174,7 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
           // to make light taps easier to register
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="close" size={32} color={getIconColor()} />
+          <Ionicons name="close" size={28} color={getIconColor()} />
         </Pressable>
       </GlassView>
     );
@@ -209,7 +209,7 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
     >
       {isNewerIOS ? (
         // newer iOS fallback: X icon with primary text color, background is transparent
-        <Ionicons name="close" size={32} color={getIconColor()} />
+        <Ionicons name="close" size={28} color={getIconColor()} />
       ) : (
         // iOS < 15 (older): text button (current style)
         <Text
