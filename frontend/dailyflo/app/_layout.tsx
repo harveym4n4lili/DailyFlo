@@ -3,11 +3,14 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, useRef } from 'react';
+import { Platform } from 'react-native';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isGlassEffectAPIAvailable } from 'expo-glass-effect';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useThemeColors } from '@/hooks/useColorPalette';
 import { ReduxProvider } from '@/store/Provider';
 import { store } from '@/store';
 import { logout, checkAuthStatus } from '@/store/slices/auth/authSlice';
@@ -20,6 +23,12 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const segments = useSegments();
+  // theme background used when liquid glass is not available (android or older ios)
+  const themeColors = useThemeColors();
+  const tabBarBackgroundColor = themeColors.background.primary();
+  // liquid glass: use native form sheet + transparent content on supported ios devices (not ipad)
+  const useLiquidGlass =
+    Platform.OS === 'ios' && isGlassEffectAPIAvailable() && !Platform.isPad;
   
   // state to track if we're still checking onboarding status
   // this prevents showing the app before we know where to route the user
@@ -183,6 +192,66 @@ export default function RootLayout() {
           <Stack>
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            {/* test-modal: liquid glass style sheet (form sheet + transparent) when available; FABTest opens this */}
+            <Stack.Screen
+              name="test-modal"
+              options={{
+                headerTransparent: Platform.OS === 'ios',
+                headerLargeTitle: false,
+                title: 'Test modal',
+                presentation:
+                  Platform.OS === 'ios'
+                    ? useLiquidGlass
+                      ? 'formSheet'
+                      : 'modal'
+                    : 'modal',
+                sheetGrabberVisible: true,
+                sheetAllowedDetents: [0.8],
+                sheetInitialDetentIndex: 0,
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : tabBarBackgroundColor,
+                },
+                headerStyle: {
+                  backgroundColor:
+                    Platform.OS === 'ios' ? 'transparent' : tabBarBackgroundColor,
+                },
+                headerBlurEffect: useLiquidGlass
+                  ? undefined
+                  : colorScheme === 'dark'
+                    ? 'dark'
+                    : 'light',
+              }}
+            />
+            {/* test-date-modal: second modal on stack to verify screen stacking (modal on top of modal) */}
+            <Stack.Screen
+              name="test-date-modal"
+              options={{
+                headerTransparent: Platform.OS === 'ios',
+                headerLargeTitle: false,
+                title: 'Test date modal',
+                presentation:
+                  Platform.OS === 'ios'
+                    ? useLiquidGlass
+                      ? 'formSheet'
+                      : 'modal'
+                    : 'modal',
+                sheetGrabberVisible: true,
+                sheetAllowedDetents: [0.8],
+                sheetInitialDetentIndex: 0,
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : tabBarBackgroundColor,
+                },
+                headerStyle: {
+                  backgroundColor:
+                    Platform.OS === 'ios' ? 'transparent' : tabBarBackgroundColor,
+                },
+                headerBlurEffect: useLiquidGlass
+                  ? undefined
+                  : colorScheme === 'dark'
+                    ? 'dark'
+                    : 'light',
+              }}
+            />
             <Stack.Screen name="+not-found" />
           </Stack>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
