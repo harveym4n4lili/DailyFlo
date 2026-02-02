@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { StyleSheet, RefreshControl, View, Text, Alert, TouchableOpacity, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 // import our custom layout components
@@ -10,6 +11,7 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 // import our new task components
 import { ListCard } from '@/components/ui/Card';
 import { FloatingActionButton } from '@/components/ui/Button';
+import { FABTest } from '@/components/test';
 import { DropdownList } from '@/components/ui/List';
 import { ModalContainer, ModalBackdrop } from '@/components/layout/ModalLayout';
 import { TaskViewModal, TaskCreationModal } from '@/components/features/tasks';
@@ -98,6 +100,8 @@ export default function TodayScreen() {
   
   // SAFE AREA INSETS - Get safe area insets for proper positioning
   const insets = useSafeAreaInsets();
+  // router: used to open test modal (liquid glass) from main FAB for testing
+  const router = useRouter();
   
   // create dynamic styles using the color palette system and typography system
   // we pass typography and insets to the createStyles function so it can use typography styles and safe area
@@ -530,10 +534,12 @@ export default function TodayScreen() {
         headerTitle="Today"
         paddingTop={insets.top+ 64} // add top padding equal to safe area inset
       />
-      {/* Floating Action Button for quick task creation */}
+      {/* Test FAB (left) – opens TestModal for testing modal behavior */}
+      <FABTest />
+      {/* Floating Action Button – opens test modal (liquid glass) for now; switch back to task creation when done testing */}
       <FloatingActionButton
         onPress={() => {
-          setIsCreateTaskModalVisible(true);
+          router.push('/test-modal');
         }}
         accessibilityLabel="Add new task"
         accessibilityHint="Double tap to create a new task"
