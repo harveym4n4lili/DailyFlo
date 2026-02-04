@@ -192,7 +192,7 @@ export default function RootLayout() {
           <Stack>
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            {/* test-modal: liquid glass style sheet (form sheet + transparent) when available; FABTest opens this */}
+            {/* test-modal: liquid glass style sheet (form sheet + transparent) when available; FABTest opens this; drag to top for full screen */}
             <Stack.Screen
               name="test-modal"
               options={{
@@ -206,7 +206,7 @@ export default function RootLayout() {
                       : 'modal'
                     : 'modal',
                 sheetGrabberVisible: true,
-                sheetAllowedDetents: [0.8],
+                sheetAllowedDetents: [0.8, 1],
                 sheetInitialDetentIndex: 0,
                 contentStyle: {
                   backgroundColor: useLiquidGlass ? 'transparent' : tabBarBackgroundColor,
@@ -250,6 +250,17 @@ export default function RootLayout() {
                   : colorScheme === 'dark'
                     ? 'dark'
                     : 'light',
+              }}
+            />
+            {/* create-task: full-screen modal (slide up, no swipe to dismiss); no liquid glass */}
+            <Stack.Screen
+              name="create-task"
+              options={{
+                headerShown: false,
+                
+                presentation: 'formSheet',
+                gestureEnabled: false,
+                contentStyle: { backgroundColor: themeColors.background.primarySecondaryBlend() },
               }}
             />
             <Stack.Screen name="+not-found" />

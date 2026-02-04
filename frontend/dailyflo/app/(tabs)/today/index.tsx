@@ -14,7 +14,7 @@ import { FloatingActionButton } from '@/components/ui/Button';
 import { FABTest } from '@/components/test';
 import { DropdownList } from '@/components/ui/List';
 import { ModalContainer, ModalBackdrop } from '@/components/layout/ModalLayout';
-import { TaskViewModal, TaskCreationModal } from '@/components/features/tasks';
+import { TaskViewModal } from '@/components/features/tasks';
 // date picker modal for selecting a new due date when rescheduling overdue tasks
 import { DatePickerModal } from '@/components/features/calendar';
 
@@ -58,8 +58,7 @@ export default function TodayScreen() {
   // Store task color separately to maintain it during modal close animation
   const [selectedTaskColor, setSelectedTaskColor] = useState<TaskColor>('blue');
   
-  // TASK CREATION MODAL STATE - separate state for modal controlled by Redux
-  const [isCreateTaskModalVisible, setIsCreateTaskModalVisible] = useState(false);
+  // task creation is the create-task Stack screen (presentation: 'modal'); opened via router
 
   // OVERDUE RESCHEDULE STATE - controls bulk reschedule for the "Overdue" group on Today screen
   // we store the IDs of the overdue tasks we want to move plus modal visibility
@@ -224,16 +223,13 @@ export default function TodayScreen() {
     }
   }, [isAuthenticated, lastFetched, isLoading, error, dispatch]);
   
-  // watch Redux createTask modal state and open local modal when it becomes true
-  // this allows opening the modal from navigation (e.g., from onboarding completion screen)
+  // when Redux says open createTask (e.g. onboarding completion), push create-task Stack screen
   useEffect(() => {
     if (modals.createTask) {
-      // open the local modal state
-      setIsCreateTaskModalVisible(true);
-      // immediately close the Redux modal state to prevent it from staying open
       closeModal('createTask');
+      router.push('/create-task');
     }
-  }, [modals.createTask, closeModal]);
+  }, [modals.createTask, closeModal, router]);
 
   // STORE USAGE - Dispatching actions for user interactions
   // Handle pull-to-refresh
@@ -536,10 +532,10 @@ export default function TodayScreen() {
       />
       {/* Test FAB (left) – opens TestModal for testing modal behavior */}
       <FABTest />
-      {/* Floating Action Button – opens test modal (liquid glass) for now; switch back to task creation when done testing */}
+      {/* Floating Action Button – opens create-task Stack screen (presentation: modal) */}
       <FloatingActionButton
         onPress={() => {
-          router.push('/test-modal');
+          router.push('/create-task');
         }}
         accessibilityLabel="Add new task"
         accessibilityHint="Double tap to create a new task"
@@ -570,12 +566,6 @@ export default function TodayScreen() {
         task={selectedTask || undefined}
       />
       
-      {/* Task Creation Modal - can be opened from Redux state (e.g., from onboarding) */}
-      <TaskCreationModal
-        visible={isCreateTaskModalVisible}
-        onClose={() => setIsCreateTaskModalVisible(false)}
-      />
-
       {/* Overdue date picker modal - used to bulk move all overdue tasks to a new date */}
       {/* uses WrappedDraggableModal for slide-up animation with separate backdrop */}
       <DatePickerModal

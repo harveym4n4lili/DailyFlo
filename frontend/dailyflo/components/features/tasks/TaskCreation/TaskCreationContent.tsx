@@ -23,22 +23,11 @@ import {
   Keyboard,                  // keyboard api for dismissing keyboard
   TouchableWithoutFeedback,  // dismiss keyboard when tapping outside inputs
   useWindowDimensions,       // hook to get screen dimensions for scroll calculations
-  Platform,                  // platform detection for iOS version checking
 } from 'react-native';
 
 // REACT NATIVE SAFE AREA CONTEXT IMPORT
 // useSafeAreaInsets: hook that provides safe area insets for the device
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-// EXPO VECTOR ICONS IMPORT
-// ionicons: provides icons for the UI
-import { Ionicons } from '@expo/vector-icons';
-
-// EXPO GLASS EFFECT IMPORTS
-// GlassView: native iOS UIVisualEffectView liquid glass surface for the whole form
-// isGlassEffectAPIAvailable: runtime check so we only use liquid glass when supported
-import GlassView from 'expo-glass-effect/build/GlassView';
-import { isGlassEffectAPIAvailable } from 'expo-glass-effect';
 
 // LAYOUT COMPONENTS IMPORTS
 // KeyboardAnchoredContainer: invisible container that positions content above keyboard when open
@@ -139,6 +128,12 @@ export interface TaskCreationContentProps {
 
   /** Optional border color for the subtask list item wrappers */
   subtaskListBorderColor?: string;
+
+  /**
+   * When true (default), render close and save buttons inside the content (for in-screen modal).
+   * When false, omit them so the parent (e.g. Stack screen) can provide header close/save.
+   */
+  embedHeaderButtons?: boolean;
 }
 
 
@@ -167,6 +162,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   subtaskListBorderRadius,
   subtaskListBorderWidth,
   subtaskListBorderColor,
+  embedHeaderButtons = true,
 }) => {
   // CONSOLE DEBUGGING - removed for cleaner logs
   
@@ -399,59 +395,17 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
 
   // CLOSE HANDLER WITH CHANGE DETECTION
   const handleClose = () => {
-    // discard message commented out - directly close modal
-    // if (hasChanges) {
-    //   Alert.alert(
-    //     'Discard Changes?',
-    //     'You have unsaved changes. Are you sure you want to discard them?',
-    //     [
-    //       {
-    //         text: 'Continue Editing',
-    //         style: 'cancel',
-    //         onPress: () => {
-    //           console.log('User chose to continue editing');
-    //         },
-    //       },
-    //       {
-    //         text: 'Discard',
-    //         style: 'destructive',
-    //         onPress: () => {
-    //           console.log('User chose to discard changes');
-    //           Keyboard.dismiss();
-    //           onClose();
-    //         },
-    //       },
-    //     ],
-    //     { cancelable: true }
-    //   );
-    // } else {
-      // console.log('Closing modal');
-      Keyboard.dismiss();
-      onClose();
-    // }
+    Keyboard.dismiss();
+    onClose();
   };
   
-  // check if liquid glass API is available at runtime (prevents crashes on unsupported iOS versions)
-  // when available, we wrap the entire task creation content in a GlassView so the modal
-  // itself becomes a liquid glass surface
-  const glassAvailable = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
+  // top section: elevated background, contains title + description
+  const taskColorKey: TaskColor = (values.color as TaskColor) || 'blue';
 
   // mainContent holds the core layout for the task creation form
-  // later we conditionally wrap this in a GlassView when liquid glass is available
   const mainContent = (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <View style={{ flex: 1 }}>
-          {/* cancel button - absolutely positioned at top left */}
-          {/* iOS 15+ (newer): circular close icon button with tertiary background */}
-          {/* iOS < 15 (older): text button with task category color background */}
-        <MainCloseButton
-          onPress={handleClose}
-          color={values.color || 'blue'}
-        />
-
-        {/* main scrollable content wrapper */}
-        {/* flex: 1 allows ScrollView to take available space above keyboard-anchored bottom section */}
-        {/* contentContainerStyle without flexGrow allows content to expand naturally */}
         <ScrollView 
         ref={mainScrollViewRef}
         style={{ flex: 1 }}
@@ -460,25 +414,14 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         keyboardDismissMode="on-drag"
         contentContainerStyle={{ paddingBottom: 0 }}
         nestedScrollEnabled={true}
-        // disable scrolling until picker buttons section would be covered
         scrollEnabled={isScrollingEnabled}
         onContentSizeChange={(contentWidth, contentHeight) => {
-          // auto-scroll when content expands and description is being edited
-          // only if scrolling is enabled (picker buttons would be covered)
           if (isScrollingEnabled && isDescriptionFocused && mainScrollViewRef.current && descriptionSectionHeight > 0) {
             setTimeout(() => {
               if (mainScrollViewRef.current) {
-                // calculate scroll position to keep the bottom of description input visible
                 const visibleArea = screenHeight - keyboardHeight;
-                
-                // calculate where the bottom of the description section is
                 const descriptionBottom = descriptionSectionY + descriptionSectionHeight;
-                
-                // calculate how much we need to scroll to keep description visible
-                // add some padding (80px) to keep input comfortably visible above keyboard
                 const scrollPosition = descriptionBottom - visibleArea + 80;
-                
-                // only scroll if description extends below visible area
                 if (scrollPosition > 0) {
                   mainScrollViewRef.current.scrollTo({
                     y: scrollPosition,
@@ -486,68 +429,70 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
                   });
                 }
               }
-            }, 50); // short delay to ensure layout has updated
+            }, 50);
           }
         }}
       >
-        {/* header with icon display and title input */}
-        {/* extra top padding to make room for absolutely positioned cancel button */}
-        {/* padding accounts for safe area top inset */}
+        {/* top section: elevated background with title and description */}
         <View
           style={{
-            paddingTop: 80 + insets.top, // extra space for cancel button + safe area
-            paddingBottom: 0,
-            paddingHorizontal: 20,
+            backgroundColor: themeColors.background.elevated(),
+            paddingTop: embedHeaderButtons ? insets.top + 32 : 24,
+            paddingBottom: 16,
+            paddingHorizontal: 0,
           }}
         >
-          {/* title input takes full width */}
+          {embedHeaderButtons && (
+            <MainCloseButton
+              onPress={handleClose}
+              color={values.color || 'blue'}
+              top={insets.top + -32}
+              left={20}
+            />
+          )}
           <TextInput
             ref={titleInputRef}
             value={values.title || ''}
             onChangeText={(t) => onChange('title', t)}
             onBlur={() => onBlur('title')}
             placeholder="e.g., Answering emails"
-            placeholderTextColor={themeColors.text.tertiary()} // matches description placeholder color
-            // use primary text color for selection instead of task category color
+            placeholderTextColor={themeColors.text.tertiary()}
             selectionColor={themeColors.text.primary()}
             style={{
               ...getTextStyle('heading-2'),
               color: themeColors.text.primary(),
               paddingVertical: 0,
-              paddingHorizontal: 0,
+              paddingHorizontal: 20,
             }}
             autoFocus={true}
             returnKeyType="next"
           />
-        </View>
-
-        {/* Task Description Section */}
-        <View 
-          ref={descriptionSectionRef}
-          onLayout={(event) => {
-            // track description section position and height for auto-scrolling
-            const { y, height } = event.nativeEvent.layout;
-            setDescriptionSectionY(y);
-            setDescriptionSectionHeight(height);
-          }}
-          style={{ 
-            paddingTop: 8,
-            // allow this section to expand naturally based on content
-            // flexShrink: 0 prevents shrinking, no flexGrow to allow natural expansion
-            flexShrink: 0,
-          }}
-        >
-          <DescriptionSection
-            description={values.description || ''}
-            onDescriptionChange={(description) => {
-              onChange('description', description);
-              // onContentSizeChange will handle auto-scrolling when content expands
+          <View
+            ref={descriptionSectionRef}
+            onLayout={(event) => {
+              const { y, height } = event.nativeEvent.layout;
+              setDescriptionSectionY(y);
+              setDescriptionSectionHeight(height);
             }}
-            onFocus={() => setIsDescriptionFocused(true)}
-            onBlur={() => setIsDescriptionFocused(false)}
-            isEditing={true}
-            taskColor={(values.color as TaskColor) || 'blue'}
-          />
+            style={{
+              paddingTop: 8,
+              flexShrink: 0,
+              // pull description back so its content aligns with title (CustomTextInput has internal paddingHorizontal: 20)
+          
+              
+            }}
+          >
+            <DescriptionSection
+              description={values.description || ''}
+              onDescriptionChange={(description) => {
+                onChange('description', description);
+              }}
+              onFocus={() => setIsDescriptionFocused(true)}
+              onBlur={() => setIsDescriptionFocused(false)}
+              isEditing={true}
+              taskColor={taskColorKey}
+            />
+          </View>
         </View>
 
         {/* Picker Buttons Section */}
@@ -596,59 +541,40 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
         )}
       </ScrollView>
 
-        {/* keyboard-anchored save button at bottom-right of modal */}
-        {/* when keyboard is hidden, it sits at the bottom-right; when keyboard opens, it stays above the keyboard */}
-        <KeyboardAnchoredContainer
-          offset={16}
-          style={{ backgroundColor: 'transparent' }}
-        >
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'flex-end',
-              alignItems: 'center',
-              paddingHorizontal: 16,
-            }}
+        {/* when embedHeaderButtons, show in-content save button (for legacy modal); else parent provides header save */}
+        {embedHeaderButtons && (
+          <KeyboardAnchoredContainer
+            offset={16}
+            style={{ backgroundColor: 'transparent' }}
           >
-            <SaveButton
-              onPress={onCreate}
-              disabled={!isCreateButtonActive}
-              isLoading={isCreating}
-              taskCategoryColor={(values.color as TaskColor) || 'blue'}
-              text="Create"
-              loadingText="Creating..."
-              size={28}
-              iconSize={28}
-            />
-          </View>
-        </KeyboardAnchoredContainer>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                paddingHorizontal: 16,
+              }}
+            >
+              <SaveButton
+                onPress={onCreate}
+                disabled={!isCreateButtonActive}
+                isLoading={isCreating}
+                taskCategoryColor={(values.color as TaskColor) || 'blue'}
+                text="Create"
+                loadingText="Creating..."
+                size={28}
+                iconSize={28}
+              />
+            </View>
+          </KeyboardAnchoredContainer>
+        )}
         </View>
       </TouchableWithoutFeedback>
   );
 
   return (
     <>
-      {/* when liquid glass is available on iOS, render the entire form content inside GlassView */}
-      {/* this makes the task creation modal itself a glass surface while keeping interactions intact */}
-      {glassAvailable ? (
-        <GlassView
-          style={{
-            flex: 1,
-            // match modal rounding so the glass follows the sheet shape
-            borderRadius: 0,
-            backgroundColor: 'transparent',
-          }}
-          glassEffectStyle="regular"
-          // allow taps and gestures to pass through to the inner content
-          isInteractive
-          // use a subtle background tint from the theme to drive the glass color
-          tintColor={themeColors.background.primarySecondaryBlend() as any}
-        >
-          {mainContent}
-        </GlassView>
-      ) : (
-        mainContent
-      )}
+      {mainContent}
 
       {/* date picker modal */}
       <DatePickerModal
