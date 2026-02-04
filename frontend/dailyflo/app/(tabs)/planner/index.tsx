@@ -1,6 +1,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
 // import our custom layout components
@@ -10,7 +11,7 @@ import { ModalBackdrop } from '@/components/layout/ModalLayout';
 import { CalendarNavigationModal } from '@/components/features/calendar/modals';
 import { WeekView } from '@/components/features/calendar/sections';
 import { ListCard } from '@/components/ui/Card';
-import { TaskViewModal, TaskCreationModal } from '@/components/features/tasks';
+import { TaskViewModal } from '@/components/features/tasks';
 import { TimelineView } from '@/components/features/timeline';
 
 // import color palette system for consistent theming
@@ -45,9 +46,9 @@ export default function PlannerScreen() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTaskColor, setSelectedTaskColor] = useState<TaskColor>('blue');
   
-  // TASK CREATION MODAL STATE - Controls the visibility of task creation modal
-  const [isCreateTaskModalVisible, setIsCreateTaskModalVisible] = useState(false);
-  
+  // router: open create-task Stack screen from FAB (with optional dueDate from selected date)
+  const router = useRouter();
+
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
   
@@ -275,10 +276,10 @@ export default function PlannerScreen() {
           />
         </View>
 
-        {/* Floating Action Button for quick task creation */}
+        {/* Floating Action Button – opens create-task Stack screen with selected date pre-filled */}
         <FloatingActionButton
           onPress={() => {
-            setIsCreateTaskModalVisible(true);
+            router.push({ pathname: '/create-task', params: { dueDate: selectedDate } });
           }}
           accessibilityLabel="Add new task"
           accessibilityHint="Double tap to create a new task"
@@ -317,15 +318,6 @@ export default function PlannerScreen() {
         task={selectedTask || undefined}
       />
       
-      {/* Task Creation Modal - rendered last to ensure proper z-ordering */}
-      {/* this modal has its own built-in backdrop via WrappedFullScreenModal */}
-      <TaskCreationModal
-        visible={isCreateTaskModalVisible}
-        onClose={() => setIsCreateTaskModalVisible(false)}
-        initialValues={{
-          dueDate: selectedDate, // pre-fill with selected date
-        }}
-      />
     </View>
   );
 }
