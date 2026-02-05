@@ -25,8 +25,10 @@ export interface GroupedListProps {
   // custom separator color (defaults to theme border color)
   separatorColor?: string;
   
-  // horizontal inset for separator line in pt (default 0 = full-width separator)
-  separatorInset?: number;
+  // left inset for separator line in pt (default 0 = align to left edge)
+  separatorInsetLeft?: number;
+  // right inset for separator line in pt (default 0 = align to right edge)
+  separatorInsetRight?: number;
   
   // custom border radius for first/last items (defaults to 12)
   borderRadius?: number;
@@ -47,12 +49,11 @@ export interface GroupedListProps {
 }
 
 /**
- * Props for GroupedListButton component
- * 
- * Button-style item for settings pages and similar use cases.
- * This is the extracted button-style functionality from the original GroupedListItem.
+ * Props for TaskFormButton component
+ *
+ * Button-style item for task forms (Date, Time, Alerts pickers, etc.).
  */
-export interface GroupedListButtonProps {
+export interface TaskFormButtonProps {
   // icon name from Ionicons library (e.g., 'calendar-outline'); ignored when iconComponent is set
   icon?: keyof typeof Ionicons.glyphMap;
   // custom icon element (e.g. your own SVG icon); when set, used instead of icon
@@ -100,7 +101,7 @@ export interface GroupedListButtonProps {
 /**
  * Configuration for a single item in the grouped list (DEPRECATED)
  * 
- * @deprecated Use GroupedListButton component instead, or pass custom ReactNode children to GroupedList
+ * @deprecated Use TaskFormButton component instead, or pass custom ReactNode children to GroupedList
  * This type is kept for backward compatibility but is no longer used by GroupedList.
  */
 export interface GroupedListItemConfig {
@@ -148,7 +149,7 @@ export interface GroupedListItemConfig {
 /**
  * Props for the individual GroupedListItem component (DEPRECATED)
  * 
- * @deprecated This component is no longer used. Use GroupedListButton wrapped in GroupedList instead.
+ * @deprecated This component is no longer used. Use TaskFormButton wrapped in GroupedList instead.
  * This type is kept for backward compatibility.
  */
 export interface GroupedListItemProps {

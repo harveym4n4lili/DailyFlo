@@ -2,10 +2,10 @@
  * CreateSubtaskButton Component
  *
  * A reusable button component for creating subtasks.
- * Uses GroupedListButton for consistent styling with other sections.
+ * Uses TaskFormButton for consistent styling with other sections.
  *
  * Features:
- * - GroupedListButton with plus icon on the left
+ * - TaskFormButton with plus icon on the left
  * - "Create Subtask" label
  * - Callback for handling subtask creation
  */
@@ -14,8 +14,8 @@
 import React from 'react';
 
 // UI COMPONENTS IMPORTS
-// GroupedListButton: button-style item for GroupedList
-import { GroupedListButton } from '@/components/ui/List/GroupedList';
+// TaskFormButton: button-style item for GroupedList in task forms
+import { TaskFormButton } from '@/components/ui/List/GroupedList';
 
 // CUSTOM HOOKS IMPORTS
 // useThemeColors: hook for accessing theme-aware colors
@@ -40,7 +40,7 @@ export interface CreateSubtaskButtonProps {
 /**
  * CreateSubtaskButton Component
  *
- * Renders a GroupedListButton for creating subtasks.
+ * Renders a TaskFormButton for creating subtasks.
  * The button displays a plus icon on the left and "Create Subtask" label.
  */
 export const CreateSubtaskButton: React.FC<CreateSubtaskButtonProps> = ({
@@ -58,7 +58,7 @@ export const CreateSubtaskButton: React.FC<CreateSubtaskButtonProps> = ({
   };
 
   return (
-    <GroupedListButton
+    <TaskFormButton
       icon="add"
       label="Create Subtask"
       value=""

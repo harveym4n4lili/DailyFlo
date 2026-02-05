@@ -63,6 +63,10 @@ import { TaskCategoryColors } from '@/constants/ColorPalette';
 // hooks for accessing design system and theme
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 
+// PICKER DISPLAY UTILITIES
+// getDatePickerDisplay: formats date for display (Today, Tomorrow, Thu 5 Feb 2026, etc.)
+import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisplay } from '@/components/ui/Button';
+
 // TYPES IMPORTS
 // typescript types for type safety
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
@@ -405,6 +409,11 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
               onShowDatePicker={handleShowDatePicker}
               onShowTimeDurationPicker={handleShowTimeDurationPicker}
               onShowAlertsPicker={handleShowAlertsPicker}
+              dateValue={getDatePickerDisplay(values.dueDate, colors, themeColors).text}
+              dateSecondaryValue={getDatePickerDisplay(values.dueDate, colors, themeColors).secondaryText}
+              timeDurationValue={getTimeDurationPickerDisplay(values.time, values.duration, themeColors).text}
+              timeDurationSecondaryValue={getTimeDurationPickerDisplay(values.time, values.duration, themeColors).secondaryText}
+              alertsValue={getAlertsPickerDisplay(values.alerts?.length ?? 0, themeColors).text}
             />
           </View>
 
