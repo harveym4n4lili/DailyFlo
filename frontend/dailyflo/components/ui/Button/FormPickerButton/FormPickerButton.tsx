@@ -31,10 +31,10 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 
 // EXPO GLASS EFFECT IMPORTS
-// GlassView: native iOS liquid glass surface used for selected picker states
-// isGlassEffectAPIAvailable: runtime check so we only enable liquid glass when supported
+// GlassView: native iOS liquid glass surface used for selected picker states.
+// We don't call isGlassEffectAPIAvailable here; GlassView will safely no-op on
+// unsupported platforms, we just gate on Platform.OS === 'ios'.
 import GlassView from 'expo-glass-effect/build/GlassView';
-import { isGlassEffectAPIAvailable } from 'expo-glass-effect';
 
 /**
  * Props for FormPickerButton component
@@ -174,7 +174,8 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   const shouldShowText = !forceSelected && ((hasValue && finalDisplayText) || defaultText);
 
   // check if liquid glass API is available at runtime (prevents crashes on unsupported iOS versions)
-  const glassAvailable = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
+  // on iOS we wrap the selected state in GlassView; expo-glass-effect safely falls back elsewhere
+  const glassAvailable = Platform.OS === 'ios';
   
   // create animated container - always use View (not Fragment) so we can apply styles
   // use Animated.View when highlightOpacity is provided, regular View otherwise

@@ -16,23 +16,27 @@ import {
   View,                      // basic container component
   Text,                      // text component for displaying text
   TextInput,                 // text input component for task title
-  Pressable,                 // pressable component for interactive elements
   ScrollView,                // scrollable container for long content
-  Animated,                  // animated api for button highlight animations
-  Alert,                     // alert dialog for confirmation prompts
   Keyboard,                  // keyboard api for dismissing keyboard
   TouchableWithoutFeedback,  // dismiss keyboard when tapping outside inputs
-  useWindowDimensions,       // hook to get screen dimensions for scroll calculations
+  useWindowDimensions,       // window size so save button overlay can be positioned relative to window
 } from 'react-native';
 
 // REACT NATIVE SAFE AREA CONTEXT IMPORT
 // useSafeAreaInsets: hook that provides safe area insets for the device
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+// REANIMATED: animate save button bottom so it slides with keyboard instead of jumping
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
+
 // LAYOUT COMPONENTS IMPORTS
-// KeyboardAnchoredContainer: invisible container that positions content above keyboard when open
-// useKeyboardHeight: hook to track keyboard height for scroll calculations
-import { KeyboardAnchoredContainer, useKeyboardHeight } from '@/components/layout/ScreenLayout';
+// useKeyboardHeight: hook to track keyboard height so create button can lock above keyboard
+import { useKeyboardHeight } from '@/components/layout/ScreenLayout';
 
 // UI COMPONENTS IMPORTS
 // button components for the form
@@ -134,6 +138,12 @@ export interface TaskCreationContentProps {
    * When false, omit them so the parent (e.g. Stack screen) can provide header close/save.
    */
   embedHeaderButtons?: boolean;
+
+  /**
+   * Extra bottom inset when keyboard is hidden (e.g. form sheet doesn't fill window; add ~80 so save button stays visible).
+   */
+  saveButtonBottomInsetWhenKeyboardHidden?: number;
+
 }
 
 
@@ -163,6 +173,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   subtaskListBorderWidth,
   subtaskListBorderColor,
   embedHeaderButtons = true,
+  saveButtonBottomInsetWhenKeyboardHidden,
 }) => {
   // CONSOLE DEBUGGING - removed for cleaner logs
   
@@ -170,38 +181,11 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   const colors = useColorPalette();
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const { height: screenHeight } = useWindowDimensions();
   
-  // STATE FOR AUTO-SCROLL
-  // track description section position and height for auto-scrolling
-  const [descriptionSectionY, setDescriptionSectionY] = useState(0);
-  const [descriptionSectionHeight, setDescriptionSectionHeight] = useState(0);
-  // track if description is being actively edited (for auto-scroll)
-  const [isDescriptionFocused, setIsDescriptionFocused] = useState(false);
-  
-  // STATE FOR SCROLL LOCKING
-  // track picker buttons section position to determine when scrolling should be enabled
-  const [pickerButtonsSectionY, setPickerButtonsSectionY] = useState(0);
-  const [pickerButtonsSectionHeight, setPickerButtonsSectionHeight] = useState(0);
-  // track keyboard height for scroll calculations using composable hook
+  // window size: used for save button overlay so button is positioned relative to window bottom
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  // track keyboard height so save button can sit above keyboard
   const keyboardHeight = useKeyboardHeight();
-  // determine if scrolling should be enabled (only when picker buttons would be covered)
-  const [isScrollingEnabled, setIsScrollingEnabled] = useState(false);
-  
-  // REF FOR PICKER BUTTONS SECTION
-  // used to measure position for scroll locking
-  const pickerButtonsSectionRef = useRef<View>(null);
-  
-  // CALCULATE SCROLL ENABLED STATE
-  // enable scrolling when picker buttons section would be covered (no bottom section; save button is top-right)
-  useEffect(() => {
-    if (pickerButtonsSectionHeight > 0) {
-      const visibleArea = screenHeight - keyboardHeight;
-      const pickerButtonsBottom = pickerButtonsSectionY + pickerButtonsSectionHeight;
-      const shouldEnableScrolling = pickerButtonsBottom > visibleArea;
-      setIsScrollingEnabled(shouldEnableScrolling);
-    }
-  }, [pickerButtonsSectionY, pickerButtonsSectionHeight, keyboardHeight, screenHeight]);
   
   // FORM STATE
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -235,40 +219,6 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   // REF FOR TITLE TEXTINPUT
   // used to focus the input and open keyboard after closing form picker modals
   const titleInputRef = useRef<TextInput>(null);
-  
-  // REF FOR MAIN SCROLLVIEW
-  // used to auto-scroll when description input expands to keep typing position visible
-  const mainScrollViewRef = useRef<ScrollView>(null);
-  
-  // REF FOR DESCRIPTION SECTION WRAPPER
-  // used to measure position for auto-scrolling
-  const descriptionSectionRef = useRef<View>(null);
-
-  // ANIMATION STATE
-  const iconButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
-  const dateButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
-  const timeButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
-  const alertsButtonHighlightOpacity = useRef(new Animated.Value(0)).current;
-  const [previousDueDate, setPreviousDueDate] = useState(values.dueDate);
-
-  // ANIMATION EFFECT
-  useEffect(() => {
-    if (previousDueDate !== values.dueDate && previousDueDate !== undefined) {
-      Animated.sequence([
-        Animated.timing(dateButtonHighlightOpacity, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(dateButtonHighlightOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-    setPreviousDueDate(values.dueDate);
-  }, [values.dueDate, previousDueDate, dateButtonHighlightOpacity]);
 
   // MODAL VISIBILITY DEBUGGING - removed for cleaner logs
 
@@ -288,26 +238,10 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
     if (modalToKeep !== 'alerts') setIsAlertsPickerVisible(false);
   };
 
-  const triggerButtonHighlight = (animatedValue: Animated.Value) => {
-    Animated.sequence([
-      Animated.timing(animatedValue, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(animatedValue, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
   // DATE PICKER HANDLERS
   const handleShowDatePicker = () => {
     Keyboard.dismiss(); // close keyboard when opening date picker
     closeAllModalsExcept('date');
-    triggerButtonHighlight(dateButtonHighlightOpacity);
     setIsDatePickerVisible(true);
   };
   
@@ -329,7 +263,6 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   const handleShowColorPicker = () => {
     Keyboard.dismiss(); // close keyboard when opening color picker
     closeAllModalsExcept('color');
-    triggerButtonHighlight(iconButtonHighlightOpacity);
     setIsColorPickerVisible(true);
   };
   
@@ -354,7 +287,6 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   const handleShowTimeDurationPicker = () => {
     Keyboard.dismiss(); // close keyboard when opening time/duration picker
     closeAllModalsExcept('time');
-    triggerButtonHighlight(timeButtonHighlightOpacity);
     setIsTimeDurationPickerVisible(true);
   };
   
@@ -378,7 +310,6 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   const handleShowAlertsPicker = () => {
     Keyboard.dismiss(); // close keyboard when opening alerts picker
     closeAllModalsExcept('alerts');
-    triggerButtonHighlight(alertsButtonHighlightOpacity);
     setIsAlertsPickerVisible(true);
   };
   
@@ -402,43 +333,36 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   // top section: elevated background, contains title + description
   const taskColorKey: TaskColor = (values.color as TaskColor) || 'blue';
 
-  // mainContent holds the core layout for the task creation form
+  // save button bottom offset relative to window: above keyboard when open, else from window bottom with optional inset
+  const saveButtonBottom = keyboardHeight > 0
+    ? keyboardHeight + 72
+    : insets.bottom + (saveButtonBottomInsetWhenKeyboardHidden ?? 0);
+
+  // reanimated: shared value for bottom so we can animate when keyboard opens/closes (slide instead of jump)
+  const animatedBottom = useSharedValue(saveButtonBottom);
+  useEffect(() => {
+    animatedBottom.value = withTiming(saveButtonBottom, {
+      duration: 250,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [saveButtonBottom, animatedBottom]);
+  // position bar at bottom; SaveButton handles its own spring show/hide via visible prop
+  const animatedSaveButtonBarStyle = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
+    bottom: animatedBottom.value,
+  }));
+
   const mainContent = (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <View style={{ flex: 1 }}>
-        <ScrollView 
-        ref={mainScrollViewRef}
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        contentContainerStyle={{ paddingBottom: 0 }}
-        nestedScrollEnabled={true}
-        scrollEnabled={isScrollingEnabled}
-        onContentSizeChange={(contentWidth, contentHeight) => {
-          if (isScrollingEnabled && isDescriptionFocused && mainScrollViewRef.current && descriptionSectionHeight > 0) {
-            setTimeout(() => {
-              if (mainScrollViewRef.current) {
-                const visibleArea = screenHeight - keyboardHeight;
-                const descriptionBottom = descriptionSectionY + descriptionSectionHeight;
-                const scrollPosition = descriptionBottom - visibleArea + 80;
-                if (scrollPosition > 0) {
-                  mainScrollViewRef.current.scrollTo({
-                    y: scrollPosition,
-                    animated: true,
-                  });
-                }
-              }
-            }, 50);
-          }
-        }}
-      >
-        {/* top section: elevated background with title and description */}
+        {/* top section: elevated background with title only - fixed at top, not scrollable */}
         <View
           style={{
             backgroundColor: themeColors.background.elevated(),
             paddingTop: embedHeaderButtons ? insets.top + 32 : 24,
-            paddingBottom: 16,
+            paddingBottom: 20,
             paddingHorizontal: 0,
           }}
         >
@@ -446,8 +370,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
             <MainCloseButton
               onPress={handleClose}
               color={values.color || 'blue'}
-              top={insets.top + -32}
-              left={20}
+              top={insets.top + -24}
             />
           )}
           <TextInput
@@ -467,106 +390,93 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
             autoFocus={true}
             returnKeyType="next"
           />
-          <View
-            ref={descriptionSectionRef}
-            onLayout={(event) => {
-              const { y, height } = event.nativeEvent.layout;
-              setDescriptionSectionY(y);
-              setDescriptionSectionHeight(height);
-            }}
-            style={{
-              paddingTop: 8,
-              flexShrink: 0,
-              // pull description back so its content aligns with title (CustomTextInput has internal paddingHorizontal: 20)
-          
-              
-            }}
-          >
+        </View>
+
+        {/* scrollable area: grouped list + description (scroll indicator visible); flexGrow: 1 so content fills to bottom when short */}
+        <ScrollView
+          style={{ flex: 1, minHeight: 0 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 160 }}
+          showsVerticalScrollIndicator={true}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
+          <View style={{ paddingTop: 0, paddingBottom: 8 }}>
+            <PickerButtonsSection
+              onShowDatePicker={handleShowDatePicker}
+              onShowTimeDurationPicker={handleShowTimeDurationPicker}
+              onShowAlertsPicker={handleShowAlertsPicker}
+            />
+          </View>
+
+          <View style={{ paddingTop: 0, paddingBottom: 0 }}>
             <DescriptionSection
               description={values.description || ''}
               onDescriptionChange={(description) => {
                 onChange('description', description);
               }}
-              onFocus={() => setIsDescriptionFocused(true)}
-              onBlur={() => setIsDescriptionFocused(false)}
               isEditing={true}
               taskColor={taskColorKey}
             />
           </View>
-        </View>
 
-        {/* Picker Buttons Section */}
-        {/* contains color, date, time, and alerts picker buttons */}
-        <View 
-          ref={pickerButtonsSectionRef}
-          onLayout={(event) => {
-            // track picker buttons section position and height for scroll locking
-            const { y, height } = event.nativeEvent.layout;
-            setPickerButtonsSectionY(y);
-            setPickerButtonsSectionHeight(height);
-          }}
-          style={{ paddingTop: 16, paddingBottom: 8 }}
-        >
-          <PickerButtonsSection
-            values={values}
-            iconButtonHighlightOpacity={iconButtonHighlightOpacity}
-            dateButtonHighlightOpacity={dateButtonHighlightOpacity}
-            timeButtonHighlightOpacity={timeButtonHighlightOpacity}
-            alertsButtonHighlightOpacity={alertsButtonHighlightOpacity}
-            onShowIconColorPicker={handleShowColorPicker}
-            onShowDatePicker={handleShowDatePicker}
-            onShowTimeDurationPicker={handleShowTimeDurationPicker}
-            onShowAlertsPicker={handleShowAlertsPicker}
-          />
-        </View>
-
-        {/* error message - shown when task creation fails */}
-        {createError && (
-          <View style={{
-            marginHorizontal: 20,
-            marginTop: 16,
-            marginBottom: 24,
-            padding: 12,
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: colors.getSemanticColor('error', 500),
-          }}>
-            <Text style={{
-              ...getTextStyle('body-small'),
-              color: colors.getSemanticColor('error', 500),
+          {createError && (
+            <View style={{
+              marginHorizontal: 20,
+              marginTop: 16,
+              marginBottom: 24,
+              padding: 12,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.getSemanticColor('error', 500),
             }}>
-              {createError}
-            </Text>
-          </View>
-        )}
-      </ScrollView>
-
-        {/* when embedHeaderButtons, show in-content save button (for legacy modal); else parent provides header save */}
-        {embedHeaderButtons && (
-          <KeyboardAnchoredContainer
-            offset={16}
-            style={{ backgroundColor: 'transparent' }}
-          >
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-                paddingHorizontal: 16,
-              }}
-            >
-              <SaveButton
-                onPress={onCreate}
-                disabled={!isCreateButtonActive}
-                isLoading={isCreating}
-                taskCategoryColor={(values.color as TaskColor) || 'blue'}
-                text="Create"
-                loadingText="Creating..."
-                size={28}
-                iconSize={28}
-              />
+              <Text style={{
+                ...getTextStyle('body-small'),
+                color: colors.getSemanticColor('error', 500),
+              }}>
+                {createError}
+              </Text>
             </View>
-          </KeyboardAnchoredContainer>
+          )}
+        </ScrollView>
+
+        {/* save button in a thin bottom strip; always mounted when embedHeaderButtons so SaveButton can run exit animation via visible prop */}
+        {embedHeaderButtons && (
+          <View
+            pointerEvents="box-none"
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: windowWidth,
+              height: 100,
+            }}
+          >
+            <Animated.View
+              pointerEvents="box-none"
+              style={animatedSaveButtonBarStyle}
+            >
+              <View
+                style={{
+                  alignSelf: 'flex-end',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 20,
+                }}
+              >
+                <SaveButton
+                  onPress={onCreate}
+                  isLoading={isCreating}
+                  taskCategoryColor={(values.color as TaskColor) || 'blue'}
+                  text="Create"
+                  loadingText="Creating..."
+                  size={28}
+                  iconSize={28}
+                  visible={isCreateButtonActive}
+                />
+              </View>
+            </Animated.View>
+          </View>
         )}
         </View>
       </TouchableWithoutFeedback>

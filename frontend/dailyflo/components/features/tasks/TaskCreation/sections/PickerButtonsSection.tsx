@@ -1,185 +1,91 @@
 /**
  * PickerButtonsSection Component
- * 
- * Horizontal scrollable section containing form picker buttons.
- * Displays icon, date, time, and alerts picker buttons with dynamic display text.
+ *
+ * Renders the remaining picker actions (Date, Time & Duration, Alerts)
+ * using the shared GroupedList + GroupedListButton for a consistent iOS Settings look.
+ *
+ * Each row is a GroupedListButton:
+ * - Date
+ * - Time & Duration
+ * - Alerts
  */
 
 import React from 'react';
-import { View, ScrollView, Animated } from 'react-native';
-// import directly from button files to avoid require cycle with Button barrel
-import { FormPickerButton } from '@/components/ui/Button/FormPickerButton';
-import { BellIcon, CalendarIcon, ClockIcon } from '@/components/ui/Icon';
-import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
-import { Ionicons } from '@expo/vector-icons';
-import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
-import {
-  getDatePickerDisplay,
-  getTimeDurationPickerDisplay,
-  getAlertsPickerDisplay,
-  getIconPickerDisplay,
-} from '@/components/ui/Button/FormPickerButton';
+import { View, StyleSheet } from 'react-native';
+import { useThemeColors } from '@/hooks/useColorPalette';
+// reusable grouped list: wraps children in rounded container with separators
+import { GroupedList, GroupedListButton } from '@/components/ui/List/GroupedList';
+// custom SVG icons (not Ionicons) for date, time, alerts
+import { CalendarIcon, ClockIcon, BellIcon } from '@/components/ui/Icon';
 
 export interface PickerButtonsSectionProps {
-  /** Form values */
-  values: Partial<TaskFormValues>;
-  /** Animation values for button highlights */
-  iconButtonHighlightOpacity: Animated.Value;
-  dateButtonHighlightOpacity: Animated.Value;
-  timeButtonHighlightOpacity: Animated.Value;
-  alertsButtonHighlightOpacity: Animated.Value;
   /** Handler functions for each picker */
-  onShowIconColorPicker: () => void;
   onShowDatePicker: () => void;
   onShowTimeDurationPicker: () => void;
   onShowAlertsPicker: () => void;
+  /** Optional display values shown on the right (default "Select") */
+  dateValue?: string;
+  timeDurationValue?: string;
+  alertsValue?: string;
 }
 
-/**
- * PickerButtonsSection Component
- * 
- * Renders a horizontal scrollable row of picker buttons for:
- * - Icon & Color selection
- * - Date selection
- * - Time & Duration selection
- * - Alerts selection
- */
 export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
-  values,
-  iconButtonHighlightOpacity,
-  dateButtonHighlightOpacity,
-  timeButtonHighlightOpacity,
-  alertsButtonHighlightOpacity,
-  onShowIconColorPicker,
   onShowDatePicker,
   onShowTimeDurationPicker,
   onShowAlertsPicker,
+  dateValue = 'Select',
+  timeDurationValue = 'Select',
+  alertsValue = 'Select',
 }) => {
-  const colors = useColorPalette();
   const themeColors = useThemeColors();
 
-  // PICKER BUTTONS CONFIGURATION
-  const pickerButtons = [
-    {
-      id: 'icon',
-      icon: (values.icon as any) || 'star-outline',
-      label: '', // empty label since there's always a default and we don't want to show text
-      onPress: onShowIconColorPicker,
-    },
-    {
-      id: 'date',
-      icon: 'calendar-outline',
-      label: 'No Date',
-      onPress: onShowDatePicker,
-    },
-    {
-      id: 'time',
-      icon: 'time-outline',
-      label: 'Time',
-      onPress: onShowTimeDurationPicker,
-    },
-    {
-      id: 'alerts',
-      icon: 'notifications-outline',
-      label: 'Alerts',
-      onPress: onShowAlertsPicker,
-    },
-  ];
-
   return (
-    <View style={{ paddingBottom: 8 }}>
-      {/* horizontal scrollable picker buttons */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyboardShouldPersistTaps="always"
-        // allow glass expansion to bleed out beyond scroll view bounds
-        style={{ overflow: 'visible' }}
-        contentContainerStyle={{
-          // use horizontal padding instead of fixed width so the row
-          // can grow beyond the screen and keep scrolling further
-          // while still starting/ending nicely inset from the screen edge
-          paddingHorizontal: 16,
-          gap: 16,
-        }}
+    <View style={styles.container}>
+      <GroupedList
+        containerStyle={styles.listContainer}
+        borderRadius={20}
+        backgroundColor={themeColors.background.secondary()}
+        separatorColor={themeColors.background.quaternary()}
+        separatorInset={20}
       >
-        {pickerButtons.map((button) => {
-          const displayInfo =
-            button.id === 'icon'
-              ? getIconPickerDisplay(values.icon, values.color, colors, themeColors)
-              : button.id === 'date'
-              ? getDatePickerDisplay(values.dueDate, colors, themeColors)
-              : button.id === 'time'
-              ? getTimeDurationPickerDisplay(values.time, values.duration, themeColors)
-              : button.id === 'alerts'
-              ? getAlertsPickerDisplay(values.alerts?.length || 0, themeColors)
-              : null;
-
-          const iconColor = displayInfo ? displayInfo.iconColor : themeColors.text.secondary();
-          const textColor = displayInfo ? displayInfo.color : themeColors.text.secondary();
-
-          // Only show display text if there's actually a value selected (not default "No X" text)
-          const displayText =
-            displayInfo && !displayInfo.text.startsWith('No ') ? displayInfo.text : '';
-
-          const animatedValue =
-            button.id === 'icon'
-              ? iconButtonHighlightOpacity
-              : button.id === 'date'
-              ? dateButtonHighlightOpacity
-              : button.id === 'time'
-              ? timeButtonHighlightOpacity
-              : alertsButtonHighlightOpacity;
-
-          return (
-            <View
-              key={button.id}
-              style={{
-                // let each picker button size itself naturally; we intentionally
-                // avoid using absolute left offsets here so the horizontal
-                // ScrollView can extend and scroll as far as needed
-                overflow: 'visible',
-              }}
-            >
-              <FormPickerButton
-                icon={button.icon}
-                defaultText={button.label}
-                displayText={displayText}
-                textColor={textColor}
-                iconColor={iconColor}
-                onPress={button.onPress}
-                highlightOpacity={animatedValue}
-                forceSelected={button.id === 'icon'} // force selected state for icon picker
-                customIcon={button.id === 'date' ? <CalendarIcon size={18} color={iconColor} /> : button.id === 'time' ? <ClockIcon size={18} color={iconColor} /> : button.id === 'alerts' ? <BellIcon size={18} color={iconColor} /> : undefined}
-                rightContainer={
-                  button.id === 'icon' ? (
-                    <View
-                      style={{
-                        // make the color-palette pill the same visual height as other picker icons
-                       
-                        height: 20,
-                        borderRadius: 10,
-                        backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Ionicons
-                        name="color-palette"
-                        size={18}
-                        color={themeColors.text.secondary()}
-                      />
-                    </View>
-                  ) : undefined
-                }
-              />
-            </View>
-          );
-        })}
-      </ScrollView>
+        <GroupedListButton
+          iconComponent={<CalendarIcon size={20} color={themeColors.text.primary()} />}
+          label="Date"
+          value={dateValue}
+          onPress={onShowDatePicker}
+          showChevron
+        />
+        <GroupedListButton
+          iconComponent={<ClockIcon size={20} color={themeColors.text.primary()} />}
+          label="Time & Duration"
+          value={timeDurationValue}
+          onPress={onShowTimeDurationPicker}
+          showChevron
+        />
+        <GroupedListButton
+          iconComponent={<BellIcon size={20} color={themeColors.text.primary()} />}
+          label="Alerts"
+          value={alertsValue}
+          onPress={onShowAlertsPicker}
+          showChevron
+        />
+      </GroupedList>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  // outer container: Settings-like horizontal inset (20pt) and bottom spacing
+  container: {
+    paddingHorizontal: 20,
+      paddingTop: 24,
+    paddingBottom: 8,
+  },
+  // list wrapper: no extra gap so the grouped list is one visual block
+  listContainer: {
+    marginVertical: 0,
+  },
+});
 
 export default PickerButtonsSection;
 

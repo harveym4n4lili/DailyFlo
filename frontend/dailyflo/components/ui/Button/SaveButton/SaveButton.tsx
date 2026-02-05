@@ -13,8 +13,11 @@
  */
 
 // REACT IMPORTS
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Pressable, Text, Platform } from 'react-native';
+
+// REANIMATED: spring scale animation when visible prop changes (show/hide)
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 // CUSTOM ICON IMPORTS
 // SaveIcon: custom SVG save/checkmark icon (replaces Ionicons checkmark)
@@ -32,10 +35,10 @@ import { getTextStyle } from '@/constants/Typography';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 
 // EXPO GLASS EFFECT IMPORTS
-// GlassView: native iOS UIVisualEffectView liquid glass surface (same pattern as MainCloseButton)
-// isGlassEffectAPIAvailable: runtime check so we only use glass when the API exists
+// GlassView: native iOS UIVisualEffectView liquid glass surface (same pattern as MainCloseButton).
+// We don't call isGlassEffectAPIAvailable here; GlassView will safely no-op on
+// unsupported platforms, we just gate on Platform.OS === 'ios'.
 import GlassView from 'expo-glass-effect/build/GlassView';
-import { isGlassEffectAPIAvailable } from 'expo-glass-effect';
 
 // TYPES IMPORTS
 import type { TaskColor } from '@/types';
@@ -91,6 +94,13 @@ export interface SaveButtonProps {
    * Use this to make the icon smaller or larger inside the same container.
    */
   iconSize?: number;
+
+  /**
+   * When false, the button animates out (scale to 0) with a spring and is non-interactive.
+   * When true or undefined, the button is visible (scale 1) with spring animation on appear.
+   * Use this to show/hide the button without unmounting so enter/exit animations can run.
+   */
+  visible?: boolean;
 }
 
 /**
@@ -115,6 +125,11 @@ const getIOSVersion = (): number => {
  * Renders a save button with tick/checkmark icon.
  * Adapts styling based on iOS version (circular icon button for iOS 15+, text button for older).
  */
+// spring when button appears (more overshoot for a bouncy entrance)
+const SPRING_CONFIG_SHOW = { damping: 5, stiffness: 100, overshootClamping: false, mass: 0.2 };
+// spring when button disappears (snappier, less bounce)
+const SPRING_CONFIG_HIDE = { damping: 18, stiffness: 100, overshootClamping: true, mass: 0.1 };
+
 export const SaveButton: React.FC<SaveButtonProps> = ({
   onPress,
   disabled = false,
@@ -124,7 +139,17 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
   loadingText = 'Saving...',
   size = 24,
   iconSize,
+  visible = true,
 }) => {
+  // reanimated: scale value for show/hide spring animation (0 = hidden, 1 = visible)
+  const scale = useSharedValue(visible ? 1 : 0);
+  useEffect(() => {
+    scale.value = withSpring(visible ? 1 : 0, visible ? SPRING_CONFIG_SHOW : SPRING_CONFIG_HIDE);
+  }, [visible, scale]);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
   // get typography system for consistent text styling
@@ -134,19 +159,20 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
   const isNewerIOS = getIOSVersion() >= 15;
   
   // check if liquid glass API is available at runtime (prevents crashes on some iOS 26 betas)
-  const glassAvailable = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
+  // on iOS we wrap the button in GlassView; expo-glass-effect safely falls back elsewhere
+  const glassAvailable = Platform.OS === 'ios';
   
   // determine icon color
   // always use the primary text color from the theme so the icon
   // matches other primary text (not the user-selected task color)
   const getIconColor = () => {
-    return themeColors.text.primary();
+    return themeColors.background.primary();
   };
   
   // background tint color for the save button glass container
-  const saveButtonGlassTintColor = themeColors.background.secondary();
+  const saveButtonGlassTintColor = themeColors.background.invertedTertiary();
   // fallback background when glass is not used (newer iOS without glass)
-  const saveButtonBackgroundColor = themeColors.background.secondary();
+  const saveButtonBackgroundColor = themeColors.background.invertedTertiary();
 
   // container size is always derived from size (keeps tap target consistent)
   const containerSize = Math.round(size * (42 / 24));
@@ -210,11 +236,21 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
     </Pressable>
   );
 
+  // wrapper: spring scale animation (visible prop) + block touches when hidden
+  const wrapper = (content: React.ReactNode) => (
+    <Animated.View
+      style={[{ alignSelf: 'flex-start' }, animatedStyle]}
+      pointerEvents={visible ? 'box-none' : 'none'}
+    >
+      {content}
+    </Animated.View>
+  );
+
   // when glass is available on newer iOS we wrap the pressable in a GlassView
   // the glass background itself is visually transparent (no custom tint),
   // and the icon always uses the primary text color
   if (isNewerIOS && glassAvailable) {
-    return (
+    return wrapper(
       <GlassView
         style={{
           width: containerSize,
@@ -236,7 +272,7 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
   // fallback for Android, web, and older iOS:
   // - newer iOS with no liquid glass: circular icon button with transparent background
   // - older iOS: keep the original text button with colored background
-  return (
+  return wrapper(
     <Pressable
       onPress={handlePress}
       disabled={!isActive}

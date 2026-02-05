@@ -25,6 +25,9 @@ export interface GroupedListProps {
   // custom separator color (defaults to theme border color)
   separatorColor?: string;
   
+  // horizontal inset for separator line in pt (default 0 = full-width separator)
+  separatorInset?: number;
+  
   // custom border radius for first/last items (defaults to 12)
   borderRadius?: number;
   
@@ -36,6 +39,11 @@ export interface GroupedListProps {
   
   // optional border color for list item wrappers (defaults to theme border when borderWidth is set)
   borderColor?: string;
+
+  // content padding and min height applied by each item wrapper (defaults match iOS Settings row)
+  contentPaddingHorizontal?: number;
+  contentPaddingVertical?: number;
+  contentMinHeight?: number;
 }
 
 /**
@@ -45,10 +53,11 @@ export interface GroupedListProps {
  * This is the extracted button-style functionality from the original GroupedListItem.
  */
 export interface GroupedListButtonProps {
-  // icon name from Ionicons library (e.g., 'calendar-outline')
-  // optional - if not provided, no icon will be shown
+  // icon name from Ionicons library (e.g., 'calendar-outline'); ignored when iconComponent is set
   icon?: keyof typeof Ionicons.glyphMap;
-  
+  // custom icon element (e.g. your own SVG icon); when set, used instead of icon
+  iconComponent?: React.ReactNode;
+
   // main label text displayed on the left (e.g., 'Date Picker')
   label: string;
   

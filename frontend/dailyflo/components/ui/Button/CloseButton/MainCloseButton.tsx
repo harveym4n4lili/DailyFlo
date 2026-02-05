@@ -34,9 +34,9 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 
 // EXPO GLASS EFFECT IMPORTS
 // GlassView: native iOS UIVisualEffectView liquid glass surface (same pattern as FAB)
-// isGlassEffectAPIAvailable: runtime check so we only use glass when the API exists
+// we don't call isGlassEffectAPIAvailable here because older SDKs may not export it;
+// GlassView itself will safely no-op on unsupported platforms.
 import GlassView from 'expo-glass-effect/build/GlassView';
-import { isGlassEffectAPIAvailable } from 'expo-glass-effect';
 
 // TYPES IMPORTS
 // typescript types for type safety
@@ -110,7 +110,7 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
   // background color for the close button container
   // align the close button surface styling with the FAB glass background
   // by using the same secondary background tone from the theme
-  const closeButtonBackgroundColor = themeColors.background.secondary();
+  const closeButtonBackgroundColor = themeColors.background.primary();
 
   // calculate top position
   // defaults to 16px from top + safe area inset for newer iOS, 20px for older iOS
@@ -121,8 +121,9 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
       ? 16 + insets.top  // newer iOS: 16px from top
       : 20 + insets.top; // older iOS: 20px from top
 
-  // check if liquid glass API is available at runtime (prevents crashes on some iOS 26 betas)
-  const glassAvailable = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
+  // on iOS we always render the GlassView wrapper; on unsupported platforms
+  // expo-glass-effect falls back internally so we don't need an explicit check.
+  const glassAvailable = Platform.OS === 'ios';
 
   // base positioning style shared between glass + non-glass versions
   const basePositionStyle = {
@@ -166,7 +167,7 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
             justifyContent: 'center',
             // add a subtle 1px border that hugs the glass circle
             // keeping it here ensures the border moves perfectly with the button content
-            borderWidth: 1,
+            borderWidth: 0,
             borderColor: themeColors.border.primary(),
             borderRadius: 21,
           }}

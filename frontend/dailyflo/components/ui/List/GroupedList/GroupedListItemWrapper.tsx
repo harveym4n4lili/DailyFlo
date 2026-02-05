@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { View, ViewStyle } from 'react-native';
+import { View, ViewStyle, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
 export interface GroupedListItemWrapperProps {
@@ -26,14 +26,22 @@ export interface GroupedListItemWrapperProps {
   /** Separator color */
   separatorColor: string;
   
+  /** Horizontal inset for separator line in pt (0 = full-width separator; unused when 0) */
+  separatorInset?: number;
+  
   /** Optional background color override (defaults to theme elevated background) */
   backgroundColor?: string;
   
-  /** Optional border width (no border when undefined) */
+  /** Optional border width (no border when undefined). When set, only the edges that form the group outline are drawn (first: top+left+right, middle: left+right, last: bottom+left+right). */
   borderWidth?: number;
   
   /** Optional border color (defaults to theme border when borderWidth is set) */
   borderColor?: string;
+
+  /** Content padding and min height (passed from GroupedList; when set, applied so button padding lives on wrapper) */
+  contentPaddingHorizontal?: number;
+  contentPaddingVertical?: number;
+  contentMinHeight?: number;
   
   /** Optional style override */
   style?: ViewStyle;
@@ -51,9 +59,13 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
   showSeparator,
   borderRadius,
   separatorColor,
+  separatorInset = 0,
   backgroundColor,
   borderWidth,
   borderColor,
+  contentPaddingHorizontal,
+  contentPaddingVertical,
+  contentMinHeight,
   style,
 }) => {
   // get theme-aware colors for default background and border when props not provided
@@ -86,30 +98,58 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
     }
   };
 
-  // combine all container styles
-  // use backgroundColor prop when provided, otherwise theme elevated background
-  // when borderWidth is set, apply border (borderColor defaults to theme border)
-  const containerStyle: ViewStyle = {
-    backgroundColor: backgroundColor ?? themeColors.background.primarySecondaryBlend(),
-    overflow: 'hidden', // ensure border radius is applied correctly
-    ...(borderWidth != null && borderWidth > 0
-      ? { borderWidth, borderColor: borderColor ?? themeColors.border.primary() }
-      : {}),
-    ...getBorderRadiusStyle(),
-    ...style, // allow parent-level override
+  // when borderWidth is set, draw only the edges that form the group outline (no double lines between rows)
+  // first: top + left + right; middle: left + right; last: bottom + left + right; only: all four
+  const getBorderEdgeStyle = (): ViewStyle => {
+    if (borderWidth == null || borderWidth <= 0) return {};
+    const c = borderColor ?? themeColors.border.primary();
+    const w = borderWidth;
+    switch (position) {
+      case 'first':
+        return { borderTopWidth: w, borderLeftWidth: w, borderRightWidth: w, borderColor: c };
+      case 'middle':
+        return { borderLeftWidth: w, borderRightWidth: w, borderColor: c };
+      case 'last':
+        return { borderBottomWidth: w, borderLeftWidth: w, borderRightWidth: w, borderColor: c };
+      case 'only':
+        return { borderWidth: w, borderColor: c };
+      default:
+        return {};
+    }
   };
 
+  // outer container: background, border radius, minHeight; no padding so separator can sit below padded content
+  const outerStyle: ViewStyle = {
+    backgroundColor: backgroundColor ?? themeColors.background.primarySecondaryBlend(),
+    overflow: 'hidden',
+    ...getBorderRadiusStyle(),
+    ...getBorderEdgeStyle(),
+    ...(contentMinHeight != null && { minHeight: contentMinHeight }),
+    ...style,
+  };
+
+  // inner wrapper: same vertical and horizontal padding so content has space on all sides; separator is outside this
+  const hasContentPadding =
+    contentPaddingHorizontal != null || contentPaddingVertical != null;
+  const contentWrapperStyle: ViewStyle = hasContentPadding
+    ? {
+        ...(contentPaddingHorizontal != null && { paddingHorizontal: contentPaddingHorizontal }),
+        ...(contentPaddingVertical != null && { paddingVertical: contentPaddingVertical }),
+      }
+    : {};
+
   return (
-    <View style={containerStyle}>
-      {children}
-      {/* separator line with horizontal padding - only shown for items that need it */}
-      {/* creates a horizontal line between items with padding on the sides */}
+    <View style={outerStyle}>
+      <View style={contentWrapperStyle}>
+        {children}
+      </View>
+      {/* separator below padded content so borders don't touch the item */}
       {showSeparator && (
         <View
           style={{
-            height: 1, // 1px separator line
+            height: StyleSheet.hairlineWidth,
             backgroundColor: separatorColor,
-            marginHorizontal: 16, // horizontal padding for the separator (16px on each side)
+            ...(separatorInset > 0 && { marginHorizontal: separatorInset }),
           }}
         />
       )}
