@@ -1,13 +1,17 @@
 import React from 'react';
 import { DynamicColorIOS, Platform } from 'react-native';
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import {
+  NativeTabs,
+  Label as NativeTabLabel,
+  Icon as NativeTabIcon,
+} from 'expo-router/unstable-native-tabs';
 
 // theme + typography hooks: used to style the tab bar consistently with the rest of the app
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTypography } from '@/hooks/useTypography';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
-function TabsContent() {
+export default function TabLayout() {
   const { getThemeColorValue } = useThemeColor();
   const typography = useTypography();
   const themeColors = useThemeColors();
@@ -27,29 +31,24 @@ function TabsContent() {
   return (
     <NativeTabs labelStyle={labelStyle} tintColor={tintColor}>
       <NativeTabs.Trigger name="today">
-        <NativeTabs.Trigger.Label>Today</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="calendar" md="calendar_today" />
+        <NativeTabLabel>Today</NativeTabLabel>
+        <NativeTabIcon sf="calendar" drawable="calendar_today" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="planner">
-        <NativeTabs.Trigger.Label>Planner</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="square.grid.2x2" md="grid_view" />
+        <NativeTabLabel>Planner</NativeTabLabel>
+        <NativeTabIcon sf="square.grid.2x2" drawable="grid_view" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="browse">
-        <NativeTabs.Trigger.Label>Browse</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="list.bullet" md="list" />
+        <NativeTabLabel>Browse</NativeTabLabel>
+        <NativeTabIcon sf="list.bullet" drawable="list" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="settings">
-        <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="gearshape" md="settings" />
+        <NativeTabLabel>Settings</NativeTabLabel>
+        <NativeTabIcon sf="gearshape" drawable="settings" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );
-}
-
-export default function TabLayout() {
-  // tablayout is a small wrapper so expo-router can mount our tabs content
-  return <TabsContent />;
 }

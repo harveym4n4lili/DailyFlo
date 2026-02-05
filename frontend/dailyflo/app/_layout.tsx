@@ -7,7 +7,6 @@ import { Platform } from 'react-native';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { isGlassEffectAPIAvailable } from 'expo-glass-effect';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -26,9 +25,9 @@ export default function RootLayout() {
   // theme background used when liquid glass is not available (android or older ios)
   const themeColors = useThemeColors();
   const tabBarBackgroundColor = themeColors.background.primary();
-  // liquid glass: use native form sheet + transparent content on supported ios devices (not ipad)
-  const useLiquidGlass =
-    Platform.OS === 'ios' && isGlassEffectAPIAvailable() && !Platform.isPad;
+  // liquid glass: on iOS (not iPad) we let expo-glass-effect decide if glass is supported internally.
+  // older SDKs may not export isGlassEffectAPIAvailable, so we avoid calling it directly.
+  const useLiquidGlass = Platform.OS === 'ios' && !Platform.isPad;
   
   // state to track if we're still checking onboarding status
   // this prevents showing the app before we know where to route the user

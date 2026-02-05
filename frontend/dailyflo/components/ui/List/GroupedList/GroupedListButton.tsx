@@ -30,6 +30,7 @@ import type { GroupedListButtonProps } from './GroupedList.types';
  */
 export const GroupedListButton: React.FC<GroupedListButtonProps> = ({
   icon,
+  iconComponent,
   label,
   value,
   secondaryValue,
@@ -44,6 +45,7 @@ export const GroupedListButton: React.FC<GroupedListButtonProps> = ({
   // determine icon color (custom or default)
   const iconColor = customStyles?.icon?.color || themeColors.text.primary();
   const iconSize = customStyles?.icon?.size || 20;
+  const showLeftIcon = iconComponent != null || icon != null;
 
   // determine text color for secondary value (lighter/tertiary)
   const labelColor = themeColors.text.secondary();
@@ -69,10 +71,8 @@ export const GroupedListButton: React.FC<GroupedListButtonProps> = ({
     return value;
   };
 
-  // container style for the button
+  // container style: no padding/minHeight here; GroupedListItemWrapper provides them
   const containerStyle: ViewStyle = {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'space-between' as const,
@@ -85,14 +85,19 @@ export const GroupedListButton: React.FC<GroupedListButtonProps> = ({
       disabled={disabled}
       style={containerStyle}
     >
-      {/* left icon */}
-      {icon && (
-        <Ionicons
-          name={icon}
-          size={iconSize}
-          color={iconColor}
-          style={{ marginRight: 12 }}
-        />
+      {/* left icon: custom iconComponent or Ionicons when icon name provided */}
+      {showLeftIcon && (
+        <View style={{ marginRight: 12 }}>
+          {iconComponent != null ? (
+            iconComponent
+          ) : (
+            <Ionicons
+              name={icon!}
+              size={iconSize}
+              color={iconColor}
+            />
+          )}
+        </View>
       )}
 
       {/* middle section: label and values */}

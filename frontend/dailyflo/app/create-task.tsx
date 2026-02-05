@@ -2,13 +2,13 @@
  * Create Task screen (full-screen modal Stack screen)
  *
  * Opened via router.push("/create-task") from FAB, Planner, Search, or Redux modals.createTask.
- * presentation: "modal" in _layout — full-screen, slide up, swipe to dismiss. No liquid glass.
+ * presentation: "modal" in _layout — full-screen, slide up, swipe to dismiss.
  * State and create logic live here; TaskCreationContent renders the form with embedHeaderButtons=true
  * so close and save are in the content (no screen header).
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -41,6 +41,7 @@ export default function CreateTaskScreen() {
   const { themeColor } = useThemeColor();
   const dispatch = useAppDispatch();
   const { isCreating, createError } = useTasks();
+  const { height: windowHeight } = useWindowDimensions();
 
   const [values, setValues] = useState<Partial<TaskFormValues>>(() => ({
     ...getDefaults(themeColor),
@@ -159,25 +160,30 @@ export default function CreateTaskScreen() {
       router.back();
     }, 100);
   };
-
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: themeColors.background.primarySecondaryBlend(), minHeight: windowHeight },
+      ]}
+    >
       <TaskCreationContent
-      visible={true}
-      values={values}
-      onChange={onChange}
-      onClose={handleClose}
-      hasChanges={hasChanges}
-      onCreate={handleCreate}
-      isCreating={isCreating}
-      createError={createError ?? undefined}
-      subtasks={subtasks}
-      onSubtaskToggle={handleSubtaskToggle}
-      onSubtaskDelete={handleSubtaskDelete}
-      onSubtaskTitleChange={handleSubtaskTitleChange}
-      onSubtaskFinishEditing={handleSubtaskFinishEditing}
-      onCreateSubtask={handleCreateSubtask}
-      embedHeaderButtons={true}
+        visible={true}
+        values={values}
+        onChange={onChange}
+        onClose={handleClose}
+        hasChanges={hasChanges}
+        onCreate={handleCreate}
+        isCreating={isCreating}
+        createError={createError ?? undefined}
+        subtasks={subtasks}
+        onSubtaskToggle={handleSubtaskToggle}
+        onSubtaskDelete={handleSubtaskDelete}
+        onSubtaskTitleChange={handleSubtaskTitleChange}
+        onSubtaskFinishEditing={handleSubtaskFinishEditing}
+        onCreateSubtask={handleCreateSubtask}
+        embedHeaderButtons={true}
+        saveButtonBottomInsetWhenKeyboardHidden={44}
       />
     </View>
   );

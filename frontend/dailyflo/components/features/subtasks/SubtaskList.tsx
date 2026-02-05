@@ -19,10 +19,10 @@ import { Platform } from 'react-native';
 import { GroupedList } from '@/components/ui/List/GroupedList';
 
 // EXPO GLASS EFFECT IMPORTS
-// glass view: native ios uivisualeffectview liquid glass surface for the subtask card
-// isGlassEffectAPIAvailable: runtime check so we only use glass when the api exists
+// glass view: native ios uivisualeffectview liquid glass surface for the subtask card.
+// We don't call isGlassEffectAPIAvailable here; GlassView will safely no-op on
+// unsupported platforms, we just gate on Platform.OS === 'ios'.
 import GlassView from 'expo-glass-effect/build/GlassView';
-import { isGlassEffectAPIAvailable } from 'expo-glass-effect';
 
 // CUSTOM HOOKS IMPORTS
 // useThemeColors: hook for accessing theme-aware colors
@@ -150,7 +150,8 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
   const isNewerIOS = getIOSVersion() >= 15;
 
   // check if liquid glass api is available at runtime (prevents crashes on some betas)
-  const glassAvailable = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
+  // on iOS we wrap the subtask group in GlassView; expo-glass-effect safely falls back elsewhere
+  const glassAvailable = Platform.OS === 'ios';
 
   // shared grouped list content so we can render it inside or outside glass
   // pass through list styling props from parent (e.g. TaskCreationContent)

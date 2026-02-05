@@ -29,10 +29,9 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 
 // expo-glass-effect: native iOS UIVisualEffectView liquid glass. Circular FAB.
 // import GlassView from build path to avoid index.js export resolution issues.
-// isGlassEffectAPIAvailable checks if the liquid glass API is available at runtime
-// (important because some iOS 26 beta versions don't have it, which can cause crashes).
+// we don't call isGlassEffectAPIAvailable here; GlassView will safely no-op on
+// unsupported platforms, so we only gate on Platform.OS === 'ios'.
 import GlassView from 'expo-glass-effect/build/GlassView';
-import { isGlassEffectAPIAvailable } from 'expo-glass-effect';
 
 // TASK CREATION MODAL IMPORT - REMOVED
 // TaskCreationModal is now managed by parent screens, not inside FAB
@@ -134,7 +133,8 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   };
 
   // check if liquid glass API is available at runtime (prevents crashes on some iOS 26 betas)
-  const glassAvailable = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
+  // on iOS we wrap the FAB in GlassView; expo-glass-effect safely falls back elsewhere
+  const glassAvailable = Platform.OS === 'ios';
 
   const buttonContent = glassAvailable ? (
     // iOS with glass available: single glassview with pressable child for a clean glass FAB
