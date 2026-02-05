@@ -14,10 +14,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TouchableOpacity, TextInput, View, Keyboard, Text, Pressable } from 'react-native';
 
-// UI COMPONENTS IMPORTS
-// GroupedListButton: button-style item for GroupedList
-import { GroupedListButton } from '@/components/ui/List/GroupedList';
-
 // EXPO VECTOR ICONS IMPORT
 import { Ionicons } from '@expo/vector-icons';
 

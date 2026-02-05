@@ -46,7 +46,7 @@ import { SaveButton, TaskButton } from '@/components/ui/Button';
 
 // UI COMPONENTS IMPORTS
 // GroupedList: flexible iOS-style grouped list component
-import { GroupedList, GroupedListButton } from '@/components/ui/List/GroupedList';
+import { GroupedList } from '@/components/ui/List/GroupedList';
 
 // FEATURE COMPONENTS IMPORTS
 // modals for date, time/duration, and alerts pickers

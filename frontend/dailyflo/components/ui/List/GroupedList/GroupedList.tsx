@@ -16,10 +16,10 @@
  *   <CustomComponent3 />
  * </GroupedList>
  * 
- * Usage with button-style items (for settings pages):
+ * Usage with button-style items (for task forms):
  * <GroupedList>
- *   <GroupedListButton icon="calendar" label="Date" value="Today" onPress={() => {}} />
- *   <GroupedListButton icon="time" label="Time" value="9:00 AM" onPress={() => {}} />
+ *   <TaskFormButton icon="calendar" label="Date" value="Today" onPress={() => {}} />
+ *   <TaskFormButton icon="time" label="Time" value="9:00 AM" onPress={() => {}} />
  * </GroupedList>
  */
 
@@ -33,12 +33,13 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   children,
   containerStyle,
   separatorColor,
-  separatorInset = 0,
-  borderRadius = 12, // default iOS-style border radius
+  separatorInsetLeft = 0,
+  separatorInsetRight = 0,
+  borderRadius = 28, // default iOS-style border radius
   backgroundColor,
   borderWidth,
   borderColor,
-  contentPaddingHorizontal = 20,
+  contentPaddingHorizontal = 20 ,
   contentPaddingVertical = 16,
   contentMinHeight = 44,
 }) => {
@@ -99,7 +100,8 @@ export const GroupedList: React.FC<GroupedListProps> = ({
             showSeparator={showSeparator}
             borderRadius={borderRadius}
             separatorColor={finalSeparatorColor}
-            separatorInset={separatorInset}
+            separatorInsetLeft={separatorInsetLeft}
+            separatorInsetRight={separatorInsetRight}
             backgroundColor={backgroundColor}
             borderWidth={borderWidth}
             borderColor={borderColor}

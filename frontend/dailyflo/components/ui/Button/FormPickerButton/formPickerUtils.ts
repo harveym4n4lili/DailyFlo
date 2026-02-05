@@ -20,6 +20,8 @@ export interface PickerButtonDisplay {
   text: string;         // The display text (e.g., "Today", "Tomorrow", "10:30 AM")
   color: string;        // Text color (semantic or theme color)
   iconColor: string;    // Icon color (usually matches text color)
+  /** Optional secondary text (e.g., "Today", "Tomorrow") shown on the right; used for date picker sublabel */
+  secondaryText?: string;
 }
 
 /**
@@ -53,6 +55,14 @@ export function getDatePickerDisplay(
       iconColor: themeColors.text.secondary(),
     };
   }
+
+  // always format the full date for the main label (e.g., "Thu, 5 Feb 2026")
+  const formattedDate = new Date(dateString).toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 
   // create date objects and normalize to start of day for accurate comparison
   // this ensures we're comparing dates without time or timezone issues
@@ -90,29 +100,32 @@ export function getDatePickerDisplay(
   })();
 
   // check for quick options FIRST (Today, Tomorrow, Yesterday, Next Week)
-  // these take priority over weekend check to avoid showing "This Weekend" when it's actually "Today"
-  // use string comparison for exact matches (more reliable)
+  // text = formatted date (main label), secondaryText = relative message (sublabel on right)
   if (isToday) {
     return {
-      text: 'Today',
+      text: formattedDate,
+      secondaryText: 'Today',
       color: colors.getSemanticColor('success'),
       iconColor: colors.getSemanticColor('success'),
     };
   } else if (isTomorrow) {
     return {
-      text: 'Tomorrow',
+      text: formattedDate,
+      secondaryText: 'Tomorrow',
       color: colors.getSemanticColor('warning'),
       iconColor: colors.getSemanticColor('warning'),
     };
   } else if (isYesterday) {
     return {
-      text: 'Yesterday',
+      text: formattedDate,
+      secondaryText: 'Yesterday',
       color: colors.getSemanticColor('error'),
       iconColor: colors.getSemanticColor('error'),
     };
   } else if (diffDays === 7) {
     return {
-      text: 'Next Week',
+      text: formattedDate,
+      secondaryText: 'Next Week',
       color: colors.getTaskCategoryColor('purple'),
       iconColor: colors.getTaskCategoryColor('purple'),
     };
@@ -124,7 +137,8 @@ export function getDatePickerDisplay(
   
   if ((selectedDayOfWeek === 6 || selectedDayOfWeek === 0) && diffDays >= 0 && diffDays <= 6) {
     return {
-      text: 'This Weekend',
+      text: formattedDate,
+      secondaryText: 'This Weekend',
       color: colors.getSemanticColor('info'),
       iconColor: colors.getSemanticColor('info'),
     };
@@ -132,21 +146,16 @@ export function getDatePickerDisplay(
 
   // check for past dates
   if (diffDays < 0) {
-    // past date - show "X days ago"
     return {
-      text: `${Math.abs(diffDays)} days ago`,
+      text: formattedDate,
+      secondaryText: `${Math.abs(diffDays)} days ago`,
       color: colors.getSemanticColor('error'),
       iconColor: colors.getSemanticColor('error'),
     };
   } else {
-    // custom date - show formatted date
-    const formattedDate = selectedDate.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
+    // custom date - no relative sublabel
     return {
-      text: formattedDate, // e.g., "9 Nov 2025"
+      text: formattedDate,
       color: themeColors.text.secondary(),
       iconColor: themeColors.text.secondary(),
     };
@@ -154,17 +163,27 @@ export function getDatePickerDisplay(
 }
 
 /**
+ * Calculate end time from start time (HH:MM) + duration (minutes).
+ * Returns end time in HH:MM 24-hour format.
+ */
+function calculateEndTime(time: string, duration: number): string {
+  const [hours, minutes] = time.split(':').map(Number);
+  const startDate = new Date();
+  startDate.setHours(hours, minutes, 0, 0);
+  const endDate = new Date(startDate.getTime() + duration * 60 * 1000);
+  return `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+}
+
+/**
  * Get time and duration display information
- * 
- * Returns appropriate text for time/duration selection:
- * - "No Time or Duration" when both are unset
- * - "10:30 AM" when only time is set
- * - "30min" when only duration is set
- * - "10:30 AM • 30min" when both are set
- * 
- * All states use secondary color for consistency
- * 
- * @param time - Time string (e.g., "10:30 AM") or undefined
+ *
+ * Main label shows time in 24-hour format:
+ * - Time + duration: "14:30 - 15:00"
+ * - Time only: "14:30"
+ * - Duration only: "00:00 - 00:30" (midnight + duration)
+ * - Neither: "No Time or Duration"
+ *
+ * @param time - Time string in HH:MM format (e.g., "14:30") or undefined
  * @param duration - Duration in minutes or undefined
  * @param themeColors - Theme colors object from useThemeColors()
  * @returns Display information with text and colors
@@ -174,38 +193,40 @@ export function getTimeDurationPickerDisplay(
   duration: number | undefined,
   themeColors: ReturnType<typeof import('@/hooks/useColorPalette').useThemeColors>
 ): PickerButtonDisplay {
-  // both time and duration selected
-  if (time && duration) {
+  // both time and duration selected: show "14:30 - 15:00"
+  if (time && duration && duration > 0) {
+    const endTime = calculateEndTime(time, duration);
     return {
-      text: `${time} • ${duration}min`,
+      text: `${time} - ${endTime}`,
+      secondaryText: `${duration}min`,
       color: themeColors.text.secondary(),
       iconColor: themeColors.text.secondary(),
     };
-  } 
-  // only time selected
-  else if (time) {
+  }
+  // only time selected: show "14:30"
+  if (time) {
     return {
       text: time,
       color: themeColors.text.secondary(),
       iconColor: themeColors.text.secondary(),
     };
-  } 
-  // only duration selected
-  else if (duration) {
+  }
+  // only duration selected: show "00:00 - 00:30" (midnight + duration)
+  if (duration && duration > 0) {
+    const endTime = calculateEndTime('00:00', duration);
     return {
-      text: `${duration}min`,
-      color: themeColors.text.secondary(),
-      iconColor: themeColors.text.secondary(),
-    };
-  } 
-  // neither selected
-  else {
-    return {
-      text: 'No Time or Duration',
+      text: `00:00 - ${endTime}`,
+      secondaryText: `${duration}min`,
       color: themeColors.text.secondary(),
       iconColor: themeColors.text.secondary(),
     };
   }
+  // neither selected
+  return {
+    text: 'No Time or Duration',
+    color: themeColors.text.secondary(),
+    iconColor: themeColors.text.secondary(),
+  };
 }
 
 /**

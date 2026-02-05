@@ -1,15 +1,14 @@
 /**
- * GroupedListButton Component
- * 
- * Button-style item for GroupedList (settings page style).
+ * TaskFormButton Component
+ *
+ * Button-style item for GroupedList in task forms (settings page style).
  * Displays icon, label, value, and chevron in a pressable row.
- * This is the button-style component extracted from the original GroupedListItem.
- * 
+ * Designed for task creation/editing pickers (Date, Time, Alerts, etc.).
+ *
  * Usage:
- * <GroupedListButton
- *   id="date"
+ * <TaskFormButton
  *   icon="calendar-outline"
- *   label="Date Picker"
+ *   label="Date"
  *   value="Today"
  *   onPress={() => {}}
  * />
@@ -20,15 +19,15 @@ import { View, Text, Pressable, ViewStyle, TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
-import type { GroupedListButtonProps } from './GroupedList.types';
+import type { TaskFormButtonProps } from './GroupedList.types';
 
 /**
- * GroupedListButton Component
- * 
+ * TaskFormButton Component
+ *
  * Button-style item with icon, label, value, and chevron.
- * Designed for settings pages and similar use cases.
+ * Used in task forms for picker rows (Date, Time & Duration, Alerts, etc.).
  */
-export const GroupedListButton: React.FC<GroupedListButtonProps> = ({
+export const TaskFormButton: React.FC<TaskFormButtonProps> = ({
   icon,
   iconComponent,
   label,
@@ -157,5 +156,4 @@ export const GroupedListButton: React.FC<GroupedListButtonProps> = ({
   );
 };
 
-export default GroupedListButton;
-
+export default TaskFormButton;

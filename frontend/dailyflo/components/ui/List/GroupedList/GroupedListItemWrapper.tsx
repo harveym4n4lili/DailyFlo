@@ -26,8 +26,10 @@ export interface GroupedListItemWrapperProps {
   /** Separator color */
   separatorColor: string;
   
-  /** Horizontal inset for separator line in pt (0 = full-width separator; unused when 0) */
-  separatorInset?: number;
+  /** Left inset for separator line in pt (0 = align to left edge) */
+  separatorInsetLeft?: number;
+  /** Right inset for separator line in pt (0 = align to right edge) */
+  separatorInsetRight?: number;
   
   /** Optional background color override (defaults to theme elevated background) */
   backgroundColor?: string;
@@ -59,7 +61,8 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
   showSeparator,
   borderRadius,
   separatorColor,
-  separatorInset = 0,
+  separatorInsetLeft = 0,
+  separatorInsetRight = 0,
   backgroundColor,
   borderWidth,
   borderColor,
@@ -149,7 +152,8 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
           style={{
             height: StyleSheet.hairlineWidth,
             backgroundColor: separatorColor,
-            ...(separatorInset > 0 && { marginHorizontal: separatorInset }),
+            ...(separatorInsetLeft > 0 && { marginLeft: separatorInsetLeft }),
+            ...(separatorInsetRight > 0 && { marginRight: separatorInsetRight }),
           }}
         />
       )}
