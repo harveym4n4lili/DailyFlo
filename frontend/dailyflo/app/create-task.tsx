@@ -9,6 +9,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import { MainCloseButton } from '@/components/ui/Button/CloseButton';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -164,9 +165,15 @@ export default function CreateTaskScreen() {
     <View
       style={[
         styles.container,
-        { backgroundColor: themeColors.background.primarySecondaryBlend(), minHeight: windowHeight },
+        { backgroundColor: themeColors.background.primary(), minHeight: windowHeight },
       ]}
     >
+      <MainCloseButton
+        onPress={handleClose}
+        color={(values.color as TaskColor) || themeColor}
+        top={20}
+        left={20}
+      />
       <TaskCreationContent
         visible={true}
         values={values}
@@ -183,6 +190,7 @@ export default function CreateTaskScreen() {
         onSubtaskFinishEditing={handleSubtaskFinishEditing}
         onCreateSubtask={handleCreateSubtask}
         embedHeaderButtons={true}
+        renderCloseButton={false}
         saveButtonBottomInsetWhenKeyboardHidden={44}
       />
     </View>

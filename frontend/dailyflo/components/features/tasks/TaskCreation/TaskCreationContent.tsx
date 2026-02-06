@@ -20,7 +20,11 @@ import {
   Keyboard,                  // keyboard api for dismissing keyboard
   TouchableWithoutFeedback,  // dismiss keyboard when tapping outside inputs
   useWindowDimensions,       // window size so save button overlay can be positioned relative to window
+  TouchableOpacity,          // for checkbox (matches TimelineCheckbox)
+  Animated as RNAnimated,    // for checkbox fill/scale animation (matches TimelineCheckbox)
+  Platform,                  // gate glass view to iOS
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 // REACT NATIVE SAFE AREA CONTEXT IMPORT
 // useSafeAreaInsets: hook that provides safe area insets for the device
@@ -71,6 +75,10 @@ import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisp
 // typescript types for type safety
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
 import type { TaskColor } from '@/types';
+
+// GLASS VIEW IMPORT
+// native iOS liquid glass for bottom section (save button strip)
+import GlassView from 'expo-glass-effect/build/GlassView';
 
 /**
  * Props for TaskCreationContent component
@@ -144,6 +152,12 @@ export interface TaskCreationContentProps {
   embedHeaderButtons?: boolean;
 
   /**
+   * When false, omit the close button so the parent can render it at window level (e.g. top-left of screen).
+   * Only applies when embedHeaderButtons is true. Default true.
+   */
+  renderCloseButton?: boolean;
+
+  /**
    * Extra bottom inset when keyboard is hidden (e.g. form sheet doesn't fill window; add ~80 so save button stays visible).
    */
   saveButtonBottomInsetWhenKeyboardHidden?: number;
@@ -177,6 +191,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   subtaskListBorderWidth,
   subtaskListBorderColor,
   embedHeaderButtons = true,
+  renderCloseButton = true,
   saveButtonBottomInsetWhenKeyboardHidden,
 }) => {
   // CONSOLE DEBUGGING - removed for cleaner logs
@@ -185,6 +200,8 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   const colors = useColorPalette();
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
+  // bottom section (save button strip) uses glass on iOS; solid background elsewhere
+  const glassAvailable = Platform.OS === 'ios';
   
   // window size: used for save button overlay so button is positioned relative to window bottom
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -193,6 +210,18 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   
   // FORM STATE
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [titleCheckboxChecked, setTitleCheckboxChecked] = useState(false);
+  
+  // title checkbox animation (matches TimelineCheckbox: 18x18 circle, fill + scale)
+  const titleCheckboxFill = useRef(new RNAnimated.Value(0)).current;
+  const titleCheckboxScale = useRef(new RNAnimated.Value(1)).current;
+  useEffect(() => {
+    RNAnimated.timing(titleCheckboxFill, {
+      toValue: titleCheckboxChecked ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [titleCheckboxChecked, titleCheckboxFill]);
   
   // CHECK IF CREATE BUTTON SHOULD BE ACTIVE
   // button is active when required fields are filled (title is required)
@@ -370,30 +399,65 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
             paddingHorizontal: 0,
           }}
         >
-          {embedHeaderButtons && (
-            <MainCloseButton
-              onPress={handleClose}
-              color={values.color || 'blue'}
-              top={insets.top + -24}
-            />
+          {embedHeaderButtons && renderCloseButton && (
+            <MainCloseButton onPress={handleClose} color={values.color || 'blue'} />
           )}
-          <TextInput
-            ref={titleInputRef}
-            value={values.title || ''}
-            onChangeText={(t) => onChange('title', t)}
-            onBlur={() => onBlur('title')}
-            placeholder="e.g., Answering emails"
-            placeholderTextColor={themeColors.text.tertiary()}
-            selectionColor={themeColors.text.primary()}
-            style={{
-              ...getTextStyle('heading-2'),
-              color: themeColors.text.primary(),
-              paddingVertical: 0,
-              paddingHorizontal: 20,
-            }}
-            autoFocus={true}
-            returnKeyType="next"
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 20 }}>
+            <View style={{ flex: 1, minWidth: 0, paddingHorizontal: 0 }}>
+              <TextInput
+                ref={titleInputRef}
+                value={values.title || ''}
+                onChangeText={(t) => onChange('title', t)}
+                onBlur={() => onBlur('title')}
+                placeholder="e.g., Answering emails"
+                placeholderTextColor={themeColors.text.tertiary()}
+                selectionColor={themeColors.text.primary()}
+                style={{
+                  ...getTextStyle('heading-2'),
+                  color: themeColors.text.primary(),
+                  paddingBottom: 12,
+                  paddingHorizontal: 0,
+                }}
+                autoFocus={true}
+                returnKeyType="next"
+              />
+              <View style={{ height: 1, backgroundColor: themeColors.text.tertiary() }} />
+              <View style={{ height: 12 }} />
+            </View>
+            <View style={{ paddingLeft: 12, flexShrink: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  RNAnimated.sequence([
+                    RNAnimated.timing(titleCheckboxScale, { toValue: 0.85, duration: 100, useNativeDriver: true }),
+                    RNAnimated.timing(titleCheckboxScale, { toValue: 1, duration: 100, useNativeDriver: true }),
+                  ]).start();
+                  setTitleCheckboxChecked((prev) => !prev);
+                }}
+                activeOpacity={1}
+                style={{ alignItems: 'center', justifyContent: 'center' }}
+              >
+                <RNAnimated.View style={{ transform: [{ scale: titleCheckboxScale }] }}>
+                  <RNAnimated.View
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 12,
+                      borderWidth: 1.5,
+                      borderColor: titleCheckboxFill.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [themeColors.text.tertiary(), themeColors.text.primary()],
+                      }),
+                      backgroundColor: titleCheckboxFill.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['transparent', themeColors.text.primary()],
+                      }),
+                    }}
+                  />
+                </RNAnimated.View>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         {/* scrollable area: grouped list + description (scroll indicator visible); flexGrow: 1 so content fills to bottom when short */}
@@ -418,6 +482,15 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
           </View>
 
           <View style={{ paddingTop: 0, paddingBottom: 0 }}>
+            {/* tertiary border above description, inset 20pt horizontally */}
+            <View
+              style={{
+                height: 1,
+                backgroundColor: themeColors.background.tertiary(),
+                marginHorizontal: 20,
+                marginBottom: 0,
+              }}
+            />
             <DescriptionSection
               description={values.description || ''}
               onDescriptionChange={(description) => {
@@ -448,27 +521,22 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
           )}
         </ScrollView>
 
-        {/* save button in a thin bottom strip; always mounted when embedHeaderButtons so SaveButton can run exit animation via visible prop */}
-        {embedHeaderButtons && (
-          <View
-            pointerEvents="box-none"
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              width: windowWidth,
-              height: 100,
-            }}
-          >
-            <Animated.View
-              pointerEvents="box-none"
-              style={animatedSaveButtonBarStyle}
-            >
+        {/* bottom section: save button strip; glass on iOS (regular), transparent elsewhere */}
+        {embedHeaderButtons && (() => {
+          const bottomStripStyle = {
+            position: 'absolute' as const,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: windowWidth,
+            height: 100,
+          };
+          const bottomStripContent = (
+            <Animated.View pointerEvents="box-none" style={animatedSaveButtonBarStyle}>
               <View
                 style={{
                   alignSelf: 'flex-end',
-                  flexDirection: 'row',
+                  flexDirection: 'row' as const,
                   alignItems: 'center',
                   paddingHorizontal: 20,
                 }}
@@ -485,8 +553,22 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
                 />
               </View>
             </Animated.View>
-          </View>
-        )}
+          );
+          return glassAvailable ? (
+            <GlassView
+              pointerEvents="box-none"
+              style={[bottomStripStyle, { backgroundColor: 'transparent' }]}
+              glassEffectStyle="regular"
+              tintColor={themeColors.background.primarySecondaryBlend() as any}
+            >
+              {bottomStripContent}
+            </GlassView>
+          ) : (
+            <View pointerEvents="box-none" style={bottomStripStyle}>
+              {bottomStripContent}
+            </View>
+          );
+        })()}
         </View>
       </TouchableWithoutFeedback>
   );

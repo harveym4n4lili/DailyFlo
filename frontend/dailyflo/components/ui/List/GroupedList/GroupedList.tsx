@@ -40,12 +40,12 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   borderWidth,
   borderColor,
   contentPaddingHorizontal = 20 ,
-  contentPaddingVertical = 16,
+  contentPaddingVertical = 14,
   contentMinHeight = 44,
 }) => {
   // get theme-aware colors for default separator color
   const themeColors = useThemeColors();
-  
+
   // use provided separator color or default to theme border color
   const finalSeparatorColor = separatorColor || themeColors.border.primary();
 
@@ -90,12 +90,10 @@ export const GroupedList: React.FC<GroupedListProps> = ({
     <View style={[{ gap: 0 }, containerStyle]}>
       {childrenArray.map((child, index) => {
         const position = getItemPosition(index);
-        // show separator for all items except the last one
         const showSeparator = index < childrenArray.length - 1;
-
         return (
           <GroupedListItemWrapper
-            key={getChildKey(child, index)} // use child's key if available, otherwise use index
+            key={getChildKey(child, index)}
             position={position}
             showSeparator={showSeparator}
             borderRadius={borderRadius}

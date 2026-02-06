@@ -12,6 +12,9 @@ export type { FloatingActionButtonProps } from './Button';
 export { FormPickerButton } from './Button';
 export type { FormPickerButtonProps } from './Button';
 
+export { TaskOptionButton } from './Button';
+export type { TaskOptionButtonProps } from './Button';
+
 // export FormPickerButton utilities
 export {
   getDatePickerDisplay,

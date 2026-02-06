@@ -83,6 +83,7 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = ({
         taskColor={taskColor}
         multiline={true}
         containerStyle={styles.textInputContainer}
+        inputStyle={styles.descriptionInputPadding}
         onFocus={onFocus}
         onBlur={onBlur}
       />
@@ -111,6 +112,13 @@ const styles = StyleSheet.create({
   textInputContainer: {
     // additional styling can be added here if needed
     // the CustomTextInput handles most of its own styling
+  },
+
+  // overrides for the description input: no top, bottom or left padding inside the text area
+  descriptionInputPadding: {
+    paddingTop: 16,
+    paddingBottom: 0,
+    paddingLeft: 20,
   },
 });
 
