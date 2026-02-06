@@ -14,7 +14,7 @@ import React from 'react';
 
 // REACT NATIVE IMPORTS
 // building blocks from react native for UI components
-import { Pressable, Text, Platform } from 'react-native';
+import { Pressable, Text, Platform, useWindowDimensions, View } from 'react-native';
 
 // REACT NATIVE SAFE AREA CONTEXT IMPORT
 // useSafeAreaInsets: hook that provides safe area insets for the device
@@ -52,10 +52,10 @@ export interface MainCloseButtonProps {
   /** Task color for styling (kept for older iOS text button background if needed) */
   color?: TaskColor;
   
-  /** Optional top position override (defaults to 16 + safe area top for newer iOS, 20 + safe area top for older iOS) */
+  /** Optional top position override (defaults to 0 so button reaches top of modal) */
   top?: number;
   
-  /** Optional left position override (defaults to 16) */
+  /** Optional left position override (defaults to 0) */
   left?: number;
   
   /** Optional right position override (if provided, left is ignored) */
@@ -73,7 +73,7 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
   onPress,
   color = 'blue',
   top,
-  left = 16,
+  left = 0,
   right,
 }) => {
   // HOOKS
@@ -81,6 +81,8 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
   const themeColors = useThemeColors();
   // get safe area insets for positioning
   const insets = useSafeAreaInsets();
+  // window dimensions for absolute positioning relative to screen
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   // IOS VERSION DETECTION
   // get iOS version number for conditional styling
@@ -112,14 +114,8 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
   // by using the same secondary background tone from the theme
   const closeButtonBackgroundColor = themeColors.background.primary();
 
-  // calculate top position
-  // defaults to 16px from top + safe area inset for newer iOS, 20px for older iOS
-  // or uses provided top value if specified
-  const topPosition = top !== undefined 
-    ? top 
-    : isNewerIOS 
-      ? 16 + insets.top  // newer iOS: 16px from top
-      : 20 + insets.top; // older iOS: 20px from top
+  // top position: 0 so button reaches top of modal (pass top={insets.top} for safe area if needed)
+  const topPosition = top !== undefined ? top : 20;
 
   // on iOS we always render the GlassView wrapper; on unsupported platforms
   // expo-glass-effect falls back internally so we don't need an explicit check.
@@ -134,12 +130,21 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
     zIndex: 10,
   };
 
+  // wrapper: absolutely positioned to window so button stays fixed at top-left when content scrolls
+  const absoluteWrapperStyle = {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    width: windowWidth,
+    height: windowHeight,
+    zIndex: 10,
+  };
+
   // when glass is available on newer iOS we wrap the pressable in a GlassView
-  // and use the same style of glass surface as the FAB (clear style + themed tint)
-  // while keeping the close button's own size and icon size
   if (isNewerIOS && glassAvailable) {
     return (
-      <GlassView
+      <View pointerEvents="box-none" style={absoluteWrapperStyle}>
+        <GlassView
         // container uses slightly larger size than the visible icon circle
         // so the liquid glass highlight has room to expand on press
         style={{
@@ -171,13 +176,12 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
             borderColor: themeColors.border.primary(),
             borderRadius: 21,
           }}
-          // hitSlop expands the tap area slightly outside the visual circle
-          // to make light taps easier to register
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="close" size={28} color={getIconColor()} />
         </Pressable>
       </GlassView>
+    </View>
     );
   }
 
@@ -185,6 +189,7 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
   // - newer iOS with no liquid glass: circular icon button with transparent background
   // - older iOS: keep the original "Cancel" pill button using task color background
   return (
+    <View pointerEvents="box-none" style={absoluteWrapperStyle}>
     <Pressable
       onPress={onPress}
       style={{
@@ -223,6 +228,7 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
         </Text>
       )}
     </Pressable>
+    </View>
   );
 };
 

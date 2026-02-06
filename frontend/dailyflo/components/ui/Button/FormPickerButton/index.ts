@@ -8,6 +8,9 @@ export { FormPickerButton } from './FormPickerButton';
 export type { FormPickerButtonProps } from './FormPickerButton';
 export { default } from './FormPickerButton';
 
+export { TaskOptionButton } from './TaskOptionButton';
+export type { TaskOptionButtonProps } from './TaskOptionButton';
+
 // Export utility functions for display logic
 export {
   getDatePickerDisplay,
