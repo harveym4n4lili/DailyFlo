@@ -11,7 +11,6 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 // import our new task components
 import { ListCard } from '@/components/ui/Card';
 import { FloatingActionButton } from '@/components/ui/Button';
-import { FABTest } from '@/components/test';
 import { DropdownList } from '@/components/ui/List';
 import { ModalContainer, ModalBackdrop } from '@/components/layout/ModalLayout';
 import { TaskViewModal } from '@/components/features/tasks';
@@ -530,8 +529,6 @@ export default function TodayScreen() {
         headerTitle="Today"
         paddingTop={insets.top+ 64} // add top padding equal to safe area inset
       />
-      {/* Test FAB (left) – opens TestModal for testing modal behavior */}
-      <FABTest />
       {/* Floating Action Button – opens create-task Stack screen (presentation: modal) */}
       <FloatingActionButton
         onPress={() => {

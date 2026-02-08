@@ -44,7 +44,12 @@ export interface GroupedListItemWrapperProps {
   contentPaddingHorizontal?: number;
   contentPaddingVertical?: number;
   contentMinHeight?: number;
-  
+
+  /**
+   * Visual style: roundedStyle (background, radius, inset separators) or lineStyle (no bg, full-length top/bottom borders)
+   */
+  listStyle?: 'roundedStyle' | 'lineStyle';
+
   /** Optional style override */
   style?: ViewStyle;
 }
@@ -69,6 +74,7 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
   contentPaddingHorizontal,
   contentPaddingVertical,
   contentMinHeight,
+  listStyle = 'roundedStyle',
   style,
 }) => {
   // get theme-aware colors for default background and border when props not provided
@@ -101,10 +107,10 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
     }
   };
 
-  // when borderWidth is set, draw only the edges that form the group outline (no double lines between rows)
+  // when borderWidth is set (roundedStyle only), draw only the edges that form the group outline
   // first: top + left + right; middle: left + right; last: bottom + left + right; only: all four
   const getBorderEdgeStyle = (): ViewStyle => {
-    if (borderWidth == null || borderWidth <= 0) return {};
+    if (listStyle === 'lineStyle' || borderWidth == null || borderWidth <= 0) return {};
     const c = borderColor ?? themeColors.border.primary();
     const w = borderWidth;
     switch (position) {
@@ -121,17 +127,36 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
     }
   };
 
+  // lineStyle: full-length top and bottom borders on each item; first/only get top, all except last get bottom
+  const getLineStyleBorders = (): ViewStyle => {
+    if (listStyle !== 'lineStyle') return {};
+    const c = separatorColor;
+    const w = StyleSheet.hairlineWidth;
+    const hasTop = position === 'first' || position === 'only';
+    const hasBottom = showSeparator || position === 'only';
+    return {
+      ...(hasTop && { borderTopWidth: w, borderTopColor: c }),
+      ...(hasBottom && { borderBottomWidth: w, borderBottomColor: c }),
+    };
+  };
+
   // outer container: background, border radius, minHeight; no padding so separator can sit below padded content
+  // lineStyle: transparent background, no radius, full-length top/bottom borders instead of inset separator
   const outerStyle: ViewStyle = {
-    backgroundColor: backgroundColor ?? themeColors.background.primarySecondaryBlend(),
+    backgroundColor:
+      listStyle === 'lineStyle'
+        ? 'transparent'
+        : (backgroundColor ?? themeColors.background.primarySecondaryBlend()),
     overflow: 'hidden',
-    ...getBorderRadiusStyle(),
+    ...(listStyle === 'roundedStyle' ? getBorderRadiusStyle() : {}),
     ...getBorderEdgeStyle(),
+    ...getLineStyleBorders(),
     ...(contentMinHeight != null && { minHeight: contentMinHeight }),
     ...style,
   };
 
   // inner wrapper: same vertical and horizontal padding so content has space on all sides; separator is outside this
+  // both styles use content padding; lineStyle uses borders instead of separate separator view
   const hasContentPadding =
     contentPaddingHorizontal != null || contentPaddingVertical != null;
   const contentWrapperStyle: ViewStyle = hasContentPadding
@@ -146,8 +171,8 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
       <View style={contentWrapperStyle}>
         {children}
       </View>
-      {/* separator below padded content so borders don't touch the item */}
-      {showSeparator && (
+      {/* roundedStyle only: separator below padded content; lineStyle uses borderBottomWidth instead */}
+      {listStyle === 'roundedStyle' && showSeparator && (
         <View
           style={{
             height: StyleSheet.hairlineWidth,

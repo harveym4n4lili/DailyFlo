@@ -8,8 +8,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
-import { MainCloseButton } from '@/components/ui/Button/CloseButton';
+import { View, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -17,7 +16,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useAppDispatch } from '@/store';
 import { createTask } from '@/store/slices/tasks/tasksSlice';
 import { useTasks } from '@/store/hooks';
-import { TaskCreationContent } from '@/components/features/tasks/TaskCreation';
+import { TaskCreationContent } from '@/components/features/NEW/TaskCreation/TaskCreationContent';
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
 import type { PriorityLevel, RoutineType, CreateTaskInput, TaskColor, Subtask as TaskSubtask } from '@/types';
 import type { Subtask } from '@/components/features/subtasks';
@@ -42,7 +41,6 @@ export default function CreateTaskScreen() {
   const { themeColor } = useThemeColor();
   const dispatch = useAppDispatch();
   const { isCreating, createError } = useTasks();
-  const { height: windowHeight } = useWindowDimensions();
 
   const [values, setValues] = useState<Partial<TaskFormValues>>(() => ({
     ...getDefaults(themeColor),
@@ -162,18 +160,7 @@ export default function CreateTaskScreen() {
     }, 100);
   };
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: themeColors.background.primary(), minHeight: windowHeight },
-      ]}
-    >
-      <MainCloseButton
-        onPress={handleClose}
-        color={(values.color as TaskColor) || themeColor}
-        top={20}
-        left={20}
-      />
+    <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
       <TaskCreationContent
         visible={true}
         values={values}
@@ -198,7 +185,5 @@ export default function CreateTaskScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
 });

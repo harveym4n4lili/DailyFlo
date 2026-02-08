@@ -40,6 +40,18 @@ export interface PickerButtonsSectionProps {
   alertsValue?: string;
   /** Background color for TaskOptionButtons (defaults to theme background.secondary) */
   taskOptionBackgroundColor?: string;
+  /** Horizontal padding for container and scroll content (default 20). Pass 0 for no h padding. */
+  contentPaddingHorizontal?: number;
+  /** When false, hides the horizontal scroll of TaskOptionButton pills (e.g. for NEW task creation). Default true. */
+  showTaskOptionPills?: boolean;
+  /** When true, time/duration row is not shown in the grouped list (e.g. NEW shows only date in list). Default false. */
+  hideTimeInList?: boolean;
+  /** When true, alerts row is not shown in the grouped list (e.g. NEW shows only date in list). Default false. */
+  hideAlertsInList?: boolean;
+  /** When true, no bottom padding so the next block (e.g. time/alert displays row) can touch the list. Default false. */
+  noBottomPadding?: boolean;
+  /** When true, no top padding so the list can sit closer to the block above (e.g. description). Default false. */
+  noTopPadding?: boolean;
 }
 
 export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
@@ -52,34 +64,43 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
   timeDurationSecondaryValue,
   alertsValue = 'Select',
   taskOptionBackgroundColor,
+  contentPaddingHorizontal = 20,
+  showTaskOptionPills = true,
+  hideTimeInList = false,
+  hideAlertsInList = false,
+  noBottomPadding = false,
+  noTopPadding = false,
 }) => {
   const themeColors = useThemeColors();
   const { width: screenWidth } = useWindowDimensions();
+  const paddingH = contentPaddingHorizontal;
 
   // determine if each field has a value (used to show TaskFormButton vs TaskOptionButton)
   const hasDate = dateValue !== NO_DATE && dateValue !== 'Select';
   const hasTimeDuration = timeDurationValue !== NO_TIME_OR_DURATION && timeDurationValue !== 'Select';
   const hasAlerts = alertsValue !== NO_ALERTS && alertsValue !== 'Select';
 
-  // build list of TaskFormButton rows only for fields that have values
+  // build list of TaskFormButton rows only for fields that have values (skip time/alerts when hidden)
   const groupedListItems: React.ReactNode[] = [];
   if (hasDate) {
+    // date row: main label = "Due today" (or Due + relative, lowercase), sublabel = formatted date
+    const dateMainLabel = dateSecondaryValue ? `Due ${dateSecondaryValue.toLowerCase()}` : dateValue;
     groupedListItems.push(
       <TaskFormButton
         key="date"
-        iconComponent={<CalendarIcon size={20} color={themeColors.text.primary()} />}
-        label={dateValue}
-        value={dateSecondaryValue ?? ''}
+        iconComponent={<CalendarIcon size={18} color={themeColors.text.primary()} isSolid />}
+        label={dateMainLabel}
+        value={dateValue}
         onPress={onShowDatePicker}
         showChevron
       />
     );
   }
-  if (hasTimeDuration) {
+  if (hasTimeDuration && !hideTimeInList) {
     groupedListItems.push(
       <TaskFormButton
         key="timeDuration"
-        iconComponent={<ClockIcon size={20} color={themeColors.text.primary()} />}
+        iconComponent={<ClockIcon size={18} color={themeColors.text.primary()} isSolid />}
         label={timeDurationValue}
         value={timeDurationSecondaryValue ?? ''}
         onPress={onShowTimeDurationPicker}
@@ -87,11 +108,11 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
       />
     );
   }
-  if (hasAlerts) {
+  if (hasAlerts && !hideAlertsInList) {
     groupedListItems.push(
       <TaskFormButton
         key="alerts"
-        iconComponent={<BellIcon size={20} color={themeColors.text.primary()} />}
+        iconComponent={<BellIcon size={18} color={themeColors.text.primary()} />}
         label="Alerts"
         value={alertsValue}
         onPress={onShowAlertsPicker}
@@ -107,7 +128,7 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
     taskOptionButtons.push(
       <TaskOptionButton
         key="date"
-        customIcon={<CalendarIcon size={taskOptionIconSize} color={themeColors.text.tertiary()} />}
+        customIcon={<CalendarIcon size={taskOptionIconSize} color={themeColors.text.primary()} isSolid />}
         label="Date"
         onPress={onShowDatePicker}
         containerStyle={styles.taskOptionSpacing}
@@ -119,7 +140,7 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
     taskOptionButtons.push(
       <TaskOptionButton
         key="timeDuration"
-        customIcon={<ClockIcon size={taskOptionIconSize} color={themeColors.text.tertiary()} />}
+        customIcon={<ClockIcon size={taskOptionIconSize} color={themeColors.text.primary()} isSolid />}
         label="Time & Duration"
         onPress={onShowTimeDurationPicker}
         containerStyle={styles.taskOptionSpacing}
@@ -131,7 +152,7 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
     taskOptionButtons.push(
       <TaskOptionButton
         key="alerts"
-        customIcon={<BellIcon size={taskOptionIconSize} color={themeColors.text.tertiary()} />}
+        customIcon={<BellIcon size={taskOptionIconSize} color={themeColors.text.primary()} />}
         label="Alerts"
         onPress={onShowAlertsPicker}
         containerStyle={styles.taskOptionSpacing}
@@ -141,7 +162,7 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingHorizontal: paddingH }, noBottomPadding && styles.containerNoBottomPadding, noTopPadding && styles.containerNoTopPadding]}>
       {/* GroupedList: only shows TaskFormButton rows for fields that have values */}
       {groupedListItems.length > 0 && (
         <GroupedList
@@ -156,17 +177,16 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
         </GroupedList>
       )}
 
-      {/* horizontal scroll of TaskOptionButtons for fields with no value */}
-      {/* overflow: visible so the glass highlight on TaskOptionButton is not clipped by the scroll */}
-      {taskOptionButtons.length > 0 && (
+      {/* horizontal scroll of TaskOptionButtons for fields with no value (hidden when showTaskOptionPills is false, e.g. NEW) */}
+      {showTaskOptionPills && taskOptionButtons.length > 0 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={[
             styles.taskOptionsScrollContent,
-            { paddingRight: 64, paddingVertical: 0, paddingBottom: 4, overflow: 'visible' as const },
+            { paddingLeft: paddingH, paddingRight: 64, paddingTop: 4, paddingBottom: 4, overflow: 'visible' as const },
           ]}
-          style={[styles.taskOptionsScroll, { width: screenWidth, overflow: 'visible' as const }]}
+          style={[styles.taskOptionsScroll, { width: screenWidth, marginHorizontal: -paddingH, overflow: 'visible' as const }]}
         >
           {taskOptionButtons}
         </ScrollView>
@@ -179,29 +199,31 @@ export const PickerButtonsSection: React.FC<PickerButtonsSectionProps> = ({
 const SECTION_GAP = 16;
 
 const styles = StyleSheet.create({
-  // outer container: Settings-like horizontal inset (20pt) and bottom spacing
-  // overflow: visible so the horizontal scroll's glass pills are not clipped
+  // outer container: paddingHorizontal overridden via prop (default 20)
   container: {
-    paddingHorizontal: 20,
     paddingTop: SECTION_GAP,
     paddingBottom: 8,
     overflow: 'visible',
+  },
+  // when noBottomPadding is true (e.g. NEW task creation): list and displays row touch with no gap
+  containerNoBottomPadding: {
+    paddingBottom: 0,
+  },
+  // when noTopPadding is true (e.g. NEW): less gap between description and grouped list
+  containerNoTopPadding: {
+    paddingTop: 0,
   },
   // list wrapper: no extra gap so the grouped list is one visual block
   listContainer: {
     marginVertical: 0,
   },
-  // horizontal scroll: bypass container padding (-20) so it extends edge-to-edge; left content inset 20
-  // overflow: visible so glass animation on TaskOptionButtons is not clipped
+  // horizontal scroll: marginHorizontal set via prop to match container padding
   taskOptionsScroll: {
     marginTop: SECTION_GAP,
-    marginHorizontal: -20,
     flexGrow: 0,
     overflow: 'visible',
   },
-  // content container: left inset 20; row of pills; right padding = screen width for full scroll range
   taskOptionsScrollContent: {
-    paddingLeft: 20,
     flexDirection: 'row',
     overflow: 'visible',
   },

@@ -18,9 +18,18 @@ import {
 
 // import custom components
 import { CustomTextInput } from '@/components/ui/TextInput';
+import { ParagraphIcon } from '@/components/ui/Icon';
+import { useThemeColors } from '@/hooks/useColorPalette';
 
 // import types
 import type { TaskColor } from '@/types';
+
+const DESCRIPTION_ICON_SIZE = 18;
+const ICON_GAP = 8;
+// fixed height so icon container doesn't grow with multiline description; icon centered inside
+const ICON_CONTAINER_HEIGHT = 22;
+// nudge icon down so it aligns with first line of placeholder text (input has top padding)
+const ICON_TOP_OFFSET = 10;
 
 /**
  * Props interface for DescriptionSection component
@@ -58,6 +67,7 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = ({
 }) => {
   // local state for description text
   const [localDescription, setLocalDescription] = useState(description);
+  const themeColors = useThemeColors();
 
   /**
    * Handle description text changes
@@ -70,23 +80,25 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Custom Description Text Input */}
-      {/* uses our custom iOS-style text input with full control over behavior */}
-      {/* automatically handles keyboard visibility and cursor positioning */}
-      {/* flow: user types → handleDescriptionChange updates state → parent callback is called */}
-      <CustomTextInput
-        value={localDescription}
-        onChangeText={handleDescriptionChange}
-        placeholder="Description"
-        editable={isEditing}
-        maxLength={500}
-        taskColor={taskColor}
-        multiline={true}
-        containerStyle={styles.textInputContainer}
-        inputStyle={styles.descriptionInputPadding}
-        onFocus={onFocus}
-        onBlur={onBlur}
-      />
+      <View style={styles.inputRow}>
+        {/* paragraph icon always visible on the left */}
+        <View style={styles.iconWrap}>
+          <ParagraphIcon size={DESCRIPTION_ICON_SIZE} color={themeColors.text.tertiary()} />
+        </View>
+        <CustomTextInput
+          value={localDescription}
+          onChangeText={handleDescriptionChange}
+          placeholder="Description"
+          editable={isEditing}
+          maxLength={500}
+          taskColor={taskColor}
+          multiline={true}
+          containerStyle={styles.textInputContainer}
+          inputStyle={styles.descriptionInputPadding}
+          onFocus={onFocus}
+          onBlur={onBlur}
+        />
+      </View>
     </View>
   );
 };
@@ -99,26 +111,30 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = ({
  * - Uses our custom iOS-style text input component
  */
 const styles = StyleSheet.create({
-  // main container - holds the custom text input
   container: {
-    // no flex: 1 to prevent layout issues
-    // component sizes naturally to its content
     paddingHorizontal: 0,
     paddingTop: 0,
     paddingBottom: 0,
   },
-
-  // container style for the custom text input
-  textInputContainer: {
-    // additional styling can be added here if needed
-    // the CustomTextInput handles most of its own styling
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
-
-  // overrides for the description input: no top, bottom or left padding inside the text area
+  iconWrap: {
+    width: DESCRIPTION_ICON_SIZE,
+    height: ICON_CONTAINER_HEIGHT,
+    marginTop: ICON_TOP_OFFSET,
+    marginRight: ICON_GAP,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  textInputContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
   descriptionInputPadding: {
-    paddingTop: 16,
     paddingBottom: 0,
-    paddingLeft: 20,
+    paddingLeft: 0,
   },
 });
 
