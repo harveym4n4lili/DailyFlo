@@ -1,5 +1,5 @@
 /**
- * NEW Task Creation content — scroll-based create task modal.
+ * TaskScreen content — scroll-based create task modal (reusable for task view later).
  * ScrollView must be absolute (top/left/right/bottom 0) to fill the stack screen and reach the top.
  * With flex: 1 only, form sheet / safe area can leave a gap above the content.
  */
@@ -20,21 +20,107 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import type { TaskCreationContentProps } from '@/components/features/tasks/TaskCreation';
 import { DatePickerModal } from '@/components/features/calendar';
-import { IconColorModal, TimeDurationModal, AlertModal } from '@/components/features/tasks/TaskCreation/modals';
-import { PickerButtonsSection, DescriptionSection } from '@/components/features/tasks/TaskCreation/sections';
-import { TimeDurationDisplay, AlertDisplay } from '@/components/features/NEW/TaskCreation/sections';
-import { SubtaskCreateButton, SubtaskListItem } from '@/components/features/NEW/TaskCreation/subtask';
-import { GroupedList } from '@/components/ui/List/GroupedList';
+import { IconColorModal, TimeDurationModal, AlertModal } from './modals';
+import { FormDetailSection, SubtaskSection } from './sections';
 import { SaveButton } from '@/components/ui/Button/SaveButton';
 import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisplay } from '@/components/ui/Button';
 import { getTextStyle } from '@/constants/Typography';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import type { TaskColor } from '@/types';
+import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
+import type { Subtask } from '@/components/features/subtasks';
 
-export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
+/**
+ * Props for TaskScreenContent component (shared type for task creation and task view)
+ */
+export interface TaskCreationContentProps {
+  /** Whether the content is visible */
+  visible: boolean;
+  
+  /** Form values */
+  values: Partial<TaskFormValues>;
+  
+  /** Form change handler */
+  onChange: <K extends keyof TaskFormValues>(key: K, v: TaskFormValues[K]) => void;
+  
+  /** Callback when modal should close */
+  onClose: () => void;
+  
+  /** Whether form has unsaved changes */
+  hasChanges: boolean;
+  
+  /** Callback to notify parent when any picker modal visibility changes */
+  /** Used to coordinate backdrop visibility between FullScreenModal and DraggableModal */
+  onPickerVisibilityChange?: (isAnyPickerVisible: boolean) => void;
+  
+  /** Callback when create button is pressed */
+  /** This function handles validating the form and creating the task */
+  onCreate: () => void;
+  
+  /** Whether a task is currently being created (loading state) */
+  /** Used to disable the create button and show loading indicator */
+  isCreating?: boolean;
+  
+  /** Error message if task creation failed */
+  /** Can be displayed to the user */
+  createError?: string | null;
+  
+  /** Array of subtasks for the task */
+  subtasks: Subtask[];
+  
+  /** Callback when a subtask is toggled (complete/incomplete) */
+  onSubtaskToggle: (subtaskId: string) => void;
+  
+  /** Callback when a subtask is deleted */
+  onSubtaskDelete: (subtaskId: string) => void;
+  
+  /** Callback when a subtask title changes */
+  onSubtaskTitleChange: (subtaskId: string, newTitle: string) => void;
+  
+  /** Callback when editing a subtask is finished */
+  onSubtaskFinishEditing: (subtaskId: string) => void;
+  
+  /** Callback when create subtask button is pressed */
+  onCreateSubtask: () => void;
+
+  /** When set, the subtask with this id should focus its input (e.g. after Add subtask); clear via onClearPendingFocus */
+  pendingFocusSubtaskId?: string | null;
+  /** Callback when the pending-focus subtask has focused its input (used to clear pendingFocusSubtaskId) */
+  onClearPendingFocus?: () => void;
+
+  /** Optional background color for the subtask list (passed to GroupedList item wrappers) */
+  subtaskListBackgroundColor?: string;
+
+  /** Optional border radius for the subtask list (defaults to 24) */
+  subtaskListBorderRadius?: number;
+
+  /** Optional border width for the subtask list item wrappers */
+  subtaskListBorderWidth?: number;
+
+  /** Optional border color for the subtask list item wrappers */
+  subtaskListBorderColor?: string;
+
+  /**
+   * When true (default), render close and save buttons inside the content (for in-screen modal).
+   * When false, omit them so the parent (e.g. Stack screen) can provide header close/save.
+   */
+  embedHeaderButtons?: boolean;
+
+  /**
+   * When false, omit the close button so the parent can render it at window level (e.g. top-left of screen).
+   * Only applies when embedHeaderButtons is true. Default true.
+   */
+  renderCloseButton?: boolean;
+
+  /**
+   * Extra bottom inset when keyboard is hidden (e.g. form sheet doesn't fill window; add ~80 so save button stays visible).
+   */
+  saveButtonBottomInsetWhenKeyboardHidden?: number;
+}
+
+export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   onClose,
   values,
   onChange,
@@ -273,73 +359,34 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
           </View>
         </View>
 
-        {/* grouped list: date only (time/alerts shown in displays below); then time/alert display row */}
+        {/* picker section: date picker (if date selected) + time/alert display row */}
         <View style={styles.pickerSectionWrap}>
-          <View style={styles.groupedListWrap}>
-            <PickerButtonsSection
-              onShowDatePicker={handleShowDatePicker}
-              onShowTimeDurationPicker={handleShowTimeDurationPicker}
-              onShowAlertsPicker={handleShowAlertsPicker}
-              dateValue={getDatePickerDisplay(values.dueDate, colors, themeColors).text}
-              dateSecondaryValue={getDatePickerDisplay(values.dueDate, colors, themeColors).secondaryText}
-              timeDurationValue={getTimeDurationPickerDisplay(values.time, values.duration, themeColors).text}
-              timeDurationSecondaryValue={getTimeDurationPickerDisplay(values.time, values.duration, themeColors).secondaryText}
-              alertsValue={getAlertsPickerDisplay(values.alerts?.length ?? 0, themeColors).text}
-              contentPaddingHorizontal={0}
-              showTaskOptionPills={false}
-              hideTimeInList
-              hideAlertsInList
-              noBottomPadding
-              noTopPadding
-            />
-          </View>
-          {/* display section: time + alert cards (subtasks section must stay below this) */}
-          <View style={styles.timeAndAlertRow}>
-            <View style={styles.timeDurationDisplayWrap}>
-              <TimeDurationDisplay
-                time={values.time}
-                duration={values.duration}
-                positionInRow="left"
-                onPress={handleShowTimeDurationPicker}
-              />
-            </View>
-            <View style={styles.alertDisplayWrap}>
-              <AlertDisplay positionInRow="right" alertsCount={values.alerts?.length ?? 0} onPress={handleShowAlertsPicker} />
-            </View>
-          </View>
+          <FormDetailSection
+            onShowDatePicker={handleShowDatePicker}
+            onShowTimeDurationPicker={handleShowTimeDurationPicker}
+            onShowAlertsPicker={handleShowAlertsPicker}
+            dateValue={getDatePickerDisplay(values.dueDate, colors, themeColors).text}
+            dateSecondaryValue={getDatePickerDisplay(values.dueDate, colors, themeColors).secondaryText}
+            time={values.time}
+            duration={values.duration}
+            alertsCount={values.alerts?.length ?? 0}
+          />
         </View>
 
         {/* subtask section: GroupedList with subtask items (if any), then Add button, then description as bottom-most */}
-        <View style={styles.subtaskSectionWrap}>
-          <GroupedList
-            containerStyle={{ ...styles.subtaskListContainer, backgroundColor: themeColors.background.elevated(), borderRadius: 28, overflow: 'hidden', paddingHorizontal: 16 }}
-            minimalStyle
-            fullWidthSeparators
-            separatorColor={themeColors.background.quaternary()}
-          >
-            {subtasks.map((s) => (
-              <SubtaskListItem
-                key={s.id}
-                value={s.title}
-                onChangeText={(t) => onSubtaskTitleChange(s.id, t)}
-                isCompleted={s.isCompleted}
-                onToggleComplete={() => onSubtaskToggle(s.id)}
-                placeholder="Subtask"
-                onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-                onDelete={onSubtaskDelete ? () => onSubtaskDelete(s.id) : undefined}
-                shouldAutoFocus={s.id === pendingFocusSubtaskId}
-                onDidAutoFocus={onClearPendingFocus}
-              />
-            ))}
-            <SubtaskCreateButton onPress={onCreateSubtask} />
-            <DescriptionSection
-              description={values.description || ''}
-              onDescriptionChange={(description) => onChange('description', description)}
-              isEditing={true}
-              taskColor={buttonColor}
-            />
-          </GroupedList>
-        </View>
+        <SubtaskSection
+          subtasks={subtasks}
+          onSubtaskTitleChange={onSubtaskTitleChange}
+          onSubtaskToggle={onSubtaskToggle}
+          onSubtaskDelete={onSubtaskDelete}
+          onCreateSubtask={onCreateSubtask}
+          pendingFocusSubtaskId={pendingFocusSubtaskId}
+          onClearPendingFocus={onClearPendingFocus}
+          description={values.description || ''}
+          onDescriptionChange={(description) => onChange('description', description)}
+          taskColor={buttonColor}
+          scrollViewRef={scrollViewRef}
+        />
 
         {createError && (
           <View
@@ -467,13 +514,5 @@ const styles = StyleSheet.create({
   titleSpacer: { height: 8 },
   checkboxWrap: { paddingLeft: 12, flexShrink: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginTop: -6 },
   checkboxTouchable: { alignItems: 'flex-start', justifyContent: 'center' },
-  pickerSectionWrap: {},
-  groupedListWrap: { marginTop: 36 },
-  timeAndAlertRow: { marginTop: 8, flexDirection: 'row', gap: 8 },
-  timeDurationDisplayWrap: { flex: 1, minWidth: 0 },
-  alertDisplayWrap: { flex: 1, minWidth: 0 },
-
-  subtaskSectionWrap: { marginTop: 36 },
-  // background + radius applied inline with themeColors; overflow hidden so content clips to rounded corners
-  subtaskListContainer: {},
+  pickerSectionWrap: { marginTop: 36 },
 });

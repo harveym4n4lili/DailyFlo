@@ -13,7 +13,6 @@ import { ListCard } from '@/components/ui/Card';
 import { FloatingActionButton } from '@/components/ui/Button';
 import { DropdownList } from '@/components/ui/List';
 import { ModalContainer, ModalBackdrop } from '@/components/layout/ModalLayout';
-import { TaskViewModal } from '@/components/features/tasks';
 // date picker modal for selecting a new due date when rescheduling overdue tasks
 import { DatePickerModal } from '@/components/features/calendar';
 
@@ -52,10 +51,6 @@ export default function TodayScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   // TASK DETAIL MODAL STATE
-  const [isTaskDetailModalVisible, setIsTaskDetailModalVisible] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  // Store task color separately to maintain it during modal close animation
-  const [selectedTaskColor, setSelectedTaskColor] = useState<TaskColor>('blue');
   
   // task creation is the create-task Stack screen (presentation: 'modal'); opened via router
 
@@ -243,28 +238,10 @@ export default function TodayScreen() {
   // TASK INTERACTION HANDLERS - Functions that handle user interactions with tasks
   // These functions demonstrate the flow: User interaction → Redux action → State update → UI re-render
   
-  // handle task press - shows task detail modal with haptic feedback
+  // handle task press - TODO: Implement task detail view
   const handleTaskPress = (task: Task) => {
     console.log('📱 Task pressed:', task.title);
-    
-    // provide medium haptic feedback
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
-    
-    // show task detail modal
-    // store both task and color separately to maintain color during close animation
-    setSelectedTask(task);
-    setSelectedTaskColor(task.color);
-    setIsTaskDetailModalVisible(true);
-  };
-  
-  // handle task detail modal close
-  const handleTaskDetailModalClose = () => {
-    setIsTaskDetailModalVisible(false);
-    // delay clearing task to allow modal animation to complete
-    // this ensures task color persists during slide-down animation
-    setTimeout(() => {
-      setSelectedTask(null);
-    }, 350); // slightly longer than modal animation duration (300ms)
+    // TODO: Implement task detail view
   };
   
   // handle task completion toggle
@@ -538,29 +515,12 @@ export default function TodayScreen() {
         accessibilityHint="Double tap to create a new task"
       />
       
-      {/* separate backdrop that fades in independently behind the task detail modal */}
-      {/* rendered at screen level, behind the modal in z-index */}
-      <ModalBackdrop
-        isVisible={isTaskDetailModalVisible}
-        onPress={handleTaskDetailModalClose}
-        zIndex={10000}
-      />
-      
       {/* separate backdrop for overdue date picker modal - fades in independently */}
       {/* rendered at screen level, behind the modal in z-index */}
       <ModalBackdrop
         isVisible={isOverdueDatePickerVisible}
         onPress={handleOverdueDatePickerClose}
         zIndex={10000}
-      />
-      
-      {/* Task Detail Modal - displays task details using TaskViewModal */}
-      <TaskViewModal
-        visible={isTaskDetailModalVisible}
-        onClose={handleTaskDetailModalClose}
-        taskColor={selectedTaskColor}
-        taskId={selectedTask?.id}
-        task={selectedTask || undefined}
       />
       
       {/* Overdue date picker modal - used to bulk move all overdue tasks to a new date */}

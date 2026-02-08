@@ -11,7 +11,6 @@ import { ModalBackdrop } from '@/components/layout/ModalLayout';
 import { CalendarNavigationModal } from '@/components/features/calendar/modals';
 import { WeekView } from '@/components/features/calendar/sections';
 import { ListCard } from '@/components/ui/Card';
-import { TaskViewModal } from '@/components/features/tasks';
 import { TimelineView } from '@/components/features/timeline';
 
 // import color palette system for consistent theming
@@ -42,9 +41,6 @@ export default function PlannerScreen() {
   });
   
   // TASK DETAIL MODAL STATE - Controls the visibility of task detail modal
-  const [isTaskDetailModalVisible, setIsTaskDetailModalVisible] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [selectedTaskColor, setSelectedTaskColor] = useState<TaskColor>('blue');
   
   // router: open create-task Stack screen from FAB (with optional dueDate from selected date)
   const router = useRouter();
@@ -124,20 +120,7 @@ export default function PlannerScreen() {
   // TASK HANDLERS - Functions to handle task interactions
   // handle when user taps on a task card to view details
   const handleTaskPress = (task: Task) => {
-    // provide medium haptic feedback when opening task detail 
-    
-    setSelectedTask(task);
-    setSelectedTaskColor(task.color || 'blue');
-    setIsTaskDetailModalVisible(true);
-  };
-  
-  // handle closing the task detail modal
-  const handleTaskDetailModalClose = () => {
-    setIsTaskDetailModalVisible(false);
-    // delay clearing selected task to allow modal close animation
-    setTimeout(() => {
-      setSelectedTask(null);
-    }, 300);
+    // TODO: Implement task detail view
   };
   
   // handle marking a task as complete/uncomplete
@@ -181,9 +164,7 @@ export default function PlannerScreen() {
   
   // handle editing a task (opens task detail modal)
   const handleTaskEdit = (task: Task) => {
-    setSelectedTask(task);
-    setSelectedTaskColor(task.color || 'blue');
-    setIsTaskDetailModalVisible(true);
+    // TODO: Implement task edit
   };
   
   // handle deleting a task
@@ -293,13 +274,6 @@ export default function PlannerScreen() {
         zIndex={10000}
       />
       
-      {/* separate backdrop that fades in independently behind the task detail modal */}
-      <ModalBackdrop
-        isVisible={isTaskDetailModalVisible}
-        onPress={handleTaskDetailModalClose}
-        zIndex={10000}
-      />
-      
       {/* Calendar Navigation Modal */}
       <CalendarNavigationModal
         visible={isCalendarModalVisible}
@@ -308,16 +282,6 @@ export default function PlannerScreen() {
         onSelectDate={handleDateSelect}
         title="Select Date"
       />
-      
-      {/* Task Detail Modal - displays task details using TaskViewModal */}
-      <TaskViewModal
-        visible={isTaskDetailModalVisible}
-        onClose={handleTaskDetailModalClose}
-        taskColor={selectedTaskColor}
-        taskId={selectedTask?.id}
-        task={selectedTask || undefined}
-      />
-      
     </View>
   );
 }

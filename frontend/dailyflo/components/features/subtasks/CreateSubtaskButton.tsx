@@ -2,11 +2,11 @@
  * CreateSubtaskButton Component
  *
  * A reusable button component for creating subtasks.
- * Uses TaskFormButton with clock icon (18px) and "Add subtask" label; icon and text use tertiary color.
+ * Uses FormDetailButton with clock icon (18px) and "Add subtask" label; icon and text use tertiary color.
  */
 
 import React from 'react';
-import { TaskFormButton } from '@/components/ui/List/GroupedList';
+import { FormDetailButton } from '@/components/ui/List/GroupedList';
 import { ClockIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
@@ -42,7 +42,7 @@ export const CreateSubtaskButton: React.FC<CreateSubtaskButtonProps> = ({
   };
 
   return (
-    <TaskFormButton
+    <FormDetailButton
       iconComponent={<ClockIcon size={ADD_SUBTASK_ICON_SIZE} color={tertiaryColor} />}
       label="Add subtask"
       value=""
