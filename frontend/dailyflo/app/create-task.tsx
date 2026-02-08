@@ -47,6 +47,7 @@ export default function CreateTaskScreen() {
     ...(params.dueDate ? { dueDate: params.dueDate } : {}),
   }));
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [pendingFocusSubtaskId, setPendingFocusSubtaskId] = useState<string | null>(null);
 
   // when opened with a dueDate param (e.g. from planner), set form dueDate and reset subtasks
   useEffect(() => {
@@ -68,6 +69,7 @@ export default function CreateTaskScreen() {
       isEditing: true,
     };
     setSubtasks((prev) => [...prev, newSubtask]);
+    setPendingFocusSubtaskId(newSubtask.id);
   };
 
   const handleSubtaskTitleChange = (subtaskId: string, newTitle: string) => {
@@ -176,6 +178,8 @@ export default function CreateTaskScreen() {
         onSubtaskTitleChange={handleSubtaskTitleChange}
         onSubtaskFinishEditing={handleSubtaskFinishEditing}
         onCreateSubtask={handleCreateSubtask}
+        pendingFocusSubtaskId={pendingFocusSubtaskId}
+        onClearPendingFocus={() => setPendingFocusSubtaskId(null)}
         embedHeaderButtons={true}
         renderCloseButton={false}
         saveButtonBottomInsetWhenKeyboardHidden={44}

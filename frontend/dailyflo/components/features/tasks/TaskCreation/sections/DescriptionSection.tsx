@@ -26,9 +26,7 @@ import type { TaskColor } from '@/types';
 
 const DESCRIPTION_ICON_SIZE = 18;
 const ICON_GAP = 8;
-// fixed height so icon container doesn't grow with multiline description; icon centered inside
 const ICON_CONTAINER_HEIGHT = 22;
-// nudge icon down so it aligns with first line of placeholder text (input has top padding)
 const ICON_TOP_OFFSET = 10;
 
 /**
@@ -79,11 +77,11 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = ({
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.inputRow}>
-        {/* paragraph icon always visible on the left */}
+    <View style={styles.wrapper}>
+      <View style={styles.container}>
+        <View style={styles.inputRow}>
         <View style={styles.iconWrap}>
-          <ParagraphIcon size={DESCRIPTION_ICON_SIZE} color={themeColors.text.tertiary()} />
+          <ParagraphIcon size={DESCRIPTION_ICON_SIZE} color={themeColors.text.primary()} />
         </View>
         <CustomTextInput
           value={localDescription}
@@ -98,6 +96,7 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = ({
           onFocus={onFocus}
           onBlur={onBlur}
         />
+        </View>
       </View>
     </View>
   );
@@ -111,6 +110,9 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = ({
  * - Uses our custom iOS-style text input component
  */
 const styles = StyleSheet.create({
+  wrapper: {
+    minHeight: 120,
+  },
   container: {
     paddingHorizontal: 0,
     paddingTop: 0,

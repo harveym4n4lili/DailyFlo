@@ -1,18 +1,18 @@
 /**
  * SubtaskCreateButton — NEW task creation only.
- * Brackets icon (18px) + "Add subtask" text; icon and text use tertiary color. No background, no inner padding.
+ * Same unchecked checkbox circle as SubtaskListItem (14px) + "Add subtask" text; icon and text use tertiary color.
  */
 
 import React from 'react';
-import { Text, Pressable, StyleSheet } from 'react-native';
-import { BracketsIcon } from '@/components/ui/Icon';
+import { Text, Pressable, StyleSheet, View } from 'react-native';
 import { getTextStyle } from '@/constants/Typography';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
-const ICON_SIZE = 16;
-const ICON_GAP = 8;
+// match SubtaskListItem checkbox so the add row lines up visually
+const CHECKBOX_SIZE = 14;
+const ICON_TEXT_GAP = 10;
 // top padding so the button doesn't touch the top border of its grouped list row (matches list row content padding)
-const CONTENT_PADDING_TOP = 14;
+const CONTENT_PADDING_TOP = 16;
 
 export interface SubtaskCreateButtonProps {
   onPress?: () => void;
@@ -36,7 +36,8 @@ export const SubtaskCreateButton: React.FC<SubtaskCreateButtonProps> = ({
       disabled={disabled}
       style={({ pressed }) => [styles.row, { opacity: disabled ? 0.5 : pressed ? 0.7 : 1 }]}
     >
-      <BracketsIcon size={ICON_SIZE} color={tertiaryColor} isSolid />
+      {/* same unchecked checkbox circle as SubtaskListItem for visual consistency */}
+      <View style={[styles.checkboxCircle, { borderColor: tertiaryColor }]} />
       <Text style={[getTextStyle('body-large'), styles.label, { color: tertiaryColor }]}>
         Add subtask
       </Text>
@@ -48,10 +49,16 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: ICON_GAP,
-    paddingTop: CONTENT_PADDING_TOP,
-    paddingBottom: 0,
+    gap: ICON_TEXT_GAP,
+    paddingVertical: CONTENT_PADDING_TOP,
     paddingHorizontal: 0,
+  },
+  checkboxCircle: {
+    width: CHECKBOX_SIZE,
+    height: CHECKBOX_SIZE,
+    borderRadius: CHECKBOX_SIZE / 2,
+    borderWidth: 2,
+    backgroundColor: 'transparent',
   },
   label: {
     fontWeight: '700',
