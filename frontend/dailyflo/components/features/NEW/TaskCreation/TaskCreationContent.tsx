@@ -4,9 +4,10 @@
  * With flex: 1 only, form sheet / safe area can leave a gap above the content.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
+  Text,
   ScrollView,
   TextInput,
   TouchableOpacity,
@@ -14,7 +15,10 @@ import {
   StyleSheet,
   Keyboard,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import type { TaskCreationContentProps } from '@/components/features/tasks/TaskCreation';
 import { DatePickerModal } from '@/components/features/calendar';
@@ -23,6 +27,7 @@ import { PickerButtonsSection, DescriptionSection } from '@/components/features/
 import { TimeDurationDisplay, AlertDisplay } from '@/components/features/NEW/TaskCreation/sections';
 import { SubtaskCreateButton, SubtaskListItem } from '@/components/features/NEW/TaskCreation/subtask';
 import { GroupedList } from '@/components/ui/List/GroupedList';
+import { SaveButton } from '@/components/ui/Button/SaveButton';
 import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisplay } from '@/components/ui/Button';
 import { getTextStyle } from '@/constants/Typography';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -34,6 +39,10 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   values,
   onChange,
   onPickerVisibilityChange,
+  onCreate,
+  isCreating = false,
+  createError,
+  hasChanges,
   onCreateSubtask,
   subtasks,
   onSubtaskTitleChange,
@@ -41,6 +50,9 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   onSubtaskDelete,
   pendingFocusSubtaskId,
   onClearPendingFocus,
+  embedHeaderButtons = true,
+  renderCloseButton = false,
+  saveButtonBottomInsetWhenKeyboardHidden,
 }) => {
   const { themeColor } = useThemeColor();
   const colors = useColorPalette();
@@ -145,6 +157,34 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
     };
   }, []);
 
+  // save button: active when title is non-empty
+  const isCreateButtonActive = useMemo(() => !!(values.title?.trim()), [values.title]);
+
+  // insets and window size for save button bar positioning
+  const insets = useSafeAreaInsets();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+
+  // save button bottom: above keyboard when open, else from window bottom with optional inset
+  const saveButtonBottom = keyboardHeight > 0
+    ? keyboardHeight + 72
+    : insets.bottom + (saveButtonBottomInsetWhenKeyboardHidden ?? 0);
+
+  // reanimated: animate save button bottom so it slides with keyboard instead of jumping
+  const animatedBottom = useSharedValue(saveButtonBottom);
+  useEffect(() => {
+    animatedBottom.value = withTiming(saveButtonBottom, {
+      duration: 250,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [saveButtonBottom]);
+
+  const animatedSaveButtonBarStyle = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
+    bottom: animatedBottom.value,
+  }));
+
   // drag indicator pill: same sizing as ModalHeader (iOS 15+ smaller pill)
   const iosVersion = Platform.OS === 'ios' ? (typeof Platform.Version === 'string' ? parseInt(Platform.Version.split('.')[0], 10) : Math.floor(Platform.Version as number)) : 0;
   const isNewerIOS = iosVersion >= 15;
@@ -171,7 +211,7 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
       <ScrollView
         ref={scrollViewRef}
         style={[styles.scroll, { backgroundColor: themeColors.background.primary() }]}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 32 : 40 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 32 : 160 }]}
         showsVerticalScrollIndicator
         keyboardShouldPersistTaps="handled"
       >
@@ -300,7 +340,68 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
             />
           </GroupedList>
         </View>
+
+        {createError && (
+          <View
+            style={{
+              marginHorizontal: 20,
+              marginTop: 16,
+              marginBottom: 24,
+              padding: 12,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.getSemanticColor('error', 500),
+            }}
+          >
+            <Text style={[getTextStyle('body-small'), { color: colors.getSemanticColor('error', 500) }]}>
+              {createError}
+            </Text>
+          </View>
+        )}
       </ScrollView>
+
+      {/* save button: outside ScrollView, absolute, based on screen dimensions */}
+      {embedHeaderButtons && (
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: windowWidth,
+            height: windowHeight,
+          }}
+        >
+          <Animated.View
+            pointerEvents="box-none"
+            style={[
+              animatedSaveButtonBarStyle,
+              {
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                width: windowWidth,
+                flexDirection: 'row',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                paddingHorizontal: 20,
+              },
+            ]}
+          >
+            <SaveButton
+              onPress={onCreate}
+              isLoading={isCreating}
+              taskCategoryColor={buttonColor}
+              text="Create"
+              loadingText="Creating..."
+              size={28}
+              iconSize={28}
+              visible={isCreateButtonActive}
+              showLabel
+            />
+          </Animated.View>
+        </View>
+      )}
 
       <DatePickerModal
         visible={isDatePickerVisible}

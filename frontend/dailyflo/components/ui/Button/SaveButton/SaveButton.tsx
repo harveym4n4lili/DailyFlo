@@ -14,7 +14,7 @@
 
 // REACT IMPORTS
 import React, { useEffect } from 'react';
-import { Pressable, Text, Platform } from 'react-native';
+import { View, Pressable, Text, Platform } from 'react-native';
 
 // REANIMATED: spring scale animation when visible prop changes (show/hide)
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
@@ -101,6 +101,12 @@ export interface SaveButtonProps {
    * Use this to show/hide the button without unmounting so enter/exit animations can run.
    */
   visible?: boolean;
+
+  /**
+   * When true, show the text label next to the icon (same color as icon, max font weight).
+   * Uses the `text` prop for the label when not loading, `loadingText` when loading.
+   */
+  showLabel?: boolean;
 }
 
 /**
@@ -140,6 +146,7 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
   size = 24,
   iconSize,
   visible = true,
+  showLabel = false,
 }) => {
   // reanimated: scale value for show/hide spring animation (0 = hidden, 1 = visible)
   const scale = useSharedValue(visible ? 1 : 0);
@@ -190,27 +197,44 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
     }
   };
 
-  // core button content (icon or text)
+  // label text: same color as icon, max font weight (900)
+  const labelText = isLoading ? loadingText : text;
+  const labelElement = showLabel ? (
+    <Text
+      style={{
+        ...getTextStyle('button-secondary'),
+        color: getIconColor(),
+        fontWeight: '900',
+        marginRight: 12,
+        alignSelf: 'center',
+      }}
+    >
+      {labelText}
+    </Text>
+  ) : null;
+
+  // core button content (icon or icon+text or text only)
   // wrapped so we can reuse it inside or outside GlassView
   const buttonContent = (
     <Pressable
       onPress={handlePress}
       disabled={!isActive}
       style={({ pressed }) => ({
-        // make the pressable fill the container so the whole area is tappable
-        width: '100%',
-        height: '100%',
+        // when showLabel: size to content so button doesn't fill screen; otherwise fill container
+        ...(showLabel ? { flexDirection: 'row' as const, alignSelf: 'flex-start', alignContent: 'center' } : { width: '100%', height: '100%' }),
         alignItems: 'center',
         justifyContent: 'center',
         // when inside a glass surface we add a subtle 1px border that hugs
         // the circular button (same pattern as `MainCloseButton`)
-        ...(isNewerIOS && glassAvailable
+        ...(isNewerIOS && glassAvailable && !showLabel
           ? {
               borderWidth: 1,
               borderColor: themeColors.border.primary(),
               borderRadius: innerBorderRadius,
             }
           : null),
+        // when showLabel, add padding so the row has room
+        ...(showLabel ? { paddingHorizontal: 12, paddingVertical: 0 } : null),
         // when pressed: use inactive state opacity (0.4), no animations
         // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
         opacity: pressed ? 0.4 : (!isActive ? 0.4 : isLoading ? 0.6 : 1),
@@ -220,8 +244,13 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
       {isNewerIOS ? (
-        // iOS 15+ (newer): custom save icon (same icon when loading; opacity shows loading state)
-        <SaveIcon size={iconSizePx} color={getIconColor()} />
+        // iOS 15+ (newer): text first, then icon (icon wrapped for vertical centering)
+        <>
+          {labelElement}
+          <View style={{ alignSelf: 'center', justifyContent: 'center', alignItems: 'center' }}>
+            <SaveIcon size={iconSizePx} color={getIconColor()} />
+          </View>
+        </>
       ) : (
         // iOS < 15 (older): text button
         <Text style={{
@@ -230,7 +259,7 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
           color: '#FFFFFF',
           fontWeight: '900', // save button is bold
         }}>
-          {isLoading ? loadingText : text}
+          {labelText}
         </Text>
       )}
     </Pressable>
@@ -253,9 +282,9 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
     return wrapper(
       <GlassView
         style={{
-          width: containerSize,
-          height: containerSize,
-          borderRadius: outerBorderRadius,
+          ...(showLabel
+            ? { alignSelf: 'flex-start' as const, minHeight: containerSize, paddingLeft: 12, paddingRight: 0, paddingVertical: 8, borderRadius: 28, justifyContent: 'center' as const, alignItems: 'center' as const }
+            : { width: containerSize, height: containerSize, borderRadius: outerBorderRadius }),
           overflow: 'visible',
         }}
         // use the same regular glass effect + themed tint as `MainCloseButton`
@@ -279,11 +308,9 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
       style={({ pressed }) => ({
         ...(isNewerIOS
           ? {
-              width: containerSize,
-              height: containerSize,
-              borderRadius: innerBorderRadius,
-              alignItems: 'center',
-              justifyContent: 'center',
+              ...(showLabel
+                ? { minWidth: containerSize, minHeight: containerSize, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 64, flexDirection: 'row' as const, alignItems: 'center', justifyContent: 'center' }
+                : { width: containerSize, height: containerSize, borderRadius: innerBorderRadius, alignItems: 'center', justifyContent: 'center' }),
               backgroundColor: saveButtonBackgroundColor,
               // when pressed: use inactive state opacity (0.4), no animations
               // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
@@ -293,7 +320,7 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
               // iOS < 15 (older): text button with colored background (preserve old design)
               paddingHorizontal: 12,
               paddingVertical: 8,
-              borderRadius: 20,
+              borderRadius: 64,
               backgroundColor: TaskCategoryColors[taskCategoryColor][500],
               justifyContent: 'center',
               alignItems: 'center',
@@ -304,8 +331,13 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
       })}
     >
       {isNewerIOS ? (
-        // newer iOS fallback: custom save icon
-        <SaveIcon size={iconSizePx} color={getIconColor()} />
+        // newer iOS fallback: text first, then icon (icon wrapped for vertical centering)
+        <>
+          {labelElement}
+          <View style={{ alignSelf: 'center', justifyContent: 'center', alignItems: 'center' }}>
+            <SaveIcon size={iconSizePx} color={getIconColor()} />
+          </View>
+        </>
       ) : (
         // iOS < 15 (older): text button (current style)
         <Text style={{
