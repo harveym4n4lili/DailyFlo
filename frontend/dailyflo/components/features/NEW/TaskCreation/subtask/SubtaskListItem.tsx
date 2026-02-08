@@ -17,7 +17,7 @@ import { getTextStyle } from '@/constants/Typography';
 import { TrashIcon } from '@/components/ui/Icon';
 
 // match header/button row vertical padding (same as SubtaskCreateButton top padding and header padding)
-const CONTENT_PADDING_VERTICAL = 12;
+const CONTENT_PADDING_VERTICAL = 14;
 const CHECKBOX_SIZE = 14;
 // spacing between checkbox (icon) and text input — matches SubtaskCreateButton icon–text gap
 const ICON_TEXT_GAP = 10;
@@ -42,6 +42,10 @@ export interface SubtaskListItemProps {
   disabled?: boolean;
   /** called when the trash (delete) button is pressed */
   onDelete?: () => void;
+  /** when true, focus the input after mount (e.g. after Add subtask); then call onDidAutoFocus */
+  shouldAutoFocus?: boolean;
+  /** called after auto-focus is done (used to clear pending focus id in parent) */
+  onDidAutoFocus?: () => void;
 }
 
 export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
@@ -54,12 +58,25 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
   onBlur,
   disabled = false,
   onDelete,
+  shouldAutoFocus = false,
+  onDidAutoFocus,
 }) => {
   const themeColors = useThemeColors();
+  const inputRef = useRef<TextInput>(null);
 
   // checkbox fill animation: 0 = unchecked (grey border, no fill), 1 = checked (primary fill)
   const checkboxFill = useRef(new RNAnimated.Value(isCompleted ? 1 : 0)).current;
   const checkboxScale = useRef(new RNAnimated.Value(1)).current;
+
+  // when parent requests focus (e.g. after Add subtask), focus input and open keyboard after mount
+  useEffect(() => {
+    if (!shouldAutoFocus) return;
+    const t = setTimeout(() => {
+      inputRef.current?.focus();
+      onDidAutoFocus?.();
+    }, 100);
+    return () => clearTimeout(t);
+  }, [shouldAutoFocus, onDidAutoFocus]);
 
   useEffect(() => {
     RNAnimated.timing(checkboxFill, {
@@ -111,6 +128,7 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
 
       {/* gap then flexible text input */}
       <TextInput
+        ref={inputRef}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -118,7 +136,8 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
         onFocus={onFocus}
         onBlur={onBlur}
         editable={!disabled}
-        style={[getTextStyle('body-large'), styles.input, { color: themeColors.text.primary() }]}
+        style={[getTextStyle('body-large'), styles.input, { color: themeColors.text.primary(), fontWeight: '900' }]}
+        selectionColor={themeColors.text.primary()}
         multiline={false}
         returnKeyType="done"
       />

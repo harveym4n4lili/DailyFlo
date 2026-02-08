@@ -39,6 +39,8 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
   onSubtaskTitleChange,
   onSubtaskToggle,
   onSubtaskDelete,
+  pendingFocusSubtaskId,
+  onClearPendingFocus,
 }) => {
   const { themeColor } = useThemeColor();
   const colors = useColorPalette();
@@ -231,16 +233,6 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
           </View>
         </View>
 
-        {/* description text area (same as original TaskCreation) */}
-        <View style={styles.descriptionWrap}>
-          <DescriptionSection
-            description={values.description || ''}
-            onDescriptionChange={(description) => onChange('description', description)}
-            isEditing={true}
-            taskColor={buttonColor}
-          />
-        </View>
-
         {/* grouped list: date only (time/alerts shown in displays below); then time/alert display row */}
         <View style={styles.pickerSectionWrap}>
           <View style={styles.groupedListWrap}>
@@ -277,32 +269,36 @@ export const TaskCreationContent: React.FC<TaskCreationContentProps> = ({
           </View>
         </View>
 
-        {/* subtask section: when subtasks exist, GroupedList with items then Add button */}
+        {/* subtask section: GroupedList with subtask items (if any), then Add button, then description as bottom-most */}
         <View style={styles.subtaskSectionWrap}>
-          {subtasks.length === 0 ? (
+          <GroupedList
+            containerStyle={{ ...styles.subtaskListContainer, backgroundColor: themeColors.background.elevated(), borderRadius: 28, overflow: 'hidden', paddingHorizontal: 16 }}
+            minimalStyle
+            fullWidthSeparators
+            separatorColor={themeColors.background.quaternary()}
+          >
+            {subtasks.map((s) => (
+              <SubtaskListItem
+                key={s.id}
+                value={s.title}
+                onChangeText={(t) => onSubtaskTitleChange(s.id, t)}
+                isCompleted={s.isCompleted}
+                onToggleComplete={() => onSubtaskToggle(s.id)}
+                placeholder="Subtask"
+                onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+                onDelete={onSubtaskDelete ? () => onSubtaskDelete(s.id) : undefined}
+                shouldAutoFocus={s.id === pendingFocusSubtaskId}
+                onDidAutoFocus={onClearPendingFocus}
+              />
+            ))}
             <SubtaskCreateButton onPress={onCreateSubtask} />
-          ) : (
-            <GroupedList
-              containerStyle={styles.subtaskListContainer}
-              minimalStyle
-              fullWidthSeparators
-              separatorColor={themeColors.background.quaternary()}
-            >
-              {subtasks.map((s) => (
-                <SubtaskListItem
-                  key={s.id}
-                  value={s.title}
-                  onChangeText={(t) => onSubtaskTitleChange(s.id, t)}
-                  isCompleted={s.isCompleted}
-                  onToggleComplete={() => onSubtaskToggle(s.id)}
-                  placeholder="Subtask"
-                  onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-                  onDelete={onSubtaskDelete ? () => onSubtaskDelete(s.id) : undefined}
-                />
-              ))}
-              <SubtaskCreateButton onPress={onCreateSubtask} />
-            </GroupedList>
-          )}
+            <DescriptionSection
+              description={values.description || ''}
+              onDescriptionChange={(description) => onChange('description', description)}
+              isEditing={true}
+              taskColor={buttonColor}
+            />
+          </GroupedList>
         </View>
       </ScrollView>
 
@@ -370,13 +366,13 @@ const styles = StyleSheet.create({
   titleSpacer: { height: 8 },
   checkboxWrap: { paddingLeft: 12, flexShrink: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginTop: -6 },
   checkboxTouchable: { alignItems: 'flex-start', justifyContent: 'center' },
-  descriptionWrap: { paddingTop: 0, paddingBottom: 0 },
   pickerSectionWrap: {},
-  groupedListWrap: { marginTop: 24 },
+  groupedListWrap: { marginTop: 36 },
   timeAndAlertRow: { marginTop: 8, flexDirection: 'row', gap: 8 },
   timeDurationDisplayWrap: { flex: 1, minWidth: 0 },
   alertDisplayWrap: { flex: 1, minWidth: 0 },
 
-  subtaskSectionWrap: { marginTop: 32 },
+  subtaskSectionWrap: { marginTop: 36 },
+  // background + radius applied inline with themeColors; overflow hidden so content clips to rounded corners
   subtaskListContainer: {},
 });

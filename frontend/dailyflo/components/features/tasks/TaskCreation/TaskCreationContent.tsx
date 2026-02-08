@@ -133,6 +133,11 @@ export interface TaskCreationContentProps {
   /** Callback when create subtask button is pressed */
   onCreateSubtask: () => void;
 
+  /** When set, the subtask with this id should focus its input (e.g. after Add subtask); clear via onClearPendingFocus */
+  pendingFocusSubtaskId?: string | null;
+  /** Callback when the pending-focus subtask has focused its input (used to clear pendingFocusSubtaskId) */
+  onClearPendingFocus?: () => void;
+
   /** Optional background color for the subtask list (passed to GroupedList item wrappers) */
   subtaskListBackgroundColor?: string;
 
