@@ -1,12 +1,12 @@
 /**
- * TaskFormButton Component
+ * FormDetailButton Component
  *
  * Button-style item for GroupedList in task forms (settings page style).
  * Displays icon, label, value, and chevron in a pressable row.
  * Designed for task creation/editing pickers (Date, Time, Alerts, etc.).
  *
  * Usage:
- * <TaskFormButton
+ * <FormDetailButton
  *   icon="calendar-outline"
  *   label="Date"
  *   value="Today"
@@ -19,15 +19,19 @@ import { View, Text, Pressable, ViewStyle, TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
-import type { TaskFormButtonProps } from './GroupedList.types';
+// import FormDetailButtonProps type from GroupedList types
+import type { FormDetailButtonProps } from '@/components/ui/List/GroupedList/GroupedList.types';
+
+// re-export the type for convenience
+export type { FormDetailButtonProps };
 
 /**
- * TaskFormButton Component
+ * FormDetailButton Component
  *
  * Button-style item with icon, label, value, and chevron.
  * Used in task forms for picker rows (Date, Time & Duration, Alerts, etc.).
  */
-export const TaskFormButton: React.FC<TaskFormButtonProps> = ({
+export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
   icon,
   iconComponent,
   label,
@@ -156,4 +160,4 @@ export const TaskFormButton: React.FC<TaskFormButtonProps> = ({
   );
 };
 
-export default TaskFormButton;
+export default FormDetailButton;

@@ -4,7 +4,7 @@
  * A simplified FormPickerButton for fields that have no value yet.
  * Used in a horizontal scroll at the bottom of GroupedList to let users add
  * options like Alerts, Time & Duration, etc. When tapped, opens the picker modal.
- * Once a value is selected, the field appears as a TaskFormButton with dynamic messaging.
+ * Once a value is selected, the field appears as a FormDetailButton with dynamic messaging.
  *
  * Unlike FormPickerButton, TaskOptionButton has:
  * - No dynamic messaging (displayText, defaultText, semantic colors)
@@ -85,7 +85,7 @@ const CONTENT_MIN_HEIGHT = 44;
  * TaskOptionButton Component
  *
  * Renders a simple pill button with icon + label. Used for fields with no value.
- * Tapping opens the picker; after selection, the field becomes a TaskFormButton row.
+ * Tapping opens the picker; after selection, the field becomes a FormDetailButton row.
  * Padding and minHeight match GroupedListItemWrapper for consistent touch targets.
  */
 export const TaskOptionButton: React.FC<TaskOptionButtonProps> = ({

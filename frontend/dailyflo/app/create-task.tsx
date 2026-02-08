@@ -3,7 +3,7 @@
  *
  * Opened via router.push("/create-task") from FAB, Planner, Search, or Redux modals.createTask.
  * presentation: "modal" in _layout — full-screen, slide up, swipe to dismiss.
- * State and create logic live here; TaskCreationContent renders the form with embedHeaderButtons=true
+ * State and create logic live here; TaskScreenContent renders the form with embedHeaderButtons=true
  * so close and save are in the content (no screen header).
  */
 
@@ -16,7 +16,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useAppDispatch } from '@/store';
 import { createTask } from '@/store/slices/tasks/tasksSlice';
 import { useTasks } from '@/store/hooks';
-import { TaskCreationContent } from '@/components/features/NEW/TaskCreation/TaskCreationContent';
+import { TaskScreenContent } from '@/components/features/tasks/TaskScreen/TaskScreenContent';
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
 import type { PriorityLevel, RoutineType, CreateTaskInput, TaskColor, Subtask as TaskSubtask } from '@/types';
 import type { Subtask } from '@/components/features/subtasks';
@@ -163,7 +163,7 @@ export default function CreateTaskScreen() {
   };
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
-      <TaskCreationContent
+      <TaskScreenContent
         visible={true}
         values={values}
         onChange={onChange}

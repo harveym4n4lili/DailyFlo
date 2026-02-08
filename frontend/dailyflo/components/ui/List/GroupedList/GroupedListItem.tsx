@@ -1,24 +1,24 @@
 /**
  * GroupedListItem Component (DEPRECATED)
  *
- * @deprecated Use TaskFormButton wrapped in GroupedList instead.
+ * @deprecated Use FormDetailButton wrapped in GroupedList instead.
  * This component is kept for backward compatibility.
  *
  * Individual row item within a GroupedList.
- * Now uses TaskFormButton internally for consistency.
+ * Now uses FormDetailButton internally for consistency.
  */
 
 import React from 'react';
 import { View } from 'react-native';
-import { TaskFormButton } from './TaskFormButton';
+import { FormDetailButton } from '@/components/ui/Button/TaskButton';
 import { GroupedListItemWrapper } from './GroupedListItemWrapper';
 import type { GroupedListItemProps } from './GroupedList.types';
 
 /**
  * GroupedListItem Component (DEPRECATED)
  * 
- * @deprecated Use TaskFormButton wrapped in GroupedList instead.
- * This component wraps TaskFormButton with the position and separator styling.
+ * @deprecated Use FormDetailButton wrapped in GroupedList instead.
+ * This component wraps FormDetailButton with the position and separator styling.
  */
 export const GroupedListItem: React.FC<GroupedListItemProps> = ({
   config,
@@ -36,7 +36,7 @@ export const GroupedListItem: React.FC<GroupedListItemProps> = ({
       separatorColor={separatorColor}
       style={itemStyle}
     >
-      <TaskFormButton
+      <FormDetailButton
         icon={config.icon}
         label={config.label}
         value={config.value}

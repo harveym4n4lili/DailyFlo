@@ -18,8 +18,8 @@
  * 
  * Usage with button-style items (for task forms):
  * <GroupedList>
- *   <TaskFormButton icon="calendar" label="Date" value="Today" onPress={() => {}} />
- *   <TaskFormButton icon="time" label="Time" value="9:00 AM" onPress={() => {}} />
+ *   <FormDetailButton icon="calendar" label="Date" value="Today" onPress={() => {}} />
+ *   <FormDetailButton icon="time" label="Time" value="9:00 AM" onPress={() => {}} />
  * </GroupedList>
  */
 
