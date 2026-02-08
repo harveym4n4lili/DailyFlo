@@ -20,6 +20,7 @@ export type { TaskOptionButtonProps } from './FormPickerButton';
 export {
   getDatePickerDisplay,
   getTimeDurationPickerDisplay,
+  getTimeDurationDisplayLabels,
   getAlertsPickerDisplay,
   getIconPickerDisplay,
   getRelativeDateMessage,

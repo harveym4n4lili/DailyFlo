@@ -236,9 +236,8 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   
   // get theme colors
   const colors = ThemeColors[colorScheme];
-  // use primary text color for cursor/stylus instead of task category color
-  // this ensures consistent styling that matches the design system
-  const stylusColor = colors.text.primary;
+  // use secondary text color for cursor/stylus - subtle but visible
+  const stylusColor = colors.text.secondary;
   
   // safely split text into lines for rendering first
   // ensure localText is always a string to prevent undefined errors

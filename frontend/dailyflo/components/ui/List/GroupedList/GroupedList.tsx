@@ -39,12 +39,26 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   backgroundColor,
   borderWidth,
   borderColor,
-  contentPaddingHorizontal = 20 ,
+  contentPaddingHorizontal = 20,
   contentPaddingVertical = 14,
   contentMinHeight = 44,
+  listStyle = 'roundedStyle',
+  minimalStyle = false,
+  fullWidthSeparators = false,
 }) => {
   // get theme-aware colors for default separator color
   const themeColors = useThemeColors();
+
+  // when minimalStyle is true, remove h/v padding, background, border radius, and min height from item wrappers
+  const finalContentPaddingHorizontal = minimalStyle ? 0 : contentPaddingHorizontal;
+  const finalContentPaddingVertical = minimalStyle ? 0 : contentPaddingVertical;
+  const finalBackgroundColor = minimalStyle ? 'transparent' : backgroundColor;
+  const finalBorderRadius = minimalStyle ? 0 : borderRadius;
+  const finalContentMinHeight = minimalStyle ? undefined : contentMinHeight;
+
+  // when fullWidthSeparators is true, separators span full width (no inset)
+  const finalSeparatorInsetLeft = fullWidthSeparators ? 0 : separatorInsetLeft;
+  const finalSeparatorInsetRight = fullWidthSeparators ? 0 : separatorInsetRight;
 
   // use provided separator color or default to theme border color
   const finalSeparatorColor = separatorColor || themeColors.border.primary();
@@ -96,16 +110,17 @@ export const GroupedList: React.FC<GroupedListProps> = ({
             key={getChildKey(child, index)}
             position={position}
             showSeparator={showSeparator}
-            borderRadius={borderRadius}
+            borderRadius={finalBorderRadius}
             separatorColor={finalSeparatorColor}
-            separatorInsetLeft={separatorInsetLeft}
-            separatorInsetRight={separatorInsetRight}
-            backgroundColor={backgroundColor}
+            separatorInsetLeft={finalSeparatorInsetLeft}
+            separatorInsetRight={finalSeparatorInsetRight}
+            backgroundColor={finalBackgroundColor}
             borderWidth={borderWidth}
             borderColor={borderColor}
-            contentPaddingHorizontal={contentPaddingHorizontal}
-            contentPaddingVertical={contentPaddingVertical}
-            contentMinHeight={contentMinHeight}
+            contentPaddingHorizontal={finalContentPaddingHorizontal}
+            contentPaddingVertical={finalContentPaddingVertical}
+            contentMinHeight={finalContentMinHeight}
+            listStyle={listStyle}
           >
             {child}
           </GroupedListItemWrapper>

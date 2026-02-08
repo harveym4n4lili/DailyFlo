@@ -46,6 +46,25 @@ export interface GroupedListProps {
   contentPaddingHorizontal?: number;
   contentPaddingVertical?: number;
   contentMinHeight?: number;
+
+  /**
+   * Visual style for the list.
+   * - roundedStyle: background color, border radius, inset separators (current iOS Settings look)
+   * - lineStyle: no background, full-length top and bottom borders on each item
+   */
+  listStyle?: 'roundedStyle' | 'lineStyle';
+
+  /**
+   * When true, removes content padding (h and v), background, and border radius from item wrappers.
+   * Useful for embedded lists (e.g. subtask list) that should be visually minimal.
+   */
+  minimalStyle?: boolean;
+
+  /**
+   * When true, separator lines span the full width (no left/right inset).
+   * Equivalent to separatorInsetLeft={0} and separatorInsetRight={0}.
+   */
+  fullWidthSeparators?: boolean;
 }
 
 /**

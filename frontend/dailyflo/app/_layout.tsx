@@ -251,14 +251,13 @@ export default function RootLayout() {
                     : 'light',
               }}
             />
-            {/* create-task: full-screen modal (slide up, no swipe to dismiss); no liquid glass */}
+            {/* create-task: form sheet modal with drag indicator; draggable to dismiss */}
             <Stack.Screen
               name="create-task"
               options={{
                 headerShown: false,
-                
                 presentation: 'formSheet',
-                gestureEnabled: false,
+                gestureEnabled: true,
                 contentStyle: { backgroundColor: themeColors.background.primarySecondaryBlend() },
               }}
             />

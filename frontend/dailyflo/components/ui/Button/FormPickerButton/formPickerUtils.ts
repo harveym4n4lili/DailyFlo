@@ -152,14 +152,27 @@ export function getDatePickerDisplay(
       color: colors.getSemanticColor('error'),
       iconColor: colors.getSemanticColor('error'),
     };
-  } else {
-    // custom date - no relative sublabel
+  }
+
+  // future within a week (2–6 days, not quick options): e.g. "Due in 3 days"
+  if (diffDays >= 2 && diffDays <= 6) {
     return {
       text: formattedDate,
+      secondaryText: `in ${diffDays} days`,
       color: themeColors.text.secondary(),
       iconColor: themeColors.text.secondary(),
     };
   }
+
+  // future 1+ weeks: e.g. "Due in 3 weeks"
+  const weeks = Math.floor(diffDays / 7);
+  const weeksLabel = weeks === 1 ? 'in 1 week' : `in ${weeks} weeks`;
+  return {
+    text: formattedDate,
+    secondaryText: weeks >= 1 ? weeksLabel : undefined,
+    color: themeColors.text.secondary(),
+    iconColor: themeColors.text.secondary(),
+  };
 }
 
 /**
@@ -227,6 +240,32 @@ export function getTimeDurationPickerDisplay(
     color: themeColors.text.secondary(),
     iconColor: themeColors.text.secondary(),
   };
+}
+
+/**
+ * Labels for the time/duration display row (e.g. TimeDurationDisplay below the grouped list).
+ * Always returns main + sub so the row can show two lines.
+ * - No time, no duration: main = "All day", sub = "No duration"
+ * - Time, no duration: main = time (e.g. "14:30"), sub = "No duration"
+ * - Time and duration: main = "start - end", sub = "Xmin"
+ * - Duration only (no time): main = "All day", sub = "Xmin"
+ */
+export function getTimeDurationDisplayLabels(
+  time: string | undefined,
+  duration: number | undefined
+): { mainLabel: string; subLabel: string } {
+  if (time && duration && duration > 0) {
+    const endTime = calculateEndTime(time, duration);
+    return { mainLabel: `${time} - ${endTime}`, subLabel: `${duration}min` };
+  }
+  if (time) {
+    return { mainLabel: time, subLabel: 'No duration' };
+  }
+  // duration only or neither: main "All day"; sub shows duration if set, else "No duration"
+  if (duration && duration > 0) {
+    return { mainLabel: 'All day', subLabel: `${duration}min` };
+  }
+  return { mainLabel: 'All day', subLabel: 'No duration' };
 }
 
 /**

@@ -15,6 +15,7 @@ export type { TaskOptionButtonProps } from './TaskOptionButton';
 export {
   getDatePickerDisplay,
   getTimeDurationPickerDisplay,
+  getTimeDurationDisplayLabels,
   getAlertsPickerDisplay,
   getIconPickerDisplay,
   getRelativeDateMessage,

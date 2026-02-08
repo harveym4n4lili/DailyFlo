@@ -69,13 +69,17 @@ export interface TaskOptionButtonProps {
 
   /**
    * Background color for the button pill.
-   * Defaults to theme background.secondary when not provided.
+   * Defaults to theme background.primarySecondaryBlend (elevated, same as GroupedListItemWrapper) when not provided.
    */
   backgroundColor?: string;
 }
 
-const BORDER_RADIUS = 28; // pill shape
+const BORDER_RADIUS = 28; // pill shape (matches GroupedList default)
 const ICON_SIZE = 18; // form option icon size
+// match GroupedListItemWrapper content padding and min height for visual consistency
+const CONTENT_PADDING_HORIZONTAL = 20;
+const CONTENT_PADDING_VERTICAL = 14;
+const CONTENT_MIN_HEIGHT = 44;
 
 /**
  * TaskOptionButton Component
@@ -95,8 +99,10 @@ export const TaskOptionButton: React.FC<TaskOptionButtonProps> = ({
 }) => {
   const themeColors = useThemeColors();
 
-  const iconColor = themeColors.text.tertiary();
-  const backgroundColor = backgroundColorProp ?? themeColors.background.primary();
+  const iconColor = themeColors.text.primary();
+  const textColor = themeColors.text.primary();
+  // elevated background: same as GroupedListItemWrapper when no override
+  const backgroundColor = backgroundColorProp ?? themeColors.background.elevated();
   const showLabel = label != null && label.length > 0;
 
   return (
@@ -110,8 +116,9 @@ export const TaskOptionButton: React.FC<TaskOptionButtonProps> = ({
           justifyContent: 'center',
           gap: showLabel ? 4 : 0,
           borderRadius: BORDER_RADIUS,
-          paddingVertical: 0,
-          paddingHorizontal: 0,
+          paddingHorizontal: CONTENT_PADDING_HORIZONTAL,
+          paddingVertical: CONTENT_PADDING_VERTICAL,
+          minHeight: CONTENT_MIN_HEIGHT,
           backgroundColor,
           opacity: disabled ? 0.5 : 1,
         }}
@@ -125,7 +132,7 @@ export const TaskOptionButton: React.FC<TaskOptionButtonProps> = ({
           <Text
             style={[
               getTextStyle('body-large'),
-              { color: themeColors.text.tertiary(), fontWeight: '900' as const },
+              { color: textColor},
             ]}
           >
             {label}

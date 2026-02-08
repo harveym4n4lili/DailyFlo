@@ -23,3 +23,15 @@ export type { BellIconProps } from './icons/BellIcon';
 
 export { BrowseIcon } from './icons/BrowseIcon';
 export type { BrowseIconProps } from './icons/BrowseIcon';
+
+export { ParagraphIcon } from './icons/ParagraphIcon';
+export type { ParagraphIconProps } from './icons/ParagraphIcon';
+
+export { CirclePlusIcon } from './icons/CirclePlusIcon';
+export type { CirclePlusIconProps } from './icons/CirclePlusIcon';
+
+export { BracketsIcon } from './icons/BracketsIcon';
+export type { BracketsIconProps } from './icons/BracketsIcon';
+
+export { TrashIcon } from './icons/TrashIcon';
+export type { TrashIconProps } from './icons/TrashIcon';

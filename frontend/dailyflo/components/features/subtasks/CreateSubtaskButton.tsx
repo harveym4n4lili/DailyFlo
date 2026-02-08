@@ -2,24 +2,15 @@
  * CreateSubtaskButton Component
  *
  * A reusable button component for creating subtasks.
- * Uses TaskFormButton for consistent styling with other sections.
- *
- * Features:
- * - TaskFormButton with plus icon on the left
- * - "Create Subtask" label
- * - Callback for handling subtask creation
+ * Uses TaskFormButton with clock icon (18px) and "Add subtask" label; icon and text use tertiary color.
  */
 
-// REACT IMPORTS
 import React from 'react';
-
-// UI COMPONENTS IMPORTS
-// TaskFormButton: button-style item for GroupedList in task forms
 import { TaskFormButton } from '@/components/ui/List/GroupedList';
-
-// CUSTOM HOOKS IMPORTS
-// useThemeColors: hook for accessing theme-aware colors
+import { ClockIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
+
+const ADD_SUBTASK_ICON_SIZE = 18;
 
 /**
  * Props interface for CreateSubtaskButton component
@@ -37,20 +28,13 @@ export interface CreateSubtaskButtonProps {
   disabled?: boolean;
 }
 
-/**
- * CreateSubtaskButton Component
- *
- * Renders a TaskFormButton for creating subtasks.
- * The button displays a plus icon on the left and "Create Subtask" label.
- */
 export const CreateSubtaskButton: React.FC<CreateSubtaskButtonProps> = ({
   onPress,
   disabled = false,
 }) => {
-  // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
+  const tertiaryColor = themeColors.text.tertiary();
 
-  // handle button press - call parent callback
   const handlePress = () => {
     if (!disabled && onPress) {
       onPress();
@@ -59,22 +43,20 @@ export const CreateSubtaskButton: React.FC<CreateSubtaskButtonProps> = ({
 
   return (
     <TaskFormButton
-      icon="add"
-      label="Create Subtask"
+      iconComponent={<ClockIcon size={ADD_SUBTASK_ICON_SIZE} color={tertiaryColor} />}
+      label="Add subtask"
       value=""
       onPress={handlePress}
       disabled={disabled}
       showChevron={false}
       customStyles={{
         container: {
-          paddingVertical: 16,
+          paddingVertical: 0,
+          paddingHorizontal: 0,
         },
         label: {
-          color: themeColors.text.secondary(),
+          color: tertiaryColor,
           fontWeight: '700',
-        },
-        icon: {
-          color: themeColors.text.secondary(),
         },
       }}
     />
