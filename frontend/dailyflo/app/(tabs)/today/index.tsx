@@ -1,9 +1,15 @@
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { StyleSheet, RefreshControl, View, Text, Alert, TouchableOpacity, Animated } from 'react-native';
+import { StyleSheet, RefreshControl, View, Text, Alert, TouchableOpacity, Animated, Platform, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
+// EXPO GLASS EFFECT IMPORTS
+// GlassView: native iOS liquid glass surface for ellipse button.
+// TODO: check isGlassEffectAPIAvailable() when implementing context menu in the future
+// for now we gate on Platform.OS === 'ios'; GlassView will safely no-op on unsupported platforms
+import GlassView from 'expo-glass-effect/build/GlassView';
 
 // import our custom layout components
 import { ScreenContainer, SafeAreaWrapper } from '@/components';
@@ -394,49 +400,57 @@ export default function TodayScreen() {
   // render main content with today's tasks
   return (
     <View style={{ flex: 1 }}>
-      {/* Fixed top section with title and ellipse button - stays at top */}
-      {/* background and border fade in with title animation */}
+      {/* Fixed top section with ellipse button - stays at top */}
+      {/* background and border fade-in removed */}
       <View style={styles.fixedTopSection}>
-        {/* animated background that fades in */}
-        <Animated.View 
-          style={[
-            styles.fixedTopSectionBackground,
-            {
-              opacity: titleOpacity,
-              backgroundColor: themeColors.background.elevated(),
-            }
-          ]}
-        />
-        {/* animated border that fades in */}
-        {/* border matches navbar styling: same color and width, but at bottom of section */}
-        <Animated.View 
-          style={[
-            styles.fixedTopSectionBorder,
-            {
-              opacity: titleOpacity,
-              borderBottomColor: themeColors.border.primary(), // same color as navbar borderTopColor
-              borderBottomWidth: 1, // match navbar border width
-            }
-          ]}
-        />
         <View style={styles.titleContainer}>
-          {showTitle && (
-            <Animated.View style={{ opacity: titleOpacity }}>
-              <Text style={styles.titleHeader}>Today</Text>
-            </Animated.View>
-          )}
+          {/* title fade-in removed */}
         </View>
-        <TouchableOpacity
-          style={styles.ellipseButton}
-          onPress={handleEllipsePress}
-          activeOpacity={0.7}
-        >
-          <Ionicons 
-            name="ellipsis-horizontal" 
-            size={32} 
-            color={themeColor} 
-          />
-        </TouchableOpacity>
+        {/* ellipse button with liquid glass styling - TODO: implement context menu here in the future */}
+        {/* check if liquid glass API is available at runtime (prevents crashes on unsupported iOS versions) */}
+        {/* on iOS we wrap the pressable in GlassView; expo-glass-effect safely falls back elsewhere */}
+        {Platform.OS === 'ios' ? (
+          <GlassView
+            style={{
+              paddingVertical: 2,
+              paddingHorizontal: 12,
+              borderRadius: 20, // pill shape: half of height for rounded ends
+              backgroundColor: 'transparent',
+              overflow: 'visible',
+            }}
+            glassEffectStyle="clear"
+            tintColor={themeColors.background.primary() as any}
+            isInteractive
+          >
+            <Pressable
+              onPress={handleEllipsePress}
+              style={{
+                
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons 
+                name="ellipsis-horizontal" 
+                size={32} 
+                color="white" 
+              />
+            </Pressable>
+          </GlassView>
+        ) : (
+          <TouchableOpacity
+            style={styles.ellipseButton}
+            onPress={handleEllipsePress}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name="ellipsis-horizontal" 
+              size={32} 
+              color="white" 
+            />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* dropdown list - using reusable DropdownList component */}
