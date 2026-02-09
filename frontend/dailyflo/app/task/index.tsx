@@ -1,10 +1,9 @@
 /**
- * Create Task screen (full-screen modal Stack screen)
+ * Task – main form screen (first screen in task stack)
  *
- * Opened via router.push("/create-task") from FAB, Planner, Search, or Redux modals.createTask.
- * presentation: "modal" in _layout — full-screen, slide up, swipe to dismiss.
- * State and create logic live here; TaskScreenContent renders the form with embedHeaderButtons=true
- * so close and save are in the content (no screen header).
+ * Uses CreateTaskDraftContext for dueDate, time, duration, alerts so date-select,
+ * time-duration-select and alert-select stay in sync. Navigates to
+ * those screens when user taps date / time / alerts.
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -21,6 +20,7 @@ import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation'
 import type { PriorityLevel, RoutineType, CreateTaskInput, TaskColor, Subtask as TaskSubtask } from '@/types';
 import type { Subtask } from '@/components/features/subtasks';
 import { validateAll } from '@/components/forms/TaskForm/TaskValidation';
+import { useCreateTaskDraft } from './CreateTaskDraftContext';
 
 const getDefaults = (themeColor: TaskColor = 'red'): TaskFormValues => ({
   title: '',
@@ -34,31 +34,51 @@ const getDefaults = (themeColor: TaskColor = 'red'): TaskFormValues => ({
   alerts: [],
 });
 
-export default function CreateTaskScreen() {
+export default function TaskIndexScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ dueDate?: string }>();
   const themeColors = useThemeColors();
   const { themeColor } = useThemeColor();
   const dispatch = useAppDispatch();
   const { isCreating, createError } = useTasks();
+  const { draft, setDraft, setDueDate, setTime, setDuration, setAlerts } = useCreateTaskDraft();
 
-  const [values, setValues] = useState<Partial<TaskFormValues>>(() => ({
+  const [localValues, setLocalValues] = useState<Partial<TaskFormValues>>(() => ({
     ...getDefaults(themeColor),
     ...(params.dueDate ? { dueDate: params.dueDate } : {}),
   }));
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [pendingFocusSubtaskId, setPendingFocusSubtaskId] = useState<string | null>(null);
 
-  // when opened with a dueDate param (e.g. from planner), set form dueDate and reset subtasks
   useEffect(() => {
-    if (params.dueDate) {
-      setValues((prev) => ({ ...prev, dueDate: params.dueDate }));
-    }
+    const initialDueDate = params.dueDate ?? new Date().toISOString();
+    setDraft({
+      dueDate: initialDueDate,
+      time: undefined,
+      duration: undefined,
+      alerts: [],
+    });
+    if (params.dueDate) setLocalValues((prev) => ({ ...prev, dueDate: params.dueDate }));
     setSubtasks([]);
-  }, [params.dueDate]);
+  }, []);
+
+  const values: Partial<TaskFormValues> = useMemo(
+    () => ({
+      ...localValues,
+      dueDate: draft.dueDate ?? localValues.dueDate ?? new Date().toISOString(),
+      time: draft.time,
+      duration: draft.duration,
+      alerts: draft.alerts?.length ? draft.alerts : localValues.alerts,
+    }),
+    [localValues, draft],
+  );
 
   const onChange = <K extends keyof TaskFormValues>(key: K, v: TaskFormValues[K]) => {
-    setValues((prev) => ({ ...prev, [key]: v }));
+    if (key === 'dueDate') setDueDate(v as string);
+    else if (key === 'time') setTime(v as string | undefined);
+    else if (key === 'duration') setDuration(v as number | undefined);
+    else if (key === 'alerts') setAlerts((v as string[]) ?? []);
+    else setLocalValues((prev) => ({ ...prev, [key]: v }));
   };
 
   const handleCreateSubtask = () => {
@@ -143,7 +163,8 @@ export default function CreateTaskScreen() {
       const result = await dispatch(createTask(taskData));
       if (createTask.fulfilled.match(result)) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-        setValues({ ...getDefaults(themeColor) });
+        setLocalValues({ ...getDefaults(themeColor) });
+        setDraft({ dueDate: undefined, time: undefined, duration: undefined, alerts: [] });
         setSubtasks([]);
         router.back();
       }
@@ -152,15 +173,22 @@ export default function CreateTaskScreen() {
     }
   };
 
-  // close: defer router.back() so we're past touch/keyboard (presentation: 'modal' avoids fullScreenModal dismiss freeze)
   const closingRef = useRef(false);
   const handleClose = () => {
     if (closingRef.current) return;
     closingRef.current = true;
-    setTimeout(() => {
-      router.back();
-    }, 100);
+    setTimeout(() => router.back(), 100);
   };
+
+  const pickerHandlers = useMemo(
+    () => ({
+      onShowDatePicker: () => router.push('/date-select'),
+      onShowTimeDurationPicker: () => router.push('/time-duration-select'),
+      onShowAlertsPicker: () => router.push('/alert-select'),
+    }),
+    [router],
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
       <TaskScreenContent
@@ -183,6 +211,7 @@ export default function CreateTaskScreen() {
         embedHeaderButtons={true}
         renderCloseButton={false}
         saveButtonBottomInsetWhenKeyboardHidden={44}
+        pickerHandlers={pickerHandlers}
       />
     </View>
   );

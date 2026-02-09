@@ -20,8 +20,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { DatePickerModal } from '@/components/features/calendar';
-import { IconColorModal, TimeDurationModal, AlertModal } from './modals';
+import { useRouter } from 'expo-router';
+import { IconColorModal } from './modals';
+import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { FormDetailSection, SubtaskSection } from './sections';
 import { SaveButton } from '@/components/ui/Button/SaveButton';
 import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisplay } from '@/components/ui/Button';
@@ -118,6 +119,16 @@ export interface TaskCreationContentProps {
    * Extra bottom inset when keyboard is hidden (e.g. form sheet doesn't fill window; add ~80 so save button stays visible).
    */
   saveButtonBottomInsetWhenKeyboardHidden?: number;
+
+  /**
+   * Optional: use these to open date/time/alert pickers (e.g. custom navigation).
+   * When not provided, stack screens are used (router.push + CreateTaskDraftContext).
+   */
+  pickerHandlers?: {
+    onShowDatePicker: () => void;
+    onShowTimeDurationPicker: () => void;
+    onShowAlertsPicker: () => void;
+  };
 }
 
 export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
@@ -139,7 +150,10 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   embedHeaderButtons = true,
   renderCloseButton = false,
   saveButtonBottomInsetWhenKeyboardHidden,
+  pickerHandlers,
 }) => {
+  const router = useRouter();
+  const draftContext = useCreateTaskDraft();
   const { themeColor } = useThemeColor();
   const colors = useColorPalette();
   const themeColors = useThemeColors();
@@ -147,40 +161,30 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   const titleInputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // picker modal visibility (only one open at a time via closeAllModalsExcept)
-  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  // only icon/color still uses an in-screen modal (no stack screen for it yet)
   const [isColorPickerVisible, setIsColorPickerVisible] = useState(false);
-  const [isTimeDurationPickerVisible, setIsTimeDurationPickerVisible] = useState(false);
-  const [isAlertsPickerVisible, setIsAlertsPickerVisible] = useState(false);
-  const isAnyPickerVisible = isDatePickerVisible || isColorPickerVisible || isTimeDurationPickerVisible || isAlertsPickerVisible;
   useEffect(() => {
-    onPickerVisibilityChange?.(isAnyPickerVisible);
-  }, [isAnyPickerVisible, onPickerVisibilityChange]);
+    onPickerVisibilityChange?.(isColorPickerVisible);
+  }, [isColorPickerVisible, onPickerVisibilityChange]);
 
-  const closeAllModalsExcept = (modalToKeep: string) => {
-    if (modalToKeep !== 'date') setIsDatePickerVisible(false);
-    if (modalToKeep !== 'color') setIsColorPickerVisible(false);
-    if (modalToKeep !== 'time') setIsTimeDurationPickerVisible(false);
-    if (modalToKeep !== 'alerts') setIsAlertsPickerVisible(false);
-  };
-
+  // date/time/alert: use stack screens (seed draft and push, or use passed pickerHandlers)
   const handleShowDatePicker = () => {
+    if (pickerHandlers?.onShowDatePicker) {
+      pickerHandlers.onShowDatePicker();
+      return;
+    }
     Keyboard.dismiss();
-    closeAllModalsExcept('date');
-    setIsDatePickerVisible(true);
-  };
-  const handleDateSelect = (date: string) => {
-    onChange('dueDate', date);
-    titleInputRef.current?.focus();
-  };
-  const handleDatePickerClose = () => {
-    setIsDatePickerVisible(false);
-    titleInputRef.current?.focus();
+    draftContext.setDraft({
+      dueDate: values.dueDate ?? new Date().toISOString(),
+      time: values.time,
+      duration: values.duration,
+      alerts: values.alerts ?? [],
+    });
+    router.push('/date-select');
   };
 
   const handleShowColorPicker = () => {
     Keyboard.dismiss();
-    closeAllModalsExcept('color');
     setIsColorPickerVisible(true);
   };
   const handleColorSelect = (color: TaskColor) => onChange('color', color);
@@ -191,27 +195,34 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   const handleIconSelect = (icon: string) => onChange('icon', icon);
 
   const handleShowTimeDurationPicker = () => {
+    if (pickerHandlers?.onShowTimeDurationPicker) {
+      pickerHandlers.onShowTimeDurationPicker();
+      return;
+    }
     Keyboard.dismiss();
-    closeAllModalsExcept('time');
-    setIsTimeDurationPickerVisible(true);
-  };
-  const handleTimeSelect = (time: string | undefined) => onChange('time', time);
-  const handleDurationSelect = (duration: number | undefined) => onChange('duration', duration);
-  const handleTimeDurationPickerClose = () => {
-    setIsTimeDurationPickerVisible(false);
-    titleInputRef.current?.focus();
+    draftContext.setDraft({
+      dueDate: values.dueDate ?? new Date().toISOString(),
+      time: values.time,
+      duration: values.duration,
+      alerts: values.alerts ?? [],
+    });
+    router.push('/time-duration-select');
   };
 
   const handleShowAlertsPicker = () => {
+    if (pickerHandlers?.onShowAlertsPicker) {
+      pickerHandlers.onShowAlertsPicker();
+      return;
+    }
     Keyboard.dismiss();
-    closeAllModalsExcept('alerts');
-    setIsAlertsPickerVisible(true);
+    draftContext.setDraft({
+      dueDate: values.dueDate ?? new Date().toISOString(),
+      time: values.time,
+      duration: values.duration,
+      alerts: values.alerts ?? [],
+    });
+    router.push('/alert-select');
   };
-  const handleAlertsPickerClose = () => {
-    setIsAlertsPickerVisible(false);
-    titleInputRef.current?.focus();
-  };
-  const handleAlertsApply = (alertIds: string[]) => onChange('alerts', alertIds);
 
   // checkbox state and animation (matches original TaskCreation: 20px circle, fill + scale)
   const [titleCheckboxChecked, setTitleCheckboxChecked] = useState(false);
@@ -450,14 +461,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
         </View>
       )}
 
-      <DatePickerModal
-        visible={isDatePickerVisible}
-        selectedDate={values.dueDate || new Date().toISOString()}
-        onClose={handleDatePickerClose}
-        onSelectDate={handleDateSelect}
-        title="Date"
-        taskCategoryColor={buttonColor}
-      />
+      {/* date/time/alert use stack screens (task/date-select etc.); only icon/color still uses a modal */}
       <IconColorModal
         visible={isColorPickerVisible}
         selectedColor={buttonColor}
@@ -465,22 +469,6 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
         onClose={handleColorPickerClose}
         onSelectColor={handleColorSelect}
         onSelectIcon={handleIconSelect}
-        taskCategoryColor={buttonColor}
-      />
-      <TimeDurationModal
-        visible={isTimeDurationPickerVisible}
-        selectedTime={values.time}
-        selectedDuration={values.duration}
-        onClose={handleTimeDurationPickerClose}
-        onSelectTime={handleTimeSelect}
-        onSelectDuration={handleDurationSelect}
-        taskCategoryColor={buttonColor}
-      />
-      <AlertModal
-        visible={isAlertsPickerVisible}
-        selectedAlerts={values.alerts || []}
-        onClose={handleAlertsPickerClose}
-        onApplyAlerts={handleAlertsApply}
         taskCategoryColor={buttonColor}
       />
     </View>

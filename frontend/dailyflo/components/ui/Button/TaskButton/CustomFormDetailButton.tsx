@@ -101,7 +101,7 @@ export const CustomFormDetailButton: React.FC<CustomFormDetailButtonProps> = ({
             getTextStyle('body-large'), 
             { 
               color: themeColors.text.primary(),
-              fontWeight: boldMainLabel ? '900' : 'normal',
+              fontWeight: boldMainLabel ? '900' : '400',
             }
           ]}
           numberOfLines={1}
