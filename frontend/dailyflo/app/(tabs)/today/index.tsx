@@ -373,7 +373,7 @@ export default function TodayScreen() {
     const initialDate =
       overdueTasks[0]?.dueDate ?? new Date().toISOString();
     setDraft({ dueDate: initialDate, time: undefined, duration: undefined, alerts: [] });
-    router.push('/date-select');
+    router.push('/date-select/index');
   };
 
   // render loading state when no tasks are loaded yet
