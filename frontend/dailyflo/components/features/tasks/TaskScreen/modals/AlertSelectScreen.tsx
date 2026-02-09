@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
+import { DashedSeparator } from '@/components/ui/borders';
 import { ALERT_OPTIONS } from './alertOptions';
 
 export function AlertSelectScreen() {
@@ -40,51 +41,57 @@ export function AlertSelectScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {ALERT_OPTIONS.map((alert) => {
+        {ALERT_OPTIONS.map((alert, index) => {
           const isSelected = selectedAlerts.includes(alert.id);
+          const isLastOption = index === ALERT_OPTIONS.length - 1;
+          
           return (
-            <Pressable
-              key={alert.id}
-              onPress={() => handleToggleAlert(alert.id)}
-              style={({ pressed }) => [
-                styles.optionButton,
-                {
-                  borderBottomColor: themeColors.border.primary(),
-                  backgroundColor:
-                    isSelected || pressed
-                      ? themeColors.background.tertiary()
-                      : 'transparent',
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`${isSelected ? 'Deselect' : 'Select'} ${alert.label}`}
-              accessibilityState={{ selected: isSelected }}
-            >
-              <View style={styles.optionLeft}>
-                <View style={styles.iconWrap}>
-                  <Ionicons
-                    name={alert.icon as any}
-                    size={20}
-                    color={
-                      isSelected
-                        ? themeColors.interactive.primary()
-                        : themeColors.text.secondary()
-                    }
-                  />
+            <View key={alert.id}>
+              <Pressable
+                onPress={() => handleToggleAlert(alert.id)}
+                style={({ pressed }) => [
+                  styles.optionButton,
+                  {
+                    backgroundColor:
+                      isSelected || pressed
+                        ? themeColors.background.tertiary()
+                        : 'transparent',
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`${isSelected ? 'Deselect' : 'Select'} ${alert.label}`}
+                accessibilityState={{ selected: isSelected }}
+              >
+                <View style={styles.optionLeft}>
+                  <View style={styles.iconWrap}>
+                    <Ionicons
+                      name={alert.icon as any}
+                      size={20}
+                      color={
+                        isSelected
+                          ? themeColors.interactive.primary()
+                          : themeColors.text.secondary()
+                      }
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      getTextStyle('body-large'),
+                      {
+                        color: themeColors.text.primary(),
+                        fontWeight: '700',
+                      },
+                    ]}
+                  >
+                    {alert.label}
+                  </Text>
                 </View>
-                <Text
-                  style={[
-                    getTextStyle('body-large'),
-                    {
-                      color: themeColors.text.primary(),
-                      fontWeight: '700',
-                    },
-                  ]}
-                >
-                  {alert.label}
-                </Text>
-              </View>
-            </Pressable>
+              </Pressable>
+              {/* dashed separator below each option except the last one - matches button paddingHorizontal (16px) */}
+              {!isLastOption && (
+                <DashedSeparator paddingHorizontal={16} />
+              )}
+            </View>
           );
         })}
       </ScrollView>
@@ -95,10 +102,9 @@ export function AlertSelectScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flex: 1, minHeight: 0 },
-  scrollContent: { paddingHorizontal: 20 },
+  scrollContent: { paddingHorizontal: 0 },
   optionButton: {
     width: '100%',
-    borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

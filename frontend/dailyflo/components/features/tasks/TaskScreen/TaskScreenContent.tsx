@@ -29,6 +29,8 @@ import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisp
 import { getTextStyle } from '@/constants/Typography';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
+import { DashedSeparator } from '@/components/ui/borders';
+import Checkbox from '@/components/ui/Button/Checkbox/Checkbox';
 import type { TaskColor } from '@/types';
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
 import type { Subtask } from '@/components/features/subtasks';
@@ -224,18 +226,8 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
     router.push('/alert-select');
   };
 
-  // checkbox state and animation (matches original TaskCreation: 20px circle, fill + scale)
+  // checkbox state for task title checkbox
   const [titleCheckboxChecked, setTitleCheckboxChecked] = useState(false);
-  const titleCheckboxFill = useRef(new RNAnimated.Value(0)).current;
-  const titleCheckboxScale = useRef(new RNAnimated.Value(1)).current;
-
-  useEffect(() => {
-    RNAnimated.timing(titleCheckboxFill, {
-      toValue: titleCheckboxChecked ? 1 : 0,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-  }, [titleCheckboxChecked, titleCheckboxFill]);
 
   // keyboard height for scroll content bottom padding so content can scroll above keyboard
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -333,40 +325,19 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
               autoFocus
               returnKeyType="next"
             />
+            {/* dashed separator underline for task title - matches scrollContent padding */}
+            <DashedSeparator style={{ marginTop: 12 }} />
             <View style={styles.titleSpacer} />
           </View>
           <View style={styles.checkboxWrap}>
-            <TouchableOpacity
+            <Checkbox
+              checked={titleCheckboxChecked}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                RNAnimated.sequence([
-                  RNAnimated.timing(titleCheckboxScale, { toValue: 0.85, duration: 100, useNativeDriver: true }),
-                  RNAnimated.timing(titleCheckboxScale, { toValue: 1, duration: 100, useNativeDriver: true }),
-                ]).start();
                 setTitleCheckboxChecked((prev) => !prev);
               }}
-              activeOpacity={1}
-              style={styles.checkboxTouchable}
-            >
-              <RNAnimated.View style={{ transform: [{ scale: titleCheckboxScale }] }}>
-                <RNAnimated.View
-                  style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: 12,
-                    borderWidth: 1.5,
-                    borderColor: titleCheckboxFill.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [themeColors.text.tertiary(), themeColors.text.primary()],
-                    }),
-                    backgroundColor: titleCheckboxFill.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['transparent', themeColors.text.primary()],
-                    }),
-                  }}
-                />
-              </RNAnimated.View>
-            </TouchableOpacity>
+              size={20}
+            />
           </View>
         </View>
 
@@ -500,7 +471,6 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center' },
   titleInputWrap: { flex: 1, minWidth: 0, paddingHorizontal: 0 },
   titleSpacer: { height: 8 },
-  checkboxWrap: { paddingLeft: 12, flexShrink: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginTop: -6 },
-  checkboxTouchable: { alignItems: 'flex-start', justifyContent: 'center' },
+  checkboxWrap: { paddingLeft: 12, flexShrink: 0, alignItems: 'center', justifyContent: 'center', marginTop: -22 },
   pickerSectionWrap: { marginTop: 36 },
 });

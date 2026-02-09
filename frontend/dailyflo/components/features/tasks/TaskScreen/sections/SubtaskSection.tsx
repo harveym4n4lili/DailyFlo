@@ -71,14 +71,17 @@ export const SubtaskSection: React.FC<SubtaskSectionProps> = ({
       <GroupedList
         containerStyle={{
           ...styles.subtaskListContainer,
-          backgroundColor: themeColors.background.elevated(),
-          borderRadius: 28,
-          overflow: 'hidden',
-          paddingHorizontal: 16,
+          backgroundColor: 'transparent',
+          borderRadius: 0,
+          overflow: 'visible',
+          paddingHorizontal: 0,
         }}
         minimalStyle
-        fullWidthSeparators
-        separatorColor={themeColors.background.quaternary()}
+        fullWidthSeparators={false}
+        separatorColor={themeColors.border.primary()}
+        useDashedSeparator={true}
+        separatorConsiderIconColumn={true}
+        iconColumnWidth={26}
       >
         {subtasks.map((s) => (
           <SubtaskListItem

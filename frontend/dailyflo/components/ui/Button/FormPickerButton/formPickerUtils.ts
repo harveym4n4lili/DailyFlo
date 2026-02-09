@@ -245,27 +245,33 @@ export function getTimeDurationPickerDisplay(
 /**
  * Labels for the time/duration display row (e.g. TimeDurationDisplay below the grouped list).
  * Always returns main + sub so the row can show two lines.
- * - No time, no duration: main = "All day", sub = "No duration"
+ * - No time: main = "Time & Duration", sub = "All day" (with duration value if set)
  * - Time, no duration: main = time (e.g. "14:30"), sub = "No duration"
  * - Time and duration: main = "start - end", sub = "Xmin"
- * - Duration only (no time): main = "All day", sub = "Xmin"
  */
 export function getTimeDurationDisplayLabels(
   time: string | undefined,
   duration: number | undefined
 ): { mainLabel: string; subLabel: string } {
-  if (time && duration && duration > 0) {
-    const endTime = calculateEndTime(time, duration);
-    return { mainLabel: `${time} - ${endTime}`, subLabel: `${duration}min` };
-  }
-  if (time) {
+  // check if time exists and is not empty (time takes priority)
+  // handle undefined, null, and empty string cases
+  const hasTime = time != null && typeof time === 'string' && time.trim().length > 0;
+  
+  if (hasTime) {
+    // with time and duration: main = "start - end", sub = duration
+    if (duration != null && duration > 0) {
+      const endTime = calculateEndTime(time, duration);
+      return { mainLabel: `${time} - ${endTime}`, subLabel: `${duration}min` };
+    }
+    // with time, no duration: main = time, sub = "No duration"
     return { mainLabel: time, subLabel: 'No duration' };
   }
-  // duration only or neither: main "All day"; sub shows duration if set, else "No duration"
-  if (duration && duration > 0) {
-    return { mainLabel: 'All day', subLabel: `${duration}min` };
+  
+  // no time: main = "Time & Duration", sub = "All day" (with duration value if set)
+  if (duration != null && duration > 0) {
+    return { mainLabel: 'Time & Duration', subLabel: `All day, ${duration}min` };
   }
-  return { mainLabel: 'All day', subLabel: 'No duration' };
+  return { mainLabel: 'Time & Duration', subLabel: 'All day' };
 }
 
 /**

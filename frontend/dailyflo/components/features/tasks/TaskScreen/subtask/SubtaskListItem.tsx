@@ -1,6 +1,6 @@
 /**
  * SubtaskListItem — NEW task creation only.
- * One row: 18px checkbox, 8px gap, text input. Vertical padding matches GroupedList content row (14px).
+ * One row: 16px checkbox (matches TaskCard), 10px gap, text input. Vertical padding matches GroupedList content row (14px).
  */
 
 import React, { useRef, useEffect } from 'react';
@@ -8,17 +8,18 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  Animated as RNAnimated,
   StyleSheet,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 import { TrashIcon } from '@/components/ui/Icon';
+import Checkbox from '@/components/ui/Button/Checkbox/Checkbox';
 
 // match header/button row vertical padding (same as SubtaskCreateButton top padding and header padding)
 const CONTENT_PADDING_VERTICAL = 14;
-const CHECKBOX_SIZE = 14;
+// checkbox size matches TaskCard checkbox size (16px)
+const CHECKBOX_SIZE = 16;
 // spacing between checkbox (icon) and text input — matches SubtaskCreateButton icon–text gap
 const ICON_TEXT_GAP = 10;
 const TRASH_ICON_SIZE = 18;
@@ -64,10 +65,6 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
   const themeColors = useThemeColors();
   const inputRef = useRef<TextInput>(null);
 
-  // checkbox fill animation: 0 = unchecked (grey border, no fill), 1 = checked (primary fill)
-  const checkboxFill = useRef(new RNAnimated.Value(isCompleted ? 1 : 0)).current;
-  const checkboxScale = useRef(new RNAnimated.Value(1)).current;
-
   // when parent requests focus (e.g. after Add subtask), focus input and open keyboard after mount
   useEffect(() => {
     if (!shouldAutoFocus) return;
@@ -78,21 +75,10 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
     return () => clearTimeout(t);
   }, [shouldAutoFocus, onDidAutoFocus]);
 
-  useEffect(() => {
-    RNAnimated.timing(checkboxFill, {
-      toValue: isCompleted ? 1 : 0,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-  }, [isCompleted, checkboxFill]);
-
+  // handle checkbox press with haptic feedback
   const handleCheckboxPress = () => {
     if (disabled) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    RNAnimated.sequence([
-      RNAnimated.timing(checkboxScale, { toValue: 0.85, duration: 100, useNativeDriver: true }),
-      RNAnimated.timing(checkboxScale, { toValue: 1, duration: 100, useNativeDriver: true }),
-    ]).start();
     onToggleComplete();
   };
 
@@ -100,31 +86,15 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
 
   return (
     <View style={styles.row}>
-      {/* 18px checkbox on the left */}
-      <TouchableOpacity
-        onPress={handleCheckboxPress}
-        disabled={disabled}
-        activeOpacity={1}
-        style={styles.checkboxTouchable}
-      >
-        <RNAnimated.View style={{ transform: [{ scale: checkboxScale }] }}>
-          <RNAnimated.View
-            style={[
-              styles.checkboxCircle,
-              {
-                borderColor: checkboxFill.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [themeColors.text.tertiary(), themeColors.text.primary()],
-                }),
-                backgroundColor: checkboxFill.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['transparent', themeColors.text.primary()],
-                }),
-              },
-            ]}
-          />
-        </RNAnimated.View>
-      </TouchableOpacity>
+      {/* checkbox on the left - using new Checkbox component */}
+      <View style={styles.checkboxContainer}>
+        <Checkbox
+          checked={isCompleted}
+          onPress={handleCheckboxPress}
+          size={CHECKBOX_SIZE}
+          disabled={disabled}
+        />
+      </View>
 
       {/* gap then flexible text input */}
       <TextInput
@@ -165,18 +135,10 @@ const styles = StyleSheet.create({
     paddingVertical: CONTENT_PADDING_VERTICAL,
     gap: ICON_TEXT_GAP,
   },
-  // checkbox tap area; no fixed height so row doesn’t get extra top/bottom space (tap area via padding)
-  checkboxTouchable: {
-    width: CHECKBOX_SIZE,
-    paddingVertical: 6,
-    alignItems: 'center',
+  // checkbox container - provides proper alignment and spacing
+  checkboxContainer: {
     justifyContent: 'center',
-  },
-  checkboxCircle: {
-    width: CHECKBOX_SIZE,
-    height: CHECKBOX_SIZE,
-    borderRadius: CHECKBOX_SIZE / 2,
-    borderWidth: 2,
+    alignItems: 'center',
   },
   input: {
     flex: 1,

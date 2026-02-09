@@ -62,6 +62,7 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
             getTextStyle('body-large'),
             {
               color: themeColors.text.tertiary?.() || labelColor,
+              fontWeight: '900',
             },
             customStyles?.value,
           ]}
@@ -118,6 +119,7 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
             getTextStyle('body-large'),
             {
               color: themeColors.text.primary(),
+              fontWeight: '900',
             },
             customStyles?.label,
           ]}
@@ -134,6 +136,7 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
                 getTextStyle('body-large'),
                 {
                   color: themeColors.text.tertiary?.() || labelColor,
+                  fontWeight: '900',
                 },
                 customStyles?.secondaryValue,
               ]}

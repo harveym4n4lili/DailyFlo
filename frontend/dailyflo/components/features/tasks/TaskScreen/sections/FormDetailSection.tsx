@@ -13,8 +13,6 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { GroupedList, FormDetailButton } from '@/components/ui/List/GroupedList';
 // custom SVG icons
 import { CalendarIcon, ClockIcon, BellIcon } from '@/components/ui/Icon';
-// reusable display row component
-import { CustomFormDetailButton, CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS } from '@/components/ui/Button/TaskButton/CustomFormDetailButton';
 // utility function for time/duration labels
 import { getTimeDurationDisplayLabels } from '@/components/ui/Button';
 
@@ -58,42 +56,52 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
   // date row: main label = "Due today" (or Due + relative, lowercase), sublabel = formatted date
   const dateMainLabel = dateSecondaryValue ? `Due ${dateSecondaryValue.toLowerCase()}` : dateValue;
 
-  // time/duration labels: All day / No duration, time / No duration, or start - end / Xmin
-  const { mainLabel: timeMainLabel, subLabel: timeSubLabel } = getTimeDurationDisplayLabels(time, duration);
+  // time/duration labels: dynamic main label (label prop) based on time selection
+  // - No time: "Time & Duration"
+  // - Time, no duration: the time (e.g., "09:00")
+  // - Time and duration: start - end (e.g., "09:00 - 09:30")
+  const hasTime = time != null && typeof time === 'string' && time.trim().length > 0;
+  let timeMainLabel = 'Time & Duration'; // default when no time (used as label prop)
+  if (hasTime) {
+    if (duration != null && duration > 0) {
+      // calculate end time for start - end format
+      const [hours, minutes] = time.split(':').map(Number);
+      const startDate = new Date();
+      startDate.setHours(hours, minutes, 0, 0);
+      const endDate = new Date(startDate.getTime() + duration * 60 * 1000);
+      const endTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+      timeMainLabel = `${time} - ${endTime}`;
+    } else {
+      // time only, no duration
+      timeMainLabel = time;
+    }
+  }
+  
+  // sub label: All day / No duration, or duration value (used as value prop)
+  const { subLabel: timeSubLabel } = getTimeDurationDisplayLabels(time, duration);
 
-  // alerts labels: no alerts → "No Alerts"; 1 → "1 Alert"; n → "n Alerts". sub: "Nudge" for now
+  // alerts labels: dynamic main label (label prop) - no alerts → "No Alerts"; 1 → "1 Alert"; n → "n Alerts"
+  // sub label (value prop): "Nudge"
   const alertsMainLabel = alertsCount === 0 ? 'No Alerts' : `${alertsCount} Alert${alertsCount === 1 ? '' : 's'}`;
   const alertsSubLabel = 'Nudge';
 
-  // icon components
-  const clockIcon = (
-    <ClockIcon 
-      size={CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS.ICON_SIZE} 
-      color={themeColors.text.primary()} 
-      isSolid 
-    />
-  );
-
-  const bellIcon = (
-    <BellIcon 
-      size={CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS.ICON_SIZE} 
-      color={themeColors.text.primary()} 
-      isSolid 
-    />
-  );
-
   return (
     <View style={styles.container}>
-      {/* date picker row in GroupedList */}
+      {/* date, time, and alerts picker rows in GroupedList */}
       {hasDate && (
         <View style={styles.groupedListWrap}>
           <GroupedList
             containerStyle={styles.listContainer}
-            contentPaddingHorizontal={16}
-            backgroundColor={themeColors.background.secondary()}
-            separatorColor={themeColors.background.quaternary()}
-            separatorInsetLeft={50}
-            separatorInsetRight={16}
+            contentPaddingHorizontal={0}
+            backgroundColor="transparent"
+            separatorColor={themeColors.border.primary()}
+            separatorInsetRight={0}
+            borderRadius={0}
+            minimalStyle={true}
+            useDashedSeparator={true}
+            itemWrapperPaddingVertical={16}
+            separatorConsiderIconColumn={true}
+            iconColumnWidth={30}
           >
             <FormDetailButton
               key="date"
@@ -103,41 +111,25 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
               onPress={onShowDatePicker}
               showChevron
             />
+            <FormDetailButton
+              key="time"
+              iconComponent={<ClockIcon size={18} color={themeColors.text.primary()} isSolid />}
+              label={timeMainLabel}
+              value={timeSubLabel}
+              onPress={onShowTimeDurationPicker}
+              showChevron
+            />
+            <FormDetailButton
+              key="alerts"
+              iconComponent={<BellIcon size={18} color={themeColors.text.primary()} isSolid />}
+              label={alertsMainLabel}
+              value={alertsSubLabel}
+              onPress={onShowAlertsPicker}
+              showChevron
+            />
           </GroupedList>
         </View>
       )}
-
-      {/* time and alert display row */}
-      <View style={styles.timeAndAlertRow}>
-        <View style={styles.timeDurationDisplayWrap}>
-          <CustomFormDetailButton
-            icon={clockIcon}
-            mainLabel={timeMainLabel}
-            subLabel={timeSubLabel}
-            showChevron={true}
-            onPress={onShowTimeDurationPicker}
-            boldMainLabel={true}
-            borderTopLeftRadius={CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS.OUTER_RADIUS}
-            borderBottomLeftRadius={CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS.OUTER_RADIUS}
-            borderTopRightRadius={CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS.INNER_RADIUS}
-            borderBottomRightRadius={CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS.INNER_RADIUS}
-          />
-        </View>
-        <View style={styles.alertDisplayWrap}>
-          <CustomFormDetailButton
-            icon={bellIcon}
-            mainLabel={alertsMainLabel}
-            subLabel={alertsSubLabel}
-            showChevron={true}
-            onPress={onShowAlertsPicker}
-            boldMainLabel={false}
-            borderTopLeftRadius={CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS.INNER_RADIUS}
-            borderBottomLeftRadius={CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS.INNER_RADIUS}
-            borderTopRightRadius={CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS.OUTER_RADIUS}
-            borderBottomRightRadius={CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS.OUTER_RADIUS}
-          />
-        </View>
-      </View>
     </View>
   );
 };
@@ -154,22 +146,6 @@ const styles = StyleSheet.create({
   // list wrapper: no extra gap so the grouped list is one visual block
   listContainer: {
     marginVertical: 0,
-  },
-  // time and alert display row: side-by-side layout
-  timeAndAlertRow: {
-    marginTop: 8,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  // time duration display wrapper: flex to fill available space
-  timeDurationDisplayWrap: {
-    flex: 1,
-    minWidth: 0,
-  },
-  // alert display wrapper: flex to fill available space
-  alertDisplayWrap: {
-    flex: 1,
-    minWidth: 0,
   },
 });
 

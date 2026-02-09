@@ -1,15 +1,16 @@
 /**
  * SubtaskCreateButton — NEW task creation only.
- * Same unchecked checkbox circle as SubtaskListItem (14px) + "Add subtask" text; icon and text use tertiary color.
+ * Uses same Checkbox component as SubtaskListItem (16px, matches TaskCard) + "Add subtask" text; icon and text use tertiary color.
  */
 
 import React from 'react';
 import { Text, Pressable, StyleSheet, View } from 'react-native';
 import { getTextStyle } from '@/constants/Typography';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import Checkbox from '@/components/ui/Button/Checkbox/Checkbox';
 
-// match SubtaskListItem checkbox so the add row lines up visually
-const CHECKBOX_SIZE = 14;
+// match SubtaskListItem checkbox so the add row lines up visually (16px matches TaskCard)
+const CHECKBOX_SIZE = 16;
 const ICON_TEXT_GAP = 10;
 // top padding so the button doesn't touch the top border of its grouped list row (matches list row content padding)
 const CONTENT_PADDING_TOP = 16;
@@ -36,8 +37,15 @@ export const SubtaskCreateButton: React.FC<SubtaskCreateButtonProps> = ({
       disabled={disabled}
       style={({ pressed }) => [styles.row, { opacity: disabled ? 0.5 : pressed ? 0.7 : 1 }]}
     >
-      {/* same unchecked checkbox circle as SubtaskListItem for visual consistency */}
-      <View style={[styles.checkboxCircle, { borderColor: tertiaryColor }]} />
+      {/* same Checkbox component as SubtaskListItem for visual consistency - always unchecked */}
+      <View style={styles.checkboxContainer}>
+        <Checkbox
+          checked={false}
+          onPress={() => {}} // no-op since this is just a visual indicator
+          size={CHECKBOX_SIZE}
+          disabled={true} // disabled so it doesn't respond to taps (button handles press)
+        />
+      </View>
       <Text style={[getTextStyle('body-large'), styles.label, { color: tertiaryColor }]}>
         Add subtask
       </Text>
@@ -53,12 +61,9 @@ const styles = StyleSheet.create({
     paddingVertical: CONTENT_PADDING_TOP,
     paddingHorizontal: 0,
   },
-  checkboxCircle: {
-    width: CHECKBOX_SIZE,
-    height: CHECKBOX_SIZE,
-    borderRadius: CHECKBOX_SIZE / 2,
-    borderWidth: 2,
-    backgroundColor: 'transparent',
+  checkboxContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   label: {
     fontWeight: '700',
