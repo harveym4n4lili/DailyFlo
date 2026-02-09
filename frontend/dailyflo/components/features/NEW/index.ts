@@ -1,3 +1,0 @@
-/**
- * NEW feature barrel.
- */

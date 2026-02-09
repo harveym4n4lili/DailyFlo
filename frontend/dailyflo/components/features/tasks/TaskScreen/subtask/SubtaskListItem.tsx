@@ -13,8 +13,8 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
-import { TrashIcon } from '@/components/ui/Icon';
-import Checkbox from '@/components/ui/Button/Checkbox/Checkbox';
+import { TrashIcon } from '@/components/ui/icon';
+import Checkbox from '@/components/ui/button/Checkbox/Checkbox';
 
 // match header/button row vertical padding (same as SubtaskCreateButton top padding and header padding)
 const CONTENT_PADDING_VERTICAL = 14;

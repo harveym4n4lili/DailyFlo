@@ -11,9 +11,9 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 
-import { CustomTextInput } from '@/components/ui/TextInput';
-import { ParagraphIcon } from '@/components/ui/Icon';
-import { CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS } from '@/components/ui/Button/TaskButton';
+import { CustomTextInput } from '@/components/ui/textinput';
+import { ParagraphIcon } from '@/components/ui/icon';
+import { CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS } from '@/components/ui/button/TaskButton';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import type { TaskColor } from '@/types';
 

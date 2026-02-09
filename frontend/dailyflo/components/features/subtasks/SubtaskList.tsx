@@ -16,7 +16,7 @@ import { View, Platform } from 'react-native';
 
 // UI COMPONENTS IMPORTS
 // GroupedList: flexible iOS-style grouped list component
-import { GroupedList } from '@/components/ui/List/GroupedList';
+import { GroupedList } from '@/components/ui/list/GroupedList';
 
 // EXPO GLASS EFFECT IMPORTS
 // glass view: native ios uivisualeffectview liquid glass surface for the subtask card.

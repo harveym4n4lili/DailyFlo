@@ -9,7 +9,7 @@
 
 import React, { useRef } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { GroupedList } from '@/components/ui/List/GroupedList';
+import { GroupedList } from '@/components/ui/list/GroupedList';
 import { SubtaskCreateButton, SubtaskListItem } from '../subtask';
 import { Description } from './Description';
 import { useThemeColors } from '@/hooks/useColorPalette';

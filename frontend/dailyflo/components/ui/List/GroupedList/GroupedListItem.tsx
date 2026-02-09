@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { View } from 'react-native';
-import { FormDetailButton } from '@/components/ui/Button/TaskButton';
+import { FormDetailButton } from '@/components/ui/button/TaskButton';
 import { GroupedListItemWrapper } from './GroupedListItemWrapper';
 import type { GroupedListItemProps } from './GroupedList.types';
 

@@ -6,8 +6,8 @@
  */
 
 import React from 'react';
-import { FormDetailButton } from '@/components/ui/List/GroupedList';
-import { ClockIcon } from '@/components/ui/Icon';
+import { FormDetailButton } from '@/components/ui/list/GroupedList';
+import { ClockIcon } from '@/components/ui/icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
 const ADD_SUBTASK_ICON_SIZE = 18;

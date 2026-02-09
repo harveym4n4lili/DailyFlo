@@ -10,11 +10,11 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 // reusable grouped list: wraps children in rounded container with separators
-import { GroupedList, FormDetailButton } from '@/components/ui/List/GroupedList';
+import { GroupedList, FormDetailButton } from '@/components/ui/list/GroupedList';
 // custom SVG icons
-import { CalendarIcon, ClockIcon, BellIcon } from '@/components/ui/Icon';
+import { CalendarIcon, ClockIcon, BellIcon } from '@/components/ui/icon';
 // utility function for time/duration labels
-import { getTimeDurationDisplayLabels } from '@/components/ui/Button';
+import { getTimeDurationDisplayLabels } from '@/components/ui/button';
 
 // string returned by formPickerUtils when field has no value
 const NO_DATE = 'No Date';

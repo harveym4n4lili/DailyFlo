@@ -21,7 +21,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-na
 
 // CUSTOM ICON IMPORTS
 // SaveIcon: custom SVG save/checkmark icon (replaces Ionicons checkmark)
-import { SaveIcon } from '@/components/ui/Icon';
+import { SaveIcon } from '@/components/ui/icon';
 
 // CUSTOM HOOKS IMPORTS
 // useThemeColors: hook for accessing theme-aware colors

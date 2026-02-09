@@ -1,23 +1,15 @@
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { StyleSheet, RefreshControl, View, Text, Alert, TouchableOpacity, Animated, Platform, Pressable } from 'react-native';
+import { StyleSheet, RefreshControl, View, Text, Alert, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-
-// EXPO GLASS EFFECT IMPORTS
-// GlassView: native iOS liquid glass surface for ellipse button.
-// TODO: check isGlassEffectAPIAvailable() when implementing context menu in the future
-// for now we gate on Platform.OS === 'ios'; GlassView will safely no-op on unsupported platforms
-import GlassView from 'expo-glass-effect/build/GlassView';
 
 // import our custom layout components
 import { ScreenContainer, SafeAreaWrapper } from '@/components';
 
 // import our new task components
-import { ListCard } from '@/components/ui/Card';
-import { FloatingActionButton } from '@/components/ui/Button';
-import { DropdownList } from '@/components/ui/List';
+import { ListCard } from '@/components/ui/card';
+import { TaskSummary } from '@/components/ui/message';
 import { ModalContainer } from '@/components/layout/ModalLayout';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 
@@ -26,9 +18,6 @@ import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
-
-// useThemeColor: hook that provides the global theme color selected by the user
-import { useThemeColor } from '@/hooks/useThemeColor';
 
 // STORE FOLDER IMPORTS - Redux state management
 // The store folder contains all Redux-related code for managing app state
@@ -66,9 +55,6 @@ export default function TodayScreen() {
   // get UI state from Redux to check if createTask modal should be opened
   const { modals, closeModal } = useUI();
   
-  // DROPDOWN STATE - Controls the visibility of the dropdown menu
-  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
-  
   // TITLE STATE - Controls the visibility of the title header
   const [showTitle, setShowTitle] = useState(false);
   
@@ -88,12 +74,6 @@ export default function TodayScreen() {
   // useTypography: Hook that provides typography styles, font families, and text utilities
   // This gives us access to predefined text styles and satoshi font family
   const typography = useTypography();
-  
-  // THEME COLOR USAGE
-  // get the global theme color selected by the user (default: red)
-  // this is used for interactive elements like the ellipse button
-  const { getThemeColorValue } = useThemeColor();
-  const themeColor = getThemeColorValue(500); // use shade 500 for ellipse button color
   
   // SAFE AREA INSETS - Get safe area insets for proper positioning
   const insets = useSafeAreaInsets();
@@ -320,30 +300,6 @@ export default function TodayScreen() {
     );
   };
 
-  // DROPDOWN HANDLERS
-  // handle ellipse button press - toggles dropdown menu visibility
-  const handleEllipsePress = () => {
-    setIsDropdownVisible(!isDropdownVisible);
-  };
-
-  // handle select all menu item press
-  const handleSelectAll = () => {
-    console.log('📋 Select all tasks requested');
-    // TODO: Implement select all functionality
-    setIsDropdownVisible(false);
-  };
-
-  // create dropdown menu items array
-  // each item defines a menu option with label, icon, and action
-  const dropdownMenuItems = [
-    {
-      id: 'select-all',
-      label: 'Select All',
-      icon: 'checkmark-circle-outline',
-      onPress: handleSelectAll,
-    },
-  ];
-
   // when we return from modals/date-select after overdue reschedule, apply the selected date
   useFocusEffect(
     React.useCallback(() => {
@@ -400,69 +356,6 @@ export default function TodayScreen() {
   // render main content with today's tasks
   return (
     <View style={{ flex: 1 }}>
-      {/* Fixed top section with ellipse button - stays at top */}
-      {/* background and border fade-in removed */}
-      <View style={styles.fixedTopSection}>
-        <View style={styles.titleContainer}>
-          {/* title fade-in removed */}
-        </View>
-        {/* ellipse button with liquid glass styling - TODO: implement context menu here in the future */}
-        {/* check if liquid glass API is available at runtime (prevents crashes on unsupported iOS versions) */}
-        {/* on iOS we wrap the pressable in GlassView; expo-glass-effect safely falls back elsewhere */}
-        {Platform.OS === 'ios' ? (
-          <GlassView
-            style={{
-              paddingVertical: 2,
-              paddingHorizontal: 12,
-              borderRadius: 20, // pill shape: half of height for rounded ends
-              backgroundColor: 'transparent',
-              overflow: 'visible',
-            }}
-            glassEffectStyle="clear"
-            tintColor={themeColors.background.primary() as any}
-            isInteractive
-          >
-            <Pressable
-              onPress={handleEllipsePress}
-              style={{
-                
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons 
-                name="ellipsis-horizontal" 
-                size={32} 
-                color="white" 
-              />
-            </Pressable>
-          </GlassView>
-        ) : (
-          <TouchableOpacity
-            style={styles.ellipseButton}
-            onPress={handleEllipsePress}
-            activeOpacity={0.7}
-          >
-            <Ionicons 
-              name="ellipsis-horizontal" 
-              size={32} 
-              color="white" 
-            />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* dropdown list - using reusable DropdownList component */}
-      <DropdownList
-        visible={isDropdownVisible}
-        onClose={() => setIsDropdownVisible(false)}
-        items={dropdownMenuItems}
-        anchorPosition="top-right"
-        topOffset={72}
-        rightOffset={20}
-      />
-
       <ScreenContainer 
         scrollable={false}
         paddingHorizontal={0}
@@ -470,6 +363,8 @@ export default function TodayScreen() {
         safeAreaBottom={false}
         paddingVertical={0}
       >
+      {/* dynamic today message - greeting/summary at top of screen */}
+      <TaskSummary />
       {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
       {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
       {/* key prop ensures this ListCard instance is completely independent from planner screen */}
@@ -510,19 +405,10 @@ export default function TodayScreen() {
           }
         }}
         scrollEventThrottle={16}
-        headerTitle="Today"
+        
         paddingTop={insets.top+ 64} // add top padding equal to safe area inset
         paddingHorizontal={20} // remove horizontal padding for full-width cards
       />
-      {/* Floating Action Button – opens task Stack screen (presentation: modal) */}
-      <FloatingActionButton
-        onPress={() => {
-          router.push('/task');
-        }}
-        accessibilityLabel="Add new task"
-        accessibilityHint="Double tap to create a new task"
-      />
-      
       </ScreenContainer>
     </View>
   );
@@ -536,70 +422,13 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
-  // fixed top section with ellipse button - stays at top of screen
-  // background and border are animated (start transparent, fade in with title)
-  fixedTopSection: {
-    position: 'absolute',
-    top: insets.top,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-    paddingHorizontal: 20,
-    height: insets.top + 10,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    // overflow removed to allow background to extend upward to cover insets
-  },
-  
-  // animated background layer that fades in
-  // extends upward to cover safe area insets
-  fixedTopSectionBackground: {
-    position: 'absolute',
-    top: -insets.top, // extend upward to cover safe area insets
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: insets.top + insets.top + 10, // cover insets + section height
-    zIndex: -1, // behind content
-  },
-  
-  // animated border layer that fades in
-  // matches navbar border styling: borderTopColor with borderTopWidth
-  fixedTopSectionBorder: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    // borderTopWidth and borderTopColor are set dynamically in component
-    zIndex: -1, // behind content
-  },
-
-  // title container - ensures consistent layout structure
-  titleContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // title header styling
+  // title header styling (used by task detail modal)
   titleHeader: {
     ...typography.getTextStyle('heading-2'),
     color: themeColors.text.primary(),
     fontWeight: '600',
   },
 
-  // ellipse button styling
-  ellipseButton: {
-    position: 'absolute',
-    right: 20,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  
   // loading text styling for initial load state
   // using typography system for consistent text styling
   loadingText: {

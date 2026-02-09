@@ -39,7 +39,7 @@ import TaskIndicators from './TaskIndicators';
 import TaskIcon from './TaskIcon';
 
 // import checkbox component
-import { Checkbox } from '@/components/ui/Button';
+import { Checkbox } from '@/components/ui/button';
 
 // import border components
 import { DashedSeparator } from '@/components/ui/borders';

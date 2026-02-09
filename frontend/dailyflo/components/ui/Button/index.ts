@@ -43,5 +43,9 @@ export { CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS } from './TaskButton';
 // Export Checkbox component
 export { Checkbox } from './Checkbox';
 
+// Export ScreenContextButton (3-dot ellipse button for screen headers)
+export { ScreenContextButton } from './ScreenContextButton';
+export type { ScreenContextButtonProps } from './ScreenContextButton';
+
 // Default export for convenience (FloatingActionButton)
 export { FloatingActionButton as default } from './FloatingActionButton';

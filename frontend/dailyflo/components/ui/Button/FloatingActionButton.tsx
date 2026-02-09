@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AddIcon } from '@/components/ui/Icon';
+import { AddIcon } from '@/components/ui/icon';
 import * as Haptics from 'expo-haptics';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeColors } from '@/hooks/useColorPalette';
