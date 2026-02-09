@@ -108,8 +108,10 @@ class TasksApiService {
       if (taskData.description !== undefined && taskData.description !== null) {
         apiData.description = taskData.description;
       }
-      if (taskData.icon !== undefined && taskData.icon !== null) {
-        apiData.icon = taskData.icon;
+      // only include icon if it's explicitly set and not empty
+      // tasks don't require icons - icon is optional
+      if (taskData.icon !== undefined && taskData.icon !== null && taskData.icon.trim() !== '') {
+        apiData.icon = taskData.icon.trim();
       }
       if (taskData.time !== undefined && taskData.time !== null) {
         apiData.time = taskData.time; // Django TimeField accepts HH:MM format string
@@ -211,8 +213,10 @@ class TasksApiService {
       if (taskData.description !== undefined && taskData.description !== null) {
         apiData.description = taskData.description;
       }
-      if (taskData.icon !== undefined && taskData.icon !== null) {
-        apiData.icon = taskData.icon;
+      // only include icon if it's explicitly set and not empty
+      // tasks don't require icons - icon is optional
+      if (taskData.icon !== undefined && taskData.icon !== null && taskData.icon.trim() !== '') {
+        apiData.icon = taskData.icon.trim();
       }
       // Handle time field - distinguish between not provided vs explicitly cleared
       // If time is undefined, null, or empty string, send null to clear it in Django

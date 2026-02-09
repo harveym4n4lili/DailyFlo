@@ -28,7 +28,7 @@ const getDefaults = (themeColor: TaskColor = 'red'): TaskFormValues => ({
   dueDate: new Date().toISOString(),
   priorityLevel: 3 as PriorityLevel,
   color: themeColor,
-  icon: 'code-slash',
+  icon: undefined, // no default icon - tasks don't require icons
   routineType: 'once' as RoutineType,
   listId: undefined,
   alerts: [],
@@ -120,7 +120,7 @@ export default function TaskIndexScreen() {
         values.description?.trim() ||
         values.dueDate !== getDefaults(themeColor).dueDate ||
         values.color !== getDefaults(themeColor).color ||
-        values.icon !== getDefaults(themeColor).icon ||
+        // icon removed from hasChanges check - tasks don't require icons
         (values.alerts && values.alerts.length > 0) ||
         values.time !== undefined ||
         values.duration !== undefined ||
@@ -143,7 +143,9 @@ export default function TaskIndexScreen() {
     const taskData: CreateTaskInput = {
       title: values.title!.trim(),
       description: values.description?.trim() || undefined,
-      icon: values.icon || undefined,
+      // only include icon if it's explicitly set (not empty/undefined)
+      // tasks don't require icons - icon is optional
+      icon: values.icon && values.icon.trim() ? values.icon.trim() : undefined,
       time: values.time || undefined,
       duration: values.duration || undefined,
       dueDate: values.dueDate || undefined,
