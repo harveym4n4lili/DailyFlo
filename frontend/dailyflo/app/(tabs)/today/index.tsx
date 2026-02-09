@@ -152,10 +152,10 @@ export default function TodayScreen() {
   // grouping explanation:
   // the listcard component will automatically group tasks by due date when groupBy="dueDate" is set
   // this creates separate sections for:
-  // - "overdue" tasks (due before today and not completed)
-  // - "today" tasks (due today and not completed)
-  // - specific dates if any tasks are due on future dates (and not completed)
-  // completed tasks are filtered out and will not appear in any group
+  // - "overdue" tasks (due before today, including completed ones)
+  // - "today" tasks (due today, including completed ones)
+  // - specific dates if any tasks are due on future dates (including completed ones)
+  // completed tasks remain in their date groups and are not filtered out
   // the grouping logic is handled internally by the listcard component
 
   // STORE USAGE - Dispatching actions to fetch data
@@ -470,6 +470,14 @@ export default function TodayScreen() {
         onTaskSwipeRight={handleTaskSwipeRight}
         showCategory={false}
         compact={false}
+        showIcon={false}
+        showIndicators={false}
+        showMetadata={false}
+        metadataVariant="today"
+        cardSpacing={0}
+        showDashedSeparator={true}
+        hideBackground={true}
+        removeInnerPadding={true}
         emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
         loading={isLoading && todaysTasks.length === 0}
         groupBy="dueDate" // group tasks by due date to separate overdue and today's tasks
@@ -478,6 +486,7 @@ export default function TodayScreen() {
         // enable bulk reschedule action specifically for the "Overdue" group on the Today screen
         // when the user taps "Reschedule", we open the date picker and then update all overdue tasks
         onOverdueReschedule={handleOverdueReschedulePress}
+        hideTodayHeader={true} // hide the group header that shows today's date since we're already on the Today screen
         onRefresh={handleRefresh}
         refreshing={isLoading}
         onScroll={(event) => {
@@ -489,6 +498,7 @@ export default function TodayScreen() {
         scrollEventThrottle={16}
         headerTitle="Today"
         paddingTop={insets.top+ 64} // add top padding equal to safe area inset
+        paddingHorizontal={20} // remove horizontal padding for full-width cards
       />
       {/* Floating Action Button – opens task Stack screen (presentation: modal) */}
       <FloatingActionButton

@@ -17,7 +17,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 
 // TYPES FOLDER IMPORTS - TypeScript type definitions
 import { Task } from '@/types';
@@ -30,13 +30,16 @@ import { getTaskColorValue } from '@/utils/taskColors';
 
 // import reusable swipeable card component
 import { SwipeableCard, SwipeAction } from '../SwipeableCard';
+import { useSwipeAnimation } from '../SwipeableCard/SwipeableCard';
 
 // import task card sub-components
 import TaskCardContent from './TaskCardContent';
 import TaskMetadata from './TaskMetadata';
 import TaskIndicators from './TaskIndicators';
-import CompletionIndicator from './CompletionIndicator';
 import TaskIcon from './TaskIcon';
+
+// import checkbox component
+import { Checkbox } from '@/components/ui/Button';
 
 /**
  * Props interface for TaskCard component
@@ -61,6 +64,18 @@ export interface TaskCardProps {
   // optional display options
   showCategory?: boolean; // whether to show the list/category name
   compact?: boolean; // whether to use compact layout
+  showIcon?: boolean; // whether to show the task icon on the left (default true)
+  showIndicators?: boolean; // whether to show bottom-right list/routine indicators (default true)
+  showMetadata?: boolean; // whether to show date/time/duration metadata (default true)
+  metadataVariant?: 'default' | 'today'; // 'today' = no date text, time as "09:00 - 09:30"
+  cardSpacing?: number; // spacing between cards (default 20)
+  showDashedSeparator?: boolean; // whether to show a dashed separator below the card (default false)
+  separatorPaddingHorizontal?: number; // horizontal padding for separator to match list padding (default 0)
+  hideBackground?: boolean; // whether to hide the card background (default false)
+  removeInnerPadding?: boolean; // whether to remove horizontal padding inside the card (default false)
+  checkboxSize?: number; // size of the checkbox (default 24)
+  isLastItem?: boolean; // whether this is the last item in the list (default false)
+  isFirstItem?: boolean; // whether this is the first item in the list (default false)
 }
 
 /**
@@ -76,7 +91,7 @@ export interface TaskCardProps {
  * - TaskCardContent: Displays icon and title
  * - TaskMetadata: Displays date/time/duration
  * - TaskIndicators: Displays routine type and list/inbox status
- * - CompletionIndicator: Displays completion checkmark
+ * - Checkbox: Displays completion checkbox on the left
  */
 export default function TaskCard({
   task,
@@ -88,6 +103,18 @@ export default function TaskCard({
   onSwipeRight,
   showCategory = false,
   compact = false,
+  showIcon = true,
+  showIndicators = true,
+  showMetadata = true,
+  metadataVariant = 'default',
+  cardSpacing = 20,
+  showDashedSeparator = false,
+  separatorPaddingHorizontal = 0,
+  hideBackground = false,
+  removeInnerPadding = false,
+  checkboxSize = 16,
+  isLastItem = false,
+  isFirstItem = false,
 }: TaskCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -96,7 +123,10 @@ export default function TaskCard({
   const taskColor = useMemo(() => getTaskColorValue(task.color), [task.color]);
 
   // create dynamic styles using the color palette system
-  const styles = useMemo(() => createStyles(themeColors), [themeColors]);
+  const styles = useMemo(() => createStyles(themeColors, cardSpacing), [themeColors, cardSpacing]);
+
+  // get translateX animation value from SwipeableCard context to animate border radius
+  const translateX = useSwipeAnimation();
 
   // configure swipe actions for SwipeableCard
   // left swipe (negative translation) = complete action (green)
@@ -142,7 +172,7 @@ export default function TaskCard({
         swipeThreshold={60}
         leftAction={leftSwipeAction}
         rightAction={rightSwipeAction}
-        borderRadius={28}
+        borderRadius={0}
       >
         {/* main card touchable area - applies conditional styles based on compact and completion state */}
         <TouchableOpacity
@@ -150,14 +180,34 @@ export default function TaskCard({
             styles.card,
             compact && styles.compactCard, // conditionally applies compact padding when compact prop is true
             task.isCompleted && styles.completedCard, // conditionally applies transparent background when task is completed
+            hideBackground && styles.transparentBackground, // conditionally applies transparent background when hideBackground is true
+            removeInnerPadding && styles.noInnerPadding, // conditionally removes horizontal padding when removeInnerPadding is true
+            // animate border radius based on swipe distance - increases as card is swiped
+            translateX && {
+              borderRadius: translateX.interpolate({
+                inputRange: [-200, 0, 200], // swipe range from -200px to +200px
+                outputRange: [28, 12, 28], // border radius animates from 12px (initial) to 28px when swiped
+                extrapolate: 'clamp', // clamp values outside the range
+              }),
+            },
           ]}
           onPress={() => onPress?.(task)} // calls onPress callback with task data when tapped
           activeOpacity={1} // prevent background opacity change
         >
-          {/* row container for icon and content - ensures proper alignment */}
+          {/* row container for checkbox, icon and content - ensures proper alignment */}
           <View style={styles.contentRow}>
-            {/* task icon on the left - conditionally rendered */}
-            {task.icon && (
+            {/* checkbox on the left - for task completion */}
+            <View style={styles.checkboxWrapper}>
+              <Checkbox
+                checked={task.isCompleted}
+                onPress={() => onComplete?.(task)}
+                size={checkboxSize}
+                borderRadius={6}
+              />
+            </View>
+
+            {/* task icon on the left - conditionally rendered when showIcon prop is true */}
+            {showIcon && task.icon && (
               <View style={styles.iconWrapper}>
                 <TaskIcon icon={task.icon} color={taskColor} />
               </View>
@@ -172,36 +222,121 @@ export default function TaskCard({
                 compact={compact}
               />
 
-              {/* task metadata - date, time, duration */}
-              <TaskMetadata
-                dueDate={task.dueDate}
-                time={task.time}
-                duration={task.duration}
-                isCompleted={task.isCompleted}
-                showCategory={showCategory}
-                listId={task.listId}
-              />
+              {/* task metadata - date, time, duration (hidden when showMetadata is false) */}
+              {showMetadata && (
+                <TaskMetadata
+                  dueDate={task.dueDate}
+                  time={task.time}
+                  duration={task.duration}
+                  isCompleted={task.isCompleted}
+                  showCategory={showCategory}
+                  listId={task.listId}
+                  metadataVariant={metadataVariant}
+                />
+              )}
             </View>
           </View>
         </TouchableOpacity>
 
-        {/* completion indicator - shows green tick icon when completed */}
-        <CompletionIndicator isCompleted={task.isCompleted} />
-
-        {/* bottom indicators - routine type and list/inbox status */}
-        <TaskIndicators routineType={task.routineType} listId={task.listId} />
+        {/* bottom indicators - routine type and list/inbox status (hidden when showIndicators is false) */}
+        {showIndicators && (
+          <TaskIndicators routineType={task.routineType} listId={task.listId} />
+        )}
       </SwipeableCard>
+      
+      {/* dashed separator below card - shown when showDashedSeparator is true and not the last item */}
+      {showDashedSeparator && !isLastItem && (
+        <DashedSeparator 
+          themeColors={themeColors} 
+          paddingHorizontal={separatorPaddingHorizontal} // separator padding matches list padding
+        />
+      )}
     </View>
   );
 }
 
+/**
+ * DashedSeparator Component
+ * 
+ * Creates a dashed line separator using multiple small Views.
+ * Since React Native doesn't support dashed borders natively, we simulate it
+ * by rendering multiple small rectangles with gaps between them.
+ * The number of dashes is calculated based on available width (screen width minus padding).
+ */
+function DashedSeparator({ 
+  themeColors,
+  paddingHorizontal = 0,
+}: { 
+  themeColors: ReturnType<typeof useThemeColors>;
+  paddingHorizontal?: number;
+}) {
+  // calculate number of dashes needed based on available width (screen width minus padding)
+  // pattern: 8px dash + 4px gap = 12px per dash segment
+  const screenWidth = Dimensions.get('window').width;
+  const availableWidth = screenWidth - (paddingHorizontal * 2); // subtract left and right padding
+  const dashWidth = 8;
+  const gapWidth = 4;
+  const segmentWidth = dashWidth + gapWidth;
+  // calculate dash count to cover available width exactly (no extra dashes)
+  const dashCount = Math.floor(availableWidth / segmentWidth);
+  const dashes = Array.from({ length: dashCount }, (_, i) => i);
+
+  // ensure padding values are exactly equal
+  const paddingLeft = paddingHorizontal;
+  const paddingRight = paddingHorizontal;
+
+  return (
+    <View style={[separatorStyles.container, { 
+      paddingLeft,
+      paddingRight,
+    }]}>
+      <View style={separatorStyles.dashContainer}>
+        {dashes.map((index) => (
+          <View
+            key={index}
+            style={[
+              separatorStyles.dash,
+              { backgroundColor: themeColors.border.primary() },
+            ]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// styles for dashed separator component
+const separatorStyles = StyleSheet.create({
+  container: {
+    width: '100%',
+    marginTop: 0, // no top margin, sits right below card
+    overflow: 'hidden', // prevent dashes from extending beyond padding
+    // paddingLeft and paddingRight are applied dynamically via style prop to ensure equal spacing on both sides
+    // these values match the ListCard's paddingHorizontal exactly
+  },
+  dashContainer: {
+    flexDirection: 'row', // horizontal layout for dashes
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    flexWrap: 'nowrap', // prevent wrapping
+  },
+  dash: {
+    width: 8, // dash width
+    height: 1, // dash height (1px line)
+    marginRight: 4, // gap between dashes
+  },
+});
+
 // create dynamic styles using the color palette system
-const createStyles = (themeColors: ReturnType<typeof useThemeColors>) =>
-  StyleSheet.create({
+const createStyles = (
+  themeColors: ReturnType<typeof useThemeColors>,
+  cardSpacing: number
+) => {
+  const styles = StyleSheet.create({
     // card container with margin bottom for spacing
     cardContainer: {
       width: '100%', // ensure full width
-      marginBottom: 20, // spacing between cards
+      marginBottom: cardSpacing, // spacing between cards (configurable via prop)
       position: 'relative', // needed for absolute positioning
       alignItems: 'stretch', // ensure children take full width
     },
@@ -210,17 +345,25 @@ const createStyles = (themeColors: ReturnType<typeof useThemeColors>) =>
     card: {
       width: '100%', // ensure full width
       backgroundColor: themeColors.background.elevated(), // use theme-aware elevated background
-      borderRadius: 28, // border radius of 28 for modern card appearance (increased by 8px)
+      borderRadius: 0, // no border radius for flat card appearance
       padding: 16,
       paddingRight: 56, // add right padding to avoid overlap with completion indicator (24px indicator + 16px margin + 16px spacing)
       position: 'relative', // needed for absolute positioning of completion indicator and bottom indicators
       overflow: 'visible', // ensure content is visible
     },
 
-    // row container for icon and content - ensures proper alignment
+    // row container for checkbox, icon and content - ensures proper alignment
     contentRow: {
-      flexDirection: 'row', // horizontal layout for icon and content
-      alignItems: 'center', // vertically center icon with content
+      flexDirection: 'row', // horizontal layout for checkbox, icon and content
+      alignItems: 'center', // vertically center all items (checkbox, icon, content)
+    },
+
+    // checkbox wrapper - provides spacing for checkbox and ensures vertical centering
+    checkboxWrapper: {
+      marginRight: 12, // spacing between checkbox and icon/content
+      justifyContent: 'center', // vertically center checkbox within wrapper
+      alignItems: 'center', // horizontally center checkbox within wrapper
+      alignSelf: 'center', // ensure wrapper itself is centered vertically in the row
     },
 
     // icon wrapper - provides spacing for icon
@@ -232,6 +375,7 @@ const createStyles = (themeColors: ReturnType<typeof useThemeColors>) =>
     contentColumn: {
       flex: 1, // take remaining space
       flexDirection: 'column', // vertical layout for title and metadata
+      justifyContent: 'center', // vertically center content within the column
     },
 
     // compact version for smaller displays
@@ -245,5 +389,22 @@ const createStyles = (themeColors: ReturnType<typeof useThemeColors>) =>
     completedCard: {
       backgroundColor: themeColors.background.primary(), // use primary background color (same as today screen)
     },
+
+    // transparent background styling (when hideBackground is true)
+    transparentBackground: {
+      backgroundColor: 'transparent', // transparent background to hide card background
+    },
+
+    // no inner padding styling (when removeInnerPadding is true)
+    noInnerPadding: {
+      paddingHorizontal: 0, // remove horizontal padding inside the card
+      paddingLeft: 0,
+      paddingRight: 0,
+      paddingTop: 16, // maintain vertical padding of 16px
+      paddingBottom: 16, // maintain vertical padding of 16px
+    },
   });
+
+  return styles;
+};
 

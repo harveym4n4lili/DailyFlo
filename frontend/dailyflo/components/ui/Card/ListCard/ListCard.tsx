@@ -40,7 +40,7 @@ import { useGroupAnimations } from '@/hooks/useGroupAnimations';
 import { useTaskCardAnimations } from '@/hooks/useTaskCardAnimations';
 
 // import utility functions for task grouping and sorting
-import { groupTasks, sortTasks, sortGroupEntries } from '@/utils/taskGrouping';
+import { groupTasks, sortTasks, sortGroupEntries, formatDateForGroup } from '@/utils/taskGrouping';
 
 // import dropdown list component for header actions menu
 import { DropdownList, DropdownListItem } from '@/components/ui/List';
@@ -73,6 +73,16 @@ export interface ListCardProps {
   // optional display options
   showCategory?: boolean; // whether to show category names in task cards
   compact?: boolean; // whether to use compact layout for task cards
+  showIcon?: boolean; // whether to show task icon (default true)
+  showIndicators?: boolean; // whether to show bottom-right list/routine indicators (default true)
+  showMetadata?: boolean; // whether to show date/time/duration metadata (default true)
+  metadataVariant?: 'default' | 'today'; // 'today' = time as "09:00 - 09:30", no "Today" text
+  cardSpacing?: number; // spacing between task cards (default 20)
+  showDashedSeparator?: boolean; // whether to show dashed separator below each card (default false)
+  separatorPaddingHorizontal?: number; // horizontal padding for separators to match list padding (defaults to paddingHorizontal)
+  hideBackground?: boolean; // whether to hide task card backgrounds (default false)
+  removeInnerPadding?: boolean; // whether to remove horizontal padding inside task cards (default false)
+  checkboxSize?: number; // size of the checkbox in task cards (default 24)
   emptyMessage?: string; // message to show when no tasks are available
   loading?: boolean; // whether the list is currently loading
 
@@ -115,6 +125,10 @@ export interface ListCardProps {
   // when provided, the "Overdue" group header will show a "Reschedule" action
   // that calls this handler with all tasks in the Overdue group
   onOverdueReschedule?: (tasks: Task[]) => void;
+
+  // optional flag to hide the group header for today's date (used on Today screen)
+  // when true, the group header that shows today's date will be hidden
+  hideTodayHeader?: boolean;
 }
 
 /**
@@ -135,6 +149,16 @@ export default function ListCard({
   onTaskSwipeRight,
   showCategory = false,
   compact = false,
+  showIcon = true,
+  showIndicators = true,
+  showMetadata = true,
+  metadataVariant,
+  cardSpacing = 20,
+  showDashedSeparator = false,
+  separatorPaddingHorizontal,
+  hideBackground = false,
+  removeInnerPadding = false,
+  checkboxSize = 20,
   emptyMessage = 'No tasks available',
   loading = false,
   groupBy = 'none',
@@ -154,6 +178,7 @@ export default function ListCard({
   dropdownRightOffset = 20,
   dropdownLeftOffset = 20,
   onOverdueReschedule,
+  hideTodayHeader = false,
 }: ListCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -164,6 +189,9 @@ export default function ListCard({
 
   // SAFE AREA INSETS - Get safe area insets for proper positioning
   const insets = useSafeAreaInsets();
+
+  // use separatorPaddingHorizontal if provided, otherwise default to paddingHorizontal
+  const finalSeparatorPaddingHorizontal = separatorPaddingHorizontal ?? paddingHorizontal;
 
   // DROPDOWN STATE - Controls the visibility of the dropdown menu
   // when dropdownItems are provided, this state manages whether the dropdown is visible
@@ -256,6 +284,10 @@ export default function ListCard({
   // render individual task card with smooth fade-in and scale animation for expansion
   const renderTaskCard: ListRenderItem<Task> = ({ item: task, index }) => {
     const { opacityValue, scaleValue } = getTaskCardAnimation(task.id, index || 0);
+    // check if this is the last item in the list
+    const isLastItem = index === processedTasks.length - 1;
+    // check if this is the first item in the list
+    const isFirstItem = index === 0;
 
     return (
       <Animated.View
@@ -274,6 +306,18 @@ export default function ListCard({
           onSwipeRight={onTaskSwipeRight}
           showCategory={showCategory}
           compact={compact}
+          showIcon={showIcon}
+          showIndicators={showIndicators}
+          showMetadata={showMetadata}
+          metadataVariant={metadataVariant}
+          cardSpacing={cardSpacing}
+          showDashedSeparator={showDashedSeparator}
+          separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
+          hideBackground={hideBackground}
+          removeInnerPadding={removeInnerPadding}
+          checkboxSize={checkboxSize}
+          isLastItem={isLastItem}
+          isFirstItem={isFirstItem}
         />
       </Animated.View>
     );
@@ -281,6 +325,16 @@ export default function ListCard({
 
   // render group header with dropdown arrow for expand/collapse functionality
   const renderGroupHeader = (title: string, count: number, groupTasks: Task[]) => {
+    // check if we should hide today's header - compare title with today's formatted date
+    if (hideTodayHeader) {
+      const today = new Date();
+      const todayFormatted = formatDateForGroup(today);
+      // if title matches today's formatted date, return null to hide the header
+      if (title === todayFormatted) {
+        return null;
+      }
+    }
+
     const isCollapsed = isGroupCollapsed(title);
     const animatedValuesForGroup = getAnimatedValuesForGroup(title);
 
@@ -435,6 +489,10 @@ export default function ListCard({
                 index || 0,
                 groupTitle
               );
+              // check if this is the last item in the group
+              const isLastItem = index === groupTasks.length - 1;
+              // check if this is the first item in the group
+              const isFirstItem = index === 0;
 
               return (
                 <Animated.View
@@ -453,6 +511,18 @@ export default function ListCard({
                     onSwipeRight={onTaskSwipeRight}
                     showCategory={showCategory}
                     compact={compact}
+                    showIcon={showIcon}
+                    showIndicators={showIndicators}
+                    showMetadata={showMetadata}
+                    metadataVariant={metadataVariant}
+                    cardSpacing={cardSpacing}
+                    showDashedSeparator={showDashedSeparator}
+                    separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
+                    hideBackground={hideBackground}
+                    removeInnerPadding={removeInnerPadding}
+                    checkboxSize={checkboxSize}
+                    isLastItem={isLastItem}
+                    isFirstItem={isFirstItem}
                   />
                 </Animated.View>
               );
@@ -519,7 +589,7 @@ const createStyles = (
 
     // group container for grouped lists
     group: {
-      marginBottom: 16, // space between groups
+      marginBottom: 24, // space between groups
     },
 
     // header container styling

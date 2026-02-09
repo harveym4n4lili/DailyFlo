@@ -199,9 +199,9 @@ export default function RootLayout() {
               name="task"
               options={{
                 headerShown: false,
-                presentation: 'formSheet',
+                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
                 gestureEnabled: true,
-                contentStyle: { backgroundColor: themeColors.background.primarySecondaryBlend() },
+                contentStyle: { backgroundColor: themeColors.background.primary() },
               }}
             />
             {/* root-level picker screens (each has own folder with _layout + index) */}

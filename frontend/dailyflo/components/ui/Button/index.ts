@@ -40,5 +40,8 @@ export { FormDetailButton, CustomFormDetailButton } from './TaskButton';
 export type { FormDetailButtonProps, CustomFormDetailButtonProps } from './TaskButton';
 export { CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS } from './TaskButton';
 
+// Export Checkbox component
+export { Checkbox } from './Checkbox';
+
 // Default export for convenience (FloatingActionButton)
 export { FloatingActionButton as default } from './FloatingActionButton';

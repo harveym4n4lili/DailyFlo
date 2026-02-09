@@ -115,7 +115,7 @@ const createStyles = (
       flexDirection: 'row', // horizontal layout
       alignItems: 'center', // center align
       justifyContent: 'space-between', // space between title/count and arrow
-      marginBottom: 12, // space between header and tasks
+      marginBottom: 0, // space between header and tasks
       paddingHorizontal: 4, // slight padding for alignment
       paddingVertical: 8, // add vertical padding for better touch target
     },

@@ -5,6 +5,7 @@
  */
 
 export { default as SwipeableCard } from './SwipeableCard';
+export { useSwipeAnimation } from './SwipeableCard';
 export { default as SwipeBackgrounds } from './SwipeBackgrounds';
 export type { SwipeAction } from './SwipeBackgrounds';
 
