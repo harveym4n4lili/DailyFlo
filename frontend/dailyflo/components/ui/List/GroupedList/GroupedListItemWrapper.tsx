@@ -9,6 +9,7 @@
 import React from 'react';
 import { View, ViewStyle, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { DashedSeparator } from '@/components/ui/borders';
 
 export interface GroupedListItemWrapperProps {
   /** The child element to wrap */
@@ -52,6 +53,12 @@ export interface GroupedListItemWrapperProps {
 
   /** Optional style override */
   style?: ViewStyle;
+
+  /** Whether to use dashed separator instead of solid line (default: false) */
+  useDashedSeparator?: boolean;
+
+  /** Vertical padding applied to the wrapper itself (paddingTop and paddingBottom) */
+  itemWrapperPaddingVertical?: number;
 }
 
 /**
@@ -76,6 +83,8 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
   contentMinHeight,
   listStyle = 'roundedStyle',
   style,
+  useDashedSeparator = false,
+  itemWrapperPaddingVertical,
 }) => {
   // get theme-aware colors for default background and border when props not provided
   const themeColors = useThemeColors();
@@ -142,6 +151,8 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
 
   // outer container: background, border radius, minHeight; no padding so separator can sit below padded content
   // lineStyle: transparent background, no radius, full-length top/bottom borders instead of inset separator
+  // itemWrapperPaddingVertical adds vertical padding to the wrapper itself (separate from content padding)
+  // when separator exists, only apply paddingTop (paddingBottom is handled by separator margin for equal spacing)
   const outerStyle: ViewStyle = {
     backgroundColor:
       listStyle === 'lineStyle'
@@ -152,11 +163,17 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
     ...getBorderEdgeStyle(),
     ...getLineStyleBorders(),
     ...(contentMinHeight != null && { minHeight: contentMinHeight }),
+    // apply paddingTop to all items, paddingBottom only when no separator (last item)
+    ...(itemWrapperPaddingVertical != null && {
+      paddingTop: itemWrapperPaddingVertical,
+      ...(!showSeparator && { paddingBottom: itemWrapperPaddingVertical }),
+    }),
     ...style,
   };
 
   // inner wrapper: same vertical and horizontal padding so content has space on all sides; separator is outside this
   // both styles use content padding; lineStyle uses borders instead of separate separator view
+  // FormDetailButton content is already vertically centered via alignItems: 'center', so wrapper padding won't affect centering
   const hasContentPadding =
     contentPaddingHorizontal != null || contentPaddingVertical != null;
   const contentWrapperStyle: ViewStyle = hasContentPadding
@@ -172,15 +189,25 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
         {children}
       </View>
       {/* roundedStyle only: separator below padded content; lineStyle uses borderBottomWidth instead */}
+      {/* when itemWrapperPaddingVertical is set, add marginTop to separator to create equal spacing above and below */}
       {listStyle === 'roundedStyle' && showSeparator && (
-        <View
-          style={{
-            height: StyleSheet.hairlineWidth,
-            backgroundColor: separatorColor,
-            ...(separatorInsetLeft > 0 && { marginLeft: separatorInsetLeft }),
-            ...(separatorInsetRight > 0 && { marginRight: separatorInsetRight }),
-          }}
-        />
+        useDashedSeparator ? (
+          <DashedSeparator 
+            paddingHorizontal={separatorInsetLeft}
+            style={itemWrapperPaddingVertical != null ? { marginTop: itemWrapperPaddingVertical } : undefined}
+          />
+        ) : (
+          <View
+            style={{
+              height: StyleSheet.hairlineWidth,
+              backgroundColor: separatorColor,
+              ...(separatorInsetLeft > 0 && { marginLeft: separatorInsetLeft }),
+              ...(separatorInsetRight > 0 && { marginRight: separatorInsetRight }),
+              // add marginTop equal to wrapper padding to create equal spacing above and below separator
+              ...(itemWrapperPaddingVertical != null && { marginTop: itemWrapperPaddingVertical }),
+            }}
+          />
+        )
       )}
     </View>
   );

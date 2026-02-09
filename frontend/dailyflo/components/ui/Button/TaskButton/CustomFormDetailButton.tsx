@@ -19,6 +19,7 @@ import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
+import { DashedSeparator } from '@/components/ui/borders';
 
 // constants for consistent styling
 const ICON_SIZE = 18;
@@ -59,6 +60,12 @@ export interface CustomFormDetailButtonProps {
   
   /** Custom style override for wrapper */
   style?: ViewStyle;
+
+  /** Whether to show a top separator border (default: false) */
+  showTopSeparator?: boolean;
+
+  /** Horizontal padding for the top separator to match container padding (default: 0) */
+  separatorPaddingHorizontal?: number;
 }
 
 /**
@@ -79,9 +86,12 @@ export const CustomFormDetailButton: React.FC<CustomFormDetailButtonProps> = ({
   borderBottomLeftRadius = DEFAULT_RADIUS,
   borderBottomRightRadius = DEFAULT_RADIUS,
   style,
+  showTopSeparator = false,
+  separatorPaddingHorizontal = 0,
 }) => {
   const themeColors = useThemeColors();
-  const backgroundColor = themeColors.background.elevated();
+  // hide background by setting to transparent
+  const backgroundColor = 'transparent';
 
   // border radius style from props
   const borderRadiusStyle = {
@@ -152,18 +162,26 @@ export const CustomFormDetailButton: React.FC<CustomFormDetailButtonProps> = ({
   ];
 
   // render as pressable if onPress is provided, otherwise static view
-  if (onPress != null) {
-    return (
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => [...wrapperStyle, { opacity: pressed ? 0.7 : 1 }]}
-      >
-        {inner}
-      </Pressable>
-    );
-  }
+  const buttonContent = onPress != null ? (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [...wrapperStyle, { opacity: pressed ? 0.7 : 1 }]}
+    >
+      {inner}
+    </Pressable>
+  ) : (
+    <View style={wrapperStyle}>{inner}</View>
+  );
 
-  return <View style={wrapperStyle}>{inner}</View>;
+  return (
+    <View>
+      {/* top separator - shown when showTopSeparator is true */}
+      {showTopSeparator && (
+        <DashedSeparator paddingHorizontal={separatorPaddingHorizontal} />
+      )}
+      {buttonContent}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -172,11 +190,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   // inner row: horizontal layout with icon, text, chevron
+  // horizontal padding removed as per design requirements
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: CONTENT_PADDING_HORIZONTAL,
+    paddingHorizontal: 0, // horizontal padding removed
     paddingVertical: CONTENT_PADDING_VERTICAL,
   },
   // text container: flex to fill available space

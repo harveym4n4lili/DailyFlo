@@ -65,6 +65,33 @@ export interface GroupedListProps {
    * Equivalent to separatorInsetLeft={0} and separatorInsetRight={0}.
    */
   fullWidthSeparators?: boolean;
+
+  /**
+   * When true, uses dashed separators instead of solid lines (default: false).
+   * Dashed separators use the DashedSeparator component for a custom dashed border effect.
+   */
+  useDashedSeparator?: boolean;
+
+  /**
+   * Vertical padding applied to each item wrapper (paddingTop and paddingBottom).
+   * This is separate from contentPaddingVertical which controls padding inside the wrapper.
+   * Useful for adding spacing around the entire wrapper (default: undefined, no wrapper padding).
+   */
+  itemWrapperPaddingVertical?: number;
+
+  /**
+   * When true, separators will automatically calculate left inset to align with content (skipping icon column).
+   * Requires iconColumnWidth to be provided for accurate calculation.
+   * When enabled, separatorInsetLeft is overridden with calculated value (iconColumnWidth).
+   */
+  separatorConsiderIconColumn?: boolean;
+
+  /**
+   * Width of the icon column (icon size + gap) used for calculating separator inset.
+   * Only used when separatorConsiderIconColumn is true.
+   * Default: 32 (18px icon + 12px gap for FormDetailButton, or 18px icon + 8px gap + some padding for Description)
+   */
+  iconColumnWidth?: number;
 }
 
 /**

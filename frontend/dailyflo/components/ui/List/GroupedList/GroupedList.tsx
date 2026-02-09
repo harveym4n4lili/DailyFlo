@@ -45,6 +45,10 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   listStyle = 'roundedStyle',
   minimalStyle = false,
   fullWidthSeparators = false,
+  useDashedSeparator = false,
+  itemWrapperPaddingVertical,
+  separatorConsiderIconColumn = false,
+  iconColumnWidth = 32,
 }) => {
   // get theme-aware colors for default separator color
   const themeColors = useThemeColors();
@@ -57,8 +61,14 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   const finalContentMinHeight = minimalStyle ? undefined : contentMinHeight;
 
   // when fullWidthSeparators is true, separators span full width (no inset)
-  const finalSeparatorInsetLeft = fullWidthSeparators ? 0 : separatorInsetLeft;
+  // when separatorConsiderIconColumn is true, calculate inset to skip icon column
+  let finalSeparatorInsetLeft = fullWidthSeparators ? 0 : separatorInsetLeft;
   const finalSeparatorInsetRight = fullWidthSeparators ? 0 : separatorInsetRight;
+  
+  // if separator should consider icon column, override left inset with icon column width
+  if (separatorConsiderIconColumn && !fullWidthSeparators) {
+    finalSeparatorInsetLeft = iconColumnWidth;
+  }
 
   // use provided separator color or default to theme border color
   const finalSeparatorColor = separatorColor || themeColors.border.primary();
@@ -121,6 +131,8 @@ export const GroupedList: React.FC<GroupedListProps> = ({
             contentPaddingVertical={finalContentPaddingVertical}
             contentMinHeight={finalContentMinHeight}
             listStyle={listStyle}
+            useDashedSeparator={useDashedSeparator}
+            itemWrapperPaddingVertical={itemWrapperPaddingVertical}
           >
             {child}
           </GroupedListItemWrapper>

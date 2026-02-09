@@ -1,0 +1,7 @@
+/**
+ * Borders Barrel Export
+ * 
+ * Central export point for border components
+ */
+
+export { default as DashedSeparator } from './DashedSeparator';

@@ -17,7 +17,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 
 // TYPES FOLDER IMPORTS - TypeScript type definitions
 import { Task } from '@/types';
@@ -40,6 +40,9 @@ import TaskIcon from './TaskIcon';
 
 // import checkbox component
 import { Checkbox } from '@/components/ui/Button';
+
+// import border components
+import { DashedSeparator } from '@/components/ui/borders';
 
 /**
  * Props interface for TaskCard component
@@ -247,85 +250,12 @@ export default function TaskCard({
       {/* dashed separator below card - shown when showDashedSeparator is true and not the last item */}
       {showDashedSeparator && !isLastItem && (
         <DashedSeparator 
-          themeColors={themeColors} 
           paddingHorizontal={separatorPaddingHorizontal} // separator padding matches list padding
         />
       )}
     </View>
   );
 }
-
-/**
- * DashedSeparator Component
- * 
- * Creates a dashed line separator using multiple small Views.
- * Since React Native doesn't support dashed borders natively, we simulate it
- * by rendering multiple small rectangles with gaps between them.
- * The number of dashes is calculated based on available width (screen width minus padding).
- */
-function DashedSeparator({ 
-  themeColors,
-  paddingHorizontal = 0,
-}: { 
-  themeColors: ReturnType<typeof useThemeColors>;
-  paddingHorizontal?: number;
-}) {
-  // calculate number of dashes needed based on available width (screen width minus padding)
-  // pattern: 8px dash + 4px gap = 12px per dash segment
-  const screenWidth = Dimensions.get('window').width;
-  const availableWidth = screenWidth - (paddingHorizontal * 2); // subtract left and right padding
-  const dashWidth = 8;
-  const gapWidth = 4;
-  const segmentWidth = dashWidth + gapWidth;
-  // calculate dash count to cover available width exactly (no extra dashes)
-  const dashCount = Math.floor(availableWidth / segmentWidth);
-  const dashes = Array.from({ length: dashCount }, (_, i) => i);
-
-  // ensure padding values are exactly equal
-  const paddingLeft = paddingHorizontal;
-  const paddingRight = paddingHorizontal;
-
-  return (
-    <View style={[separatorStyles.container, { 
-      paddingLeft,
-      paddingRight,
-    }]}>
-      <View style={separatorStyles.dashContainer}>
-        {dashes.map((index) => (
-          <View
-            key={index}
-            style={[
-              separatorStyles.dash,
-              { backgroundColor: themeColors.border.primary() },
-            ]}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
-
-// styles for dashed separator component
-const separatorStyles = StyleSheet.create({
-  container: {
-    width: '100%',
-    marginTop: 0, // no top margin, sits right below card
-    overflow: 'hidden', // prevent dashes from extending beyond padding
-    // paddingLeft and paddingRight are applied dynamically via style prop to ensure equal spacing on both sides
-    // these values match the ListCard's paddingHorizontal exactly
-  },
-  dashContainer: {
-    flexDirection: 'row', // horizontal layout for dashes
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    flexWrap: 'nowrap', // prevent wrapping
-  },
-  dash: {
-    width: 8, // dash width
-    height: 1, // dash height (1px line)
-    marginRight: 4, // gap between dashes
-  },
-});
 
 // create dynamic styles using the color palette system
 const createStyles = (
