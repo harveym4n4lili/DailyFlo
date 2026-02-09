@@ -76,6 +76,82 @@ export function formatDateWithTags(
 }
 
 /**
+ * Formats time and duration as a time range: "09:00 - 09:30"
+ * Calculates end time from start time + duration.
+ * 
+ * @param time - Start time string (format: "HH:MM" or "HH:MM:SS")
+ * @param duration - Duration in minutes
+ * @returns Formatted string like "09:00 - 09:30", or just "09:00" if no duration
+ */
+export function formatTimeRange(time: string | null | undefined, duration?: number): string {
+  if (!time) {
+    // no start time: if we have duration only, show "XX min" as fallback
+    if (duration && duration > 0) {
+      return `${duration} min`;
+    }
+    return '';
+  }
+  // format time to HH:MM (remove seconds if present)
+  const startTime = time.includes(':') && time.split(':').length === 3
+    ? time.substring(0, 5)
+    : time.length >= 5 ? time.substring(0, 5) : time;
+  
+  // if no duration, return just the start time
+  if (!duration || duration <= 0) {
+    return startTime;
+  }
+  
+  // parse start time: "09:00" -> hours=9, minutes=0
+  const [hoursStr, minutesStr] = startTime.split(':');
+  let hours = parseInt(hoursStr || '0', 10);
+  let minutes = parseInt(minutesStr || '0', 10);
+  
+  // add duration to get end time
+  minutes += duration;
+  hours += Math.floor(minutes / 60);
+  minutes = minutes % 60;
+  hours = hours % 24; // wrap around if past midnight
+  
+  const endTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  return `${startTime} - ${endTime}`;
+}
+
+/**
+ * Formats metadata for today screen: time range only, no date.
+ * Uses "09:00 - 09:30" format instead of "09:00 • 30 min".
+ * For overdue tasks, still shows the date (e.g. "2 days ago • 09:00 - 09:30").
+ * 
+ * @param dueDate - ISO date string or null
+ * @param time - Optional time string (format: "HH:MM")
+ * @param duration - Optional duration in minutes
+ * @returns Formatted string - time range only when due today, date + time range for overdue
+ */
+export function formatMetadataForToday(
+  dueDate: string | null,
+  time?: string,
+  duration?: number
+): string {
+  const timeRange = formatTimeRange(time, duration);
+  const dateText = formatDueDate(dueDate);
+  
+  // if due today, show only time range (no "Today" prefix)
+  const today = new Date();
+  const date = dueDate ? new Date(dueDate) : null;
+  today.setHours(0, 0, 0, 0);
+  if (date) {
+    date.setHours(0, 0, 0, 0);
+    if (date.toDateString() === today.toDateString()) {
+      return timeRange; // today: just "09:00 - 09:30"
+    }
+  }
+  
+  // overdue or other: show date + time range
+  const parts = [dateText];
+  if (timeRange) parts.push(timeRange);
+  return parts.join(' • ');
+}
+
+/**
  * Determines if a date is overdue
  * 
  * @param dueDate - ISO date string or null

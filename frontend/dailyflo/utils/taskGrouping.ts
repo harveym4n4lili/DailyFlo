@@ -35,10 +35,9 @@ export function getTaskGroupKey(
     case 'priority':
       return `Priority ${task.priorityLevel}`;
     case 'dueDate':
-      // completed tasks go into a separate "Completed" group
-      if (task.isCompleted) {
-        return 'Completed';
-      } else if (!task.dueDate) {
+      // don't separate completed tasks - they stay in their date groups
+      // this allows completed tasks to remain visible in the today screen
+      if (!task.dueDate) {
         return 'No Due Date';
       } else {
         const dueDate = new Date(task.dueDate);
@@ -165,7 +164,6 @@ export function sortTasks(
  * Sorts group entries with special ordering:
  * - Today group goes first
  * - Overdue group goes after Today
- * - Completed group always goes last
  * - Other groups maintain original order
  * 
  * @param groupEntries - Array of [groupTitle, tasks] tuples
@@ -178,10 +176,6 @@ export function sortGroupEntries(
   const todayGroupKey = formatDateForGroup(today);
 
   return groupEntries.sort(([titleA], [titleB]) => {
-    // Completed group always goes last
-    if (titleA === 'Completed') return 1;
-    if (titleB === 'Completed') return -1;
-
     // Today group goes first (before Overdue)
     if (titleA === todayGroupKey) return -1;
     if (titleB === todayGroupKey) return 1;

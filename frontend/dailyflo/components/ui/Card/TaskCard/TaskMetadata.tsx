@@ -12,7 +12,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { formatDateWithTags, isOverdue } from '@/utils/taskFormatters';
+import { formatDateWithTags, formatMetadataForToday, isOverdue } from '@/utils/taskFormatters';
 
 interface TaskMetadataProps {
   // due date ISO string or null/undefined
@@ -27,6 +27,8 @@ interface TaskMetadataProps {
   showCategory?: boolean;
   // optional list ID
   listId?: string | null;
+  // when 'today': hides "Today" text, shows time as "09:00 - 09:30" instead of "09:00 • 30 min"
+  metadataVariant?: 'default' | 'today';
 }
 
 /**
@@ -42,6 +44,7 @@ export default function TaskMetadata({
   isCompleted,
   showCategory = false,
   listId,
+  metadataVariant = 'default',
 }: TaskMetadataProps) {
   const themeColors = useThemeColors();
   const semanticColors = useSemanticColors();
@@ -49,6 +52,12 @@ export default function TaskMetadata({
 
   // create dynamic styles using theme colors and typography
   const styles = createStyles(themeColors, typography);
+
+  // get formatted metadata text based on variant
+  const formattedText =
+    metadataVariant === 'today'
+      ? formatMetadataForToday(dueDate ?? null, time, duration)
+      : formatDateWithTags(dueDate ?? null, time, duration);
 
   // determine text color based on completion and overdue status
   // completed tasks use tertiary color, overdue dates use red, others use tertiary
@@ -62,6 +71,11 @@ export default function TaskMetadata({
     return themeColors.text.tertiary(); // tertiary for all other dates
   };
 
+  // don't render metadata section if we have nothing to show
+  if (!showCategory && !formattedText) {
+    return null;
+  }
+
   return (
     <View style={styles.metadata}>
       {/* category section - conditionally rendered only if showCategory prop is true */}
@@ -74,16 +88,16 @@ export default function TaskMetadata({
         </View>
       )}
 
-      {/* due date section - always rendered */}
-      <View style={styles.bottomMetadata}>
-        <View style={styles.metadataItem}>
-          {/* due date text with time and duration tags */}
-          {/* format: "Today • XX:XX • XX min" or variations */}
-          <Text style={[styles.metadataValue, { color: getTextColor() }]}>
-            {formatDateWithTags(dueDate, time, duration)}
-          </Text>
+      {/* due date section - only show when we have text to display */}
+      {formattedText ? (
+        <View style={styles.bottomMetadata}>
+          <View style={styles.metadataItem}>
+            <Text style={[styles.metadataValue, { color: getTextColor() }]}>
+              {formattedText}
+            </Text>
+          </View>
         </View>
-      </View>
+      ) : null}
     </View>
   );
 }

@@ -51,7 +51,12 @@ export default function SwipeBackgrounds({
             styles.swipeBackgroundLeft,
             {
               backgroundColor: leftAction.backgroundColor,
-              borderRadius,
+              // animate border radius based on swipe distance - increases as card is swiped
+              borderRadius: translateX.interpolate({
+                inputRange: [-200, 0, 200], // swipe range from -200px to +200px
+                outputRange: [28, 12, 28], // border radius animates from 12px (initial) to 28px when swiped
+                extrapolate: 'clamp', // clamp values outside the range
+              }),
               opacity: translateX.interpolate({
                 inputRange: [-100, -5, 0, 100],
                 outputRange: [1, 0.3, 0, 0],
@@ -98,7 +103,12 @@ export default function SwipeBackgrounds({
             styles.swipeBackgroundRight,
             {
               backgroundColor: rightAction.backgroundColor,
-              borderRadius,
+              // animate border radius based on swipe distance - increases as card is swiped
+              borderRadius: translateX.interpolate({
+                inputRange: [-200, 0, 200], // swipe range from -200px to +200px
+                outputRange: [28, borderRadius, 28], // border radius increases from base to 28px when swiped
+                extrapolate: 'clamp', // clamp values outside the range
+              }),
               opacity: translateX.interpolate({
                 inputRange: [-100, 0, 5, 50],
                 outputRange: [0, 0, 0.1, 1],
