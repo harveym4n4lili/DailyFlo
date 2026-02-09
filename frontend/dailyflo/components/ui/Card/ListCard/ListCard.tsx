@@ -43,7 +43,7 @@ import { useTaskCardAnimations } from '@/hooks/useTaskCardAnimations';
 import { groupTasks, sortTasks, sortGroupEntries, formatDateForGroup } from '@/utils/taskGrouping';
 
 // import dropdown list component for header actions menu
-import { DropdownList, DropdownListItem } from '@/components/ui/List';
+import { DropdownList, DropdownListItem } from '@/components/ui/list';
 
 // import sub-components
 import GroupHeader from './GroupHeader';

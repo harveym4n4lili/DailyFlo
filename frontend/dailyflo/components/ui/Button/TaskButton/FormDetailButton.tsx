@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 // import FormDetailButtonProps type from GroupedList types
-import type { FormDetailButtonProps } from '@/components/ui/List/GroupedList/GroupedList.types';
+import type { FormDetailButtonProps } from '@/components/ui/list/GroupedList/GroupedList.types';
 
 // re-export the type for convenience
 export type { FormDetailButtonProps };

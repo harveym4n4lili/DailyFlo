@@ -15,7 +15,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Task } from '@/types';
 import { getTaskColorValue } from '@/utils/taskColors';
-import TaskIcon from '@/components/ui/Card/TaskCard/TaskIcon';
+import TaskIcon from '@/components/ui/card/TaskCard/TaskIcon';
 import { formatTimeRange, getTaskCardHeight } from './timelineUtils';
 
 interface DragOverlayProps {

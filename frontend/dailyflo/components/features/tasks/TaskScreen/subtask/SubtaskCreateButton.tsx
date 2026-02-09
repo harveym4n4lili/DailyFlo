@@ -7,7 +7,7 @@ import React from 'react';
 import { Text, Pressable, StyleSheet, View } from 'react-native';
 import { getTextStyle } from '@/constants/Typography';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import Checkbox from '@/components/ui/Button/Checkbox/Checkbox';
+import Checkbox from '@/components/ui/button/Checkbox/Checkbox';
 
 // match SubtaskListItem checkbox so the add row lines up visually (16px matches TaskCard)
 const CHECKBOX_SIZE = 16;

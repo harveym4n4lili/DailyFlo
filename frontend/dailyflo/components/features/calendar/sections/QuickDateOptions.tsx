@@ -14,7 +14,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 // icons from expo vector icons (for options that are not calendar)
 import { Ionicons } from '@expo/vector-icons';
 // custom calendar icon for date options
-import { CalendarIcon } from '@/components/ui/Icon';
+import { CalendarIcon } from '@/components/ui/icon';
 
 // typography system for consistent text styling
 import { getTextStyle } from '@/constants/Typography';

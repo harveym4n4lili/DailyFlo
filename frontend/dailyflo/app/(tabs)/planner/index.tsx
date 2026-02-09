@@ -6,11 +6,11 @@ import * as Haptics from 'expo-haptics';
 
 // import our custom layout components
 import { ScreenContainer } from '@/components';
-import { FloatingActionButton } from '@/components/ui/Button';
+import { FloatingActionButton } from '@/components/ui/button';
 import { ModalBackdrop } from '@/components/layout/ModalLayout';
 import { CalendarNavigationModal } from '@/components/features/calendar/modals';
 import { WeekView } from '@/components/features/calendar/sections';
-import { ListCard } from '@/components/ui/Card';
+import { ListCard } from '@/components/ui/card';
 import { TimelineView } from '@/components/features/timeline';
 
 // import color palette system for consistent theming
