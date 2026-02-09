@@ -38,6 +38,12 @@ export interface QuickDateOptionsProps {
    * @param optionName - The name of the option selected (for analytics/debugging)
    */
   onSelectDate: (date: string, optionName: string) => void;
+
+  /**
+   * When true, option buttons use transparent background (e.g. when parent has elevated background).
+   * @default false
+   */
+  transparentOptionBackground?: boolean;
 }
 
 /**
@@ -49,6 +55,7 @@ export interface QuickDateOptionsProps {
 export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
   selectedDate,
   onSelectDate,
+  transparentOptionBackground = false,
 }) => {
   // get theme-aware colors for styling buttons
   const themeColors = useThemeColors();
@@ -159,10 +166,14 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
             style={({ pressed }) => [
               styles.optionButton,
               {
-                // Highlight background only while pressing
-                backgroundColor: pressed
-                  ? themeColors.background.tertiary()
-                  : themeColors.background.elevated(),
+                // transparent option background (e.g. when parent is elevated) or default elevated
+                backgroundColor: transparentOptionBackground
+                  ? pressed
+                    ? themeColors.background.tertiary()
+                    : 'transparent'
+                  : pressed
+                    ? themeColors.background.tertiary()
+                    : themeColors.background.elevated(),
                 borderColor: themeColors.border.primary(),
               },
             ]}
@@ -222,9 +233,10 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
  * Styles for QuickDateOptions
  */
 const styles = StyleSheet.create({
-  // container for all quick date options
+  // container for all quick date options (20px horizontal padding, 12px space below before calendar)
   container: {
-    paddingHorizontal: 0,
+    paddingHorizontal: 20,
+    marginBottom: 12,
   },
   
   // individual option button styling

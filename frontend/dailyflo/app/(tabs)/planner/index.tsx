@@ -42,7 +42,7 @@ export default function PlannerScreen() {
   
   // TASK DETAIL MODAL STATE - Controls the visibility of task detail modal
   
-  // router: open create-task Stack screen from FAB (with optional dueDate from selected date)
+  // router: open task Stack screen from FAB (with optional dueDate from selected date)
   const router = useRouter();
 
   // COLOR PALETTE USAGE - Getting theme-aware colors
@@ -257,10 +257,10 @@ export default function PlannerScreen() {
           />
         </View>
 
-        {/* Floating Action Button – opens create-task Stack screen with selected date pre-filled */}
+        {/* Floating Action Button – opens task Stack screen with selected date pre-filled */}
         <FloatingActionButton
           onPress={() => {
-            router.push({ pathname: '/create-task', params: { dueDate: selectedDate } });
+            router.push({ pathname: '/task', params: { dueDate: selectedDate } });
           }}
           accessibilityLabel="Add new task"
           accessibilityHint="Double tap to create a new task"

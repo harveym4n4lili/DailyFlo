@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { ReduxProvider } from '@/store/Provider';
+import { CreateTaskDraftProvider } from './task/CreateTaskDraftContext';
 import { store } from '@/store';
 import { logout, checkAuthStatus } from '@/store/slices/auth/authSlice';
 
@@ -188,72 +189,14 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ReduxProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          {/* Task stack and sub-screens share draft via context */}
+          <CreateTaskDraftProvider>
           <Stack>
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            {/* test-modal: liquid glass style sheet (form sheet + transparent) when available; FABTest opens this; drag to top for full screen */}
+            {/* task: create-task form only; pickers are root-level screens below */}
             <Stack.Screen
-              name="test-modal"
-              options={{
-                headerTransparent: Platform.OS === 'ios',
-                headerLargeTitle: false,
-                title: 'Test modal',
-                presentation:
-                  Platform.OS === 'ios'
-                    ? useLiquidGlass
-                      ? 'formSheet'
-                      : 'modal'
-                    : 'modal',
-                sheetGrabberVisible: true,
-                sheetAllowedDetents: [0.8, 1],
-                sheetInitialDetentIndex: 0,
-                contentStyle: {
-                  backgroundColor: useLiquidGlass ? 'transparent' : tabBarBackgroundColor,
-                },
-                headerStyle: {
-                  backgroundColor:
-                    Platform.OS === 'ios' ? 'transparent' : tabBarBackgroundColor,
-                },
-                headerBlurEffect: useLiquidGlass
-                  ? undefined
-                  : colorScheme === 'dark'
-                    ? 'dark'
-                    : 'light',
-              }}
-            />
-            {/* test-date-modal: second modal on stack to verify screen stacking (modal on top of modal) */}
-            <Stack.Screen
-              name="test-date-modal"
-              options={{
-                headerTransparent: Platform.OS === 'ios',
-                headerLargeTitle: false,
-                title: 'Test date modal',
-                presentation:
-                  Platform.OS === 'ios'
-                    ? useLiquidGlass
-                      ? 'formSheet'
-                      : 'modal'
-                    : 'modal',
-                sheetGrabberVisible: true,
-                sheetAllowedDetents: [0.8],
-                sheetInitialDetentIndex: 0,
-                contentStyle: {
-                  backgroundColor: useLiquidGlass ? 'transparent' : tabBarBackgroundColor,
-                },
-                headerStyle: {
-                  backgroundColor:
-                    Platform.OS === 'ios' ? 'transparent' : tabBarBackgroundColor,
-                },
-                headerBlurEffect: useLiquidGlass
-                  ? undefined
-                  : colorScheme === 'dark'
-                    ? 'dark'
-                    : 'light',
-              }}
-            />
-            {/* create-task: form sheet modal with drag indicator; draggable to dismiss */}
-            <Stack.Screen
-              name="create-task"
+              name="task"
               options={{
                 headerShown: false,
                 presentation: 'formSheet',
@@ -261,8 +204,49 @@ export default function RootLayout() {
                 contentStyle: { backgroundColor: themeColors.background.primarySecondaryBlend() },
               }}
             />
+            {/* root-level picker screens (each has own folder with _layout + index) */}
+            <Stack.Screen
+              name="date-select"
+              options={{
+                headerShown: false,
+                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+                sheetGrabberVisible: false,
+                sheetAllowedDetents: [0.8],
+                sheetInitialDetentIndex: 0,
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
+                },
+              }}
+            />
+            <Stack.Screen
+              name="time-duration-select"
+              options={{
+                headerShown: false,
+                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+                sheetGrabberVisible: false,
+                sheetAllowedDetents: [0.7],
+                sheetInitialDetentIndex: 0,
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
+                },
+              }}
+            />
+            <Stack.Screen
+              name="alert-select"
+              options={{
+                headerShown: false,
+                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+                sheetGrabberVisible: false,
+                sheetAllowedDetents: [0.7],
+                sheetInitialDetentIndex: 0,
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
+                },
+              }}
+            />
             <Stack.Screen name="+not-found" />
           </Stack>
+          </CreateTaskDraftProvider>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         </ThemeProvider>
       </ReduxProvider>
