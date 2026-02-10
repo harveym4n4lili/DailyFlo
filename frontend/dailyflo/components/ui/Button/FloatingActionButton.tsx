@@ -84,6 +84,12 @@ export interface FloatingActionButtonProps {
   // accessibilityHint: additional context read by screen readers
   // tells users how to interact with the button (e.g., "double tap to activate")
   accessibilityHint?: string;
+
+  /** Custom background color (overrides theme default) */
+  backgroundColor?: string;
+
+  /** Custom icon color (overrides theme default) */
+  iconColor?: string;
 }
 
 /**
@@ -105,6 +111,8 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   style,                                                 // optional custom styles from parent
   accessibilityLabel = 'Add new task',                  // screen reader label (default provided)
   accessibilityHint = 'Double tap to create a new task', // screen reader hint (default provided)
+  backgroundColor: customBackgroundColor,               // optional override for background
+  iconColor: customIconColor,                            // optional override for icon
 }) => {
   // MODAL STATE MANAGEMENT - REMOVED
   // modal is now managed by parent screens to prevent duplicate modals
@@ -113,17 +121,18 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   const insets = useSafeAreaInsets();
   const { getThemeColorValue } = useThemeColor();
   const themeColors = useThemeColors();
-  // backgroundColor: base surface color pulled from theme for the glass background.
-  const backgroundColor = themeColors.background.secondary();
-  // iconColor: uses the primary text color so the plus icon always matches our main text color
-  const iconColor = themeColors.text.primary();
+  // backgroundColor: use custom prop or fall back to theme secondary
+  const backgroundColor = customBackgroundColor ?? themeColors.background.secondary();
+  // iconColor: use custom prop or fall back to primary text color
+  const iconColor = customIconColor ?? themeColors.text.primary();
   // tintColor: iOS uses DynamicColorIOS so the system can treat this as a "dynamic" color
   // just like the navbar; Android falls back to the plain hex value.
   const tintColor =
     Platform.OS === 'ios'
       ? DynamicColorIOS({ light: backgroundColor, dark: backgroundColor })
       : backgroundColor;
-  const navBarBg = themeColors.background.invertedPrimary();
+  // android/non-glass: use backgroundColor (which may be custom)
+  const navBarBg = backgroundColor;
   const navBarBorder = themeColors.border.primary();
 
   // handlePress runs on tap: haptics then parent onPress (e.g. open task-creation modal).

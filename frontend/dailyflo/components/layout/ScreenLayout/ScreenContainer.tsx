@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
 
   // heading section - wraps optional heading content at top
   headingSection: {
-    paddingTop: 16,
+    paddingTop: 24,
     paddingBottom: 8,
   },
 
