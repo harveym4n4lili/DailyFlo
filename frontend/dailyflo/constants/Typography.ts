@@ -66,7 +66,7 @@ export const FontWeight = {
 export const TextStyles = {
   // heading styles - for titles and section headers
   'large-heading-1': {
-    fontSize: 56,        // extra large for date/number display
+    fontSize: 48,        // extra large for date/number display
     // tight line height
     fontWeight: FontWeight.bold,
     fontFamily: 'Satoshi-Bold',

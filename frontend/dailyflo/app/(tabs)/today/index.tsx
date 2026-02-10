@@ -9,6 +9,7 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 
 // import our new task components
 import { ListCard } from '@/components/ui/card';
+import { FloatingActionButton } from '@/components/ui/button';
 import { TaskSummary } from '@/components/ui/message';
 import { ModalContainer } from '@/components/layout/ModalLayout';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
@@ -365,14 +366,14 @@ export default function TodayScreen() {
         heading={
           <View style={[styles.dateHeadingRow, { paddingHorizontal: 24 }]}>
             <Text style={[typography.getTextStyle('large-heading-1'), { color: themeColors.text.primary() }]}>
-              {String(new Date().getDate()).padStart(2, '0')}
+              Today
             </Text>
             <View style={styles.dateMonthYearBlock}>
               <Text style={[typography.getTextStyle('heading-3'), { color: themeColors.text.tertiary() }]}>
                 {new Date().toLocaleDateString('en-US', { month: 'short' }).slice(0, 3)}'{String(new Date().getFullYear()).slice(-2)}
               </Text>
               <Text style={[typography.getTextStyle('heading-3'), { color: themeColors.text.secondary(), marginTop: 2 }]}>
-                {new Date().toLocaleDateString('en-US', { weekday: 'long' })}
+              {String(new Date().getDate()).padStart(2, '0')} {new Date().toLocaleDateString('en-US', { weekday: 'long' }).slice(0, 3)}
               </Text>
             </View>
           </View>
@@ -425,6 +426,13 @@ export default function TodayScreen() {
         paddingHorizontal={24} // remove horizontal padding for full-width cards
       />
       </ScreenContainer>
+      <FloatingActionButton
+        onPress={() => router.push('/task')}
+        backgroundColor={themeColors.background.invertedPrimary()}
+        iconColor={themeColors.text.invertedPrimary()}
+        accessibilityLabel="Add new task"
+        accessibilityHint="Double tap to create a new task"
+      />
     </View>
   );
 }

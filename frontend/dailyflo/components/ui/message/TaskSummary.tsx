@@ -175,8 +175,12 @@ export function TaskSummary({
             {' due today.'}
           </>
         )}{' '}
-        You're <Text style={{ color: highlightColor }}>mostly free</Text> after{' '}
-        <Text style={{ color: highlightColor }}>{freeTimeStr}</Text>.
+        {count === 0 ? (
+          <>You're free <Text style={{ color: highlightColor }}>all day</Text>!</>
+        ) : (
+          <>You're <Text style={{ color: highlightColor }}>mostly free</Text> after{' '}
+            <Text style={{ color: highlightColor }}>{freeTimeStr}</Text>.</>
+        )}
       </Text>
     </View>
   );
