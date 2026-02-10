@@ -329,7 +329,7 @@ export default function TodayScreen() {
     const initialDate =
       overdueTasks[0]?.dueDate ?? new Date().toISOString();
     setDraft({ dueDate: initialDate, time: undefined, duration: undefined, alerts: [] });
-    router.push('/date-select/index');
+    router.push('/date-select');
   };
 
   // render loading state when no tasks are loaded yet
@@ -356,15 +356,30 @@ export default function TodayScreen() {
   // render main content with today's tasks
   return (
     <View style={{ flex: 1 }}>
-      <ScreenContainer 
+      <ScreenContainer
         scrollable={false}
         paddingHorizontal={0}
-        safeAreaTop={false}
-        safeAreaBottom={false}
         paddingVertical={0}
+        safeAreaTop={true}
+        safeAreaBottom={false}
+        heading={
+          <View style={[styles.dateHeadingRow, { paddingHorizontal: 24 }]}>
+            <Text style={[typography.getTextStyle('large-heading-1'), { color: themeColors.text.primary() }]}>
+              {String(new Date().getDate()).padStart(2, '0')}
+            </Text>
+            <View style={styles.dateMonthYearBlock}>
+              <Text style={[typography.getTextStyle('heading-3'), { color: themeColors.text.tertiary() }]}>
+                {new Date().toLocaleDateString('en-US', { month: 'short' }).slice(0, 3)}'{String(new Date().getFullYear()).slice(-2)}
+              </Text>
+              <Text style={[typography.getTextStyle('heading-3'), { color: themeColors.text.secondary(), marginTop: 2 }]}>
+                {new Date().toLocaleDateString('en-US', { weekday: 'long' })}
+              </Text>
+            </View>
+          </View>
+        }
       >
       {/* dynamic today message - greeting/summary at top of screen */}
-      <TaskSummary />
+      <TaskSummary tasks={todaysTasks} userName="Harvey" paddingHorizontal={24} marginTop={20} />
       {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
       {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
       {/* key prop ensures this ListCard instance is completely independent from planner screen */}
@@ -406,8 +421,8 @@ export default function TodayScreen() {
         }}
         scrollEventThrottle={16}
         
-        paddingTop={insets.top+ 64} // add top padding equal to safe area inset
-        paddingHorizontal={20} // remove horizontal padding for full-width cards
+        paddingTop={48}
+        paddingHorizontal={24} // remove horizontal padding for full-width cards
       />
       </ScreenContainer>
     </View>
@@ -422,6 +437,17 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
+  // date heading row - date (09) on left, month/year block on right
+  dateHeadingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  // month/year block - 2 rows: "Jan'26" and "Monday"
+  dateMonthYearBlock: {
+    alignItems: 'flex-end',
+  },
+
   // title header styling (used by task detail modal)
   titleHeader: {
     ...typography.getTextStyle('heading-2'),

@@ -48,7 +48,9 @@ export interface ScreenContainerProps extends ViewProps {
   
   // scroll view props - passed through when scrollable is true
   scrollViewProps?: ScrollViewProps;
-  
+
+  // heading section - optional content to render at the top (e.g. screen title)
+  heading?: React.ReactNode;
   
   // children - the content to display inside the container
   children: React.ReactNode;
@@ -71,6 +73,7 @@ export function ScreenContainer({
   paddingHorizontal,
   paddingVertical,
   scrollViewProps,
+  heading,
   children,
   style,
   ...otherProps
@@ -117,7 +120,7 @@ export function ScreenContainer({
   // render the content based on whether it should be scrollable
   const renderContent = () => {
     if (scrollable) {
-      // render scrollable content with ScrollView
+      // render scrollable content with ScrollView (heading at top when provided)
       return (
         <ScrollView
           style={styles.scrollView}
@@ -129,14 +132,26 @@ export function ScreenContainer({
           keyboardShouldPersistTaps="handled"
           {...scrollViewProps}
         >
+          {heading ? (
+            <View style={styles.headingSection}>
+              {heading}
+            </View>
+          ) : null}
           {children}
         </ScrollView>
       );
     } else {
-      // render static content with View
+      // render static content with View (heading above children when provided)
       return (
-        <View style={[styles.content, { paddingHorizontal: horizontalPadding }]}>
-          {children}
+        <View style={styles.content}>
+          {heading ? (
+            <View style={[styles.headingSection, { paddingHorizontal: horizontalPadding }]}>
+              {heading}
+            </View>
+          ) : null}
+          <View style={[styles.mainContent, { paddingHorizontal: horizontalPadding }]}>
+            {children}
+          </View>
         </View>
       );
     }
@@ -164,6 +179,17 @@ const styles = StyleSheet.create({
   
   // content area for non-scrollable content
   content: {
+    flex: 1,
+  },
+
+  // heading section - wraps optional heading content at top
+  headingSection: {
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+
+  // main content area (children) when heading is present
+  mainContent: {
     flex: 1,
   },
   
