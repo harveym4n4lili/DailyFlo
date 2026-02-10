@@ -59,6 +59,7 @@ export {
 
 // export message components (dynamic today message, etc.)
 export { TaskSummary } from './message';
+export type { TaskSummaryProps } from './message';
 export type {
   AddIconProps,
   CloseIconProps,

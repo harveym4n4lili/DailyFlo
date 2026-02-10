@@ -5,3 +5,4 @@
  */
 
 export { TaskSummary } from './TaskSummary';
+export type { TaskSummaryProps } from './TaskSummary';
