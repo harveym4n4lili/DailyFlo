@@ -35,3 +35,6 @@ export type { BracketsIconProps } from './icons/BracketsIcon';
 
 export { TrashIcon } from './icons/TrashIcon';
 export type { TrashIconProps } from './icons/TrashIcon';
+
+export { SparklesIcon } from './icons/SparklesIcon';
+export type { SparklesIconProps } from './icons/SparklesIcon';

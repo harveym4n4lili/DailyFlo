@@ -682,7 +682,7 @@ const createStyles = (
     width: '100%',
     alignItems: 'stretch',
     position: 'relative',
-    backgroundColor: themeColors.background.primary(),
+    backgroundColor: themeColors.background.primarySecondaryBlend(),
     paddingHorizontal: 16,
     paddingVertical: 12,
   },

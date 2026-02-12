@@ -19,6 +19,7 @@ import TimeLabel from './TimeLabel';
 import { OverlappingTaskCard } from './OverlappingTaskCard';
 import DragOverlay from './DragOverlay';
 import { DashedVerticalLine } from '@/components/ui/borders';
+import { SparklesIcon } from '@/components/ui/icon';
 import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag, getTaskCardHeight } from './timelineUtils';
 
 // type for combined overlapping tasks
@@ -217,20 +218,44 @@ export default function TimelineView({
   }, [dynamicStartHour, startHour, endHour, timeInterval, tasksWithTime]);
 
   // spacing constants - adjust these to change spacing between tasks
-  const SPACING_LESS_THAN_30_MIN = 30;
-  const SPACING_30_MIN_TO_1_HOUR = 90;
-  const SPACING_MORE_THAN_1_HOUR = 90;
+  const SPACING_LESS_THAN_30_MIN = 16;
+  const SPACING_30_MIN_TO_2_HOURS = 64;
+  const SPACING_MORE_THAN_2_HOURS = 120;
   
   // calculate spacing between tasks based on time difference
   const getTaskSpacing = (timeDifferenceMinutes: number): number => {
     if (timeDifferenceMinutes < 30) {
       return SPACING_LESS_THAN_30_MIN;
-    } else if (timeDifferenceMinutes <= 60) {
-      return SPACING_30_MIN_TO_1_HOUR;
+    } else if (timeDifferenceMinutes <= 120) {
+      return SPACING_30_MIN_TO_2_HOURS;
     } else {
-      return SPACING_MORE_THAN_1_HOUR;
+      return SPACING_MORE_THAN_2_HOURS;
     }
   };
+
+  // 20 messages for 30 min to 2 hours free time segments - short, about enjoying a break (max 6-7 words)
+  const FREE_TIME_BREAK_MESSAGES = [
+    'Take a moment to breathe.',
+    'You deserve a little rest.',
+    'Enjoy this pocket of calm.',
+    'Stretch and unwind a bit.',
+    'Step outside for fresh air.',
+    'Grab a drink and relax.',
+    'Let your mind wander free.',
+    'Quick recharge before what\'s next.',
+    'Sit back and take it in.',
+    'A brief pause does wonders.',
+    'Ease into this quiet moment.',
+    'Reset before the next task.',
+    'Savor this small slice of time.',
+    'Unplug for a few minutes.',
+    'Allow yourself to slow down.',
+    'A short break, well earned.',
+    'Breathe deep and feel ease.',
+    'Enjoy the empty space.',
+    'Nice little pocket of peace.',
+    'Pause and appreciate the quiet.',
+  ];
 
   // sort tasks by time to calculate equal spacing positions
   const sortedTasks = useMemo(() => {
@@ -351,6 +376,48 @@ export default function TimelineView({
     
     return positions;
   }, [sortedTasks, taskCardHeights, combinedOverlappingTasks]); // recalc when tasks or heights change so spacing matches animated card heights
+
+  // free time segments - gaps between non-overlapping tasks where we show contextual messages
+  // derived from equalSpacingPositions: gap = space between bottom of current task and top of next
+  // includes timeDifferenceMinutes to pick message type: 30-60 min = break messages, >60 min = duration message
+  const freeTimeSegments = useMemo(() => {
+    const segments: Array<{ top: number; height: number; timeDifferenceMinutes: number }> = [];
+    if (sortedTasks.length < 2) return segments;
+
+    for (let i = 0; i < sortedTasks.length - 1; i++) {
+      const task = sortedTasks[i];
+      const nextTask = sortedTasks[i + 1];
+      if (!task.time || !nextTask.time) continue;
+
+      const taskEndMinutes = timeToMinutes(task.time) + (task.duration || 0);
+      const nextTaskMinutes = timeToMinutes(nextTask.time);
+      const timeDifferenceMinutes = nextTaskMinutes - taskEndMinutes;
+      const isOverlapping =
+        taskEndMinutes > nextTaskMinutes ||
+        timeToMinutes(task.time) === nextTaskMinutes ||
+        timeToMinutes(task.time) === nextTaskMinutes + (nextTask.duration || 0) ||
+        nextTaskMinutes === taskEndMinutes;
+
+      if (isOverlapping) continue;
+
+      const curr = equalSpacingPositions.get(task.id);
+      const next = equalSpacingPositions.get(nextTask.id);
+      if (!curr || !next) continue;
+
+      const gapTop = curr.equalSpacingPosition + curr.cardHeight / 2;
+      const nextTaskTop = next.equalSpacingPosition - next.cardHeight / 2;
+      const gapHeight = nextTaskTop - gapTop;
+      if (gapHeight > 0) segments.push({ top: gapTop, height: gapHeight, timeDifferenceMinutes });
+    }
+    return segments;
+  }, [sortedTasks, equalSpacingPositions]);
+
+  // format minutes as "Xh Ym" for free time duration display
+  const formatMinutesToDuration = (minutes: number): string => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h}h ${m}m`;
+  };
 
   // calculate dynamic pixelsPerMinute for each segment between tasks
   // returns a map of segment index -> pixelsPerMinute
@@ -1575,6 +1642,40 @@ export default function TimelineView({
               { top: timelineLineBounds.top },
             ]}
           />
+
+          {/* free time blocks - rendered in the gap between non-overlapping tasks (30+ min only) */}
+          {freeTimeSegments
+            .filter((seg) => seg.timeDifferenceMinutes >= 30)
+            .map((seg, i) => {
+              const isLongBreak = seg.timeDifferenceMinutes > 120;
+              const isMediumBreak = seg.timeDifferenceMinutes >= 30 && seg.timeDifferenceMinutes <= 120;
+              return (
+                <View
+                  key={`free-time-${i}`}
+                  style={[
+                    styles.freeTimeBlock,
+                    { top: seg.top, height: seg.height },
+                  ]}
+                >
+                  <View style={styles.freeTimeContentRow}>
+                    <SparklesIcon size={14} color={themeColors.background.quaternary()} />
+                    {isLongBreak ? (
+                      <Text style={[styles.freeTimeTextSegments, { color: themeColors.background.tertiary() }]}>
+                        Woah! you have{' '}
+                        <Text style={styles.freeTimeDurationBold}>
+                          {formatMinutesToDuration(seg.timeDifferenceMinutes)}
+                        </Text>
+                        {' '}of free time!
+                      </Text>
+                    ) : (
+                      <Text style={[styles.freeTimeTextSegments, { color: themeColors.background.tertiary() }]}>
+                        {FREE_TIME_BREAK_MESSAGES[i % FREE_TIME_BREAK_MESSAGES.length]}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
           
           {/* drag overlay - follows thumb position during drag */}
           {/* only rendered when dragState exists and task is available (during active drag) */}
@@ -1837,6 +1938,39 @@ const createStyles = (
   timelineLine: {
     position: 'absolute',
     left: 21,
+  },
+
+  // free time block - fills the gap between non-overlapping tasks
+  // positioned absolutely at gap top/height, text vertically centered
+  // 32px left padding and left-aligned for all segment messages
+  freeTimeBlock: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 36,
+  },
+
+  // row containing sparkles icon (14px) + message text
+  freeTimeContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  // free time text - base color background tertiary, used for all segment messages
+  freeTimeTextSegments: {
+    ...typography.getTextStyle('body-medium'),
+    color: themeColors.background.tertiary(),
+    fontWeight: '900',
+  },
+
+  // bold white/accent duration (e.g. "4h 32m") inside the long break message
+  // uses primary text for contrast (white in dark mode, dark in light mode)
+  freeTimeDurationBold: {
+    fontWeight: '700',
+    color: themeColors.text.primary(),
   },
 
   // empty state container
