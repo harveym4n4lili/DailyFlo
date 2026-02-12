@@ -132,7 +132,7 @@ const createStyles = (
     borderRadius: 16, // border radius for rounded container
     borderWidth: 0, // no border
     borderColor: themeColors.text.tertiary(), // border color (not used when borderWidth is 0)
-    backgroundColor: themeColors.background.tertiary(), // use tertiary background color from theme
+    backgroundColor: themeColors.background.primarySecondaryBlend(), // use tertiary background color from theme
   },
 
   // subtask icon styling (checkbox on the left)

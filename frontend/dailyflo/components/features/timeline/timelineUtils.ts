@@ -23,10 +23,10 @@ export const TASK_CARD_HEIGHTS = {
   NO_DURATION_NO_SUBTASK: 64,
   
   // base height for tasks without duration but with subtasks (collapsed)
-  NO_DURATION_WITH_SUBTASK: 88,
+  NO_DURATION_WITH_SUBTASK: 72,
   
   // base height for tasks with duration but without subtasks
-  WITH_DURATION_NO_SUBTASK: 88,
+  WITH_DURATION_NO_SUBTASK: 72,
   
   // base height for tasks with duration and with subtasks (collapsed)
   WITH_DURATION_WITH_SUBTASK: 88,
