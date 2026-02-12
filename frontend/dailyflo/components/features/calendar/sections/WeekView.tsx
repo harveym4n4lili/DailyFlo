@@ -265,10 +265,12 @@ export const WeekView: React.FC<WeekViewProps> = ({
    * Handle scroll end in FlatList
    * When user finishes swiping to a new page, update the current week and select the same day
    */
+  // page width for paging - full screen so swipe isn't clipped by container padding
+  const pageWidth = screenWidth;
+  
   const handleMomentumScrollEnd = useCallback((event: any) => {
     const { contentOffset } = event.nativeEvent;
-    const weekWidth = screenWidth - 32;
-    const currentIndex = Math.round(contentOffset.x / weekWidth);
+    const currentIndex = Math.round(contentOffset.x / pageWidth);
     
     // get the week start for the current page index
     const newWeekStart = weeksData[currentIndex];
@@ -298,18 +300,17 @@ export const WeekView: React.FC<WeekViewProps> = ({
   
   /**
    * Get item layout for FlatList performance optimization
-   * Each page is the full screen width minus container padding
+   * Each page is full screen width for correct paging (weekGrid stays centered with same visual spacing)
    */
   const getItemLayout = useCallback(
     (_: any, index: number) => {
-      const weekWidth = screenWidth - 32;
       return {
-        length: weekWidth,
-        offset: weekWidth * index,
+        length: pageWidth,
+        offset: pageWidth * index,
         index,
       };
     },
-    [screenWidth]
+    [pageWidth]
   );
   
   /**
@@ -450,7 +451,9 @@ export const WeekView: React.FC<WeekViewProps> = ({
         WEEK GRID SECTION
         Contains: 3 weeks (previous, current, next) in a horizontal FlatList with pagination
         Layout: Swipeable pages - one week per page
+        listWrapper uses negative margin to break out of container padding so full pages are visible during swipe
       */}
+      <View style={styles.listWrapper}>
       <FlatList
         ref={flatListRef}
         data={weeksData}
@@ -459,7 +462,8 @@ export const WeekView: React.FC<WeekViewProps> = ({
           const weekData = getWeekData(weekStart);
           
           return (
-            <View style={[styles.weekGrid, { width: screenWidth - 32 }]}>
+            <View style={[styles.weekPage, { width: pageWidth }]}>
+              <View style={[styles.weekGrid, { width: screenWidth - 32 }]}>
               {weekData.map((date, index) => {
                 const dayNumber = date.getDate();
                 const isSelected = isSelectedDate(date);
@@ -483,7 +487,8 @@ export const WeekView: React.FC<WeekViewProps> = ({
                           getTextStyle('body-medium'),
                           styles.dayHeaderText,
                           { 
-                            color: themeColors.text.tertiary?.() || themeColors.text.secondary()
+                            color: themeColors.text.tertiary?.() || themeColors.text.secondary(),
+                            fontWeight: '900',
                           }
                         ]}>
                         {dayHeaders[index]}
@@ -502,6 +507,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
                   </View>
                 );
               })}
+              </View>
             </View>
           );
         }}
@@ -515,6 +521,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
         decelerationRate="fast"
         scrollEventThrottle={16}
       />
+      </View>
     </View>
   );
 };
@@ -558,6 +565,16 @@ const createStyles = (
     marginLeft: 8,
   },
   
+  // breaks out of container padding so FlatList scrolls full-width (no cut-off during swipe)
+  listWrapper: {
+    marginHorizontal: -16,
+  },
+  
+  // full-width page wrapper - centers weekGrid to preserve visual spacing
+  weekPage: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   
   // week grid container - holds all the day columns for a single week
   weekGrid: {
