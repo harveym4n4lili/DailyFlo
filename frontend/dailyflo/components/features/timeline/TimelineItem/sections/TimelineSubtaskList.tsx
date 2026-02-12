@@ -180,12 +180,10 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>
 ) => StyleSheet.create({
   // expanded area below the card - appears when subtasks are expanded
-  // creates the extra space below the main card content (32px per subtask + 12px padding)
-  // seamlessly connects with the card above (no gap, same background)
-  // positioned as the bottom row in cardWrapper
+  // uses primary background for visual separation from task card
   expandedArea: {
     width: '100%',
-    backgroundColor: themeColors.background.primarySecondaryBlend(), // match card background for seamless look
+    backgroundColor: themeColors.background.primary(),
     // no border radius - cardWrapper handles all border radius
   },
 

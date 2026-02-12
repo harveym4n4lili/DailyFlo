@@ -309,10 +309,10 @@ const createStyles = (
   contentContainer: {
     flex: 1,
     backgroundColor: themeColors.background.primarySecondaryBlend(), // primary secondary blend background color
-    borderRadius: modalBorderRadius,
-    borderWidth: 1, // 1px border matching task creation border width
+   
+    borderTopWidth: 1, // 1px border matching task creation border width
     borderColor: themeColors.border.primary(), // border color matching task creation border color
-    margin: 4, // 8px spacing from all screen edges
+    margin: 0, // 8px spacing from all screen edges
     paddingHorizontal: 0, // remove horizontal padding since ListCard handles its own padding
     paddingTop: 0, // top padding for content spacing
     overflow: 'hidden', // ensure content respects border radius

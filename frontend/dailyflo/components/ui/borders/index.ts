@@ -5,3 +5,4 @@
  */
 
 export { default as DashedSeparator } from './DashedSeparator';
+export { default as DashedVerticalLine } from './DashedVerticalLine';

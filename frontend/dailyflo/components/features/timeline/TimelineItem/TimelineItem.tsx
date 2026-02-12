@@ -18,9 +18,9 @@ import { useTypography } from '@/hooks/useTypography';
 import { Task } from '@/types';
 import { getTaskColorValue } from '@/utils/taskColors';
 import TaskIcon from '@/components/ui/card/TaskCard/TaskIcon';
+import { Checkbox } from '@/components/ui/button';
 import { formatTimeRange, calculateTaskHeight, getTaskCardHeight, TASK_CARD_HEIGHTS } from '../timelineUtils';
-// import extracted sub-components
-import { TimelineCheckbox, TimelineSubtaskButton, TimelineSubtaskList } from './sections';
+import { TimelineSubtaskButton, TimelineSubtaskList } from './sections';
 
 interface TimelineItemProps {
   // task to display
@@ -617,7 +617,6 @@ export default function TimelineItem({
           onLayout={handleContentLayout}
         >
           {/* combined container for task content - fixed height, stays at top */}
-          {/* this is the main card that doesn't expand */}
           <Animated.View
             style={[
               styles.combinedContainer,
@@ -631,7 +630,7 @@ export default function TimelineItem({
               onPress={handleTaskPress}
               activeOpacity={0.7}
             >
-              {/* task content - text only, no icon */}
+              {/* task content - text only */}
               <View style={styles.taskContent}>
                 {/* text content container - layout depends on subtask presence */}
                 {hasSubtasks ? (
@@ -686,8 +685,15 @@ export default function TimelineItem({
                 )}
               </View>
               
-              {/* checkbox container - on the right side */}
-              <View style={styles.checkboxContainer} />
+              {/* checkbox - right of task content */}
+              <View style={styles.checkboxWrapper}>
+                <Checkbox
+                  checked={task.isCompleted}
+                  onPress={() => onTaskComplete?.(task)}
+                  size={18}
+                  borderRadius={6}
+                />
+              </View>
             </TouchableOpacity>
             
             {/* subtask button - absolutely positioned layer above task card */}
@@ -695,14 +701,6 @@ export default function TimelineItem({
               task={task}
               isExpanded={isSubtasksExpanded}
               onToggle={handleSubtaskToggle}
-            />
-            
-            {/* checkbox - absolutely positioned layer above task card for easy tapping */}
-            <TimelineCheckbox
-              task={task}
-              taskColor={taskColor}
-              onTaskComplete={onTaskComplete}
-              minCardHeight={minCardHeight}
             />
           </Animated.View>
           
@@ -761,42 +759,35 @@ const createStyles = (
   },
   
   // combined container for task content - fixed height, stays at top
-  // this is the main card that doesn't expand
-  // no icon here - icon is separate
   combinedContainer: {
     flexDirection: 'row',
-    width: '100%', // ensure it takes full width of content
+    width: '100%',
     alignItems: 'stretch',
-    position: 'relative', // needed for absolute positioning of subtask button and checkbox
-    backgroundColor: themeColors.background.elevated(),
-
+    position: 'relative',
+    backgroundColor: themeColors.background.primary(),
     paddingHorizontal: 16,
-    paddingVertical: 12, // top padding only (bottom padding moved to subtask space)
+    paddingVertical: 12,
   },
   
-  // touchable content area inside combined container
-  // fills the container and handles touch events
+  // touchable content area - row: checkbox on left, task content on right
   touchableContent: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'stretch',
-  },
-  
-
-  // task content container (text only) - inside combined container
-  // no icon wrapper needed since icon is separate
-  taskContent: {
-    flex: 1,
-    position: 'relative', // needed for absolute positioning of list indicator
-    justifyContent: 'center', // vertically center content
+    alignItems: 'center',
+    gap: 12,
   },
 
-  // checkbox container - on the right side of task content (spacer for layout)
-  checkboxContainer: {
-    marginLeft: 0, // spacing between task content and checkbox
+  // checkbox wrapper - left of task content, centers the Checkbox
+  checkboxWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 18, // same width as checkbox circle to maintain layout spacing
+  },
+
+  // task content container (text only) - right of checkbox
+  taskContent: {
+    flex: 1,
+    position: 'relative',
+    justifyContent: 'center',
   },
 
   // time range row - contains time range only

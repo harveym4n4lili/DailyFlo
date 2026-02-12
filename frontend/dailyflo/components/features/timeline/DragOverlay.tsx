@@ -16,6 +16,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { Task } from '@/types';
 import { getTaskColorValue } from '@/utils/taskColors';
 import TaskIcon from '@/components/ui/card/TaskCard/TaskIcon';
+import { Checkbox } from '@/components/ui/button';
 import { formatTimeRange, getTaskCardHeight } from './timelineUtils';
 
 interface DragOverlayProps {
@@ -152,7 +153,7 @@ export default function DragOverlay({
             },
           ]}
         >
-          {/* task content - text only, no icon */}
+          {/* task content - text only */}
           <View style={styles.taskContent}>
             {/* text content container */}
             <View style={styles.textContainer}>
@@ -178,8 +179,15 @@ export default function DragOverlay({
             </View>
           </View>
           
-          {/* checkbox container - spacer for layout */}
-          <View style={styles.checkboxContainer} />
+          {/* checkbox - right of task content */}
+          <View style={styles.checkboxWrapper}>
+            <Checkbox
+              checked={task.isCompleted}
+              onPress={() => {}}
+              size={18}
+              borderRadius={6}
+            />
+          </View>
         </View>
       </View>
     </AnimatedReanimated.View>
@@ -229,32 +237,28 @@ const createStyles = (
   },
   
   // combined container for task content - fixed height
-  // matches the combined container from TimelineItem
   combinedContainer: {
     flexDirection: 'row',
     width: '100%',
-    alignItems: 'stretch',
+    alignItems: 'center',
     position: 'relative',
-    backgroundColor: themeColors.background.elevated(),
+    backgroundColor: themeColors.background.primarySecondaryBlend(),
     paddingHorizontal: 16,
     paddingVertical: 12,
+    gap: 12,
+  },
+  
+  // checkbox wrapper - left of task content
+  checkboxWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   
   // task content container (text only)
-  // matches the task content style from TimelineItem
   taskContent: {
     flex: 1,
     position: 'relative',
-    justifyContent: 'center', // vertically center content
-  },
-  
-  // checkbox container - spacer for layout
-  // matches the checkbox container from TimelineItem
-  checkboxContainer: {
-    marginLeft: 0,
-    alignItems: 'center',
     justifyContent: 'center',
-    width: 18, // same width as checkbox circle to maintain layout spacing
   },
   
   // time range row - contains time range only
