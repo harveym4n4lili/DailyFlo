@@ -182,6 +182,7 @@ export function useThemeColors() {
     text: {
       primary: () => getThemeColor('text', 'primary'),
       secondary: () => getThemeColor('text', 'secondary'),
+      primarySecondaryBlend: () => getThemeColor('text', 'primarySecondaryBlend'),
       tertiary: () => getThemeColor('text', 'tertiary'),
       quaternary: () => getThemeColor('text', 'quaternary'),
       // inverted colors - opposite theme colors for contrast sections

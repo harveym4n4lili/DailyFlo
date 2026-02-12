@@ -41,7 +41,7 @@ export default function DashedVerticalLine({
   const lineColor = color ?? themeColors.background.primarySecondaryBlend();
 
   // pattern: 10px dash + 4px gap = 14px per segment (matches DashedSeparator proportions)
-  const dashHeight = 16;
+  const dashHeight = 8;
   const gapHeight = 4;
   const segmentHeight = dashHeight + gapHeight;
   const dashCount = Math.floor(height / segmentHeight);
