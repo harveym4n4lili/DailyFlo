@@ -135,7 +135,7 @@ const createStyles = (
   checkboxTouchable: {
     position: 'absolute',
     right: 12, // position inside card padding area with spacing from right edge (card has 16px padding)
-    zIndex: 20, // layer above task card (higher than subtask button which is zIndex 10)
+    zIndex: 20,
     width: 44, // larger tap area for better touch target (iOS/Android recommended minimum is 44x44)
     height: 44,
     alignItems: 'center', // center the visual checkbox horizontally within the tap area
