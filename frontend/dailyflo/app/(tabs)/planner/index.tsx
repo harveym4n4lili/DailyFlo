@@ -290,6 +290,7 @@ export default function PlannerScreen() {
             startHour={6}
             endHour={23}
             timeInterval={60}
+
           />
         </View>
 

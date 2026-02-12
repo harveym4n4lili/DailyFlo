@@ -149,10 +149,7 @@ export default function TimelineView({
           color: firstTask.color,
           routineType: firstTask.routineType,
           sortOrder: 0,
-          metadata: {
-            subtasks: [],
-            reminders: [],
-          },
+          metadata: { subtasks: [], reminders: [] },
           softDeleted: false,
           createdAt: firstTask.createdAt,
           updatedAt: firstTask.updatedAt,
@@ -265,8 +262,7 @@ export default function TimelineView({
         let combinedHeight = 0;
         combinedTask.tasks.forEach((taskItem, index) => {
           const taskDuration = taskItem.duration || 0;
-          const taskHasSubtasks = taskItem.metadata?.subtasks && taskItem.metadata.subtasks.length > 0;
-          const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+          const taskHeight = getTaskCardHeight(taskDuration);
           combinedHeight += taskHeight;
           // add 4px spacing between cards (not after the last one)
           if (index < combinedTask.tasks.length - 1) {
@@ -281,12 +277,9 @@ export default function TimelineView({
       } else {
         // regular task - use standard height calculation
         const duration = task.duration || 0;
-        const hasSubtasks = task.metadata?.subtasks && task.metadata.subtasks.length > 0;
-
         // prefer the live measured/animated height so spacing animates with the card
-        // fall back to the base height from centralized helper if we don't have it yet
         const measuredHeight = taskCardHeights.get(task.id);
-        const fallbackHeight = getTaskCardHeight(duration, hasSubtasks);
+        const fallbackHeight = getTaskCardHeight(duration);
         cardHeight = measuredHeight ?? fallbackHeight;
       }
       
@@ -334,8 +327,7 @@ export default function TimelineView({
             let nextCombinedHeight = 0;
             nextCombinedTask.tasks.forEach((taskItem, index) => {
               const taskDuration = taskItem.duration || 0;
-              const taskHasSubtasks = taskItem.metadata?.subtasks && taskItem.metadata.subtasks.length > 0;
-              const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+              const taskHeight = getTaskCardHeight(taskDuration);
               nextCombinedHeight += taskHeight;
               // add 4px spacing between cards (not after the last one)
               if (index < nextCombinedTask.tasks.length - 1) {
@@ -347,9 +339,8 @@ export default function TimelineView({
           } else {
             // regular next task
             const nextTaskDuration = nextTask.duration || 0;
-            const nextTaskHasSubtasks = nextTask.metadata?.subtasks && nextTask.metadata.subtasks.length > 0;
             const nextMeasuredHeight = taskCardHeights.get(nextTask.id);
-            const nextFallbackHeight = getTaskCardHeight(nextTaskDuration, nextTaskHasSubtasks);
+            const nextFallbackHeight = getTaskCardHeight(nextTaskDuration);
             nextTaskSpacingHeight = nextMeasuredHeight ?? nextFallbackHeight;
           }
 
@@ -1578,6 +1569,7 @@ export default function TimelineView({
           {/* vertical dashed line connecting all time slots - extends only between first and last task */}
           <DashedVerticalLine
             height={timelineLineBounds.height}
+            color={themeColors.border.secondary()}
             style={[
               styles.timelineLine,
               { top: timelineLineBounds.top },
@@ -1627,8 +1619,7 @@ export default function TimelineView({
                 let combinedHeight = 0;
                 combinedTask.tasks.forEach((taskItem, index) => {
                   const taskDuration = taskItem.duration || 0;
-                  const taskHasSubtasks = taskItem.metadata?.subtasks && taskItem.metadata.subtasks.length > 0;
-                  const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+                  const taskHeight = getTaskCardHeight(taskDuration);
                   combinedHeight += taskHeight;
                   // add 4px spacing between cards (not after the last one)
                   if (index < combinedTask.tasks.length - 1) {
@@ -1642,7 +1633,7 @@ export default function TimelineView({
                 const taskPpm = taskPixelsPerMinute.get(task.id) || 0.3;
                 
                 // for overlapping tasks, position based on the first task's time
-                // this ensures the first task aligns with its time label even when subtasks expand
+                // this ensures the first task aligns with its time label
                 const firstTask = combinedTask.tasks[0];
                 const firstTaskTime = firstTask?.time;
                 let overlappingCardPosition: number;
@@ -1681,8 +1672,7 @@ export default function TimelineView({
                       const draggedTask = combinedTask.tasks.find(t => t.id === taskId);
                       if (draggedTask) {
                         const taskDuration = draggedTask.duration || 0;
-                        const taskHasSubtasks = !!(draggedTask.metadata?.subtasks && Array.isArray(draggedTask.metadata.subtasks) && draggedTask.metadata.subtasks.length > 0);
-                        const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+                        const taskHeight = getTaskCardHeight(taskDuration);
                         const measuredHeight = taskCardHeights.get(taskId) || taskHeight;
                         handleDragEnd(taskId, newY, measuredHeight);
                       }
@@ -1698,16 +1688,14 @@ export default function TimelineView({
                         // calculate position by summing heights of all previous tasks
                         for (let i = 0; i < taskIndex; i++) {
                           const prevTask = combinedTask.tasks[i];
-                          // use measured height if available (includes expanded subtasks)
+                          // use measured height if available
                           const prevMeasuredHeight = taskCardHeights.get(prevTask.id);
                           const prevTaskDuration = prevTask.duration || 0;
-                          const prevTaskHasSubtasks = !!(prevTask.metadata?.subtasks && Array.isArray(prevTask.metadata.subtasks) && prevTask.metadata.subtasks.length > 0);
-                          const prevTaskHeight = prevMeasuredHeight ?? getTaskCardHeight(prevTaskDuration, prevTaskHasSubtasks);
+                          const prevTaskHeight = prevMeasuredHeight ?? getTaskCardHeight(prevTaskDuration);
                           taskTopPosition += prevTaskHeight + 4; // 4px spacing between cards
                         }
                         const taskDuration = draggedTask.duration || 0;
-                        const taskHasSubtasks = !!(draggedTask.metadata?.subtasks && Array.isArray(draggedTask.metadata.subtasks) && draggedTask.metadata.subtasks.length > 0);
-                        const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+                        const taskHeight = getTaskCardHeight(taskDuration);
                         const measuredHeight = taskCardHeights.get(taskId) || taskHeight;
                         handleDragStart(taskId, taskTopPosition, measuredHeight, draggedTask);
                       }
@@ -1719,8 +1707,7 @@ export default function TimelineView({
                       const draggedTask = combinedTask.tasks.find(t => t.id === taskId);
                       if (draggedTask) {
                         const taskDuration = draggedTask.duration || 0;
-                        const taskHasSubtasks = !!(draggedTask.metadata?.subtasks && Array.isArray(draggedTask.metadata.subtasks) && draggedTask.metadata.subtasks.length > 0);
-                        const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+                        const taskHeight = getTaskCardHeight(taskDuration);
                         const measuredHeight = taskCardHeights.get(taskId) || taskHeight;
                         handleDragPositionChange(taskId, yPosition, measuredHeight);
                       }
@@ -1748,7 +1735,7 @@ export default function TimelineView({
               // - After updating a task
               // - After initially loading
               // spacingHeight uses fallback height from TASK_CARD_HEIGHTS constants
-              // values: 64px (no duration), 80px (duration), 88px (duration + subtasks)
+              // values: 64px (no duration), 72px (duration)
               const spacingHeight = equalSpacing.cardHeight;
               const measuredHeight = taskCardHeights.get(task.id) || spacingHeight;
               const taskPpm = taskPixelsPerMinute.get(task.id) || 0.3;

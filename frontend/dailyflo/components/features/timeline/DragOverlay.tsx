@@ -64,8 +64,7 @@ export default function DragOverlay({
   
   // calculate minimum card height (base height without expansion)
   // this matches the calculation in TimelineItem
-  const hasSubtasks = !!(task.metadata?.subtasks && Array.isArray(task.metadata.subtasks) && task.metadata.subtasks.length > 0);
-  const minCardHeight = getTaskCardHeight(duration, hasSubtasks);
+  const minCardHeight = getTaskCardHeight(duration);
   
   // format time range for display (e.g., "9:00 AM - 10:30 AM")
   const timeRangeText = task.time ? formatTimeRange(task.time, duration) : '';
