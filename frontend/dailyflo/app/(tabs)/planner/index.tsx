@@ -1,12 +1,14 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
 // import our custom layout components
 import { ScreenContainer } from '@/components';
-import { FloatingActionButton } from '@/components/ui/button';
+import { FloatingActionButton, ScreenContextButton } from '@/components/ui/button';
+import { DropdownList } from '@/components/ui/list';
 import { ModalBackdrop } from '@/components/layout/ModalLayout';
 import { CalendarNavigationModal } from '@/components/features/calendar/modals';
 import { WeekView } from '@/components/features/calendar/sections';
@@ -33,6 +35,9 @@ import { Task, TaskColor } from '@/types';
 export default function PlannerScreen() {
   // CALENDAR MODAL STATE - Controls the visibility of the calendar modal
   const [isCalendarModalVisible, setIsCalendarModalVisible] = useState(false);
+  
+  // top section context menu visibility (for ellipse button)
+  const [isTopSectionMenuVisible, setIsTopSectionMenuVisible] = useState(false);
   
   // SELECTED DATE STATE - Currently selected date for calendar navigation
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -225,7 +230,27 @@ export default function PlannerScreen() {
   // render main content
   return (
     <View style={{ flex: 1 }}>
-
+      {/* top section - 48px row for context ellipse button, matches Today screen */}
+      <View style={[styles.topSectionAnchor, { height: insets.top + 48 }]}>
+        <View style={styles.topSectionRow}>
+          <ScreenContextButton
+            onPress={() => setIsTopSectionMenuVisible(true)}
+            style={styles.topSectionContextButton}
+            accessibilityLabel="Open menu"
+          />
+        </View>
+      </View>
+      <DropdownList
+        visible={isTopSectionMenuVisible}
+        onClose={() => setIsTopSectionMenuVisible(false)}
+        items={[
+          { id: 'refresh', label: 'Refresh', icon: 'refresh-outline', onPress: () => { setIsTopSectionMenuVisible(false); handleRefresh(); } },
+          { id: 'settings', label: 'Settings', icon: 'settings-outline', onPress: () => { setIsTopSectionMenuVisible(false); router.push('/(tabs)/settings'); } },
+        ]}
+        anchorPosition="top-right"
+        topOffset={insets.top + 48}
+        rightOffset={24}
+      />
       <ScreenContainer 
         scrollable={false}
         paddingHorizontal={0}
@@ -244,6 +269,17 @@ export default function PlannerScreen() {
         
         {/* Content area with rounded top and left corners */}
         <View style={styles.contentContainer}>
+          {/* fade opacity overlay - starts 48px below date selection border, matches Today screen */}
+          <View style={styles.fadeOverlay} pointerEvents="none">
+            <LinearGradient
+              colors={[
+                themeColors.background.primary(),
+                themeColors.withOpacity(themeColors.background.primary(), 0),
+              ]}
+              locations={[0.0, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
           {/* TimelineView component displays tasks in a timeline format */}
           {/* shows tasks positioned at their scheduled times with drag functionality */}
           <TimelineView
@@ -295,9 +331,38 @@ const createStyles = (
   insets: ReturnType<typeof useSafeAreaInsets>,
   modalBorderRadius: number // border radius value that matches modal styling
 ) => StyleSheet.create({
-  // week view container - positioned at top with safe area padding
+  // top section anchor - fixed row for context button, matches Today screen (insets.top + 48)
+  topSectionAnchor: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    backgroundColor: themeColors.background.primary(),
+  },
+
+  // row container for context button - matches Today screen topSectionRow
+  topSectionRow: {
+    position: 'absolute',
+    top: insets.top,
+    left: 0,
+    right: 0,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 24,
+  },
+  topSectionContextButton: {
+    padding: 8,
+    marginRight: -8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // week view container - positioned below top section (insets.top + 48 for context button row)
   weekViewContainer: {
-    paddingTop: insets.top,
+    paddingTop: insets.top + 48,
     backgroundColor: themeColors.background.primary(),
   },
 
@@ -308,13 +373,24 @@ const createStyles = (
   // uses primary secondary blend background color for subtle visual distinction
   contentContainer: {
     flex: 1,
+    position: 'relative',
     backgroundColor: themeColors.background.primarySecondaryBlend(), // primary secondary blend background color
    
-    borderTopWidth: 1, // 1px border matching task creation border width
-    borderColor: themeColors.border.primary(), // border color matching task creation border color
+
     margin: 0, // 8px spacing from all screen edges
     paddingHorizontal: 0, // remove horizontal padding since ListCard handles its own padding
     paddingTop: 0, // top padding for content spacing
     overflow: 'hidden', // ensure content respects border radius
+  },
+
+  // fade overlay - 48px below date selection border, same gradient as Today screen (locations 0.4-1 = solid to transparent)
+  fadeOverlay: {
+    position: 'absolute',
+    top: 0, // 48px below the border of the date selection
+    left: 0,
+    right: 0,
+    height: 32, // matches Today screen fade height
+    zIndex: 5,
+    overflow: 'hidden',
   },
 });
