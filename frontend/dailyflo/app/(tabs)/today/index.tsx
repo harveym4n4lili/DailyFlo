@@ -1,6 +1,9 @@
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { StyleSheet, RefreshControl, View, Text, Alert, Animated } from 'react-native';
+import AnimatedReanimated, { useSharedValue, useAnimatedStyle, useAnimatedReaction, withTiming } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useRouter, useFocusEffect } from 'expo-router';
 
@@ -9,8 +12,8 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 
 // import our new task components
 import { ListCard } from '@/components/ui/card';
-import { FloatingActionButton } from '@/components/ui/button';
-import { TaskSummary } from '@/components/ui/message';
+import { FloatingActionButton, ScreenContextButton } from '@/components/ui/button';
+import { DropdownList } from '@/components/ui/list';
 import { ModalContainer } from '@/components/layout/ModalLayout';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 
@@ -44,6 +47,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function TodayScreen() {
   // REFRESH STATE - Controls the pull-to-refresh indicator
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // top section context menu visibility
+  const [isTopSectionMenuVisible, setIsTopSectionMenuVisible] = useState(false);
+
+  // scroll offset for Today header fade - updated on scroll, drives reanimated opacity (0→48px = fade out)
+  const scrollY = useSharedValue(0);
+
+  // mini Today header opacity - animates in/out based on scroll threshold (not tied to scroll position)
+  // withTiming allows interruption: fade out can interrupt fade in and vice versa
+  const miniHeaderOpacity = useSharedValue(0);
+  useAnimatedReaction(
+    () => scrollY.value > 48,
+    (shouldShow) => {
+      miniHeaderOpacity.value = withTiming(shouldShow ? 1 : 0, { duration: 200 });
+    }
+  );
+
+  const miniTodayHeaderStyle = useAnimatedStyle(() => ({
+    opacity: miniHeaderOpacity.value,
+  }));
   
   // TASK DETAIL MODAL STATE
   
@@ -103,6 +126,11 @@ export default function TodayScreen() {
   } = useTasks();
   // useTasks: Custom hook that provides typed access to the tasks slice state
   // This is defined in store/hooks.ts and wraps Redux's useSelector
+
+  // reset scrollY when refresh completes so Today header fades back in
+  useEffect(() => {
+    if (!isLoading) scrollY.value = 0;
+  }, [isLoading, scrollY]);
 
   // Get authentication state from Redux
   // Only fetch tasks if user is authenticated
@@ -357,30 +385,51 @@ export default function TodayScreen() {
   // render main content with today's tasks
   return (
     <View style={{ flex: 1 }}>
+      {/* top section anchor - blur + opacity gradient + mini Today header that fades in on scroll */}
+      <View style={[styles.topSectionAnchor, { height: insets.top + 64 }]}>
+        <BlurView
+          tint={themeColors.isDark ? 'dark' : 'light'}
+          intensity={2}
+          style={StyleSheet.absoluteFill}
+        />
+        <LinearGradient
+          colors={[
+            themeColors.background.primary(),
+            themeColors.withOpacity(themeColors.background.primary(), 0),
+          ]}
+          locations={[0.4, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <View style={styles.topSectionRow}>
+          <AnimatedReanimated.View style={[styles.miniTodayHeader, miniTodayHeaderStyle]} pointerEvents="none">
+            <Text style={[styles.miniTodayHeaderText, { color: themeColors.text.primary() }]}>Today</Text>
+          </AnimatedReanimated.View>
+          <ScreenContextButton
+            onPress={() => setIsTopSectionMenuVisible(true)}
+            style={styles.topSectionContextButton}
+            accessibilityLabel="Open menu"
+          />
+        </View>
+      </View>
+      <DropdownList
+        visible={isTopSectionMenuVisible}
+        onClose={() => setIsTopSectionMenuVisible(false)}
+        items={[
+          { id: 'refresh', label: 'Refresh', icon: 'refresh-outline', onPress: () => { setIsTopSectionMenuVisible(false); handleRefresh(); } },
+          { id: 'settings', label: 'Settings', icon: 'settings-outline', onPress: () => { setIsTopSectionMenuVisible(false); router.push('/(tabs)/settings'); } },
+        ]}
+        anchorPosition="top-right"
+        topOffset={insets.top + 48}
+        rightOffset={24}
+      />
       <ScreenContainer
         scrollable={false}
         paddingHorizontal={0}
         paddingVertical={0}
-        safeAreaTop={true}
+        safeAreaTop={false}
         safeAreaBottom={false}
-        heading={
-          <View style={[styles.dateHeadingRow, { paddingHorizontal: 24 }]}>
-            <Text style={[typography.getTextStyle('large-heading-1'), { color: themeColors.text.primary() }]}>
-              Today
-            </Text>
-            <View style={styles.dateMonthYearBlock}>
-              <Text style={[typography.getTextStyle('heading-3'), { color: themeColors.text.tertiary() }]}>
-                {new Date().toLocaleDateString('en-US', { month: 'short' }).slice(0, 3)}'{String(new Date().getFullYear()).slice(-2)}
-              </Text>
-              <Text style={[typography.getTextStyle('heading-3'), { color: themeColors.text.secondary(), marginTop: 2 }]}>
-              {String(new Date().getDate()).padStart(2, '0')} {new Date().toLocaleDateString('en-US', { weekday: 'long' }).slice(0, 3)}
-              </Text>
-            </View>
-          </View>
-        }
       >
-      {/* dynamic today message - greeting/summary at top of screen */}
-      <TaskSummary tasks={todaysTasks} userName="Harvey" paddingHorizontal={24} marginTop={20} />
       {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
       {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
       {/* key prop ensures this ListCard instance is completely independent from planner screen */}
@@ -411,19 +460,22 @@ export default function TodayScreen() {
         // enable bulk reschedule action specifically for the "Overdue" group on the Today screen
         // when the user taps "Reschedule", we open the date picker and then update all overdue tasks
         onOverdueReschedule={handleOverdueReschedulePress}
-        hideTodayHeader={true} // hide the group header that shows today's date since we're already on the Today screen
+        hideTodayHeader={false} // show today's date as group header in the task list
+        bigTodayHeader={true} // show big "Today" title at top of list
         onRefresh={handleRefresh}
         refreshing={isLoading}
         onScroll={(event) => {
-          // Notify the layout about scroll position changes
+          const offsetY = event.nativeEvent.contentOffset.y;
+          scrollY.value = offsetY;
           if ((global as any).trackScrollToTodayLayout) {
-            (global as any).trackScrollToTodayLayout(event.nativeEvent.contentOffset.y);
+            (global as any).trackScrollToTodayLayout(offsetY);
           }
         }}
         scrollEventThrottle={16}
-        
+        scrollYSharedValue={scrollY}
         paddingTop={48}
         paddingHorizontal={24} // remove horizontal padding for full-width cards
+        scrollPastTopInset={true} // let content scroll up into status bar area without cutoff
       />
       </ScreenContainer>
       <FloatingActionButton
@@ -445,22 +497,55 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
-  // date heading row - date (09) on left, month/year block on right
-  dateHeadingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  // month/year block - 2 rows: "Jan'26" and "Monday"
-  dateMonthYearBlock: {
-    alignItems: 'flex-end',
-  },
-
   // title header styling (used by task detail modal)
   titleHeader: {
     ...typography.getTextStyle('heading-2'),
     color: themeColors.text.primary(),
     fontWeight: '600',
+  },
+
+  // top section anchor - fixed blur + gradient at top, list content scrolls under it
+  topSectionAnchor: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    overflow: 'hidden',
+  },
+
+  // row container for mini header + context button, vertically centered between insets.top and insets.top + 48
+  topSectionRow: {
+    position: 'absolute',
+    top: insets.top,
+    left: 0,
+    right: 0,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  // mini Today header in top section - h and v centered in full width, fades in on scroll
+  miniTodayHeader: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniTodayHeaderText: {
+    ...typography.getTextStyle('heading-3'),
+    fontWeight: '600',
+  },
+  // context menu button on right side of mini header
+  topSectionContextButton: {
+    marginLeft: 'auto',
+    padding: 8,
+    marginRight: -8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // loading text styling for initial load state

@@ -262,6 +262,8 @@ export default function PlannerScreen() {
           onPress={() => {
             router.push({ pathname: '/task', params: { dueDate: selectedDate } });
           }}
+          backgroundColor={themeColors.background.invertedPrimary()}
+          iconColor={themeColors.text.invertedPrimary()}
           accessibilityLabel="Add new task"
           accessibilityHint="Double tap to create a new task"
         />
