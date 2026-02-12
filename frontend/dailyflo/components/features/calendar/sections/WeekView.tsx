@@ -13,7 +13,7 @@
  */
 
 // react: core react library for component state and memoization
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 
 // react native components for building the calendar UI
 import { View, Text, Pressable, TouchableOpacity, StyleSheet, Animated, FlatList, useWindowDimensions } from 'react-native';
@@ -195,6 +195,9 @@ export const WeekView: React.FC<WeekViewProps> = ({
   // track if user is currently swiping (to prevent selectedDate effect from interfering)
   const isUserSwipingRef = useRef<boolean>(false);
   
+  // skip scroll on initial mount (we use initialScrollIndex={1} for that)
+  const isInitialMountRef = useRef<boolean>(true);
+  
   // get screen width for pagination calculations
   const { width: screenWidth } = useWindowDimensions();
   
@@ -289,12 +292,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
         onSelectDate(newSelectedDate.toISOString());
       }
       
-      // reset FlatList to center page (index 1) after state update so new week is in center
-      setTimeout(() => {
-        flatListRef.current?.scrollToIndex({ index: 1, animated: false });
-        // reset flag after scroll completes
-        isUserSwipingRef.current = false;
-      }, 0);
+      // scroll to center happens in useLayoutEffect - runs before paint so no flash
     }
   }, [weeksData, currentWeekStart, screenWidth, selectedDate, onSelectDate]);
   
@@ -315,6 +313,20 @@ export const WeekView: React.FC<WeekViewProps> = ({
   );
   
   /**
+   * Scroll to center (index 1) whenever currentWeekStart changes.
+   * Runs in useLayoutEffect = BEFORE paint, so user never sees wrong week flash.
+   * Skips initial mount (initialScrollIndex={1} already handles that).
+   */
+  useLayoutEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
+    }
+    flatListRef.current?.scrollToIndex({ index: 1, animated: false });
+    isUserSwipingRef.current = false;
+  }, [currentWeekStart]);
+  
+  /**
    * Reset FlatList to center page (current week) when week changes externally
    * Only runs when selectedDate changes from outside (not during user swipes)
    */
@@ -330,10 +342,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
       // only update if the selected date is in a different week
       if (selectedWeekMonday.getTime() !== currentWeekStart.getTime()) {
         setCurrentWeekStart(selectedWeekMonday);
-        // scroll to center page (index 1) after state update
-        setTimeout(() => {
-          flatListRef.current?.scrollToIndex({ index: 1, animated: false });
-        }, 0);
+        // scroll happens in useLayoutEffect when currentWeekStart updates
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
