@@ -1813,7 +1813,7 @@ const createStyles = (
   // scroll content container with calculated height
   scrollContent: {
     flexDirection: 'row',
-    paddingTop: 80, // increased top padding to see just the top
+    paddingTop: 52, // increased top padding to see just the top
     paddingBottom: 200, // bottom padding
   },
 
