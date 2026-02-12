@@ -110,10 +110,6 @@ export default function TimelineItem({
   // state for subtask dropdown expansion
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(false);
   
-  // animated value for card height expansion using reanimated - runs on native thread for better performance
-  // initialized with default height, will be updated when minCardHeight is calculated
-  const cardHeightAnimation = useSharedValue(64); // default to 64px, will be updated
-  
   // animated value for position using reanimated - runs on native thread for better performance
   // this makes tasks smoothly move when other tasks expand/collapse
   const positionAnimation = useSharedValue(position);
@@ -129,6 +125,10 @@ export default function TimelineItem({
   
   // track previous position to detect when position updates after drag
   const previousPositionRef = useRef(position);
+  
+  // skip position animation during initial layout (first ~250ms) - prevents jank when tasks measure height
+  // and equalSpacingPositions recalculates with new positions
+  const mountTimeRef = useRef(Date.now());
   
   // track if we're waiting for position update after drag to trigger fade-in
   const waitingForRepositionRef = useRef(false);
@@ -201,6 +201,9 @@ export default function TimelineItem({
     return expandedHeight;
   }, [minCardHeight, isSubtasksExpanded, subtasksCount]);
   
+  // use correct height from first frame - prevents flash of 64px before effects run
+  const cardHeightAnimation = useSharedValue(minCardHeight);
+  
   // update animation value when minCardHeight changes (for initial render or when task properties change)
   // using reanimated shared value - runs on native thread for better performance
   useEffect(() => {
@@ -211,12 +214,14 @@ export default function TimelineItem({
   }, [minCardHeight]);
   
   // animate card height when expansion state changes using reanimated
-  // withTiming runs on native thread for smooth 60fps animation on iOS
+  // skip animation during initial layout to prevent flash; animate for expand/collapse
   useEffect(() => {
-    // only animate if cardHeight is a valid number
-    if (typeof cardHeight === 'number' && cardHeight > 0) {
-      // use withTiming for smooth animation - runs on native thread
-      // duration 200ms for smooth, visible expansion animation
+    if (typeof cardHeight !== 'number' || cardHeight <= 0) return;
+    
+    if (Date.now() - mountTimeRef.current < 250) {
+      // initial layout - set immediately to prevent jank
+      cardHeightAnimation.value = cardHeight;
+    } else {
       cardHeightAnimation.value = withTiming(cardHeight, {
         duration: 75,
       });
@@ -300,11 +305,13 @@ export default function TimelineItem({
     const { height } = event.nativeEvent.layout;
     if (measuredContentHeight !== height) {
       setMeasuredContentHeight(height);
+      // during initial layout, sync displayed height to measured immediately to prevent short-then-grow flash
+      if (Date.now() - mountTimeRef.current < 250) {
+        cardHeightAnimation.value = height;
+      }
       // report the measured height to parent so timeline spacing adjusts
-      // this includes the expanded height when subtasks are expanded
       if (onHeightMeasuredRef.current) {
         onHeightMeasuredRef.current(height);
-        // update shared value for tracking (used in worklet)
         lastReportedHeight.value = height;
       }
     }
@@ -344,10 +351,14 @@ export default function TimelineItem({
       cancelAnimation(fadeAnimation);
       positionAnimation.value = position; // set immediately, no animation
       fadeAnimation.value = 1; // set immediately, no fade animation
+    } else if (Date.now() - mountTimeRef.current < 250) {
+      // initial layout phase - skip animation to prevent jank when tasks measure height
+      // and position updates cascade (fallback heights → measured heights)
+      cancelAnimation(positionAnimation);
+      positionAnimation.value = position;
     } else {
       // animate position smoothly when it changes using reanimated
       // this makes tasks smoothly move when other tasks expand/collapse
-      // duration 200ms matches the card height animation for synchronized movement
       positionAnimation.value = withTiming(position, {
         duration: 75,
       });

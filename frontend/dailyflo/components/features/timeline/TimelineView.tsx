@@ -683,6 +683,10 @@ export default function TimelineView({
   // using ref to persist shared values across renders
   // note: we can't call useSharedValue conditionally, so we create them lazily using a helper
   const labelPositionAnimationsRef = useRef<Map<string, ReturnType<typeof useSharedValue<number>>>>(new Map());
+  
+  // skip label animation during initial layout (~250ms) - prevents jank when positions update
+  // after task height measurements cascade
+  const timelineMountTimeRef = useRef(Date.now());
 
   // helper function to get or create shared value for a label
   // using makeMutable allows us to create shared values conditionally (inside useEffect)
@@ -700,24 +704,34 @@ export default function TimelineView({
   // create and update animated positions for time labels
   // this makes labels smoothly move when tasks expand/collapse
   useEffect(() => {
+    const isInitialLayout = Date.now() - timelineMountTimeRef.current < 250;
+    
     allTimeLabels.forEach((label) => {
       const startLabelKey = `${label.taskId}-${label.time}-start`;
       
       // get or create shared value for start time label
       const positionAnimation = getOrCreateLabelAnimation(startLabelKey, label.position);
       
-      // animate position smoothly when it changes
-      positionAnimation.value = withTiming(label.position, {
-        duration: 75, // matches card expansion animation duration
-      });
+      // during initial layout, set immediately to prevent jank; later, animate smoothly
+      if (isInitialLayout) {
+        positionAnimation.value = label.position;
+      } else {
+        positionAnimation.value = withTiming(label.position, {
+          duration: 75, // matches card expansion animation duration
+        });
+      }
       
       // handle end time label if it exists
       if (label.endTime && label.endPosition !== undefined) {
         const endLabelKey = `${label.taskId}-${label.endTime}-end`;
         const endPositionAnimation = getOrCreateLabelAnimation(endLabelKey, label.endPosition);
-        endPositionAnimation.value = withTiming(label.endPosition, {
-          duration: 75, // matches card expansion animation duration
-        });
+        if (isInitialLayout) {
+          endPositionAnimation.value = label.endPosition;
+        } else {
+          endPositionAnimation.value = withTiming(label.endPosition, {
+            duration: 75, // matches card expansion animation duration
+          });
+        }
       }
     });
     
