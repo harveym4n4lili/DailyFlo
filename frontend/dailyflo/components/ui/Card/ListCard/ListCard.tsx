@@ -38,6 +38,7 @@ import { useTypography } from '@/hooks/useTypography';
 // import custom hooks for animation management
 import { useGroupAnimations } from '@/hooks/useGroupAnimations';
 import { useTaskCardAnimations } from '@/hooks/useTaskCardAnimations';
+import AnimatedReanimated, { useAnimatedStyle, useSharedValue, interpolate, Extrapolation, type SharedValue } from 'react-native-reanimated';
 
 // import utility functions for task grouping and sorting
 import { groupTasks, sortTasks, sortGroupEntries, formatDateForGroup } from '@/utils/taskGrouping';
@@ -129,6 +130,18 @@ export interface ListCardProps {
   // optional flag to hide the group header for today's date (used on Today screen)
   // when true, the group header that shows today's date will be hidden
   hideTodayHeader?: boolean;
+
+  // optional big "Today" header at top of list (used on Today screen)
+  // when true, renders a large "Today" title as the first element in the list header
+  bigTodayHeader?: boolean;
+
+  // when true, list content extends under top safe area (status bar) so user can scroll past it
+  // use with safeAreaTop={false} on parent ScreenContainer - content starts below status bar
+  // but can scroll up into that area without being cut off
+  scrollPastTopInset?: boolean;
+
+  // optional shared value for scroll offset - when provided with bigTodayHeader, Today header fades out on scroll
+  scrollYSharedValue?: SharedValue<number>;
 }
 
 /**
@@ -179,6 +192,9 @@ export default function ListCard({
   dropdownLeftOffset = 20,
   onOverdueReschedule,
   hideTodayHeader = false,
+  bigTodayHeader = false,
+  scrollPastTopInset = false,
+  scrollYSharedValue,
 }: ListCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -236,8 +252,8 @@ export default function ListCard({
 
   // create dynamic styles using the color palette system and typography system
   const styles = useMemo(
-    () => createStyles(themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal),
-    [themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal]
+    () => createStyles(themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal, scrollPastTopInset),
+    [themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal, scrollPastTopInset]
   );
 
   // use custom hooks for animation management
@@ -371,31 +387,54 @@ export default function ListCard({
     setIsDropdownVisible(!isDropdownVisible);
   };
 
-  // render header component with optional dropdown button
+  // fallback shared value when scrollY not provided - stays at 0 so header stays visible
+  const fallbackScrollY = useSharedValue(0);
+  const scrollY = scrollYSharedValue ?? fallbackScrollY;
+
+  // animated style for Today header - fades out when scrollY passes 48px (uses reanimated for smooth 60fps)
+  const bigTodayHeaderAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [0, 48],
+      [1, 0],
+      Extrapolation.CLAMP
+    ),
+  }));
+
+  // render header component with optional big today header and dropdown button
   const renderHeader = () => {
-    if (!headerTitle && !headerSubtitle && !dropdownItems) return null;
+    const hasStandardHeader = headerTitle || headerSubtitle || dropdownItems;
+    if (!bigTodayHeader && !hasStandardHeader) return null;
 
     return (
-      <View style={styles.headerContainer}>
-        {/* header title and subtitle section */}
-        <View style={styles.headerTextContainer}>
-          {headerTitle && <Text style={styles.headerTitle}>{headerTitle}</Text>}
-          {headerSubtitle && <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>}
-        </View>
-        
-        {/* dropdown menu button (ellipse icon) - only shown if dropdownItems are provided */}
-        {dropdownItems && dropdownItems.length > 0 && (
-          <TouchableOpacity
-            style={styles.dropdownButton}
-            onPress={handleDropdownButtonPress}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="ellipsis-horizontal"
-              size={24}
-              color={themeColors.text.primary()}
-            />
-          </TouchableOpacity>
+      <View style={styles.listHeaderWrapper}>
+        {/* big "Today" header - large typography at top when bigTodayHeader is true, fades on scroll */}
+        {bigTodayHeader && (
+          <AnimatedReanimated.View style={bigTodayHeaderAnimatedStyle}>
+            <Text style={styles.bigTodayHeader}>Today</Text>
+          </AnimatedReanimated.View>
+        )}
+        {/* standard header: title, subtitle, dropdown button */}
+        {hasStandardHeader && (
+          <View style={styles.headerContainer}>
+            <View style={styles.headerTextContainer}>
+              {headerTitle && <Text style={styles.headerTitle}>{headerTitle}</Text>}
+              {headerSubtitle && <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>}
+            </View>
+            {dropdownItems && dropdownItems.length > 0 && (
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={handleDropdownButtonPress}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="ellipsis-horizontal"
+                  size={24}
+                  color={themeColors.text.primary()}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
         )}
       </View>
     );
@@ -567,7 +606,8 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   insets: { top: number; bottom: number; left: number; right: number },
   paddingTop?: number,
-  paddingHorizontal?: number
+  paddingHorizontal?: number,
+  scrollPastTopInset?: boolean
 ) =>
   StyleSheet.create({
     // main container
@@ -579,8 +619,9 @@ const createStyles = (
 
     // list container for proper spacing
     // extra bottom padding to allow scrolling tasks above the FAB
+    // when scrollPastTopInset: add top inset so content starts below status bar but can scroll into it
     listContainer: {
-      paddingTop: paddingTop ?? 0, // top padding for list container (optional, defaults to 0)
+      paddingTop: (paddingTop ?? 0) + (scrollPastTopInset ? insets.top : 0), // top padding for list container (optional, defaults to 0)
       paddingBottom: 58 + 80 + 16 + insets.bottom + 40, // FAB height (58px) + navbar height (80px) + spacing (16px) + safe area bottom + extra space (40px)
       paddingHorizontal: paddingHorizontal ?? 20, // horizontal padding for task cards (optional, defaults to 20px)
       // ensure content can scroll all the way to bottom of screen
@@ -592,6 +633,16 @@ const createStyles = (
       marginBottom: 24, // space between groups
     },
 
+    // wrapper for list header (big today + standard header)
+    listHeaderWrapper: {
+      marginBottom: 8,
+    },
+    // big "Today" header - large typography for today screen
+    bigTodayHeader: {
+      ...typography.getTextStyle('heading-1'),
+      color: themeColors.text.primary(),
+      marginBottom: 8,
+    },
     // header container styling
     headerContainer: {
       flexDirection: 'row', // horizontal layout for title/subtitle and dropdown button
