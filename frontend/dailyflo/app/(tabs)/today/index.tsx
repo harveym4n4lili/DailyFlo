@@ -244,10 +244,10 @@ export default function TodayScreen() {
   // TASK INTERACTION HANDLERS - Functions that handle user interactions with tasks
   // These functions demonstrate the flow: User interaction → Redux action → State update → UI re-render
   
-  // handle task press - TODO: Implement task detail view
+  // handle task press - opens task screen in edit mode
   const handleTaskPress = (task: Task) => {
-    console.log('📱 Task pressed:', task.title);
-    // TODO: Implement task detail view
+    const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+    router.push({ pathname: '/task', params: { taskId: baseId } });
   };
   
   // handle task completion toggle
@@ -280,11 +280,10 @@ export default function TodayScreen() {
     }
   };
   
-  // handle task edit (for future task edit modal)
+  // handle task edit - opens task screen in edit mode (same as task press)
   const handleTaskEdit = (task: Task) => {
-    console.log('✏️ Task edit requested:', task.title);
-    // TODO: Open task edit modal
-    // This will be implemented when we add task editing functionality
+    const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+    router.push({ pathname: '/task', params: { taskId: baseId } });
   };
   
   // handle task delete (for future confirmation modal)

@@ -11,7 +11,6 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Animated as RNAnimated,
   StyleSheet,
   Keyboard,
   Platform,
@@ -53,22 +52,30 @@ export interface TaskCreationContentProps {
   
   /** Whether form has unsaved changes */
   hasChanges: boolean;
+  /** Whether save button should be visible (create: when required fields entered; view: when hasChanges) */
+  isSaveButtonVisible?: boolean;
   
   /** Callback to notify parent when any picker modal visibility changes */
   /** Used to coordinate backdrop visibility between FullScreenModal and DraggableModal */
   onPickerVisibilityChange?: (isAnyPickerVisible: boolean) => void;
   
-  /** Callback when create button is pressed */
-  /** This function handles validating the form and creating the task */
+  /** Callback when save button is pressed (create or update) */
   onCreate: () => void;
   
-  /** Whether a task is currently being created (loading state) */
+  /** Save button label when not loading (default: "Create") */
+  saveButtonText?: string;
+  /** Save button label when loading (default: "Creating...") */
+  saveLoadingText?: string;
+  
+  /** Whether a task is currently being created or updated (loading state) */
   /** Used to disable the create button and show loading indicator */
   isCreating?: boolean;
   
   /** Error message if task creation failed */
   /** Can be displayed to the user */
   createError?: string | null;
+  /** Error message when update fails (used in edit mode) */
+  updateError?: string | null;
   
   /** Array of subtasks for the task */
   subtasks: Subtask[];
@@ -106,16 +113,16 @@ export interface TaskCreationContentProps {
   subtaskListBorderColor?: string;
 
   /**
-   * When true (default), render close and save buttons inside the content (for in-screen modal).
-   * When false, omit them so the parent (e.g. Stack screen) can provide header close/save.
+   * When true (default), render save button inside the content.
+   * When false, omit so the parent can provide header save.
    */
   embedHeaderButtons?: boolean;
 
   /**
-   * When false, omit the close button so the parent can render it at window level (e.g. top-left of screen).
-   * Only applies when embedHeaderButtons is true. Default true.
+   * When true, task screen is in edit mode (save button: icon-only, top right).
+   * When false, create mode (save button: Create + arrow, floating at bottom with keyboard animation).
    */
-  renderCloseButton?: boolean;
+  isEditMode?: boolean;
 
   /**
    * Extra bottom inset when keyboard is hidden (e.g. form sheet doesn't fill window; add ~80 so save button stays visible).
@@ -139,9 +146,13 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   onChange,
   onPickerVisibilityChange,
   onCreate,
+  saveButtonText = 'Create',
+  saveLoadingText = 'Creating...',
   isCreating = false,
   createError,
+  updateError,
   hasChanges,
+  isSaveButtonVisible: isSaveButtonVisibleProp,
   onCreateSubtask,
   subtasks,
   onSubtaskTitleChange,
@@ -150,7 +161,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   pendingFocusSubtaskId,
   onClearPendingFocus,
   embedHeaderButtons = true,
-  renderCloseButton = false,
+  isEditMode = false,
   saveButtonBottomInsetWhenKeyboardHidden,
   pickerHandlers,
 }) => {
@@ -246,28 +257,24 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
     };
   }, []);
 
-  // save button: active when title is non-empty
-  const isCreateButtonActive = useMemo(() => !!(values.title?.trim()), [values.title]);
+  // save button visibility: parent passes create (required fields) or view (hasChanges)
+  const isSaveButtonVisible = isSaveButtonVisibleProp ?? hasChanges;
 
-  // insets and window size for save button bar positioning
   const insets = useSafeAreaInsets();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
-  // save button bottom: above keyboard when open, else from window bottom with optional inset
+  // create mode: save button floats at bottom, animates with keyboard
   const saveButtonBottom = keyboardHeight > 0
     ? keyboardHeight + 72
     : insets.bottom + (saveButtonBottomInsetWhenKeyboardHidden ?? 0);
-
-  // reanimated: animate save button bottom so it slides with keyboard instead of jumping
   const animatedBottom = useSharedValue(saveButtonBottom);
   useEffect(() => {
     animatedBottom.value = withTiming(saveButtonBottom, {
       duration: 250,
       easing: Easing.out(Easing.cubic),
     });
-  }, [saveButtonBottom]);
-
-  const animatedSaveButtonBarStyle = useAnimatedStyle(() => ({
+  }, [saveButtonBottom, animatedBottom]);
+  const animatedCreateSaveBarStyle = useAnimatedStyle(() => ({
     position: 'absolute' as const,
     left: 0,
     right: 0,
@@ -299,7 +306,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       </View>
       <ScrollView
         ref={scrollViewRef}
-        style={[styles.scroll, { backgroundColor: themeColors.background.primary() }]}
+        style={[styles.scroll]}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 32 : 160 }]}
         showsVerticalScrollIndicator
         keyboardShouldPersistTaps="handled"
@@ -322,7 +329,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
                   paddingHorizontal: 0,
                 },
               ]}
-              autoFocus
+              autoFocus={!isEditMode}
               returnKeyType="next"
             />
             {/* dashed separator underline for task title - matches scrollContent padding */}
@@ -372,7 +379,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
           scrollViewRef={scrollViewRef}
         />
 
-        {createError && (
+        {(createError ?? updateError) && (
           <View
             style={{
               marginHorizontal: 20,
@@ -385,13 +392,13 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
             }}
           >
             <Text style={[getTextStyle('body-small'), { color: colors.getSemanticColor('error', 500) }]}>
-              {createError}
+              {createError ?? updateError}
             </Text>
           </View>
         )}
       </ScrollView>
 
-      {/* save button: outside ScrollView, absolute, based on screen dimensions */}
+      {/* save button: same position for create and view - bottom bar, animates with keyboard */}
       {embedHeaderButtons && (
         <View
           pointerEvents="box-none"
@@ -406,9 +413,8 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
           <Animated.View
             pointerEvents="box-none"
             style={[
-              animatedSaveButtonBarStyle,
+              animatedCreateSaveBarStyle,
               {
-                position: 'absolute',
                 left: 0,
                 right: 0,
                 width: windowWidth,
@@ -423,11 +429,11 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
               onPress={onCreate}
               isLoading={isCreating}
               taskCategoryColor={buttonColor}
-              text="Create"
-              loadingText="Creating..."
+              text={saveButtonText}
+              loadingText={saveLoadingText}
               size={28}
               iconSize={28}
-              visible={isCreateButtonActive}
+              visible={isSaveButtonVisible}
               showLabel
             />
           </Animated.View>
@@ -469,7 +475,7 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   // top spacing: drag indicator area (~20px) + spacing before title
-  scrollContent: { padding: 24, paddingTop: 48, paddingBottom: 40 },
+  scrollContent: { padding: 24, paddingTop: 40, paddingBottom: 40 },
   titleRow: { flexDirection: 'row', alignItems: 'center' },
   titleInputWrap: { flex: 1, minWidth: 0, paddingHorizontal: 0 },
   titleSpacer: { height: 8 },

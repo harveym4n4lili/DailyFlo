@@ -119,9 +119,10 @@ export default function PlannerScreen() {
   }, [isAuthenticated, dispatch]);
   
   // TASK HANDLERS - Functions to handle task interactions
-  // handle when user taps on a task card to view details
+  // handle when user taps on a task card - opens task screen in edit mode
   const handleTaskPress = (task: Task) => {
-    // TODO: Implement task detail view
+    const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+    router.push({ pathname: '/task', params: { taskId: baseId } });
   };
   
   // handle marking a task as complete/uncomplete
@@ -161,9 +162,10 @@ export default function PlannerScreen() {
     }
   };
   
-  // handle editing a task (opens task detail modal)
+  // handle editing a task - opens task screen in edit mode (same as task press)
   const handleTaskEdit = (task: Task) => {
-    // TODO: Implement task edit
+    const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+    router.push({ pathname: '/task', params: { taskId: baseId } });
   };
   
   // handle deleting a task (for expanded recurring, delete base task)

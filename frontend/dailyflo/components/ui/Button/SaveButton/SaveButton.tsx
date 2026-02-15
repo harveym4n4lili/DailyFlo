@@ -169,16 +169,13 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
   // on iOS we wrap the button in GlassView; expo-glass-effect safely falls back elsewhere
   const glassAvailable = Platform.OS === 'ios';
   
-  // determine icon color
-  // always use the primary text color from the theme so the icon
-  // matches other primary text (not the user-selected task color)
+  // determine icon color (same for create and view)
   const getIconColor = () => {
     return themeColors.background.primary();
   };
   
-  // background tint color for the save button glass container
+  // background tint color for the save button glass container (same for create and view)
   const saveButtonGlassTintColor = themeColors.background.invertedTertiary();
-  // fallback background when glass is not used (newer iOS without glass)
   const saveButtonBackgroundColor = themeColors.background.invertedTertiary();
 
   // container size is always derived from size (keeps tap target consistent)
