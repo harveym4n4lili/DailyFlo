@@ -16,8 +16,8 @@ import { getTextStyle } from '@/constants/Typography';
 import { TrashIcon } from '@/components/ui/icon';
 import Checkbox from '@/components/ui/button/Checkbox/Checkbox';
 
-// match header/button row vertical padding (same as SubtaskCreateButton top padding and header padding)
-const CONTENT_PADDING_VERTICAL = 14;
+// no extra vertical padding - GroupedList contentPaddingVertical handles row spacing
+const CONTENT_PADDING_VERTICAL = 0;
 // checkbox size matches TaskCard checkbox size (16px)
 const CHECKBOX_SIZE = 16;
 // spacing between checkbox (icon) and text input — matches SubtaskCreateButton icon–text gap

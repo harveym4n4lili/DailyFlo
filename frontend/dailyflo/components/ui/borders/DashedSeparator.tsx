@@ -19,9 +19,11 @@ import { View, StyleSheet, Dimensions, ViewStyle } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
 interface DashedSeparatorProps {
-  // horizontal padding on both left and right sides (default 0)
-  // this padding matches the parent container's padding to align the separator properly
+  // horizontal padding on both left and right sides when symmetric (default 0)
   paddingHorizontal?: number;
+  // optional asymmetric padding - when set, overrides paddingHorizontal for that side
+  paddingLeft?: number;
+  paddingRight?: number;
   // optional style override for the container (useful for adding marginTop, etc.)
   style?: ViewStyle;
 }
@@ -34,25 +36,27 @@ interface DashedSeparatorProps {
  */
 export default function DashedSeparator({ 
   paddingHorizontal = 0,
+  paddingLeft: paddingLeftProp,
+  paddingRight: paddingRightProp,
   style,
 }: DashedSeparatorProps) {
   // get theme colors internally so component is self-contained
   const themeColors = useThemeColors();
 
+  // use asymmetric padding when provided, else fall back to symmetric paddingHorizontal
+  const paddingLeft = paddingLeftProp ?? paddingHorizontal;
+  const paddingRight = paddingRightProp ?? paddingHorizontal;
+
   // calculate number of dashes needed based on available width (screen width minus padding)
   // pattern: 8px dash + 4px gap = 12px per dash segment
   const screenWidth = Dimensions.get('window').width;
-  const availableWidth = screenWidth - (paddingHorizontal * 2); // subtract left and right padding
+  const availableWidth = screenWidth - paddingLeft - paddingRight;
   const dashWidth = 8;
   const gapWidth = 4;
   const segmentWidth = dashWidth + gapWidth;
   // calculate dash count to cover available width exactly (no extra dashes)
   const dashCount = Math.floor(availableWidth / segmentWidth);
   const dashes = Array.from({ length: dashCount }, (_, i) => i);
-
-  // ensure padding values are exactly equal on both sides
-  const paddingLeft = paddingHorizontal;
-  const paddingRight = paddingHorizontal;
 
   return (
     <View style={[styles.container, { 

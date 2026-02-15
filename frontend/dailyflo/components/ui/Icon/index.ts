@@ -38,3 +38,6 @@ export type { TrashIconProps } from './icons/TrashIcon';
 
 export { SparklesIcon } from './icons/SparklesIcon';
 export type { SparklesIconProps } from './icons/SparklesIcon';
+
+export { RepeatIcon } from './icons/RepeatIcon';
+export type { RepeatIconProps } from './icons/RepeatIcon';

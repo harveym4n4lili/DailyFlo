@@ -69,17 +69,15 @@ export const SubtaskSection: React.FC<SubtaskSectionProps> = ({
   return (
     <View style={styles.container}>
       <GroupedList
-        containerStyle={{
-          ...styles.subtaskListContainer,
-          backgroundColor: 'transparent',
-          borderRadius: 0,
-          overflow: 'visible',
-          paddingHorizontal: 0,
-        }}
-        minimalStyle
-        fullWidthSeparators={false}
+        containerStyle={styles.subtaskListContainer}
+        contentPaddingHorizontal={0}
+        contentPaddingVertical={16}
+        backgroundColor={themeColors.background.primary()}
         separatorColor={themeColors.border.primary()}
-        useDashedSeparator={true}
+        separatorInsetRight={0}
+        borderRadius={24}
+        minimalStyle={false}
+        fullWidthSeparators={false}
         separatorConsiderIconColumn={true}
         iconColumnWidth={26}
       >
@@ -111,9 +109,12 @@ export const SubtaskSection: React.FC<SubtaskSectionProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 36,
+    marginTop: 0,
+    
   },
-  subtaskListContainer: {},
+  subtaskListContainer: {
+    marginVertical: 0,
+  },
 });
 
 export default SubtaskSection;

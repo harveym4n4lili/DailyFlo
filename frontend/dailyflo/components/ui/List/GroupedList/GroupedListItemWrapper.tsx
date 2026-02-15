@@ -54,9 +54,6 @@ export interface GroupedListItemWrapperProps {
   /** Optional style override */
   style?: ViewStyle;
 
-  /** Whether to use dashed separator instead of solid line (default: false) */
-  useDashedSeparator?: boolean;
-
   /** Vertical padding applied to the wrapper itself (paddingTop and paddingBottom) */
   itemWrapperPaddingVertical?: number;
 }
@@ -83,7 +80,6 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
   contentMinHeight,
   listStyle = 'roundedStyle',
   style,
-  useDashedSeparator = false,
   itemWrapperPaddingVertical,
 }) => {
   // get theme-aware colors for default background and border when props not provided
@@ -191,23 +187,11 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
       {/* roundedStyle only: separator below padded content; lineStyle uses borderBottomWidth instead */}
       {/* when itemWrapperPaddingVertical is set, add marginTop to separator to create equal spacing above and below */}
       {listStyle === 'roundedStyle' && showSeparator && (
-        useDashedSeparator ? (
-          <DashedSeparator 
-            paddingHorizontal={separatorInsetLeft}
-            style={itemWrapperPaddingVertical != null ? { marginTop: itemWrapperPaddingVertical } : undefined}
-          />
-        ) : (
-          <View
-            style={{
-              height: StyleSheet.hairlineWidth,
-              backgroundColor: separatorColor,
-              ...(separatorInsetLeft > 0 && { marginLeft: separatorInsetLeft }),
-              ...(separatorInsetRight > 0 && { marginRight: separatorInsetRight }),
-              // add marginTop equal to wrapper padding to create equal spacing above and below separator
-              ...(itemWrapperPaddingVertical != null && { marginTop: itemWrapperPaddingVertical }),
-            }}
-          />
-        )
+        <DashedSeparator 
+          paddingLeft={separatorInsetLeft}
+          paddingRight={separatorInsetRight}
+          style={itemWrapperPaddingVertical != null ? { marginTop: itemWrapperPaddingVertical } : undefined}
+        />
       )}
     </View>
   );
