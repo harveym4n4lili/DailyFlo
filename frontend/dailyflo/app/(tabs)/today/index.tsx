@@ -72,9 +72,8 @@ export default function TodayScreen() {
   
   // task creation is the task Stack screen (presentation: 'modal'); opened via router
 
-  // OVERDUE RESCHEDULE: we push modals/date-select and apply selected date when we return
-  const overdueTaskIdsRef = useRef<string[]>([]);
-  const { setDraft, draft } = useCreateTaskDraft();
+  // OVERDUE RESCHEDULE: we push date-select and apply selected date via callback (avoids race with draft state)
+  const { setDraft, registerOverdueReschedule, clearOverdueReschedule } = useCreateTaskDraft();
   
   // get UI state from Redux to check if createTask modal should be opened
   const { modals, closeModal } = useUI();
@@ -329,14 +328,21 @@ export default function TodayScreen() {
     );
   };
 
-  // when we return from modals/date-select after overdue reschedule, apply the selected date
+  // clear overdue reschedule callback when screen gains focus (e.g. user backed out without selecting)
   useFocusEffect(
     React.useCallback(() => {
-      if (overdueTaskIdsRef.current.length === 0) return;
-      const ids = [...overdueTaskIdsRef.current];
-      overdueTaskIdsRef.current = [];
-      const date = draft.dueDate;
-      if (!date) return;
+      clearOverdueReschedule();
+    }, [clearOverdueReschedule]),
+  );
+
+  // handle press on "Reschedule" in the Overdue group header: open date-select, apply date via callback
+  const handleOverdueReschedulePress = (overdueTasks: Task[]) => {
+    const ids = overdueTasks.map((t) => t.id);
+    const initialDate =
+      overdueTasks[0]?.dueDate ?? new Date().toISOString();
+    setDraft({ dueDate: initialDate, time: undefined, duration: undefined, alerts: [] });
+
+    registerOverdueReschedule((date) => {
       (async () => {
         try {
           await Promise.all(
@@ -348,16 +354,8 @@ export default function TodayScreen() {
           console.error('Failed to bulk reschedule overdue tasks:', err);
         }
       })();
-    }, [draft.dueDate, dispatch]),
-  );
+    });
 
-  // handle press on "Reschedule" in the Overdue group header: open date-select stack screen
-  const handleOverdueReschedulePress = (overdueTasks: Task[]) => {
-    const ids = overdueTasks.map((t) => t.id);
-    overdueTaskIdsRef.current = ids;
-    const initialDate =
-      overdueTasks[0]?.dueDate ?? new Date().toISOString();
-    setDraft({ dueDate: initialDate, time: undefined, duration: undefined, alerts: [] });
     router.push('/date-select');
   };
 
