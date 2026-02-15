@@ -1,9 +1,9 @@
 /**
  * Task – main form screen (first screen in task stack)
  *
+ * Supports create mode (no taskId) and edit mode (taskId param).
  * Uses CreateTaskDraftContext for dueDate, time, duration, alerts so date-select,
- * time-duration-select and alert-select stay in sync. Navigates to
- * those screens when user taps date / time / alerts.
+ * time-duration-select and alert-select stay in sync.
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -13,7 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useAppDispatch } from '@/store';
-import { createTask } from '@/store/slices/tasks/tasksSlice';
+import { createTask, updateTask } from '@/store/slices/tasks/tasksSlice';
 import { useTasks } from '@/store/hooks';
 import { TaskScreenContent } from '@/components/features/tasks/TaskScreen/TaskScreenContent';
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
@@ -34,33 +34,125 @@ const getDefaults = (themeColor: TaskColor = 'red'): TaskFormValues => ({
   alerts: [],
 });
 
+// map Task metadata subtasks to form Subtask (add isEditing)
+function taskToFormSubtasks(metaSubtasks?: { id: string; title: string; isCompleted: boolean; sortOrder?: number }[]): Subtask[] {
+  if (!metaSubtasks?.length) return [];
+  return metaSubtasks
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map((s) => ({ id: s.id, title: s.title, isCompleted: s.isCompleted, isEditing: false }));
+}
+
 export default function TaskIndexScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ dueDate?: string }>();
+  const params = useLocalSearchParams<{ dueDate?: string; taskId?: string }>();
   const themeColors = useThemeColors();
   const { themeColor } = useThemeColor();
   const dispatch = useAppDispatch();
-  const { isCreating, createError } = useTasks();
+  const { tasks, isCreating, isUpdating, createError, updateError } = useTasks();
   const { draft, setDraft, setDueDate, setTime, setDuration, setAlerts } = useCreateTaskDraft();
 
-  const [localValues, setLocalValues] = useState<Partial<TaskFormValues>>(() => ({
-    ...getDefaults(themeColor),
-    ...(params.dueDate ? { dueDate: params.dueDate } : {}),
-  }));
-  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const isEditMode = !!params.taskId;
+
+  // when editing, load task from Redux; when creating, use defaults
+  const [localValues, setLocalValues] = useState<Partial<TaskFormValues>>(() => {
+    if (params.taskId) {
+      const task = tasks.find((t) => t.id === params.taskId);
+      if (task) {
+        return {
+          title: task.title,
+          description: task.description || '',
+          dueDate: task.dueDate ?? new Date().toISOString(),
+          priorityLevel: task.priorityLevel,
+          color: task.color,
+          icon: task.icon,
+          routineType: task.routineType,
+          listId: task.listId ?? undefined,
+          time: task.time,
+          duration: task.duration ?? undefined,
+          alerts: (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
+        };
+      }
+    }
+    return {
+      ...getDefaults(themeColor),
+      ...(params.dueDate ? { dueDate: params.dueDate } : {}),
+    };
+  });
+  const [subtasks, setSubtasks] = useState<Subtask[]>(() => {
+    if (params.taskId) {
+      const task = tasks.find((t) => t.id === params.taskId);
+      if (task?.metadata?.subtasks) return taskToFormSubtasks(task.metadata.subtasks);
+    }
+    return [];
+  });
   const [pendingFocusSubtaskId, setPendingFocusSubtaskId] = useState<string | null>(null);
 
+  // store initial values for edit mode hasChanges comparison
+  const initialValuesRef = useRef<{ values: Partial<TaskFormValues>; subtasks: Subtask[] } | null>(null);
+  if (isEditMode && params.taskId && !initialValuesRef.current) {
+    const task = tasks.find((t) => t.id === params.taskId);
+    if (task) {
+      initialValuesRef.current = {
+        values: {
+          title: task.title,
+          description: task.description || '',
+          dueDate: task.dueDate ?? '',
+          time: task.time,
+          duration: task.duration,
+          color: task.color,
+          routineType: task.routineType,
+          alerts: (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
+        },
+        subtasks: taskToFormSubtasks(task.metadata?.subtasks),
+      };
+    }
+  }
+
+  // load task data when in edit mode (runs when taskId or tasks changes)
   useEffect(() => {
-    const initialDueDate = params.dueDate ?? new Date().toISOString();
-    setDraft({
-      dueDate: initialDueDate,
-      time: undefined,
-      duration: undefined,
-      alerts: [],
-    });
-    if (params.dueDate) setLocalValues((prev) => ({ ...prev, dueDate: params.dueDate }));
-    setSubtasks([]);
-  }, []);
+    if (isEditMode && params.taskId) {
+      const task = tasks.find((t) => t.id === params.taskId);
+      if (task) {
+        setDraft({
+          dueDate: task.dueDate ?? new Date().toISOString(),
+          time: task.time,
+          duration: task.duration,
+          alerts: (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
+        });
+        setLocalValues({
+          title: task.title,
+          description: task.description || '',
+          dueDate: task.dueDate ?? new Date().toISOString(),
+          priorityLevel: task.priorityLevel,
+          color: task.color,
+          icon: task.icon,
+          routineType: task.routineType,
+          listId: task.listId ?? undefined,
+          time: task.time,
+          duration: task.duration,
+          alerts: (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
+        });
+        setSubtasks(taskToFormSubtasks(task.metadata?.subtasks));
+        if (!initialValuesRef.current) {
+          initialValuesRef.current = {
+            values: { title: task.title, description: task.description || '', dueDate: task.dueDate ?? '', time: task.time, duration: task.duration, color: task.color, routineType: task.routineType, alerts: (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [] },
+            subtasks: taskToFormSubtasks(task.metadata?.subtasks),
+          };
+        }
+      }
+    }
+  }, [params.taskId, isEditMode, tasks]);
+
+  // create mode: init draft and clear when switching to create
+  useEffect(() => {
+    if (!isEditMode) {
+      const initialDueDate = params.dueDate ?? new Date().toISOString();
+      setDraft({ dueDate: initialDueDate, time: undefined, duration: undefined, alerts: [] });
+      if (params.dueDate) setLocalValues((prev) => ({ ...prev, dueDate: params.dueDate }));
+      setSubtasks([]);
+      initialValuesRef.current = null;
+    }
+  }, [params.dueDate, isEditMode]);
 
   const values: Partial<TaskFormValues> = useMemo(
     () => ({
@@ -113,24 +205,46 @@ export default function TaskIndexScreen() {
     setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId));
   };
 
-  const hasChanges = useMemo(
-    () =>
-      !!(
-        values.title?.trim() ||
-        values.description?.trim() ||
-        values.dueDate !== getDefaults(themeColor).dueDate ||
-        values.color !== getDefaults(themeColor).color ||
-        // icon removed from hasChanges check - tasks don't require icons
-        (values.alerts && values.alerts.length > 0) ||
-        values.time !== undefined ||
-        values.duration !== undefined ||
-        values.routineType !== getDefaults(themeColor).routineType ||
-        subtasks.length > 0
-      ),
-    [values, themeColor, subtasks],
-  );
+  const hasChanges = useMemo(() => {
+    if (isEditMode && initialValuesRef.current) {
+      const init = initialValuesRef.current;
+      const v = values;
+      const subtasksChanged =
+        subtasks.length !== init.subtasks.length ||
+        subtasks.some((s, i) => {
+          const o = init.subtasks[i];
+          return !o || s.title !== o.title || s.isCompleted !== o.isCompleted;
+        });
+      return !!(
+        (v.title?.trim() ?? '') !== (init.values.title ?? '') ||
+        (v.description ?? '') !== (init.values.description ?? '') ||
+        (v.dueDate ?? '') !== (init.values.dueDate ?? '') ||
+        (v.time ?? '') !== (init.values.time ?? '') ||
+        (v.duration ?? undefined) !== (init.values.duration ?? undefined) ||
+        (v.color ?? '') !== (init.values.color ?? '') ||
+        (v.routineType ?? '') !== (init.values.routineType ?? '') ||
+        JSON.stringify(v.alerts ?? []) !== JSON.stringify(init.values.alerts ?? []) ||
+        subtasksChanged
+      );
+    }
+    return !!(
+      values.title?.trim() ||
+      values.description?.trim() ||
+      values.dueDate !== getDefaults(themeColor).dueDate ||
+      values.color !== getDefaults(themeColor).color ||
+      (values.alerts && values.alerts.length > 0) ||
+      values.time !== undefined ||
+      values.duration !== undefined ||
+      values.routineType !== getDefaults(themeColor).routineType ||
+      subtasks.length > 0
+    );
+  }, [values, themeColor, subtasks, isEditMode]);
 
-  const handleCreate = async () => {
+  // create mode: save button visible when all required fields are entered (title is required)
+  // view mode: save button visible when any change is made
+  const isSaveButtonVisible = isEditMode ? hasChanges : !!(values.title?.trim());
+
+  const handleSave = async () => {
     const errors = validateAll(values as TaskFormValues);
     if (Object.keys(errors).length > 0) return;
 
@@ -141,38 +255,71 @@ export default function TaskIndexScreen() {
       sortOrder: index,
     }));
 
-    const taskData: CreateTaskInput = {
-      title: values.title!.trim(),
-      description: values.description?.trim() || undefined,
-      // only include icon if it's explicitly set (not empty/undefined)
-      // tasks don't require icons - icon is optional
-      icon: values.icon && values.icon.trim() ? values.icon.trim() : undefined,
-      time: values.time || undefined,
-      duration: values.duration || undefined,
-      dueDate: values.dueDate || undefined,
-      priorityLevel: values.priorityLevel || 3,
-      color: values.color || themeColor,
-      routineType: values.routineType || 'once',
-      listId: values.listId || undefined,
-      metadata: {
-        subtasks: taskSubtasks,
-        reminders: [],
-        notes: values.description?.trim() || undefined,
-        tags: [],
-      },
-    };
-
-    try {
-      const result = await dispatch(createTask(taskData));
-      if (createTask.fulfilled.match(result)) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-        setLocalValues({ ...getDefaults(themeColor) });
-        setDraft({ dueDate: undefined, time: undefined, duration: undefined, alerts: [] });
-        setSubtasks([]);
-        router.back();
+    if (isEditMode && params.taskId) {
+      try {
+        const result = await dispatch(
+          updateTask({
+            id: params.taskId,
+            updates: {
+              id: params.taskId,
+              title: values.title!.trim(),
+              description: values.description?.trim() || undefined,
+              icon: values.icon && values.icon.trim() ? values.icon.trim() : undefined,
+              time: values.time || undefined,
+              duration: values.duration || undefined,
+              dueDate: values.dueDate || undefined,
+              priorityLevel: values.priorityLevel || 3,
+              color: values.color || themeColor,
+              routineType: values.routineType || 'once',
+              listId: values.listId || undefined,
+              metadata: {
+                subtasks: taskSubtasks,
+                reminders: (values.alerts ?? []).map((id) => ({ id, type: 'custom' as const, scheduledTime: new Date(), isEnabled: true })),
+                notes: values.description?.trim() || undefined,
+                tags: [],
+              },
+            },
+          })
+        );
+        if (updateTask.fulfilled.match(result)) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+          router.back();
+        }
+      } catch (e) {
+        console.error('Unexpected error updating task:', e);
       }
-    } catch (e) {
-      console.error('Unexpected error creating task:', e);
+    } else {
+      const taskData: CreateTaskInput = {
+        title: values.title!.trim(),
+        description: values.description?.trim() || undefined,
+        icon: values.icon && values.icon.trim() ? values.icon.trim() : undefined,
+        time: values.time || undefined,
+        duration: values.duration || undefined,
+        dueDate: values.dueDate || undefined,
+        priorityLevel: values.priorityLevel || 3,
+        color: values.color || themeColor,
+        routineType: values.routineType || 'once',
+        listId: values.listId || undefined,
+        metadata: {
+          subtasks: taskSubtasks,
+          reminders: [],
+          notes: values.description?.trim() || undefined,
+          tags: [],
+        },
+      };
+
+      try {
+        const result = await dispatch(createTask(taskData));
+        if (createTask.fulfilled.match(result)) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+          setLocalValues({ ...getDefaults(themeColor) });
+          setDraft({ dueDate: undefined, time: undefined, duration: undefined, alerts: [] });
+          setSubtasks([]);
+          router.back();
+        }
+      } catch (e) {
+        console.error('Unexpected error creating task:', e);
+      }
     }
   };
 
@@ -200,9 +347,13 @@ export default function TaskIndexScreen() {
         onChange={onChange}
         onClose={handleClose}
         hasChanges={hasChanges}
-        onCreate={handleCreate}
-        isCreating={isCreating}
+        isSaveButtonVisible={isSaveButtonVisible}
+        onCreate={handleSave}
+        saveButtonText={isEditMode ? 'Save' : 'Create'}
+        saveLoadingText={isEditMode ? 'Saving...' : 'Creating...'}
+        isCreating={isCreating || isUpdating}
         createError={createError ?? undefined}
+        updateError={updateError ?? undefined}
         subtasks={subtasks}
         onSubtaskToggle={handleSubtaskToggle}
         onSubtaskDelete={handleSubtaskDelete}
@@ -212,7 +363,7 @@ export default function TaskIndexScreen() {
         pendingFocusSubtaskId={pendingFocusSubtaskId}
         onClearPendingFocus={() => setPendingFocusSubtaskId(null)}
         embedHeaderButtons={true}
-        renderCloseButton={false}
+        isEditMode={isEditMode}
         saveButtonBottomInsetWhenKeyboardHidden={44}
         pickerHandlers={pickerHandlers}
       />

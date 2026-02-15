@@ -201,7 +201,10 @@ export default function RootLayout() {
                 headerShown: false,
                 presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
                 gestureEnabled: true,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                sheetAllowedDetents: [0.6, 1],
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.primary(),
+                },
               }}
             />
             {/* root-level picker screens (each has own folder with _layout + index) */}
