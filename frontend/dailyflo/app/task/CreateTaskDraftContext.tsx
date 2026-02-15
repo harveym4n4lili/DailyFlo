@@ -7,7 +7,7 @@
  * stack read/write this context so we don't need to pass params when pushing.
  */
 
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react';
 
 export interface CreateTaskDraftSlice {
   dueDate: string | undefined;
@@ -24,6 +24,10 @@ interface CreateTaskDraftContextValue {
   setAlerts: (alertIds: string[]) => void;
   /** Replace the whole draft slice (e.g. when index initializes from params) */
   setDraft: (slice: Partial<CreateTaskDraftSlice>) => void;
+  /** Register callback for overdue reschedule - invoked when user selects date in date-select (before nav back) */
+  registerOverdueReschedule: (onDateSelected: (date: string) => void) => void;
+  /** Clear overdue reschedule callback (e.g. when user backs out without selecting) */
+  clearOverdueReschedule: () => void;
 }
 
 const defaultDraft: CreateTaskDraftSlice = {
@@ -37,8 +41,14 @@ const CreateTaskDraftContext = createContext<CreateTaskDraftContextValue | null>
 
 export function CreateTaskDraftProvider({ children }: { children: ReactNode }) {
   const [draft, setDraftState] = useState<CreateTaskDraftSlice>(defaultDraft);
+  const overdueRescheduleRef = useRef<((date: string) => void) | null>(null);
 
   const setDueDate = useCallback((date: string | undefined) => {
+    if (date && overdueRescheduleRef.current) {
+      const cb = overdueRescheduleRef.current;
+      overdueRescheduleRef.current = null;
+      cb(date);
+    }
     setDraftState((prev) => ({ ...prev, dueDate: date }));
   }, []);
   const setTime = useCallback((time: string | undefined) => {
@@ -54,6 +64,14 @@ export function CreateTaskDraftProvider({ children }: { children: ReactNode }) {
     setDraftState((prev) => ({ ...prev, ...slice }));
   }, []);
 
+  const registerOverdueReschedule = useCallback((onDateSelected: (date: string) => void) => {
+    overdueRescheduleRef.current = onDateSelected;
+  }, []);
+
+  const clearOverdueReschedule = useCallback(() => {
+    overdueRescheduleRef.current = null;
+  }, []);
+
   const value: CreateTaskDraftContextValue = {
     draft,
     setDueDate,
@@ -61,6 +79,8 @@ export function CreateTaskDraftProvider({ children }: { children: ReactNode }) {
     setDuration,
     setAlerts,
     setDraft,
+    registerOverdueReschedule,
+    clearOverdueReschedule,
   };
 
   return (
