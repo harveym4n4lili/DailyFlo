@@ -45,7 +45,6 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   listStyle = 'roundedStyle',
   minimalStyle = false,
   fullWidthSeparators = false,
-  useDashedSeparator = false,
   itemWrapperPaddingVertical,
   separatorConsiderIconColumn = false,
   iconColumnWidth = 32,
@@ -131,7 +130,6 @@ export const GroupedList: React.FC<GroupedListProps> = ({
             contentPaddingVertical={finalContentPaddingVertical}
             contentMinHeight={finalContentMinHeight}
             listStyle={listStyle}
-            useDashedSeparator={useDashedSeparator}
             itemWrapperPaddingVertical={itemWrapperPaddingVertical}
           >
             {child}

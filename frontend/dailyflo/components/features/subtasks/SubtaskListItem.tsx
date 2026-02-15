@@ -159,8 +159,7 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
     return (
       <View
         style={{
-          paddingHorizontal: 16, // match horizontal padding of grouped list items in elevated container
-          paddingVertical: 16,
+      
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -231,7 +230,6 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
     <View
       style={{
         paddingHorizontal: 16, // match horizontal padding of grouped list items in elevated container
-        paddingVertical: 16,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',

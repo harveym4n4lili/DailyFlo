@@ -2,40 +2,52 @@
  * FormDetailSection Component
  *
  * Renders date picker action using GroupedList + FormDetailButton.
- * Shows date as a FormDetailButton row in the GroupedList when a date is selected.
- * Also includes time/duration and alerts display rows below the date picker.
+ * Shows date, time/duration, and alerts rows in the GroupedList when a date is selected.
+ * Repeating is in a separate container below the GroupedList (same padding, border radius, primarySecondaryBlend).
  */
 
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
-// reusable grouped list: wraps children in rounded container with separators
 import { GroupedList, FormDetailButton } from '@/components/ui/list/GroupedList';
-// custom SVG icons
-import { CalendarIcon, ClockIcon, BellIcon } from '@/components/ui/icon';
-// utility function for time/duration labels
+import { DropdownList } from '@/components/ui/list';
+import { getTextStyle } from '@/constants/Typography';
+import { CalendarIcon, ClockIcon, BellIcon, RepeatIcon } from '@/components/ui/icon';
 import { getTimeDurationDisplayLabels } from '@/components/ui/button';
+import type { RoutineType } from '@/types';
+import { Host, ContextMenu, Button } from '@expo/ui/swift-ui';
 
 // string returned by formPickerUtils when field has no value
 const NO_DATE = 'No Date';
 
+// menu options and labels for repeating (default: Once)
+const ROUTINE_MENU_OPTIONS: { id: RoutineType; label: string }[] = [
+  { id: 'once', label: 'Once' },
+  { id: 'daily', label: 'Every day' },
+  { id: 'weekly', label: 'Once a week' },
+  { id: 'monthly', label: 'Once a month' },
+  { id: 'yearly', label: 'Once a year' },
+];
+const ROUTINE_TYPE_LABELS: Record<RoutineType, string> = {
+  once: 'Once',
+  daily: 'Every day',
+  weekly: 'Once a week',
+  monthly: 'Once a month',
+  yearly: 'Once a year',
+};
+
 export interface FormDetailSectionProps {
-  /** Handler function for date picker */
   onShowDatePicker: () => void;
-  /** Handler function for time/duration picker */
   onShowTimeDurationPicker: () => void;
-  /** Handler function for alerts picker */
   onShowAlertsPicker: () => void;
-  /** Main label for date (e.g., "Thu, 5 Feb 2026") */
   dateValue?: string;
-  /** Sublabel for date shown on the right (e.g., "Today", "Tomorrow") */
   dateSecondaryValue?: string;
-  /** Time string in HH:MM format (e.g. "14:30") or undefined when not set */
   time?: string;
-  /** Duration in minutes or undefined when not set */
   duration?: number;
-  /** Number of alerts selected (0 = "No Alerts", 1 = "1 Alert", etc.) */
   alertsCount?: number;
+  routineType?: RoutineType;
+  onRoutineTypeChange?: (routineType: RoutineType) => void;
 }
 
 export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
@@ -47,8 +59,11 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
   time,
   duration,
   alertsCount = 0,
+  routineType = 'once',
+  onRoutineTypeChange,
 }) => {
   const themeColors = useThemeColors();
+  const [isRepeatingMenuVisible, setIsRepeatingMenuVisible] = useState(false);
 
   // determine if date has a value (used to show FormDetailButton)
   const hasDate = dateValue !== NO_DATE && dateValue !== 'Select';
@@ -92,13 +107,13 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
         <View style={styles.groupedListWrap}>
           <GroupedList
             containerStyle={styles.listContainer}
-            contentPaddingHorizontal={0}
-            backgroundColor="transparent"
+            contentPaddingHorizontal={12}
+            contentPaddingVertical={0}
+            backgroundColor={themeColors.background.primarySecondaryBlend()}
             separatorColor={themeColors.border.primary()}
             separatorInsetRight={0}
-            borderRadius={0}
-            minimalStyle={true}
-            useDashedSeparator={true}
+            borderRadius={24}
+            minimalStyle={false}
             itemWrapperPaddingVertical={16}
             separatorConsiderIconColumn={true}
             iconColumnWidth={30}
@@ -128,6 +143,75 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
               showChevron
             />
           </GroupedList>
+
+          {/* Repeating: iOS = native ContextMenu (liquid glass), Android = DropdownList */}
+          {Platform.OS === 'ios' ? (
+            <View style={styles.repeatingWrapper}>
+              <Host matchContents={false} style={styles.repeatingHost}>
+                <ContextMenu activationMethod="singlePress">
+                  <ContextMenu.Trigger>
+                    <View style={styles.repeatingTapArea}>
+                      <View
+                        style={[
+                          styles.repeatingPill,
+                          { backgroundColor: themeColors.background.primarySecondaryBlend() },
+                        ]}
+                      >
+                        <RepeatIcon size={18} color={themeColors.text.primary()} style={styles.repeatingIcon} />
+                        <Text style={[styles.repeatingText, { color: themeColors.text.primary() }]}>
+                          {ROUTINE_TYPE_LABELS[routineType]}
+                        </Text>
+                      </View>
+                    </View>
+                  </ContextMenu.Trigger>
+                  <ContextMenu.Items>
+                    {ROUTINE_MENU_OPTIONS.map((opt) => (
+                      <Button key={opt.id} onPress={() => onRoutineTypeChange?.(opt.id)}>
+                        {opt.label}
+                      </Button>
+                    ))}
+                  </ContextMenu.Items>
+                </ContextMenu>
+              </Host>
+            </View>
+          ) : (
+            <>
+              <Pressable
+                style={styles.repeatingTapArea}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setIsRepeatingMenuVisible(true);
+                }}
+              >
+                <View
+                  style={[
+                    styles.repeatingPill,
+                    { backgroundColor: themeColors.background.primarySecondaryBlend() },
+                  ]}
+                >
+                  <RepeatIcon size={18} color={themeColors.text.primary()} style={styles.repeatingIcon} />
+                  <Text style={[styles.repeatingText, { color: themeColors.text.primary() }]}>
+                    {ROUTINE_TYPE_LABELS[routineType]}
+                  </Text>
+                </View>
+              </Pressable>
+              <DropdownList
+                visible={isRepeatingMenuVisible}
+                onClose={() => setIsRepeatingMenuVisible(false)}
+                items={ROUTINE_MENU_OPTIONS.map((opt) => ({
+                  id: opt.id,
+                  label: opt.label,
+                  onPress: () => {
+                    onRoutineTypeChange?.(opt.id);
+                    setIsRepeatingMenuVisible(false);
+                  },
+                }))}
+                anchorPosition="top-left"
+                topOffset={120}
+                leftOffset={20}
+              />
+            </>
+          )}
         </View>
       )}
     </View>
@@ -139,13 +223,43 @@ const styles = StyleSheet.create({
   container: {
     overflow: 'visible',
   },
-  // grouped list wrapper
   groupedListWrap: {
     marginBottom: 0,
   },
-  // list wrapper: no extra gap so the grouped list is one visual block
   listContainer: {
     marginVertical: 0,
+  },
+  repeatingWrapper: {
+    marginTop: 12,
+    alignSelf: 'stretch' as const,
+  },
+  repeatingHost: {
+    alignSelf: 'stretch' as const,
+  },
+  // full-width tap area
+  repeatingTapArea: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    alignSelf: 'stretch' as const,
+    marginTop: 12,
+    minHeight: 48,
+  },
+  // pill with background - fits content, left-aligned within tap area
+  repeatingPill: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    alignSelf: 'flex-start' as const,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  repeatingIcon: {
+    marginRight: 4,
+  },
+  repeatingText: {
+    ...getTextStyle('body-large'),
+    fontWeight: '900',
   },
 });
 

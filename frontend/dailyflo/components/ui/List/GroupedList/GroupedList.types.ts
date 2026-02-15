@@ -67,12 +67,6 @@ export interface GroupedListProps {
   fullWidthSeparators?: boolean;
 
   /**
-   * When true, uses dashed separators instead of solid lines (default: false).
-   * Dashed separators use the DashedSeparator component for a custom dashed border effect.
-   */
-  useDashedSeparator?: boolean;
-
-  /**
    * Vertical padding applied to each item wrapper (paddingTop and paddingBottom).
    * This is separate from contentPaddingVertical which controls padding inside the wrapper.
    * Useful for adding spacing around the entire wrapper (default: undefined, no wrapper padding).

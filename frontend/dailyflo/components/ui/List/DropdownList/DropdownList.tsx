@@ -218,7 +218,6 @@ export default function DropdownList({
       >
         {/* dropdown list container with rounded corners */}
         <View style={styles.listContainer}>
-          {/* render each menu item */}
           {items.map(renderMenuItem)}
         </View>
       </TouchableOpacity>

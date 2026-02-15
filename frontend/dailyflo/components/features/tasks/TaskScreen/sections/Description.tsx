@@ -20,7 +20,7 @@ import type { TaskColor } from '@/types';
 // constants for icon + content layout
 const ICON_SIZE = CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS.ICON_SIZE;
 const ICON_CONTAINER_HEIGHT = 22;
-const ICON_TOP_OFFSET = 10;
+const ICON_TOP_OFFSET = 0;
 const ICON_CONTENT_GAP = 8;
 
 export interface DescriptionProps {
@@ -117,7 +117,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  // override CustomTextInput's default paddingVertical (12) to remove extra top/bottom space
   descriptionInputPadding: {
+    paddingTop: 0,
     paddingBottom: 0,
     paddingLeft: 0,
   },

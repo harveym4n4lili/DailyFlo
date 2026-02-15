@@ -12,8 +12,8 @@ import Checkbox from '@/components/ui/button/Checkbox/Checkbox';
 // match SubtaskListItem checkbox so the add row lines up visually (16px matches TaskCard)
 const CHECKBOX_SIZE = 16;
 const ICON_TEXT_GAP = 10;
-// top padding so the button doesn't touch the top border of its grouped list row (matches list row content padding)
-const CONTENT_PADDING_TOP = 16;
+// no extra vertical padding
+const CONTENT_PADDING_TOP = 0;
 
 export interface SubtaskCreateButtonProps {
   onPress?: () => void;
