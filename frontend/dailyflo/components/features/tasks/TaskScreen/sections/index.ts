@@ -11,3 +11,6 @@ export type { SubtaskSectionProps } from './SubtaskSection';
 
 export { Description, default as DescriptionDefault } from './Description';
 export type { DescriptionProps } from './Description';
+
+export { RepeatingSection, default as RepeatingSectionDefault } from './RepeatingSection';
+export type { RepeatingSectionProps } from './RepeatingSection';

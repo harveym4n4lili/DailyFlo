@@ -124,6 +124,7 @@ export default function TaskIndexScreen() {
         (values.alerts && values.alerts.length > 0) ||
         values.time !== undefined ||
         values.duration !== undefined ||
+        values.routineType !== getDefaults(themeColor).routineType ||
         subtasks.length > 0
       ),
     [values, themeColor, subtasks],

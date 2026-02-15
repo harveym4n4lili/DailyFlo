@@ -23,7 +23,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { IconColorModal } from './modals';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
-import { FormDetailSection, SubtaskSection } from './sections';
+import { FormDetailSection, SubtaskSection, RepeatingSection } from './sections';
 import { SaveButton } from '@/components/ui/button/SaveButton';
 import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisplay } from '@/components/ui/button';
 import { getTextStyle } from '@/constants/Typography';
@@ -31,7 +31,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { DashedSeparator } from '@/components/ui/borders';
 import Checkbox from '@/components/ui/button/Checkbox/Checkbox';
-import type { TaskColor } from '@/types';
+import type { TaskColor, RoutineType } from '@/types';
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
 import type { Subtask } from '@/components/features/subtasks';
 
@@ -368,6 +368,12 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
           onDescriptionChange={(description) => onChange('description', description)}
           taskColor={buttonColor}
           scrollViewRef={scrollViewRef}
+        />
+
+        {/* repeating section: button below grouped list - opens context menu for every day / once a week / once a month / once a year */}
+        <RepeatingSection
+          routineType={(values.routineType as RoutineType) || 'once'}
+          onRoutineTypeChange={(routineType) => onChange('routineType', routineType)}
         />
 
         {createError && (
