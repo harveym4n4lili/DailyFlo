@@ -254,6 +254,7 @@ function transformApiTaskToTask(apiTask: any): Task {
       reminders: apiTask.metadata?.reminders || [],
       notes: apiTask.metadata?.notes,
       tags: apiTask.metadata?.tags,
+      recurrence_completions: apiTask.metadata?.recurrence_completions,
     },
     softDeleted: apiTask.soft_deleted !== undefined ? apiTask.soft_deleted : (apiTask.softDeleted !== undefined ? apiTask.softDeleted : false),
     createdAt: apiTask.created_at || apiTask.createdAt || new Date().toISOString(),

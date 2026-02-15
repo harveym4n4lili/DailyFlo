@@ -43,6 +43,13 @@ import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSl
 // The types folder contains all TypeScript interfaces and type definitions
 import { Task, TaskColor } from '@/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  expandTasksForDates,
+  getTargetDatesForTodayScreen,
+  isExpandedRecurrenceId,
+  getBaseTaskId,
+  getOccurrenceDateFromId,
+} from '@/utils/recurrenceUtils';
 
 export default function TodayScreen() {
   // REFRESH STATE - Controls the pull-to-refresh indicator
@@ -135,27 +142,14 @@ export default function TodayScreen() {
   // Only fetch tasks if user is authenticated
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
-  // filter tasks to show today's, overdue, and completed tasks
-  // useMemo ensures this calculation only runs when tasks change
+  // expand and filter tasks: one-off + recurring occurrences for today and overdue (last 14 days)
+  // recurring tasks generate virtual occurrences per date; completion tracked per-occurrence in metadata.recurrence_completions
   const todaysTasks = useMemo(() => {
-    const today = new Date();
-    const todayString = today.toDateString(); // get date in "Mon Jan 15 2024" format
-    
-    const filtered = tasks.filter(task => {
-      // include completed tasks (they'll be grouped separately)
-      if (task.isCompleted) return true;
-      
-      // include tasks that are due today or overdue
-      if (task.dueDate) {
-        const taskDate = new Date(task.dueDate);
-        const isToday = taskDate.toDateString() === todayString;
-        // include overdue tasks (due before today)
-        const isOverdue = taskDate < today;
-        return isToday || isOverdue;
-      }
-      return false;
+    const targetDates = getTargetDatesForTodayScreen();
+    const expanded = expandTasksForDates(tasks, targetDates, {
+      includeOneOffBeforeRange: true, // include one-off tasks overdue before our 14-day window
     });
-    return filtered;
+    return expanded;
   }, [tasks]);
 
   // calculate total task count for header display (only incomplete tasks)
@@ -257,19 +251,33 @@ export default function TodayScreen() {
   };
   
   // handle task completion toggle
+  // for recurring occurrences (id format: baseId__dateStr), update metadata.recurrence_completions instead of isCompleted
   const handleTaskComplete = (task: Task) => {
-    console.log('✅ Task completion toggled:', task.title);
-    // STORE USAGE - Dispatching updateTask action to toggle completion status
-    // dispatch(updateTask()): Sends the updateTask action to the Redux store
-    // This triggers the async thunk defined in store/slices/tasks/tasksSlice.ts
-    // The thunk will make an API call and update the store with the results
-    dispatch(updateTask({ 
-      id: task.id, 
-      updates: { 
+    if (isExpandedRecurrenceId(task.id)) {
+      // recurring occurrence: add/remove date from recurrence_completions on the base task
+      const baseId = getBaseTaskId(task.id);
+      const occurrenceDate = getOccurrenceDateFromId(task.id);
+      if (!occurrenceDate) return;
+      const baseTask = tasks.find((t) => t.id === baseId);
+      if (!baseTask) return;
+      const completions = baseTask.metadata?.recurrence_completions ?? [];
+      const newCompletions = task.isCompleted
+        ? completions.filter((d) => d !== occurrenceDate)
+        : [...completions, occurrenceDate];
+      dispatch(updateTask({
+        id: baseId,
+        updates: {
+          id: baseId,
+          metadata: { ...baseTask.metadata, recurrence_completions: newCompletions },
+        },
+      }));
+    } else {
+      // one-off task: toggle isCompleted as usual
+      dispatch(updateTask({
         id: task.id,
-        isCompleted: !task.isCompleted
-      } 
-    }));
+        updates: { id: task.id, isCompleted: !task.isCompleted },
+      }));
+    }
   };
   
   // handle task edit (for future task edit modal)
@@ -281,13 +289,8 @@ export default function TodayScreen() {
   
   // handle task delete (for future confirmation modal)
   const handleTaskDelete = (task: Task) => {
-    console.log('🗑️ Task delete requested:', task.title);
-    // STORE USAGE - Dispatching deleteTask action to remove task
-    // dispatch(deleteTask()): Sends the deleteTask action to the Redux store
-    // This triggers the async thunk defined in store/slices/tasks/tasksSlice.ts
-    // The thunk will make an API call and update the store by removing the task
-    // TODO: Add confirmation modal before deletion
-    dispatch(deleteTask(task.id));
+    const taskId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+    dispatch(deleteTask(taskId));
   };
 
 
@@ -337,7 +340,8 @@ export default function TodayScreen() {
 
   // handle press on "Reschedule" in the Overdue group header: open date-select, apply date via callback
   const handleOverdueReschedulePress = (overdueTasks: Task[]) => {
-    const ids = overdueTasks.map((t) => t.id);
+    // use base task ids (recurring occurrences share same base; reschedule updates the template)
+    const ids = [...new Set(overdueTasks.map((t) => (isExpandedRecurrenceId(t.id) ? getBaseTaskId(t.id) : t.id)))];
     const initialDate =
       overdueTasks[0]?.dueDate ?? new Date().toISOString();
     setDraft({ dueDate: initialDate, time: undefined, duration: undefined, alerts: [] });

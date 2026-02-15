@@ -12,7 +12,7 @@ export type TaskColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'teal' 
 
 // Define the possible routine types for tasks
 // This matches the ROUTINE_TYPE_CHOICES in the backend Task model
-export type RoutineType = 'once' | 'daily' | 'weekly' | 'monthly';
+export type RoutineType = 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 // Define the priority levels (1-5, where 5 is highest priority)
 // This matches the priority_level field in the backend Task model
@@ -70,6 +70,8 @@ export interface Task {
     reminders: TaskReminder[];      // Array of reminders
     notes?: string;                 // Additional notes
     tags?: string[];                // Optional tags for categorization
+    /** for recurring tasks: dates (YYYY-MM-DD) when this occurrence was completed */
+    recurrence_completions?: string[];
   };
   
   // Soft delete support

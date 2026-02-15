@@ -16,7 +16,7 @@ import { useTypography } from '@/hooks/useTypography';
 
 interface TaskIndicatorsProps {
   // routine type - determines if repeating indicator is shown
-  routineType: 'once' | 'daily' | 'weekly' | 'monthly';
+  routineType: 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly';
   // optional list ID - determines if "List" or "Inbox" is shown
   listId?: string | null;
 }
@@ -46,6 +46,8 @@ export default function TaskIndicators({
         return 'Weekly';
       case 'monthly':
         return 'Monthly';
+      case 'yearly':
+        return 'Yearly';
       default:
         return '';
     }

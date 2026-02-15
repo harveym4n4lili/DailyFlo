@@ -31,6 +31,12 @@ import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSl
 
 // types for tasks
 import { Task, TaskColor } from '@/types';
+import {
+  expandTasksForDates,
+  isExpandedRecurrenceId,
+  getBaseTaskId,
+  getOccurrenceDateFromId,
+} from '@/utils/recurrenceUtils';
 
 export default function PlannerScreen() {
   // CALENDAR MODAL STATE - Controls the visibility of the calendar modal
@@ -98,21 +104,11 @@ export default function PlannerScreen() {
     setSelectedDate(date);
   };
   
-  // filter tasks for the selected date
-  // useMemo ensures this calculation only runs when tasks or selectedDate changes
+  // expand tasks for selected date: one-off + recurring occurrences that fall on selectedDate
   const selectedDateTasks = useMemo(() => {
     if (!selectedDate) return [];
-    
-    // convert selected date to date string for comparison (YYYY-MM-DD format)
-    const selectedDateObj = new Date(selectedDate);
-    const selectedDateString = selectedDateObj.toDateString(); // "Mon Jan 15 2024" format
-    
-    // filter tasks that match the selected date
-    return tasks.filter(task => {
-      if (!task.dueDate) return false;
-      const taskDate = new Date(task.dueDate);
-      return taskDate.toDateString() === selectedDateString;
-    });
+    const selectedDateStr = new Date(selectedDate).toISOString().slice(0, 10);
+    return expandTasksForDates(tasks, [selectedDateStr]);
   }, [tasks, selectedDate]);
   
   // fetch tasks when component mounts or when authentication state changes
@@ -129,39 +125,37 @@ export default function PlannerScreen() {
   };
   
   // handle marking a task as complete/uncomplete
-  // when completing a task, also completes all its subtasks
-  // when uncompleting a task, also uncompletes all its subtasks
+  // for recurring occurrences (expanded id), update metadata.recurrence_completions on base task
   const handleTaskComplete = async (task: Task) => {
     try {
-      const newCompletionStatus = !task.isCompleted;
-      
-      // prepare updates object
-      const updates: any = {
-        id: task.id,
-        isCompleted: newCompletionStatus,
-      };
-      
-      // if task has subtasks, update all subtasks to match the task's completion status
-      if (task.metadata?.subtasks && task.metadata.subtasks.length > 0) {
-        // create updated subtasks array with all subtasks matching the task's completion status
-        const updatedSubtasks = task.metadata.subtasks.map(subtask => ({
-          ...subtask,
-          isCompleted: newCompletionStatus, // match the task's new completion status
-        }));
-        
-        // include updated subtasks in metadata
-        updates.metadata = {
-          ...task.metadata,
-          subtasks: updatedSubtasks,
-        };
+      if (isExpandedRecurrenceId(task.id)) {
+        const baseId = getBaseTaskId(task.id);
+        const occurrenceDate = getOccurrenceDateFromId(task.id);
+        if (!occurrenceDate) return;
+        const baseTask = tasks.find((t) => t.id === baseId);
+        if (!baseTask) return;
+        const completions = baseTask.metadata?.recurrence_completions ?? [];
+        const newCompletions = task.isCompleted
+          ? completions.filter((d) => d !== occurrenceDate)
+          : [...completions, occurrenceDate];
+        await dispatch(updateTask({
+          id: baseId,
+          updates: {
+            id: baseId,
+            metadata: { ...baseTask.metadata, recurrence_completions: newCompletions },
+          },
+        })).unwrap();
+      } else {
+        const newCompletionStatus = !task.isCompleted;
+        const updates: any = { id: task.id, isCompleted: newCompletionStatus };
+        if (task.metadata?.subtasks?.length) {
+          updates.metadata = {
+            ...task.metadata,
+            subtasks: task.metadata.subtasks.map((s) => ({ ...s, isCompleted: newCompletionStatus })),
+          };
+        }
+        await dispatch(updateTask({ id: task.id, updates })).unwrap();
       }
-      
-      // dispatch updateTask action to Redux store
-      // this will trigger the async thunk that updates the task via API
-      await dispatch(updateTask({ 
-        id: task.id, 
-        updates 
-      })).unwrap();
     } catch (error) {
       console.error('Failed to update task:', error);
     }
@@ -172,10 +166,11 @@ export default function PlannerScreen() {
     // TODO: Implement task edit
   };
   
-  // handle deleting a task
+  // handle deleting a task (for expanded recurring, delete base task)
   const handleTaskDelete = async (task: Task) => {
+    const taskId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     try {
-      await dispatch(deleteTask(task.id)).unwrap();
+      await dispatch(deleteTask(taskId)).unwrap();
     } catch (error) {
       console.error('Failed to delete task:', error);
     }
@@ -201,27 +196,16 @@ export default function PlannerScreen() {
   };
 
   // handle when a task's time is changed via dragging on the timeline
-  // updates the task's time and optionally duration
+  // for expanded recurring tasks, update the base task
   const handleTaskTimeChange = async (taskId: string, newTime: string, newDuration?: number) => {
     try {
-      // find the task to update
-      const task = tasks.find(t => t.id === taskId);
+      const baseId = isExpandedRecurrenceId(taskId) ? getBaseTaskId(taskId) : taskId;
+      const task = tasks.find((t) => t.id === baseId);
       if (!task) return;
 
-      // prepare update data with new time
-      const updates: any = {
-        id: taskId,
-        time: newTime,
-      };
-
-      // include duration if provided
-      if (newDuration !== undefined) {
-        updates.duration = newDuration;
-      }
-
-      // dispatch updateTask action to Redux store
-      // this will trigger the async thunk that updates the task via API
-      await dispatch(updateTask({ id: taskId, updates })).unwrap();
+      const updates: any = { id: baseId, time: newTime };
+      if (newDuration !== undefined) updates.duration = newDuration;
+      await dispatch(updateTask({ id: baseId, updates })).unwrap();
     } catch (error) {
       console.error('Failed to update task time:', error);
     }

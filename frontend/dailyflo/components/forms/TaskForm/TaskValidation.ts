@@ -53,7 +53,7 @@ export function validateField<K extends keyof TaskFormValues>(
   }
 
   if (key === 'routineType') {
-    const allowed: RoutineType[] = ['once', 'daily', 'weekly', 'monthly'];
+    const allowed: RoutineType[] = ['once', 'daily', 'weekly', 'monthly', 'yearly'];
     if (value && !allowed.includes(value as RoutineType)) return 'invalid routine type';
   }
 
