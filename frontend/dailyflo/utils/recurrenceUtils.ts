@@ -156,7 +156,12 @@ export function expandTasksForDates(
     }
 
     // recurring: generate one occurrence per matching target date
+    // skip dates in recurrence_exceptions (user edited "this instance only" - one-off created instead)
+    const exceptions = (task.metadata as any)?.recurrence_exceptions ?? [];
+    const exceptionSet = new Set(exceptions);
+
     for (const dateStr of targetDates) {
+      if (exceptionSet.has(dateStr)) continue; // this occurrence was overridden by a one-off
       if (!taskOccursOnDate(task, dateStr)) continue;
 
       const completions = getRecurrenceCompletionDates(task);

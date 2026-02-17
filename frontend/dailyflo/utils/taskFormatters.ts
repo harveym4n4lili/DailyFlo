@@ -7,6 +7,24 @@
  */
 
 /**
+ * Normalizes a time string to HH:MM format.
+ * Django/API often returns HH:MM:SS (e.g. "16:00:00"); we use HH:MM internally
+ * for validation, display, and updates. This prevents validation failures
+ * and hasChanges mismatches that block saves.
+ */
+export function normalizeTimeToHHMM(time: string | null | undefined): string | undefined {
+  if (!time || typeof time !== 'string' || time.trim() === '') return undefined;
+  const trimmed = time.trim();
+  if (trimmed.includes(':') && trimmed.split(':').length >= 2) {
+    const [h, m] = trimmed.split(':').map(Number);
+    if (!Number.isNaN(h) && !Number.isNaN(m)) {
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+  }
+  return trimmed.length >= 5 ? trimmed.substring(0, 5) : trimmed;
+}
+
+/**
  * Formats a due date string into a human-readable format
  * Returns "Today", "Tomorrow", "X days ago" for overdue, or formatted date
  * 

@@ -201,7 +201,7 @@ export default function RootLayout() {
                 headerShown: false,
                 presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
                 gestureEnabled: true,
-                sheetAllowedDetents: [0.6, 1],
+                sheetAllowedDetents: [0.7, 1],
                 contentStyle: {
                   backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.primary(),
                 },

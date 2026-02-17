@@ -76,6 +76,8 @@ export interface TaskCreationContentProps {
   createError?: string | null;
   /** Error message when update fails (used in edit mode) */
   updateError?: string | null;
+  /** Validation error when save fails due to invalid form data (e.g. title required) */
+  validationError?: string | null;
   
   /** Array of subtasks for the task */
   subtasks: Subtask[];
@@ -151,6 +153,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   isCreating = false,
   createError,
   updateError,
+  validationError,
   hasChanges,
   isSaveButtonVisible: isSaveButtonVisibleProp,
   onCreateSubtask,
@@ -379,7 +382,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
           scrollViewRef={scrollViewRef}
         />
 
-        {(createError ?? updateError) && (
+        {(createError ?? updateError ?? validationError) && (
           <View
             style={{
               marginHorizontal: 20,
@@ -392,7 +395,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
             }}
           >
             <Text style={[getTextStyle('body-small'), { color: colors.getSemanticColor('error', 500) }]}>
-              {createError ?? updateError}
+              {createError ?? updateError ?? validationError}
             </Text>
           </View>
         )}

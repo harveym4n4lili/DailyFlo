@@ -120,9 +120,11 @@ export default function PlannerScreen() {
   
   // TASK HANDLERS - Functions to handle task interactions
   // handle when user taps on a task card - opens task screen in edit mode
+  // for recurring occurrences, pass occurrenceDate so save can offer "this instance" vs "all"
   const handleTaskPress = (task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
-    router.push({ pathname: '/task', params: { taskId: baseId } });
+    const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
+    router.push({ pathname: '/task', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
   // handle marking a task as complete/uncomplete
@@ -165,7 +167,8 @@ export default function PlannerScreen() {
   // handle editing a task - opens task screen in edit mode (same as task press)
   const handleTaskEdit = (task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
-    router.push({ pathname: '/task', params: { taskId: baseId } });
+    const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
+    router.push({ pathname: '/task', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
   // handle deleting a task (for expanded recurring, delete base task)
