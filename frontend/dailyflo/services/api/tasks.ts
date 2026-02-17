@@ -26,6 +26,7 @@ import {
 // UpdateTaskInput: Type for updating tasks (from types/common/Task.ts)
 // These are the frontend formats with camelCase field names
 import { CreateTaskInput, UpdateTaskInput } from '../../types/common/Task';
+import { normalizeTimeToHHMM } from '../../utils/taskFormatters';
 
 /**
  * Tasks API service class
@@ -114,7 +115,7 @@ class TasksApiService {
         apiData.icon = taskData.icon.trim();
       }
       if (taskData.time !== undefined && taskData.time !== null) {
-        apiData.time = taskData.time; // Django TimeField accepts HH:MM format string
+        apiData.time = normalizeTimeToHHMM(taskData.time) ?? taskData.time; // normalize HH:MM:SS to HH:MM for Django
       }
       if (taskData.duration !== undefined && taskData.duration !== null) {
         apiData.duration = taskData.duration;
@@ -227,8 +228,8 @@ class TasksApiService {
           // Explicitly clearing time - send null to Django to remove the time
           apiData.time = null;
         } else {
-          // Time has a value - send it to Django
-          apiData.time = taskData.time; // Django TimeField accepts HH:MM format string
+          // Time has a value - normalize HH:MM:SS to HH:MM for Django
+          apiData.time = normalizeTimeToHHMM(taskData.time) ?? taskData.time;
         }
       }
       // Handle duration field - distinguish between not provided vs explicitly cleared

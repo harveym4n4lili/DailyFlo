@@ -7,6 +7,7 @@
 
 import { CreateTaskInput, PriorityLevel, RoutineType } from '@/types';
 import { TaskCategoryColorName } from '@/constants/ColorPalette';
+import { normalizeTimeToHHMM } from '@/utils/taskFormatters';
 
 export type ValidationErrors = Partial<Record<keyof CreateTaskInput | 'title', string>>;
 
@@ -74,14 +75,14 @@ export function validateField<K extends keyof TaskFormValues>(
     if (v.length > 50) return 'icon name must be ≤ 50 chars';
   }
 
-  // validate time field - must be in HH:MM format
-  // time is optional but if provided should match HH:MM pattern (e.g., '14:30', '09:00')
+  // validate time field - must be in HH:MM format (API may return HH:MM:SS - normalize first)
   if (key === 'time') {
     const v = value as string | undefined;
     if (v) {
-      // regex pattern: HH:MM where HH is 00-23 and MM is 00-59
+      const normalized = normalizeTimeToHHMM(v);
+      if (!normalized) return undefined;
       const timePattern = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
-      if (!timePattern.test(v)) return 'time must be in HH:MM format (e.g., 14:30)';
+      if (!timePattern.test(normalized)) return 'time must be in HH:MM format (e.g., 14:30)';
     }
   }
 

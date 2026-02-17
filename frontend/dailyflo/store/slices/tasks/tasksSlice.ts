@@ -26,6 +26,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // tasksApiService: service that handles all task-related API calls to Django backend
 // this service makes HTTP requests and returns formatted responses
 import tasksApiService from '../../../services/api/tasks';
+import { normalizeTimeToHHMM } from '../../../utils/taskFormatters';
 
 /**
  * Define the shape of the tasks state
@@ -240,7 +241,7 @@ function transformApiTaskToTask(apiTask: any): Task {
     title: apiTask.title || '',
     description: apiTask.description || '',
     icon: apiTask.icon,
-    time: apiTask.time,
+    time: normalizeTimeToHHMM(apiTask.time) ?? apiTask.time,
     duration: apiTask.duration || 0,
     dueDate: apiTask.due_date || apiTask.dueDate || null,
     isCompleted: apiTask.is_completed !== undefined ? apiTask.is_completed : (apiTask.isCompleted !== undefined ? apiTask.isCompleted : false),
@@ -255,6 +256,7 @@ function transformApiTaskToTask(apiTask: any): Task {
       notes: apiTask.metadata?.notes,
       tags: apiTask.metadata?.tags,
       recurrence_completions: apiTask.metadata?.recurrence_completions,
+      recurrence_exceptions: apiTask.metadata?.recurrence_exceptions,
     },
     softDeleted: apiTask.soft_deleted !== undefined ? apiTask.soft_deleted : (apiTask.softDeleted !== undefined ? apiTask.softDeleted : false),
     createdAt: apiTask.created_at || apiTask.createdAt || new Date().toISOString(),

@@ -6,14 +6,14 @@
  * time-duration-select and alert-select stay in sync.
  */
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { View, StyleSheet, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useAppDispatch } from '@/store';
-import { createTask, updateTask } from '@/store/slices/tasks/tasksSlice';
+import { createTask, updateTask, fetchTasks } from '@/store/slices/tasks/tasksSlice';
 import { useTasks } from '@/store/hooks';
 import { TaskScreenContent } from '@/components/features/tasks/TaskScreen/TaskScreenContent';
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
@@ -21,6 +21,7 @@ import type { PriorityLevel, RoutineType, CreateTaskInput, TaskColor, Subtask as
 import type { Subtask } from '@/components/features/subtasks';
 import { validateAll } from '@/components/forms/TaskForm/TaskValidation';
 import { useCreateTaskDraft } from './CreateTaskDraftContext';
+import { isRecurringTask } from '@/utils/recurrenceUtils';
 
 const getDefaults = (themeColor: TaskColor = 'red'): TaskFormValues => ({
   title: '',
@@ -44,7 +45,7 @@ function taskToFormSubtasks(metaSubtasks?: { id: string; title: string; isComple
 
 export default function TaskIndexScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ dueDate?: string; taskId?: string }>();
+  const params = useLocalSearchParams<{ dueDate?: string; taskId?: string; occurrenceDate?: string }>();
   const themeColors = useThemeColors();
   const { themeColor } = useThemeColor();
   const dispatch = useAppDispatch();
@@ -86,35 +87,58 @@ export default function TaskIndexScreen() {
     return [];
   });
   const [pendingFocusSubtaskId, setPendingFocusSubtaskId] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // store initial values for edit mode hasChanges comparison
   const initialValuesRef = useRef<{ values: Partial<TaskFormValues>; subtasks: Subtask[] } | null>(null);
+  const initialDraftSyncedRef = useRef(false);
+  const prevAutoSaveDraftRef = useRef<string>('');
   if (isEditMode && params.taskId && !initialValuesRef.current) {
     const task = tasks.find((t) => t.id === params.taskId);
     if (task) {
-      initialValuesRef.current = {
-        values: {
-          title: task.title,
-          description: task.description || '',
-          dueDate: task.dueDate ?? '',
-          time: task.time,
-          duration: task.duration,
-          color: task.color,
-          routineType: task.routineType,
-          alerts: (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
-        },
-        subtasks: taskToFormSubtasks(task.metadata?.subtasks),
-      };
+        initialValuesRef.current = {
+          values: {
+            title: task.title,
+            description: task.description || '',
+            dueDate: task.dueDate ?? '',
+            time: task.time,
+            duration: task.duration,
+            color: task.color,
+            icon: task.icon,
+            listId: task.listId ?? undefined,
+            priorityLevel: task.priorityLevel,
+            routineType: task.routineType,
+            alerts: (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
+          },
+          subtasks: taskToFormSubtasks(task.metadata?.subtasks),
+        };
     }
   }
 
   // load task data when in edit mode (runs when taskId or tasks changes)
+  // if task not in store, fetch tasks from API so we have the latest data to edit
   useEffect(() => {
     if (isEditMode && params.taskId) {
       const task = tasks.find((t) => t.id === params.taskId);
-      if (task) {
+      if (!task) {
+        // task not in Redux store yet (e.g. deep link, or tasks not fetched) - fetch to load it
+        dispatch(fetchTasks());
+        return;
+      }
+        // when editing a specific occurrence, use occurrence date so form shows which instance we're editing
+        const effectiveDueDate = params.occurrenceDate && isRecurringTask(task)
+          ? (task.time
+            ? (() => {
+                const [h, m] = task.time.split(':').map(Number);
+                const d = new Date(params.occurrenceDate! + 'T12:00:00');
+                d.setHours(h, m ?? 0, 0, 0);
+                return d.toISOString();
+              })()
+            : params.occurrenceDate + 'T12:00:00.000Z')
+          : (task.dueDate ?? new Date().toISOString());
+        initialDraftSyncedRef.current = false; // reset so auto-save skips first run after load
         setDraft({
-          dueDate: task.dueDate ?? new Date().toISOString(),
+          dueDate: effectiveDueDate,
           time: task.time,
           duration: task.duration,
           alerts: (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
@@ -122,7 +146,7 @@ export default function TaskIndexScreen() {
         setLocalValues({
           title: task.title,
           description: task.description || '',
-          dueDate: task.dueDate ?? new Date().toISOString(),
+          dueDate: effectiveDueDate,
           priorityLevel: task.priorityLevel,
           color: task.color,
           icon: task.icon,
@@ -135,13 +159,63 @@ export default function TaskIndexScreen() {
         setSubtasks(taskToFormSubtasks(task.metadata?.subtasks));
         if (!initialValuesRef.current) {
           initialValuesRef.current = {
-            values: { title: task.title, description: task.description || '', dueDate: task.dueDate ?? '', time: task.time, duration: task.duration, color: task.color, routineType: task.routineType, alerts: (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [] },
+            values: {
+              title: task.title,
+              description: task.description || '',
+              dueDate: effectiveDueDate ?? (task.dueDate ?? ''),
+              time: task.time,
+              duration: task.duration,
+              color: task.color,
+              icon: task.icon,
+              listId: task.listId ?? undefined,
+              priorityLevel: task.priorityLevel,
+              routineType: task.routineType,
+              alerts: (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
+            },
             subtasks: taskToFormSubtasks(task.metadata?.subtasks),
           };
         }
-      }
     }
-  }, [params.taskId, isEditMode, tasks]);
+  }, [params.taskId, params.occurrenceDate, isEditMode, tasks, dispatch]);
+
+  // auto-save date/time/duration/alerts when draft changes in edit mode (no save button for these)
+  const task = isEditMode && params.taskId ? tasks.find((t) => t.id === params.taskId) : null;
+  useEffect(() => {
+    if (!isEditMode || !params.taskId || !task) return;
+    // after load effect runs, draft is synced from task - mark that we've done initial sync
+    if (!initialDraftSyncedRef.current) {
+      initialDraftSyncedRef.current = true;
+      return; // skip first run - draft was just set from task, don't save
+    }
+    const taskAlerts = (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [];
+    const taskDueDate = task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : '';
+    const draftDueDate = draft.dueDate ? new Date(draft.dueDate).toISOString().slice(0, 10) : '';
+    const draftChanged =
+      draftDueDate !== taskDueDate ||
+      (draft.time ?? '') !== (task.time ?? '') ||
+      (draft.duration ?? 0) !== (task.duration ?? 0) ||
+      JSON.stringify(draft.alerts ?? []) !== JSON.stringify(taskAlerts);
+    if (!draftChanged) return;
+    const draftKey = `${draft.dueDate}|${draft.time}|${draft.duration}|${JSON.stringify(draft.alerts ?? [])}`;
+    if (prevAutoSaveDraftRef.current === draftKey) return; // avoid duplicate save
+    prevAutoSaveDraftRef.current = draftKey;
+    const dueDateToSave = draft.dueDate ?? task.dueDate ?? new Date().toISOString();
+    dispatch(
+      updateTask({
+        id: params.taskId,
+        updates: {
+          id: params.taskId,
+          dueDate: dueDateToSave,
+          time: draft.time ?? undefined,
+          duration: draft.duration ?? undefined,
+          metadata: {
+            ...(task.metadata ?? {}),
+            reminders: (draft.alerts ?? []).map((id) => ({ id, type: 'custom' as const, scheduledTime: new Date(), isEnabled: true })),
+          },
+        },
+      })
+    );
+  }, [params.taskId, isEditMode, draft.dueDate, draft.time, draft.duration, draft.alerts, task, dispatch]);
 
   // create mode: init draft and clear when switching to create
   useEffect(() => {
@@ -165,11 +239,24 @@ export default function TaskIndexScreen() {
     [localValues, draft],
   );
 
+  // auto-save routineType in edit mode - no save button needed
+  const handleRoutineTypeChange = useCallback(
+    (routineType: RoutineType) => {
+      setLocalValues((prev) => ({ ...prev, routineType }));
+      if (isEditMode && params.taskId) {
+        dispatch(updateTask({ id: params.taskId, updates: { id: params.taskId, routineType } }));
+      }
+    },
+    [isEditMode, params.taskId, dispatch],
+  );
+
   const onChange = <K extends keyof TaskFormValues>(key: K, v: TaskFormValues[K]) => {
+    setValidationError(null); // clear validation error when user edits
     if (key === 'dueDate') setDueDate(v as string);
     else if (key === 'time') setTime(v as string | undefined);
     else if (key === 'duration') setDuration(v as number | undefined);
     else if (key === 'alerts') setAlerts((v as string[]) ?? []);
+    else if (key === 'routineType') handleRoutineTypeChange(v as RoutineType);
     else setLocalValues((prev) => ({ ...prev, [key]: v }));
   };
 
@@ -205,6 +292,7 @@ export default function TaskIndexScreen() {
     setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId));
   };
 
+  // hasChanges excludes date/time/duration/alerts/recurrence - those auto-save, save button only for title/description/subtasks/color/icon/listId/priority
   const hasChanges = useMemo(() => {
     if (isEditMode && initialValuesRef.current) {
       const init = initialValuesRef.current;
@@ -218,12 +306,10 @@ export default function TaskIndexScreen() {
       return !!(
         (v.title?.trim() ?? '') !== (init.values.title ?? '') ||
         (v.description ?? '') !== (init.values.description ?? '') ||
-        (v.dueDate ?? '') !== (init.values.dueDate ?? '') ||
-        (v.time ?? '') !== (init.values.time ?? '') ||
-        (v.duration ?? undefined) !== (init.values.duration ?? undefined) ||
         (v.color ?? '') !== (init.values.color ?? '') ||
-        (v.routineType ?? '') !== (init.values.routineType ?? '') ||
-        JSON.stringify(v.alerts ?? []) !== JSON.stringify(init.values.alerts ?? []) ||
+        (v.icon ?? '') !== (init.values.icon ?? '') ||
+        (v.listId ?? '') !== (init.values.listId ?? '') ||
+        (v.priorityLevel ?? 3) !== (init.values.priorityLevel ?? 3) ||
         subtasksChanged
       );
     }
@@ -246,7 +332,13 @@ export default function TaskIndexScreen() {
 
   const handleSave = async () => {
     const errors = validateAll(values as TaskFormValues);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) {
+      // show first validation error to user (e.g. "title is required")
+      const firstError = errors.title ?? Object.values(errors).filter(Boolean)[0] ?? 'Please fix the form errors';
+      setValidationError(firstError);
+      return;
+    }
+    setValidationError(null);
 
     const taskSubtasks: TaskSubtask[] = subtasks.map((st, index) => ({
       id: st.id,
@@ -256,17 +348,22 @@ export default function TaskIndexScreen() {
     }));
 
     if (isEditMode && params.taskId) {
-      try {
+      const task = tasks.find((t) => t.id === params.taskId);
+      const isRecurring = task && isRecurringTask(task);
+      // for recurring: occurrenceDate from URL param, or from form's dueDate when editing without param
+      const occurrenceDate = params.occurrenceDate ?? (values.dueDate ? new Date(values.dueDate).toISOString().slice(0, 10) : null);
+
+      const performUpdateAll = async () => {
         const result = await dispatch(
           updateTask({
-            id: params.taskId,
+            id: params.taskId!,
             updates: {
-              id: params.taskId,
+              id: params.taskId!,
               title: values.title!.trim(),
               description: values.description?.trim() || undefined,
               icon: values.icon && values.icon.trim() ? values.icon.trim() : undefined,
               time: values.time || undefined,
-              duration: values.duration || undefined,
+              duration: values.duration ?? undefined,
               dueDate: values.dueDate || undefined,
               priorityLevel: values.priorityLevel || 3,
               color: values.color || themeColor,
@@ -284,6 +381,76 @@ export default function TaskIndexScreen() {
         if (updateTask.fulfilled.match(result)) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
           router.back();
+        }
+      };
+
+      const performUpdateThisInstanceOnly = async () => {
+        if (!occurrenceDate) return;
+        try {
+          // 1. create one-off task for this occurrence with user's edits
+          const oneOffDueDate = values.time
+            ? (() => {
+                const [h, m] = values.time!.split(':').map(Number);
+                const d = new Date(occurrenceDate + 'T12:00:00');
+                d.setHours(h, m ?? 0, 0, 0);
+                return d.toISOString();
+              })()
+            : occurrenceDate + 'T12:00:00.000Z';
+          const createResult = await dispatch(
+            createTask({
+              title: values.title!.trim(),
+              description: values.description?.trim() || undefined,
+              icon: values.icon && values.icon.trim() ? values.icon.trim() : undefined,
+              time: values.time || undefined,
+              duration: values.duration ?? undefined,
+              dueDate: oneOffDueDate,
+              priorityLevel: values.priorityLevel || 3,
+              color: values.color || themeColor,
+              routineType: 'once',
+              listId: values.listId || undefined,
+              metadata: {
+                subtasks: taskSubtasks,
+                reminders: (values.alerts ?? []).map((id) => ({ id, type: 'custom' as const, scheduledTime: new Date(), isEnabled: true })),
+                notes: values.description?.trim() || undefined,
+                tags: [],
+              },
+            })
+          );
+          if (!createTask.fulfilled.match(createResult)) return;
+          // 2. add occurrence to recurrence_exceptions on base task so recurring doesn't show on this date
+          const baseTask = tasks.find((t) => t.id === params.taskId);
+          const existing = (baseTask?.metadata as any)?.recurrence_exceptions ?? [];
+          const newExceptions = existing.includes(occurrenceDate) ? existing : [...existing, occurrenceDate];
+          await dispatch(
+            updateTask({
+              id: params.taskId!,
+              updates: {
+                id: params.taskId!,
+                metadata: { ...(baseTask?.metadata ?? {}), recurrence_exceptions: newExceptions },
+              },
+            })
+          );
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+          router.back();
+        } catch (e) {
+          console.error('Unexpected error updating this occurrence:', e);
+        }
+      };
+
+      try {
+        if (isRecurring && occurrenceDate) {
+          // show choice: this instance only vs all instances
+          Alert.alert(
+            'Update recurring task',
+            'Do you want to update this occurrence only, or all future occurrences?',
+            [
+              { text: 'This occurrence only', onPress: performUpdateThisInstanceOnly },
+              { text: 'All occurrences', onPress: performUpdateAll },
+              { text: 'Cancel', style: 'cancel' },
+            ]
+          );
+        } else {
+          await performUpdateAll();
         }
       } catch (e) {
         console.error('Unexpected error updating task:', e);
@@ -354,6 +521,7 @@ export default function TaskIndexScreen() {
         isCreating={isCreating || isUpdating}
         createError={createError ?? undefined}
         updateError={updateError ?? undefined}
+        validationError={validationError ?? undefined}
         subtasks={subtasks}
         onSubtaskToggle={handleSubtaskToggle}
         onSubtaskDelete={handleSubtaskDelete}

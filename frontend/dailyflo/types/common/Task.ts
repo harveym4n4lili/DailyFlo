@@ -72,6 +72,8 @@ export interface Task {
     tags?: string[];                // Optional tags for categorization
     /** for recurring tasks: dates (YYYY-MM-DD) when this occurrence was completed */
     recurrence_completions?: string[];
+    /** for recurring tasks: dates (YYYY-MM-DD) excluded from recurrence (user edited "this instance only" - one-off created) */
+    recurrence_exceptions?: string[];
   };
   
   // Soft delete support

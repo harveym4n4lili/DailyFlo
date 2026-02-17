@@ -48,7 +48,7 @@ export interface SubtaskSectionProps {
   taskColor?: TaskColor;
   
   /** ScrollView ref for scrolling to end when subtask is focused */
-  scrollViewRef?: React.RefObject<ScrollView>;
+  scrollViewRef?: React.RefObject<ScrollView | null>;
 }
 
 export const SubtaskSection: React.FC<SubtaskSectionProps> = ({

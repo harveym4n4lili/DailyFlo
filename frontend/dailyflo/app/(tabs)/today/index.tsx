@@ -245,9 +245,11 @@ export default function TodayScreen() {
   // These functions demonstrate the flow: User interaction → Redux action → State update → UI re-render
   
   // handle task press - opens task screen in edit mode
+  // for recurring occurrences, pass occurrenceDate so save can offer "this instance" vs "all"
   const handleTaskPress = (task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
-    router.push({ pathname: '/task', params: { taskId: baseId } });
+    const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
+    router.push({ pathname: '/task', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
   // handle task completion toggle
@@ -283,7 +285,8 @@ export default function TodayScreen() {
   // handle task edit - opens task screen in edit mode (same as task press)
   const handleTaskEdit = (task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
-    router.push({ pathname: '/task', params: { taskId: baseId } });
+    const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
+    router.push({ pathname: '/task', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
   // handle task delete (for future confirmation modal)
