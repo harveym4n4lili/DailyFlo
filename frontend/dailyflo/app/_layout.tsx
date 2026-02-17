@@ -194,7 +194,19 @@ export default function RootLayout() {
           <Stack>
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            {/* task: create-task form only; pickers are root-level screens below */}
+            {/* task-create: full screen, no indent, drag to close only */}
+            <Stack.Screen
+              name="task-create"
+              options={{
+                headerShown: false,
+                presentation: 'modal',
+                gestureEnabled: true,
+                contentStyle: {
+                  backgroundColor: themeColors.background.primary(),
+                },
+              }}
+            />
+            {/* task: view/edit form sheet with indent (detents) */}
             <Stack.Screen
               name="task"
               options={{

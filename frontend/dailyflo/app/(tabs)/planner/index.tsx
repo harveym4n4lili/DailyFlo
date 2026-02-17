@@ -124,7 +124,7 @@ export default function PlannerScreen() {
   const handleTaskPress = (task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
-    router.push({ pathname: '/task', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
+    router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
   // handle marking a task as complete/uncomplete
@@ -168,7 +168,7 @@ export default function PlannerScreen() {
   const handleTaskEdit = (task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
-    router.push({ pathname: '/task', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
+    router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
   // handle deleting a task (for expanded recurring, delete base task)
@@ -286,7 +286,7 @@ export default function PlannerScreen() {
         {/* Floating Action Button – opens task Stack screen with selected date pre-filled */}
         <FloatingActionButton
           onPress={() => {
-            router.push({ pathname: '/task', params: { dueDate: selectedDate } });
+            router.push({ pathname: '/task-create' as any, params: { dueDate: selectedDate } });
           }}
           backgroundColor={themeColors.background.invertedPrimary()}
           iconColor={themeColors.text.invertedPrimary()}

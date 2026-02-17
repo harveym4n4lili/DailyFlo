@@ -227,7 +227,7 @@ export default function TodayScreen() {
   useEffect(() => {
     if (modals.createTask) {
       closeModal('createTask');
-      router.push('/task');
+      router.push('/task-create' as any);
     }
   }, [modals.createTask, closeModal, router]);
 
@@ -249,7 +249,7 @@ export default function TodayScreen() {
   const handleTaskPress = (task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
-    router.push({ pathname: '/task', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
+    router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
   // handle task completion toggle
@@ -286,7 +286,7 @@ export default function TodayScreen() {
   const handleTaskEdit = (task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
-    router.push({ pathname: '/task', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
+    router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
   // handle task delete (for future confirmation modal)
@@ -483,7 +483,7 @@ export default function TodayScreen() {
       />
       </ScreenContainer>
       <FloatingActionButton
-        onPress={() => router.push('/task')}
+        onPress={() => router.push('/task-create' as any)}
         backgroundColor={themeColors.background.invertedPrimary()}
         iconColor={themeColors.text.invertedPrimary()}
         accessibilityLabel="Add new task"
