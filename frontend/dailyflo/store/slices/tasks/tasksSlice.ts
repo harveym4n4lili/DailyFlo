@@ -27,6 +27,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // this service makes HTTP requests and returns formatted responses
 import tasksApiService from '../../../services/api/tasks';
 import { normalizeTimeToHHMM } from '../../../utils/taskFormatters';
+import { isExpandedRecurrenceId, getBaseTaskId } from '../../../utils/recurrenceUtils';
 
 /**
  * Define the shape of the tasks state
@@ -1058,10 +1059,14 @@ const tasksSlice = createSlice({
       })
       .addCase(deleteTask.fulfilled, (state, action) => {
         state.isDeleting = false;
-        const taskId = action.payload;
-        state.tasks = state.tasks.filter(task => task.id !== taskId);
-        state.filteredTasks = state.filteredTasks.filter(task => task.id !== taskId);
-        state.selectedTaskIds = state.selectedTaskIds.filter(id => id !== taskId);
+        const deletedBaseId = action.payload;
+        // remove base task and any expanded recurrence occurrences (baseId__dateStr)
+        // recurring tasks have one record; occurrences are virtual, but we filter both for robustness
+        const shouldRemove = (task: Task) =>
+          task.id === deletedBaseId || (isExpandedRecurrenceId(task.id) && getBaseTaskId(task.id) === deletedBaseId);
+        state.tasks = state.tasks.filter(task => !shouldRemove(task));
+        state.filteredTasks = state.filteredTasks.filter(task => !shouldRemove(task));
+        state.selectedTaskIds = state.selectedTaskIds.filter(id => id !== deletedBaseId && !(isExpandedRecurrenceId(id) && getBaseTaskId(id) === deletedBaseId));
       })
       .addCase(deleteTask.rejected, (state, action) => {
         state.isDeleting = false;

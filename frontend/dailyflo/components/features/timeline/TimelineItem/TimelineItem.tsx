@@ -18,8 +18,10 @@ import { useTypography } from '@/hooks/useTypography';
 import { Task } from '@/types';
 import { getTaskColorValue } from '@/utils/taskColors';
 import TaskIcon from '@/components/ui/card/TaskCard/TaskIcon';
+import { RepeatIcon } from '@/components/ui/icon';
 import { Checkbox } from '@/components/ui/button';
 import { formatTimeRange, getTaskCardHeight } from '../timelineUtils';
+import { isRecurringTask } from '@/utils/recurrenceUtils';
 
 interface TimelineItemProps {
   // task to display
@@ -162,6 +164,19 @@ export default function TimelineItem({
   const subtasksCount = task.metadata?.subtasks?.length ?? 0;
   const completedSubtasksCount = task.metadata?.subtasks?.filter(st => st.isCompleted).length ?? 0;
   const allSubtasksComplete = subtasksCount > 0 && completedSubtasksCount === subtasksCount;
+
+  // recurrence display text - same labels as TaskIndicators
+  // use isRecurringTask to handle edge cases (undefined routineType, etc.)
+  const recurrenceLabel = useMemo(() => {
+    if (!isRecurringTask(task)) return null;
+    switch (task.routineType) {
+      case 'daily': return 'Daily';
+      case 'weekly': return 'Weekly';
+      case 'monthly': return 'Monthly';
+      case 'yearly': return 'Yearly';
+      default: return null;
+    }
+  }, [task]);
   
   // use correct height from first frame - prevents flash of 64px before effects run
   const cardHeightAnimation = useSharedValue(minCardHeight);
@@ -607,6 +622,16 @@ export default function TimelineItem({
                         </Text>
                       </View>
                     )}
+                    {/* recurrence display - same icon/text as subtask, hidden when routineType is 'once' */}
+                    {recurrenceLabel && (
+                      <View style={styles.recurrenceRow}>
+                        <RepeatIcon
+                          size={12}
+                          color={themeColors.text.tertiary()}
+                        />
+                        <Text style={styles.recurrenceText}>{recurrenceLabel}</Text>
+                      </View>
+                    )}
                   </View>
                   <Text
                     style={[
@@ -708,16 +733,20 @@ const createStyles = (
     justifyContent: 'center',
   },
 
-  // time range row - time on left, subtask count 12px to the right
+  // time range row - time on left, subtask count and recurrence to the right
+  // flexWrap allows recurrence to wrap to next line if row is too narrow (avoids clipping)
   timeRangeRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     marginBottom: 2,
   },
 
   // text content container (time range + title)
+  // minWidth: 0 allows flex child to shrink below content size, preventing overflow
   textContainer: {
     flex: 1,
+    minWidth: 0,
     justifyContent: 'center',
     alignSelf: 'stretch',
   },
@@ -751,6 +780,19 @@ const createStyles = (
     gap: 6,
   },
   subtaskCount: {
+    ...typography.getTextStyle('body-medium'),
+    color: themeColors.text.tertiary(),
+    fontWeight: '900',
+  },
+
+  // recurrence row - refresh icon + label, same styling as subtask display
+  recurrenceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 12,
+    gap: 4,
+  },
+  recurrenceText: {
     ...typography.getTextStyle('body-medium'),
     color: themeColors.text.tertiary(),
     fontWeight: '900',
