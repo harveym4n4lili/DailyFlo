@@ -44,18 +44,23 @@ export function taskOccursOnDate(task: Task, dateStr: string): boolean {
     return anchorStr === dateStr;
   }
 
-  // target must be on or after anchor (recurrence starts at anchor date)
-  if (anchor > target) return false;
+  // target date must be on or after anchor date (recurrence starts at anchor)
+  // use date-only comparison to avoid timezone/time-of-day excluding same-day occurrences
+  if (dateStr < anchorStr) return false;
 
   switch (task.routineType) {
     case 'daily':
       return true; // every day from anchor onward
     case 'weekly':
-      return anchor.getDay() === target.getDay();
+      // compare day-of-week using noon local to avoid timezone edge cases
+      return new Date(anchorStr + 'T12:00:00').getDay() === target.getDay();
     case 'monthly':
-      return anchor.getDate() === target.getDate();
+      // compare day-of-month using noon local to avoid timezone edge cases
+      return new Date(anchorStr + 'T12:00:00').getDate() === target.getDate();
     case 'yearly':
-      return anchor.getMonth() === target.getMonth() && anchor.getDate() === target.getDate();
+      // compare month and day using noon local to avoid timezone edge cases
+      const anchorAtNoon = new Date(anchorStr + 'T12:00:00');
+      return anchorAtNoon.getMonth() === target.getMonth() && anchorAtNoon.getDate() === target.getDate();
     default:
       return false;
   }
