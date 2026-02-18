@@ -855,6 +855,31 @@ export const deleteTask = createAsyncThunk(
   }
 );
 
+// Duplicate a task - creates a copy via API
+export const duplicateTask = createAsyncThunk(
+  'tasks/duplicateTask',
+  async (taskId: string, { rejectWithValue }) => {
+    try {
+      const response = await retryWithExponentialBackoff(() => tasksApiService.duplicateTask(taskId));
+      const responseAny = response as any;
+      let apiTask: any;
+      if (responseAny?.data && typeof responseAny.data === 'object') {
+        apiTask = responseAny.data;
+      } else if (response && typeof response === 'object' && 'id' in response) {
+        apiTask = response;
+      } else if (Array.isArray(response) && response.length > 0) {
+        apiTask = response[0];
+      } else {
+        throw new Error(`Unexpected response format from duplicate API`);
+      }
+      return transformApiTaskToTask(apiTask);
+    } catch (error) {
+      console.error('❌ duplicateTask failed:', error);
+      return rejectWithValue(getErrorMessage(error));
+    }
+  }
+);
+
 /**
  * Create the tasks slice
  * 
@@ -1071,6 +1096,21 @@ const tasksSlice = createSlice({
       .addCase(deleteTask.rejected, (state, action) => {
         state.isDeleting = false;
         state.deleteError = action.payload as string;
+      })
+      // Handle duplicateTask - same as createTask (add new task to state)
+      .addCase(duplicateTask.pending, (state) => {
+        state.isCreating = true;
+        state.createError = null;
+      })
+      .addCase(duplicateTask.fulfilled, (state, action) => {
+        state.isCreating = false;
+        state.tasks.push(action.payload);
+        state.filteredTasks = applyFilters(state.tasks, state.filters);
+        state.lastFetched = Date.now();
+      })
+      .addCase(duplicateTask.rejected, (state, action) => {
+        state.isCreating = false;
+        state.createError = action.payload as string;
       });
   },
 });

@@ -5,6 +5,7 @@
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
+import { deleteTask } from '@/store/slices/tasks/tasksSlice';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -18,6 +19,7 @@ import type { PriorityLevel, RoutineType, TaskColor, Subtask as TaskSubtask } fr
 import type { Subtask } from '@/components/features/subtasks';
 import { validateAll } from '@/components/forms/TaskForm/TaskValidation';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
+import { useDuplicateTask } from '@/app/task/DuplicateTaskContext';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
 
 function taskToFormSubtasks(metaSubtasks?: { id: string; title: string; isCompleted: boolean; sortOrder?: number }[]): Subtask[] {
@@ -35,6 +37,7 @@ export default function TaskEditScreen() {
   const dispatch = useAppDispatch();
   const { tasks, isUpdating, updateError } = useTasks();
   const { draft, setDraft, setDueDate, setTime, setDuration, setAlerts } = useCreateTaskDraft();
+  const { setDuplicateData } = useDuplicateTask();
 
   const taskId = params.taskId;
   const task = taskId ? tasks.find((t) => t.id === taskId) : null;
@@ -370,6 +373,54 @@ export default function TaskEditScreen() {
     setTimeout(() => router.back(), 100);
   };
 
+  const handleDeleteTask = useCallback(() => {
+    Alert.alert(
+      'Delete Task',
+      `Are you sure you want to delete "${task?.title ?? 'this task'}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await dispatch(deleteTask(taskId)).unwrap();
+              router.back();
+            } catch (e) {
+              console.error('Failed to delete task:', e);
+            }
+          },
+        },
+      ]
+    );
+  }, [taskId, task?.title, dispatch, router]);
+
+  // duplicate: close task view, open task-create with current task data pre-filled (no API call - user edits then saves)
+  const handleDuplicateTask = useCallback(() => {
+    setDuplicateData({
+      values: {
+        title: values.title,
+        description: values.description,
+        dueDate: values.dueDate,
+        time: values.time,
+        duration: values.duration,
+        priorityLevel: values.priorityLevel,
+        color: values.color,
+        icon: values.icon,
+        routineType: values.routineType,
+        listId: values.listId,
+        alerts: values.alerts,
+      },
+      subtasks: subtasks.map((s) => ({
+        id: `subtask-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        title: s.title,
+        isCompleted: false,
+        isEditing: false,
+      })),
+    });
+    router.replace('/task-create');
+  }, [values, subtasks, setDuplicateData, router]);
+
   const pickerHandlers = useMemo(
     () => ({
       onShowDatePicker: () => router.push('/date-select'),
@@ -410,6 +461,9 @@ export default function TaskEditScreen() {
         isEditMode={true}
         saveButtonBottomInsetWhenKeyboardHidden={44}
         pickerHandlers={pickerHandlers}
+        onActivityLog={() => {}}
+        onDuplicateTask={handleDuplicateTask}
+        onDeleteTask={handleDeleteTask}
       />
     </View>
   );

@@ -18,6 +18,9 @@ export type { TaskOptionButtonProps } from './button';
 export { ScreenContextButton } from './button';
 export type { ScreenContextButtonProps } from './button';
 
+export { ActionContextMenu } from './contextMenu';
+export type { ActionContextMenuProps, ActionContextMenuItem } from './contextMenu';
+
 // export FormPickerButton utilities
 export {
   getDatePickerDisplay,

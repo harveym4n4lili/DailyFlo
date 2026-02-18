@@ -23,7 +23,9 @@ import { useRouter } from 'expo-router';
 import { IconColorModal } from './modals';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { FormDetailSection, SubtaskSection } from './sections';
-import { SaveButton } from '@/components/ui/button/SaveButton';
+import { TrashIcon, ClockIcon } from '@/components/ui/icon';
+import { SaveButton } from '@/components/ui/button';
+import { ActionContextMenu } from '@/components/ui';
 import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisplay } from '@/components/ui/button';
 import { getTextStyle } from '@/constants/Typography';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -140,6 +142,13 @@ export interface TaskCreationContentProps {
     onShowTimeDurationPicker: () => void;
     onShowAlertsPicker: () => void;
   };
+
+  /** Optional: called when Activity log is selected from actions menu */
+  onActivityLog?: () => void;
+  /** Optional: called when Duplicate is selected from actions menu (edit mode only) */
+  onDuplicateTask?: () => void;
+  /** Optional: called when Delete task is selected from actions menu (edit mode only) */
+  onDeleteTask?: () => void;
 }
 
 export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
@@ -167,6 +176,9 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   isEditMode = false,
   saveButtonBottomInsetWhenKeyboardHidden,
   pickerHandlers,
+  onActivityLog,
+  onDuplicateTask,
+  onDeleteTask,
 }) => {
   const router = useRouter();
   const draftContext = useCreateTaskDraft();
@@ -291,8 +303,28 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   const pillHeight = isNewerIOS ? 5 : 6;
   const pillRadius = isNewerIOS ? 2 : 3;
 
+  // build actions menu items: Activity log, Delete task (red, with solid TrashIcon)
+  const actionsMenuItems = useMemo(() => {
+    const items: { id: string; label: string; onPress: () => void; destructive?: boolean; systemImage?: string; icon?: string; iconComponent?: (color: string) => React.ReactNode }[] = [
+      { id: 'activity', label: 'Activity log', systemImage: 'clock.arrow.circlepath', iconComponent: (color) => <ClockIcon size={20} color={color} isSolid />, onPress: onActivityLog ?? (() => {}) },
+      { id: 'duplicate', label: 'Duplicate', systemImage: 'doc.on.doc', icon: 'copy-outline', onPress: onDuplicateTask ?? (() => {}) },
+      { id: 'delete', label: 'Delete task', onPress: onDeleteTask ?? (() => {}), destructive: true, systemImage: 'trash', iconComponent: (color) => <TrashIcon size={20} color={color} /> },
+    ];
+    return items;
+  }, [onActivityLog, onDuplicateTask, onDeleteTask]);
+
   return (
     <View style={styles.container}>
+      {/* actions button: top right, only in edit mode (not create) */}
+      {isEditMode && (
+        <View style={styles.actionsButtonWrap} pointerEvents="box-none">
+          <ActionContextMenu
+            items={actionsMenuItems}
+            style={styles.actionsButton}
+            accessibilityLabel="Task actions"
+          />
+        </View>
+      )}
       {/* drag indicator at top so user knows the sheet is draggable to dismiss */}
       <View style={styles.dragIndicatorWrap} pointerEvents="none">
         <View
@@ -310,12 +342,25 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       <ScrollView
         ref={scrollViewRef}
         style={[styles.scroll]}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 32 : 160 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: isEditMode ? 60 : 48, paddingBottom: keyboardHeight > 0 ? keyboardHeight + 32 : 160 },
+        ]}
         showsVerticalScrollIndicator
         keyboardShouldPersistTaps="handled"
       >
-        {/* task title input + checkbox row (checkbox on right) */}
+        {/* task title input + checkbox row (checkbox on left) */}
         <View style={styles.titleRow}>
+          <View style={styles.checkboxWrap}>
+            <Checkbox
+              checked={titleCheckboxChecked}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setTitleCheckboxChecked((prev) => !prev);
+              }}
+              size={20}
+            />
+          </View>
           <View style={styles.titleInputWrap}>
             <TextInput
               ref={titleInputRef}
@@ -338,16 +383,6 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
             {/* dashed separator underline for task title - matches scrollContent padding */}
             <DashedSeparator style={{ marginTop: 12 }} />
             <View style={styles.titleSpacer} />
-          </View>
-          <View style={styles.checkboxWrap}>
-            <Checkbox
-              checked={titleCheckboxChecked}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setTitleCheckboxChecked((prev) => !prev);
-              }}
-              size={20}
-            />
           </View>
         </View>
 
@@ -459,6 +494,16 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  // actions button: absolute top right, liquid glass on iOS
+  actionsButtonWrap: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  actionsButton: {
+    backgroundColor: 'transparent',
+  },
   // drag indicator: centered pill at top (matches ModalHeader style)
   dragIndicatorWrap: {
     position: 'absolute',
@@ -477,11 +522,11 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  // top spacing: drag indicator area (~20px) + spacing before title
-  scrollContent: { padding: 24, paddingTop: 40, paddingBottom: 40 },
+  // top spacing: drag indicator area; paddingTop overridden inline (36 create, 60 edit)
+  scrollContent: { padding: 24, paddingBottom: 40 },
   titleRow: { flexDirection: 'row', alignItems: 'center' },
   titleInputWrap: { flex: 1, minWidth: 0, paddingHorizontal: 0 },
   titleSpacer: { height: 8 },
-  checkboxWrap: { paddingLeft: 12, flexShrink: 0, alignItems: 'center', justifyContent: 'center', marginTop: -22 },
-  pickerSectionWrap: { marginTop: 36 },
+  checkboxWrap: { paddingRight: 16, flexShrink: 0, alignItems: 'center', justifyContent: 'center', marginTop: -16 },
+  pickerSectionWrap: { marginTop: 20 },
 });

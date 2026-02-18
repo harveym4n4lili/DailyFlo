@@ -12,6 +12,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { ReduxProvider } from '@/store/Provider';
 import { CreateTaskDraftProvider } from './task/CreateTaskDraftContext';
+import { DuplicateTaskProvider } from './task/DuplicateTaskContext';
 import { store } from '@/store';
 import { logout, checkAuthStatus } from '@/store/slices/auth/authSlice';
 
@@ -189,8 +190,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ReduxProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          {/* Task stack and sub-screens share draft via context */}
+          {/* Task stack and sub-screens share draft via context; DuplicateTaskProvider for pre-filling create from Duplicate */}
           <CreateTaskDraftProvider>
+          <DuplicateTaskProvider>
           <Stack>
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -199,7 +201,7 @@ export default function RootLayout() {
               name="task-create"
               options={{
                 headerShown: false,
-                presentation: 'modal',
+                presentation: 'formSheet',
                 gestureEnabled: true,
                 contentStyle: {
                   backgroundColor: themeColors.background.primary(),
@@ -261,6 +263,7 @@ export default function RootLayout() {
             />
             <Stack.Screen name="+not-found" />
           </Stack>
+          </DuplicateTaskProvider>
           </CreateTaskDraftProvider>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         </ThemeProvider>
