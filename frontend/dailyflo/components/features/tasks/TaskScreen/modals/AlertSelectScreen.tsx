@@ -87,9 +87,11 @@ export function AlertSelectScreen() {
                   </Text>
                 </View>
               </Pressable>
-              {/* dashed separator below each option except the last one - matches button paddingHorizontal (16px) */}
+              {/* dashed separator below each option - same as QuickDateOptions: wrapper with card padding */}
               {!isLastOption && (
-                <DashedSeparator paddingHorizontal={Paddings.card} />
+                <View style={styles.separatorWrapper}>
+                  <DashedSeparator paddingHorizontal={0} />
+                </View>
               )}
             </View>
           );
@@ -103,6 +105,10 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flex: 1, minHeight: 0 },
   scrollContent: { paddingHorizontal: Paddings.none },
+  // same horizontal padding as option buttons - matches QuickDateOptions separator alignment
+  separatorWrapper: {
+    paddingHorizontal: Paddings.card,
+  },
   optionButton: {
     width: '100%',
     flexDirection: 'row',

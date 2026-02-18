@@ -23,7 +23,7 @@
 export const FontFamily = {
   // primary font family - Inter is the main app font
   // this is the base name - we'll add specific weights when using fonts
-  primary: 'Satoshi',
+  primary: 'undefined',
   
   // fallback fonts for different platforms
   // these are used if the primary font fails to load
@@ -78,7 +78,7 @@ export const TextStyles = {
   },
   'heading-2': {
     fontSize: 26,        // medium title size
-    fontWeight: FontWeight.bold,
+    fontWeight: FontWeight.semibold,
    // fontFamily: 'Inter-Bold',
   },
   'heading-3': {
@@ -89,7 +89,7 @@ export const TextStyles = {
   'heading-4': {
     fontSize: 17,        // section header size
     fontWeight: FontWeight.medium,
- 
+    
   },
 
   // body text styles - for main content
@@ -100,13 +100,13 @@ export const TextStyles = {
   },
   'body-medium': {
     fontSize: 15,        // smaller body text
-    fontWeight: FontWeight.regular,
+    fontWeight: FontWeight.medium,
     //fontFamily: 'Inter-Medium',
   },
   'body-small': {
     fontSize: 13,        // smallest readable text
     lineHeight: 14,
-    fontWeight: FontWeight.regular,
+    fontWeight: FontWeight.medium,
     //fontFamily: 'Inter',
   },
 
