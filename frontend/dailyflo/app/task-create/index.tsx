@@ -3,7 +3,7 @@
  * Presentation is fullScreenModal set on root Stack in app/_layout.tsx.
  */
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -18,6 +18,7 @@ import type { PriorityLevel, RoutineType, CreateTaskInput, TaskColor, Subtask as
 import type { Subtask } from '@/components/features/subtasks';
 import { validateAll } from '@/components/forms/TaskForm/TaskValidation';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
+import { useDuplicateTask } from '@/app/task/DuplicateTaskContext';
 
 const getDefaults = (themeColor: TaskColor = 'red'): TaskFormValues => ({
   title: '',
@@ -39,16 +40,38 @@ export default function TaskCreateScreen() {
   const dispatch = useAppDispatch();
   const { isCreating, createError } = useTasks();
   const { draft, setDraft, setDueDate, setTime, setDuration, setAlerts } = useCreateTaskDraft();
+  const { consumeDuplicateData } = useDuplicateTask();
 
   const [localValues, setLocalValues] = useState<Partial<TaskFormValues>>(() => ({
     ...getDefaults(themeColor),
     ...(params.dueDate ? { dueDate: params.dueDate } : {}),
   }));
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+
+  // on mount: if we came from Duplicate, consume the pre-filled data and apply it (runs once)
+  const hasConsumedDuplicateRef = useRef(false);
+  useLayoutEffect(() => {
+    if (hasConsumedDuplicateRef.current) return;
+    const dup = consumeDuplicateData();
+    if (dup) {
+      hasConsumedDuplicateRef.current = true;
+      setLocalValues((prev) => ({ ...getDefaults(themeColor), ...prev, ...dup.values }));
+      setSubtasks(dup.subtasks);
+      setDraft({
+        dueDate: dup.values.dueDate,
+        time: dup.values.time,
+        duration: dup.values.duration,
+        alerts: dup.values.alerts ?? [],
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount to consume duplicate data
+  }, []);
   const [pendingFocusSubtaskId, setPendingFocusSubtaskId] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // when params.dueDate changes (e.g. from FAB with preselected date), update draft - skip if we came from Duplicate
   useEffect(() => {
+    if (hasConsumedDuplicateRef.current) return;
     const initialDueDate = params.dueDate ?? new Date().toISOString();
     setDraft({ dueDate: initialDueDate, time: undefined, duration: undefined, alerts: [] });
     if (params.dueDate) setLocalValues((prev) => ({ ...prev, dueDate: params.dueDate }));
@@ -202,6 +225,8 @@ export default function TaskCreateScreen() {
         isEditMode={false}
         saveButtonBottomInsetWhenKeyboardHidden={44}
         pickerHandlers={pickerHandlers}
+        onActivityLog={() => {}}
+        onDeleteTask={handleClose}
       />
     </View>
   );

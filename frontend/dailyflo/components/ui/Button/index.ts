@@ -47,5 +47,9 @@ export { Checkbox } from './Checkbox';
 export { ScreenContextButton } from './ScreenContextButton';
 export type { ScreenContextButtonProps } from './ScreenContextButton';
 
+// Export ActionsButton (ellipsis button with liquid glass context menu)
+export { ActionsButton } from './ActionsButton/index';
+export type { ActionsButtonProps, ActionsButtonItem } from './ActionsButton/index';
+
 // Default export for convenience (FloatingActionButton)
 export { FloatingActionButton as default } from './FloatingActionButton';
