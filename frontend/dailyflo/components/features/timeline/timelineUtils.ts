@@ -20,10 +20,10 @@ import { useState, useCallback, useRef } from 'react';
  */
 export const TASK_CARD_HEIGHTS = {
   // base height for tasks without duration
-  NO_DURATION: 64,
+  NO_DURATION: 60,
   
   // base height for tasks with duration
-  WITH_DURATION: 64,
+  WITH_DURATION: 60,
 } as const;
 
 /**

@@ -21,7 +21,7 @@ import { getTaskColorValue } from '@/utils/taskColors';
 import TaskIcon from '@/components/ui/card/TaskCard/TaskIcon';
 import { RepeatIcon } from '@/components/ui/icon';
 import { Checkbox } from '@/components/ui/button';
-import { formatTimeRange, getTaskCardHeight } from '../timelineUtils';
+import { getTaskCardHeight, formatTimeRange } from '../timelineUtils';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
 
 interface TimelineItemProps {
@@ -53,6 +53,9 @@ interface TimelineItemProps {
   // whether this task is currently being dragged (for z-index management)
   // this prop comes from parent to track which task should be on top layer
   isDraggedTask?: boolean;
+  // when part of overlapping group: 'first' = top task, 'middle' = between, 'last' = bottom task
+  // used to flatten border radius where cards connect (first: bottom 0, last: top 0, middle: all 0)
+  overlapPosition?: 'first' | 'middle' | 'last';
 }
 
 /**
@@ -75,6 +78,7 @@ export default function TimelineItem({
   onPress,
   onTaskComplete,
   isDraggedTask = false,
+  overlapPosition,
 }: TimelineItemProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -84,6 +88,18 @@ export default function TimelineItem({
 
   // create dynamic styles using theme colors and typography
   const styles = useMemo(() => createStyles(themeColors, typography, taskColor), [themeColors, typography, taskColor]);
+
+  // border radius for overlapping cards - flatten corners where cards connect
+  // first: bottom corners 0; last: top corners 0; middle: all corners 0
+  const overlapBorderRadius = useMemo(() => {
+    if (!overlapPosition) return null;
+    switch (overlapPosition) {
+      case 'first': return { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 };
+      case 'last': return { borderTopLeftRadius: 0, borderTopRightRadius: 0 };
+      case 'middle': return { borderRadius: 0 };
+      default: return null;
+    }
+  }, [overlapPosition]);
 
   // animated value for drag position using reanimated - runs on native thread for better performance
   // starts at 0, tracks drag offset during gesture
@@ -160,6 +176,9 @@ export default function TimelineItem({
   
   // calculate minimum card height based on duration
   const minCardHeight = useMemo(() => getTaskCardHeight(duration), [duration]);
+
+  // time range for display - shown above title when in overlapping tasks
+  const timeRangeText = task.time && overlapPosition ? formatTimeRange(task.time, duration) : '';
   
   // subtask count for display (0/X format)
   const subtasksCount = task.metadata?.subtasks?.length ?? 0;
@@ -433,12 +452,6 @@ export default function TimelineItem({
     translateY.value = 0;
   };
 
-  // format time range for display (e.g., "9:00 AM - 10:30 AM")
-  const timeRangeText = useMemo(() => {
-    if (!task.time) return '';
-    return formatTimeRange(task.time, duration);
-  }, [task.time, duration]);
-
   // track if long press has activated - pan gesture only works after long press
   // this allows drag to start only after holding for iOS standard duration
   const longPressActivated = useSharedValue(false);
@@ -584,7 +597,7 @@ export default function TimelineItem({
         {/* height is fixed at base height */}
         {/* background color is task color, icon color is primary */}
         {task.icon && (
-          <AnimatedReanimated.View style={[styles.iconContainer, styles.iconContainerPadding, { height: minCardHeight }, animatedDragIndicatorStyle]}>
+          <AnimatedReanimated.View style={[styles.iconContainer, styles.iconContainerPadding, { height: minCardHeight }, overlapBorderRadius, animatedDragIndicatorStyle]}>
             <TaskIcon icon={task.icon} color={themeColors.background.invertedPrimary()} size={20} />
           </AnimatedReanimated.View>
         )}
@@ -593,6 +606,7 @@ export default function TimelineItem({
         <AnimatedReanimated.View
           style={[
             styles.content,
+            overlapBorderRadius,
             animatedContentStyle,
             animatedDragIndicatorStyle,
           ]}
@@ -604,12 +618,34 @@ export default function TimelineItem({
               onPress={handleTaskPress}
               activeOpacity={0.7}
             >
+              {/* checkbox on left - matches TaskCard layout, marginRight: 12 for checkbox-to-title spacing */}
+              <View style={styles.checkboxWrapper}>
+                <Checkbox
+                  checked={task.isCompleted}
+                  onPress={() => onTaskComplete?.(task)}
+                  size={18}
+                  borderRadius={6}
+                />
+              </View>
               <View style={styles.taskContent}>
-                <View style={styles.textContainer}>
+                {/* time display above title - only when in overlapping tasks */}
+                {timeRangeText ? (
                   <View style={styles.timeRangeRow}>
-                    {timeRangeText && (
-                      <Text style={styles.timeRange}>{timeRangeText}</Text>
-                    )}
+                    <Text style={styles.timeRange}>{timeRangeText}</Text>
+                  </View>
+                ) : null}
+                <View style={styles.titleRow}>
+                  <Text
+                    style={[
+                      styles.title,
+                      task.isCompleted && styles.completedTitle,
+                    ]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {task.title}
+                  </Text>
+                  <View style={styles.indicatorsRow}>
                     {subtasksCount > 0 && (
                       <View style={styles.subtaskCountRow}>
                         <Checkbox
@@ -624,7 +660,6 @@ export default function TimelineItem({
                         </Text>
                       </View>
                     )}
-                    {/* recurrence display - same icon/text as subtask, hidden when routineType is 'once' */}
                     {recurrenceLabel && (
                       <View style={styles.recurrenceRow}>
                         <RepeatIcon
@@ -635,25 +670,7 @@ export default function TimelineItem({
                       </View>
                     )}
                   </View>
-                  <Text
-                    style={[
-                      styles.title,
-                      task.isCompleted && styles.completedTitle,
-                    ]}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {task.title}
-                  </Text>
                 </View>
-              </View>
-              <View style={styles.checkboxWrapper}>
-                <Checkbox
-                  checked={task.isCompleted}
-                  onPress={() => onTaskComplete?.(task)}
-                  size={18}
-                  borderRadius={6}
-                />
               </View>
             </TouchableOpacity>
           </Animated.View>
@@ -710,43 +727,50 @@ const createStyles = (
     backgroundColor: themeColors.background.primarySecondaryBlend(),
   },
   
-  // touchable content area - row: checkbox on left, task content on right
+  // touchable content area - row: checkbox on left, task content on right (matches TaskCard layout)
   touchableContent: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 12, // checkbox-to-title spacing - matches TaskCard checkboxWrapper marginRight: 12
   },
 
-  // checkbox wrapper - left of task content, centers the Checkbox
+  // checkbox wrapper - left of task content, centers the Checkbox (same as TaskCard)
   checkboxWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  // task content container (text only) - right of checkbox
+  // task content container - title and indicators, right of checkbox
   taskContent: {
     flex: 1,
     position: 'relative',
     justifyContent: 'center',
   },
 
-  // time range row - time on left, subtask count and recurrence to the right
-  // flexWrap allows recurrence to wrap to next line if row is too narrow (avoids clipping)
+  // time range row - above title when in overlapping tasks (matches DragOverlay)
   timeRangeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
     marginBottom: 2,
   },
 
-  // text content container (time range + title)
-  // minWidth: 0 allows flex child to shrink below content size, preventing overflow
-  textContainer: {
+  // title row - title on left, subtask and recurrence indicators on the right (same line)
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
     flex: 1,
     minWidth: 0,
-    justifyContent: 'center',
-    alignSelf: 'stretch',
+  },
+
+  // indicators on the right - subtask count and recurrence label
+  indicatorsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
   },
 
   // completed title styling - matches TaskCard completed styling
@@ -755,18 +779,16 @@ const createStyles = (
     color: themeColors.text.secondary(), // dimmed color for completed
   },
 
-  // subtask count row - checkbox icon + 0/X text, 12px right of time
+  // subtask count - checkbox icon + 0/X text
   subtaskCountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 12,
     gap: 6,
   },
-  // recurrence row - refresh icon + label, same styling as subtask display
+  // recurrence - repeat icon + label
   recurrenceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 12,
     gap: 4,
   },
 
@@ -791,6 +813,9 @@ const createStyles = (
   title: {
     ...typography.getTextStyle('heading-4'),
     color: themeColors.text.primary(),
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
   subtaskCount: {
     ...typography.getTextStyle('body-medium'),
