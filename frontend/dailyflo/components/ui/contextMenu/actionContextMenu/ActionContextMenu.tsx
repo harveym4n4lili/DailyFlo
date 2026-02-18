@@ -46,25 +46,39 @@ export interface ActionContextMenuProps {
   style?: ViewStyle;
   /** optional accessibility label */
   accessibilityLabel?: string;
+  /** optional top offset for Android dropdown anchor (default 60) */
+  dropdownAnchorTopOffset?: number;
+  /** optional right offset for Android dropdown anchor (default 20) */
+  dropdownAnchorRightOffset?: number;
+  /** optional icon color override (e.g. "white" for dark headers) */
+  iconColor?: string;
+  /** tint for liquid glass / Android background: "primary" (top section) or "elevated" (task screen) */
+  tint?: 'primary' | 'elevated';
 }
 
 export function ActionContextMenu({
   items,
   style,
   accessibilityLabel = 'Actions',
+  dropdownAnchorTopOffset = 60,
+  dropdownAnchorRightOffset = 20,
+  iconColor: iconColorProp,
+  tint = 'primary',
 }: ActionContextMenuProps) {
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const themeColors = useThemeColors();
+  const iconColor = iconColorProp ?? themeColors.text.primary();
+  const tintColor = tint === 'elevated' ? themeColors.background.primarySecondaryBlend() : themeColors.background.primary();
 
   const handleItemPress = (item: ActionContextMenuItem) => {
     item.onPress();
     setIsDropdownVisible(false);
   };
 
-  // android: container with background
+  // android: container with background (uses tint for consistency with iOS)
   const containerStyle = [
     styles.container,
-    { backgroundColor: themeColors.background.primary() as any },
+    { backgroundColor: tintColor as any },
     style,
   ];
 
@@ -77,7 +91,7 @@ export function ActionContextMenu({
               <GlassView
                 style={styles.iosWrapper}
                 glassEffectStyle="clear"
-                tintColor={themeColors.background.primarySecondaryBlend() as any}
+                tintColor={tintColor as any}
                 isInteractive
               >
                 <Pressable
@@ -86,7 +100,7 @@ export function ActionContextMenu({
                   accessibilityLabel={accessibilityLabel}
                   accessibilityRole="button"
                 >
-                  <Ionicons name="ellipsis-horizontal" size={32} color={themeColors.text.primary()} />
+                  <Ionicons name="ellipsis-horizontal" size={32} color={iconColor} />
                 </Pressable>
               </GlassView>
             </ContextMenu.Trigger>
@@ -118,7 +132,7 @@ export function ActionContextMenu({
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
       >
-        <Ionicons name="ellipsis-horizontal" size={32} color={themeColors.text.primary()} />
+        <Ionicons name="ellipsis-horizontal" size={32} color={iconColor} />
       </TouchableOpacity>
       <DropdownList
         visible={isDropdownVisible}
@@ -132,8 +146,8 @@ export function ActionContextMenu({
           iconComponent: item.iconComponent,
         }))}
         anchorPosition="top-right"
-        topOffset={60}
-        rightOffset={20}
+        topOffset={dropdownAnchorTopOffset}
+        rightOffset={dropdownAnchorRightOffset}
       />
     </View>
   );

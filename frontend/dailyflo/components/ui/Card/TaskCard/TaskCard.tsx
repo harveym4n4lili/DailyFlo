@@ -18,6 +18,7 @@
 
 import React, { useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 // TYPES FOLDER IMPORTS - TypeScript type definitions
 import { Task } from '@/types';
@@ -166,6 +167,14 @@ export default function TaskCard({
     }
   };
 
+  // handle card press - same haptic as TimelineItem for consistent feel
+  const handlePress = () => {
+    if (onPress) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
+      onPress(task);
+    }
+  };
+
   return (
     <View style={styles.cardContainer}>
       {/* swipeable card wrapper - adds swipe gesture functionality */}
@@ -194,8 +203,8 @@ export default function TaskCard({
               }),
             },
           ]}
-          onPress={() => onPress?.(task)} // calls onPress callback with task data when tapped
-          activeOpacity={1} // prevent background opacity change
+          onPress={handlePress}
+          activeOpacity={0.7}
         >
           {/* row container for checkbox, icon and content - ensures proper alignment */}
           <View style={styles.contentRow}>

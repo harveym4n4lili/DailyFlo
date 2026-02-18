@@ -322,6 +322,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
             items={actionsMenuItems}
             style={styles.actionsButton}
             accessibilityLabel="Task actions"
+            tint="elevated"
           />
         </View>
       )}
