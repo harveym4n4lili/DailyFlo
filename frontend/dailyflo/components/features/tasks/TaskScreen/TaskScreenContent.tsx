@@ -316,31 +316,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* actions button: top right, only in edit mode (not create) */}
-      {isEditMode && (
-        <View style={styles.actionsButtonWrap} pointerEvents="box-none">
-          <ActionContextMenu
-            items={actionsMenuItems}
-            style={styles.actionsButton}
-            accessibilityLabel="Task actions"
-            tint="elevated"
-          />
-        </View>
-      )}
-      {/* drag indicator at top so user knows the sheet is draggable to dismiss */}
-      <View style={styles.dragIndicatorWrap} pointerEvents="none">
-        <View
-          style={[
-            styles.dragIndicatorPill,
-            {
-              width: pillWidth,
-              height: pillHeight,
-              borderRadius: pillRadius,
-              backgroundColor: themeColors.interactive.tertiary(),
-            },
-          ]}
-        />
-      </View>
+      {/* ScrollView first so header overlays on top (header has zIndex) */}
       <ScrollView
         ref={scrollViewRef}
         style={[styles.scroll]}
@@ -443,64 +419,107 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
         )}
       </ScrollView>
 
-      {/* save button: same position for create and view - bottom bar, animates with keyboard */}
-      {embedHeaderButtons && (
-        <View
-          pointerEvents="box-none"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: windowWidth,
-            height: windowHeight,
-          }}
-        >
-          <Animated.View
+      {/* header container: all non-scroll content - collapsable: false required for RNScreens FormSheet
+          (expects at most 2 subviews: header + ScrollView) */}
+      <View style={styles.headerContainer} collapsable={false} pointerEvents="box-none">
+        {/* drag indicator + actions */}
+        <View style={styles.headerWrap} pointerEvents="box-none">
+          {isEditMode && (
+            <View style={styles.actionsButtonWrap} pointerEvents="box-none">
+              <ActionContextMenu
+                items={actionsMenuItems}
+                style={styles.actionsButton}
+                accessibilityLabel="Task actions"
+                tint="elevated"
+              />
+            </View>
+          )}
+          <View style={styles.dragIndicatorWrap} pointerEvents="none">
+            <View
+              style={[
+                styles.dragIndicatorPill,
+                {
+                  width: pillWidth,
+                  height: pillHeight,
+                  borderRadius: pillRadius,
+                  backgroundColor: themeColors.interactive.tertiary(),
+                },
+              ]}
+            />
+          </View>
+        </View>
+        {/* save button overlay */}
+        {embedHeaderButtons && (
+          <View
             pointerEvents="box-none"
             style={[
-              animatedCreateSaveBarStyle,
-              {
-                left: 0,
-                right: 0,
-                width: windowWidth,
-                flexDirection: 'row',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-                paddingHorizontal: Paddings.groupedListContentHorizontal,
-              },
+              styles.saveOverlayWrap,
+              { width: windowWidth, height: windowHeight },
             ]}
           >
-            <SaveButton
-              onPress={onCreate}
-              isLoading={isCreating}
-              taskCategoryColor={buttonColor}
-              text={saveButtonText}
-              loadingText={saveLoadingText}
-              size={28}
-              iconSize={28}
-              visible={isSaveButtonVisible}
-              showLabel
-            />
-          </Animated.View>
-        </View>
-      )}
-
-      {/* date/time/alert use stack screens (task/date-select etc.); only icon/color still uses a modal */}
-      <IconColorModal
-        visible={isColorPickerVisible}
-        selectedColor={buttonColor}
-        selectedIcon={values.icon}
-        onClose={handleColorPickerClose}
-        onSelectColor={handleColorSelect}
-        onSelectIcon={handleIconSelect}
-        taskCategoryColor={buttonColor}
-      />
+            <Animated.View
+              pointerEvents="box-none"
+              style={[
+                animatedCreateSaveBarStyle,
+                {
+                  left: 0,
+                  right: 0,
+                  width: windowWidth,
+                  flexDirection: 'row',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                  paddingHorizontal: Paddings.groupedListContentHorizontal,
+                },
+              ]}
+            >
+              <SaveButton
+                onPress={onCreate}
+                isLoading={isCreating}
+                taskCategoryColor={buttonColor}
+                text={saveButtonText}
+                loadingText={saveLoadingText}
+                size={28}
+                iconSize={28}
+                visible={isSaveButtonVisible}
+                showLabel
+              />
+            </Animated.View>
+          </View>
+        )}
+        <IconColorModal
+          visible={isColorPickerVisible}
+          selectedColor={buttonColor}
+          selectedIcon={values.icon}
+          onClose={handleColorPickerClose}
+          onSelectColor={handleColorSelect}
+          onSelectIcon={handleIconSelect}
+          taskCategoryColor={buttonColor}
+        />
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  // header container: wraps all non-scroll content; collapsable: false for FormSheet (max 2 subviews)
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+  },
+  // header wrapper: drag indicator + actions
+  headerWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+    zIndex: 10,
+  },
   // actions button: absolute top right, liquid glass on iOS
   actionsButtonWrap: {
     position: 'absolute',
@@ -510,6 +529,12 @@ const styles = StyleSheet.create({
   },
   actionsButton: {
     backgroundColor: 'transparent',
+  },
+  // save overlay: full-screen wrapper for bottom save button
+  saveOverlayWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
   // drag indicator: centered pill at top (matches ModalHeader style)
   dragIndicatorWrap: {

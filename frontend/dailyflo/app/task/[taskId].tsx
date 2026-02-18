@@ -4,11 +4,10 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { Alert } from 'react-native';
 import { deleteTask } from '@/store/slices/tasks/tasksSlice';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useThemeColors } from '@/hooks/useColorPalette';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useAppDispatch } from '@/store';
 import { updateTask, fetchTasks, createTask } from '@/store/slices/tasks/tasksSlice';
@@ -32,7 +31,6 @@ function taskToFormSubtasks(metaSubtasks?: { id: string; title: string; isComple
 export default function TaskEditScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ taskId: string; occurrenceDate?: string }>();
-  const themeColors = useThemeColors();
   const { themeColor } = useThemeColor();
   const dispatch = useAppDispatch();
   const { tasks, isUpdating, updateError } = useTasks();
@@ -435,8 +433,7 @@ export default function TaskEditScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
-      <TaskScreenContent
+    <TaskScreenContent
         visible={true}
         values={values}
         onChange={onChange}
@@ -465,10 +462,5 @@ export default function TaskEditScreen() {
         onDuplicateTask={handleDuplicateTask}
         onDeleteTask={handleDeleteTask}
       />
-    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-});

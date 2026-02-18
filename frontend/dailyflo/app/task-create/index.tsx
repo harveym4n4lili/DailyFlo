@@ -4,10 +4,8 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useThemeColors } from '@/hooks/useColorPalette';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useAppDispatch } from '@/store';
 import { createTask } from '@/store/slices/tasks/tasksSlice';
@@ -35,7 +33,6 @@ const getDefaults = (themeColor: TaskColor = 'red'): TaskFormValues => ({
 export default function TaskCreateScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ dueDate?: string }>();
-  const themeColors = useThemeColors();
   const { themeColor } = useThemeColor();
   const dispatch = useAppDispatch();
   const { isCreating, createError } = useTasks();
@@ -199,8 +196,7 @@ export default function TaskCreateScreen() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
-      <TaskScreenContent
+    <TaskScreenContent
         visible={true}
         values={values}
         onChange={onChange}
@@ -228,10 +224,5 @@ export default function TaskCreateScreen() {
         onActivityLog={() => {}}
         onDeleteTask={handleClose}
       />
-    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-});
