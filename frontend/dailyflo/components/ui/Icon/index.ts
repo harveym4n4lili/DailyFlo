@@ -41,3 +41,6 @@ export type { SparklesIconProps } from './icons/SparklesIcon';
 
 export { RepeatIcon } from './icons/RepeatIcon';
 export type { RepeatIconProps } from './icons/RepeatIcon';
+
+export { SFSymbolIcon } from './SFSymbolIcon';
+export type { SFSymbolIconProps } from './SFSymbolIcon';

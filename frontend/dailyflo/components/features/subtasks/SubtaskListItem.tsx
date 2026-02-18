@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 // useTypography: hook for accessing typography system
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 /**
  * Props interface for SubtaskListItem component
@@ -197,7 +198,7 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
               ...typography.getTextStyle('body-large'),
               color: themeColors.text.primary(),
               flex: 1,
-              padding: 0,
+              padding: Paddings.none,
               margin: 0,
               minHeight: 20,
               marginRight: 8, // space before close button
@@ -229,7 +230,7 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
   return (
     <View
       style={{
-        paddingHorizontal: 16, // match horizontal padding of grouped list items in elevated container
+        paddingHorizontal: Paddings.card,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',

@@ -11,6 +11,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { DashedSeparator } from '@/components/ui/borders';
+import { Paddings } from '@/constants/Paddings';
 import { ALERT_OPTIONS } from './alertOptions';
 
 export function AlertSelectScreen() {
@@ -37,7 +38,7 @@ export function AlertSelectScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: 20, paddingBottom: insets.bottom + 24 },
+          { paddingTop: Paddings.screenSmall, paddingBottom: insets.bottom + Paddings.modalBottomExtra },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -79,7 +80,6 @@ export function AlertSelectScreen() {
                       getTextStyle('body-large'),
                       {
                         color: themeColors.text.primary(),
-                        fontWeight: '700',
                       },
                     ]}
                   >
@@ -89,7 +89,7 @@ export function AlertSelectScreen() {
               </Pressable>
               {/* dashed separator below each option except the last one - matches button paddingHorizontal (16px) */}
               {!isLastOption && (
-                <DashedSeparator paddingHorizontal={16} />
+                <DashedSeparator paddingHorizontal={Paddings.card} />
               )}
             </View>
           );
@@ -102,14 +102,14 @@ export function AlertSelectScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flex: 1, minHeight: 0 },
-  scrollContent: { paddingHorizontal: 0 },
+  scrollContent: { paddingHorizontal: Paddings.none },
   optionButton: {
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: Paddings.listItemVertical,
+    paddingHorizontal: Paddings.card,
     height: 48,
   },
   optionLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },

@@ -34,6 +34,7 @@ import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 // import custom hooks for animation management
 import { useGroupAnimations } from '@/hooks/useGroupAnimations';
@@ -171,7 +172,7 @@ export default function ListCard({
   separatorPaddingHorizontal,
   hideBackground = false,
   removeInnerPadding = false,
-  checkboxSize = 20,
+  checkboxSize = 18,
   emptyMessage = 'No tasks available',
   loading = false,
   groupBy = 'none',
@@ -184,7 +185,7 @@ export default function ListCard({
   headerTitle,
   headerSubtitle,
   paddingTop,
-  paddingHorizontal = 20, // default horizontal padding (20px)
+  paddingHorizontal = Paddings.screenSmall,
   dropdownItems,
   dropdownAnchorPosition = 'top-right',
   dropdownTopOffset = 0,
@@ -610,22 +611,11 @@ const createStyles = (
   scrollPastTopInset?: boolean
 ) =>
   StyleSheet.create({
-    // main container
+    // --- LAYOUT STYLES ---
     container: {
       flex: 1, // take up available space
       // ensure container extends all the way to bottom of screen
       // this allows scroll view to stretch fully and show all tasks above navbar
-    },
-
-    // list container for proper spacing
-    // extra bottom padding to allow scrolling tasks above the FAB
-    // when scrollPastTopInset: add top inset so content starts below status bar but can scroll into it
-    listContainer: {
-      paddingTop: (paddingTop ?? 0) + (scrollPastTopInset ? insets.top : 0), // top padding for list container (optional, defaults to 0)
-      paddingBottom: 58 + 80 + 16 + insets.bottom + 40, // FAB height (58px) + navbar height (80px) + spacing (16px) + safe area bottom + extra space (40px)
-      paddingHorizontal: paddingHorizontal ?? 20, // horizontal padding for task cards (optional, defaults to 20px)
-      // ensure content can scroll all the way to bottom of screen
-      flexGrow: 1, // allow content to grow and fill available space
     },
 
     // group container for grouped lists
@@ -637,21 +627,6 @@ const createStyles = (
     listHeaderWrapper: {
       marginBottom: 8,
     },
-    // big "Today" header - large typography for today screen
-    bigTodayHeader: {
-      ...typography.getTextStyle('heading-1'),
-      color: themeColors.text.primary(),
-      marginBottom: 8,
-    },
-    // header container styling
-    headerContainer: {
-      flexDirection: 'row', // horizontal layout for title/subtitle and dropdown button
-      alignItems: 'center', // center align vertically
-      justifyContent: 'space-between', // space between text and button
-      paddingTop: 16,
-      paddingBottom: 16, // space between header and content
-    },
-
     // header text container for title and subtitle
     headerTextContainer: {
       flex: 1, // take up available space
@@ -666,23 +641,34 @@ const createStyles = (
       marginLeft: 12, // space between text and button
     },
 
-    // header title text styling
-    // using typography system for consistent text styling
-    headerTitle: {
-      // use the heading-1 text style from typography system (36px, bold, satoshi font)
-      ...typography.getTextStyle('heading-1'),
-      // use theme-aware primary text color from color system
-      color: themeColors.text.primary(),
+    // --- PADDING STYLES ---
+    listContainer: {
+      paddingTop: (paddingTop ?? 0) + (scrollPastTopInset ? insets.top : 0),
+      paddingBottom: 58 + 80 + 16 + insets.bottom + Paddings.scrollBottomExtra,
+      paddingHorizontal: paddingHorizontal ?? Paddings.screenSmall,
+      flexGrow: 1,
+    },
+    headerContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: Paddings.card,
+      paddingBottom: Paddings.card,
     },
 
-    // header subtitle text styling
-    // using typography system for consistent text styling
+    // --- TYPOGRAPHY STYLES ---
+    bigTodayHeader: {
+      ...typography.getTextStyle('heading-1'),
+      color: themeColors.text.primary(),
+      marginBottom: 8,
+    },
+    headerTitle: {
+      ...typography.getTextStyle('heading-1'),
+      color: themeColors.text.primary(),
+    },
     headerSubtitle: {
-      // use the heading-4 text style from typography system (16px, bold, satoshi font)
       ...typography.getTextStyle('heading-4'),
-      // add top margin for spacing from title
       marginTop: 8,
-      // use theme-aware secondary text color from color system
       color: themeColors.text.secondary(),
     },
   });

@@ -12,6 +12,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 interface GroupHeaderProps {
   // group title to display
@@ -107,16 +108,7 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>
 ) =>
   StyleSheet.create({
-    // group header styling
-    groupHeader: {
-      flexDirection: 'row', // horizontal layout
-      alignItems: 'center', // center align
-      justifyContent: 'space-between', // space between title/count and arrow
-      marginBottom: 0, // space between header and tasks
-      paddingHorizontal: 4, // slight padding for alignment
-      paddingVertical: 8, // add vertical padding for better touch target
-    },
-
+    // --- LAYOUT STYLES ---
     // container for title/count and optional secondary action
     leftContainer: {
       flexDirection: 'row',
@@ -131,41 +123,10 @@ const createStyles = (
       flex: 1, // take up available space
     },
 
-    // group title text styling
-    // using typography system for consistent text styling
-    groupTitle: {
-      // use the heading-4 text style from typography system (16px, bold, satoshi font)
-      ...typography.getTextStyle('heading-4'),
-      // use theme-aware primary text color from color system
-      color: themeColors.text.primary(),
-      marginRight: 8, // space between title and count
-    },
-
-    // group count text styling
-    // using typography system for consistent text styling
-    groupCount: {
-      // use the body-large text style from typography system (14px, regular, satoshi font)
-      ...typography.getTextStyle('body-large'),
-      // use theme-aware tertiary text color from color system
-      color: themeColors.text.tertiary(),
-      fontWeight: '500',
-    },
-
     // secondary action button styling (e.g. "Reschedule")
-    // separate touchable so tap doesn't trigger parent - positioned between title and arrow
     secondaryActionButton: {
       marginLeft: 8,
       marginRight: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-    },
-
-    // secondary action text styling
-    // uses system warning red (error color) with heavier font weight
-    secondaryActionText: {
-      ...typography.getTextStyle('body-medium'),
-      color: semanticColors.error(), // system warning red color
-      fontWeight: '700', // heavier weight (was '600', now '700' for more emphasis)
     },
 
     // animated arrow container - touchable for toggle, centers the chevron icon
@@ -173,6 +134,37 @@ const createStyles = (
       marginLeft: 4,
       justifyContent: 'center',
       alignItems: 'center',
+    },
+
+    // --- PADDING STYLES ---
+    groupHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 0,
+      paddingHorizontal: Paddings.touchTargetSmall,
+      paddingVertical: Paddings.touchTarget,
+    },
+    secondaryActionButton: {
+      marginLeft: 8,
+      marginRight: 4,
+      paddingHorizontal: Paddings.touchTarget,
+      paddingVertical: Paddings.touchTargetSmall,
+    },
+
+    // --- TYPOGRAPHY STYLES ---
+    groupTitle: {
+      ...typography.getTextStyle('heading-4'),
+      color: themeColors.text.primary(),
+      marginRight: 8,
+    },
+    groupCount: {
+      ...typography.getTextStyle('body-large'),
+      color: themeColors.text.tertiary(),
+    },
+    secondaryActionText: {
+      ...typography.getTextStyle('body-medium'),
+      color: semanticColors.error(),
     },
   });
 

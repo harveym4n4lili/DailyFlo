@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
+import { Paddings } from '@/constants/Paddings';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
 import { ModalHeader, DraggableModal, LockableScrollView } from '@/components/layout/ModalLayout';
@@ -136,7 +137,7 @@ export function IconColorModal({
               left: 0,
               right: 0,
               zIndex: 10, // ensure it floats above scrolling content
-              paddingHorizontal: 20,
+              paddingHorizontal: Paddings.groupedListContentHorizontal,
             }}
           >
             <View>
@@ -144,8 +145,8 @@ export function IconColorModal({
               <View
                 style={{
                   backgroundColor: themeColors.background.quaternary(),
-                  paddingVertical: 8,
-                  paddingHorizontal: 8,
+                  paddingVertical: Paddings.touchTarget,
+                  paddingHorizontal: Paddings.touchTarget,
                   borderRadius: 29,
                 }}
               >
@@ -213,8 +214,8 @@ export function IconColorModal({
               <LockableScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{
-                  paddingTop: 80, // padding to account for floating color slider above
-                  paddingBottom: insets.bottom + 24,
+                  paddingTop: Paddings.iconColorModalContentTop,
+                  paddingBottom: insets.bottom + Paddings.modalBottomExtra,
                 }}
                 showsVerticalScrollIndicator={false}
               >
@@ -222,7 +223,7 @@ export function IconColorModal({
                 <View style={{ gap: 12 }}>
                   <Text style={[
                     getTextStyle('heading-4'),
-                    { color: themeColors.text.primary(), paddingHorizontal: 20 }
+                    { color: themeColors.text.primary(), paddingHorizontal: Paddings.groupedListContentHorizontal }
                   ]}>
                     Icon
                   </Text>
@@ -232,7 +233,7 @@ export function IconColorModal({
                     style={{
                       flexDirection: 'row',
                       flexWrap: 'wrap',
-                      paddingHorizontal: 8, // 20px padding from screen edges
+                      paddingHorizontal: Paddings.touchTarget,
                     }}
                   >
                     {AVAILABLE_ICONS.map((icon) => {

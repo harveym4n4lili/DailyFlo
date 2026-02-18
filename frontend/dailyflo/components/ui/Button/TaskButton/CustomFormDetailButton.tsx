@@ -20,12 +20,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 import { DashedSeparator } from '@/components/ui/borders';
+import { Paddings } from '@/constants/Paddings';
 
-// constants for consistent styling
+// constants for consistent styling - groupedListContentVertical (14) matches GroupedList row padding
 const ICON_SIZE = 18;
 const DEFAULT_RADIUS = 28; // default border radius when not in side-by-side layout
 const CONTENT_PADDING_HORIZONTAL = 16;
-const CONTENT_PADDING_VERTICAL = 14;
 
 export interface CustomFormDetailButtonProps {
   /** Custom icon component (ReactNode) to display on the left */
@@ -111,7 +111,6 @@ export const CustomFormDetailButton: React.FC<CustomFormDetailButtonProps> = ({
             getTextStyle('body-large'), 
             { 
               color: themeColors.text.primary(),
-              fontWeight: boldMainLabel ? '900' : '400',
             }
           ]}
           numberOfLines={1}
@@ -127,7 +126,6 @@ export const CustomFormDetailButton: React.FC<CustomFormDetailButtonProps> = ({
               styles.subLabel, 
               { 
                 color: themeColors.text.tertiary(), 
-                fontWeight: '900' 
               }
             ]}
             numberOfLines={1}
@@ -194,9 +192,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 0, // horizontal padding removed
-    paddingVertical: CONTENT_PADDING_VERTICAL,
+    gap: Paddings.groupedListIconTextSpacing,
+    paddingHorizontal: Paddings.none,
+    paddingVertical: Paddings.groupedListContentVertical,
   },
   // text container: flex to fill available space
   textWrap: {
@@ -220,7 +218,7 @@ export const CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS = {
   INNER_RADIUS: 8, // inner radius for side-by-side layout
   OUTER_RADIUS: 28, // outer radius for side-by-side layout
   CONTENT_PADDING_HORIZONTAL,
-  CONTENT_PADDING_VERTICAL,
+  CONTENT_PADDING_VERTICAL: Paddings.groupedListContentVertical,
 };
 
 export default CustomFormDetailButton;

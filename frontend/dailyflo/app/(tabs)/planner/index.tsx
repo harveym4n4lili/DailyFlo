@@ -21,6 +21,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 // safe area context for handling devices with notches/home indicators
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -218,9 +219,9 @@ export default function PlannerScreen() {
   // render main content
   return (
     <View style={{ flex: 1 }}>
-      {/* top section - 48px row for context ellipse button, matches Today screen */}
-      <View style={[styles.topSectionAnchor, { height: insets.top + 48 }]}>
-        <View style={styles.topSectionRow}>
+      {/* top section - 48px row for context ellipse button; pointerEvents box-none so taps pass through to WeekView header */}
+      <View style={[styles.topSectionAnchor, { height: insets.top + 48 }]} pointerEvents="box-none">
+        <View style={styles.topSectionRow} pointerEvents="box-none">
           <ActionContextMenu
             items={[
               { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
@@ -323,7 +324,7 @@ const createStyles = (
     left: 0,
     right: 0,
     zIndex: 10,
-    backgroundColor: themeColors.background.primary(),
+    backgroundColor: 'transparent',
   },
 
   // row container for context button - matches Today screen topSectionRow
@@ -336,16 +337,16 @@ const createStyles = (
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingHorizontal: 24,
+    paddingHorizontal: Paddings.screen,
   },
   // matches task screen ActionContextMenu (transparent bg, liquid glass)
   topSectionContextButton: {
     backgroundColor: 'primary',
   },
 
-  // week view container - positioned below top section (insets.top + 48 for context button row)
+  // week view container - starts at inset top; top section overlays with context button (zIndex 10)
   weekViewContainer: {
-    paddingTop: insets.top + 48,
+    paddingTop: insets.top,
     backgroundColor: themeColors.background.primary(),
   },
 
@@ -361,8 +362,8 @@ const createStyles = (
    
 
     margin: 0, // 8px spacing from all screen edges
-    paddingHorizontal: 0, // remove horizontal padding since ListCard handles its own padding
-    paddingTop: 0, // top padding for content spacing
+    paddingHorizontal: Paddings.none,
+    paddingTop: Paddings.none,
     overflow: 'hidden', // ensure content respects border radius
   },
 

@@ -15,6 +15,7 @@ import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming, useAn
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { Task } from '@/types';
 import { getTaskColorValue } from '@/utils/taskColors';
 import TaskIcon from '@/components/ui/card/TaskCard/TaskIcon';
@@ -568,6 +569,7 @@ export default function TimelineItem({
       <AnimatedReanimated.View
         style={[
           styles.container,
+          styles.containerPadding,
           animatedContainerStyle, // animated position, drag transform, and fade - runs on native thread
           {
             // apply higher z-index when this task is being dragged so it appears above all others
@@ -582,7 +584,7 @@ export default function TimelineItem({
         {/* height is fixed at base height */}
         {/* background color is task color, icon color is primary */}
         {task.icon && (
-          <AnimatedReanimated.View style={[styles.iconContainer, { height: minCardHeight }, animatedDragIndicatorStyle]}>
+          <AnimatedReanimated.View style={[styles.iconContainer, styles.iconContainerPadding, { height: minCardHeight }, animatedDragIndicatorStyle]}>
             <TaskIcon icon={task.icon} color={themeColors.background.invertedPrimary()} size={20} />
           </AnimatedReanimated.View>
         )}
@@ -596,7 +598,7 @@ export default function TimelineItem({
           ]}
           onLayout={handleContentLayout}
         >
-          <Animated.View style={[styles.combinedContainer, { height: minCardHeight }]}>
+          <Animated.View style={[styles.combinedContainer, styles.combinedContainerPadding, { height: minCardHeight }]}>
             <TouchableOpacity
               style={styles.touchableContent}
               onPress={handleTaskPress}
@@ -667,6 +669,7 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   taskColor: string
 ) => StyleSheet.create({
+  // --- LAYOUT STYLES ---
   // main container for the task item
   // row layout: icon container on left, content column on right
   container: {
@@ -674,22 +677,19 @@ const createStyles = (
     left: 0,
     right: 0,
     flexDirection: 'row',
-    alignItems: 'flex-start', // align to top, let content determine height
-    paddingLeft: 0,
-    paddingRight: 16,
+    alignItems: 'flex-start',
   },
 
   // icon container - separate background for the icon
   // positioned on the left in the row layout
   // background color is task color, icon color is primary
   iconContainer: {
-    width: 44, // fixed width: 20px icon + 24px padding (12px each side)
+    width: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: taskColor, // task color background for icon container
-    borderRadius: 24, // matches task card border radius
-    paddingHorizontal: 12, // horizontal padding for icon spacing
-    marginRight: 12, // spacing between icon container and content
+    backgroundColor: taskColor,
+    borderRadius: 24,
+    marginRight: 12,
   },
 
   // content column - contains task content
@@ -708,8 +708,6 @@ const createStyles = (
     alignItems: 'stretch',
     position: 'relative',
     backgroundColor: themeColors.background.primarySecondaryBlend(),
-    paddingHorizontal: 16,
-    paddingVertical: 12,
   },
   
   // touchable content area - row: checkbox on left, task content on right
@@ -751,21 +749,6 @@ const createStyles = (
     alignSelf: 'stretch',
   },
 
-  // time range text styling - matches TaskCard metadata styling
-  timeRange: {
-    // use body-medium text style from typography system (matches TaskMetadata)
-    ...typography.getTextStyle('body-medium'),
-    color: themeColors.text.tertiary(),
-    fontWeight: '900',
-  },
-
-  // task title text styling - matches TaskCard title styling
-  title: {
-    // use heading-4 text style from typography system (matches TaskCardContent)
-    ...typography.getTextStyle('heading-4'),
-    color: themeColors.text.primary(),
-  },
-
   // completed title styling - matches TaskCard completed styling
   completedTitle: {
     textDecorationLine: 'line-through', // strikethrough for completed tasks
@@ -779,12 +762,6 @@ const createStyles = (
     marginLeft: 12,
     gap: 6,
   },
-  subtaskCount: {
-    ...typography.getTextStyle('body-medium'),
-    color: themeColors.text.tertiary(),
-    fontWeight: '900',
-  },
-
   // recurrence row - refresh icon + label, same styling as subtask display
   recurrenceRow: {
     flexDirection: 'row',
@@ -792,10 +769,36 @@ const createStyles = (
     marginLeft: 12,
     gap: 4,
   },
+
+  // --- PADDING STYLES ---
+  containerPadding: {
+    paddingLeft: Paddings.none,
+    paddingRight: Paddings.card,
+  },
+  iconContainerPadding: {
+    paddingHorizontal: Paddings.cardCompact,
+  },
+  combinedContainerPadding: {
+    paddingHorizontal: Paddings.card,
+    paddingVertical: Paddings.listItemVertical,
+  },
+
+  // --- TYPOGRAPHY STYLES ---
+  timeRange: {
+    ...typography.getTextStyle('body-medium'),
+    color: themeColors.text.tertiary(),
+  },
+  title: {
+    ...typography.getTextStyle('heading-4'),
+    color: themeColors.text.primary(),
+  },
+  subtaskCount: {
+    ...typography.getTextStyle('body-medium'),
+    color: themeColors.text.tertiary(),
+  },
   recurrenceText: {
     ...typography.getTextStyle('body-medium'),
     color: themeColors.text.tertiary(),
-    fontWeight: '900',
   },
 });
 

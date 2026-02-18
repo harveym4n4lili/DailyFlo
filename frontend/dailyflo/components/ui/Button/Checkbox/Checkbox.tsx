@@ -146,7 +146,7 @@ const createStyles = (
       width: size,
       height: size,
       borderRadius: borderRadius,
-      borderWidth: 2, // border width for the checkbox outline
+      borderWidth: 1.5, // border width for the checkbox outline
       borderColor: themeColors.text.tertiary(), // default border color (grey)
       backgroundColor: 'transparent', // default background (transparent)
     },

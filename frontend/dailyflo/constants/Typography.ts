@@ -17,11 +17,11 @@
 /**
  * Font Family Configuration
  * 
- * Defines the primary font (Satoshi) and fallback fonts for different platforms.
+ * Defines the primary font (Inter) and fallback fonts for different platforms.
  * Fallback fonts ensure text displays properly even if the primary font fails to load.
  */
 export const FontFamily = {
-  // primary font family - Satoshi is the main brand font
+  // primary font family - Inter is the main app font
   // this is the base name - we'll add specific weights when using fonts
   primary: 'Satoshi',
   
@@ -29,7 +29,7 @@ export const FontFamily = {
   // these are used if the primary font fails to load
   fallback: {
     // iOS fallback fonts - these are system fonts that look good on iOS
-    ios: ['SF Pro Display', '-apple-system'],
+    ios: ['SF Pro Rounded', '-apple-system'],
     // Android fallback fonts - these are system fonts that look good on Android
     android: ['Roboto', 'sans-serif'],
     // web fallback fonts - these are web-safe fonts
@@ -40,20 +40,20 @@ export const FontFamily = {
 /**
  * Font Weight Configuration
  * 
- * Defines all available font weights using Satoshi's actual weight values.
- * These correspond to the actual font files you'll need to include.
+ * Defines all available font weights using Inter's actual weight values.
+ * These correspond to the actual font files loaded in _layout.tsx.
  */
 export const FontWeight = {
   // light weight - used for subtle text, captions
-  light: '400',
+  light: '300',
   // regular weight - used for body text, most content
-  regular: '500',
+  regular: '400',
   // medium weight - used for buttons, emphasized text
-  medium: '600',
+  medium: '500',
   // semibold weight - used for headings, important text
-  semibold: '700',
+  semibold: '600',
   // bold weight - used for main headings, strong emphasis
-  bold: '900',
+  bold: '700',
 } as const;
 
 /**
@@ -66,82 +66,82 @@ export const FontWeight = {
 export const TextStyles = {
   // heading styles - for titles and section headers
   'large-heading-1': {
-    fontSize: 48,        // extra large for date/number display
+    fontSize: 90,        // extra large for date/number display
     // tight line height
     fontWeight: FontWeight.bold,
-    fontFamily: 'Satoshi-Bold',
+    //fontFamily: 'Inter-Bold',
   },
   'heading-1': {
     fontSize: 40,        // large title size
-      // tight line height for headings
-    fontWeight: FontWeight.bold,  // bold weight for emphasis
-    fontFamily: 'Satoshi-Bold',  // specific font family for react native
+    fontWeight: FontWeight.bold,
+    //fontFamily: 'Inter-semibold',
   },
   'heading-2': {
     fontSize: 26,        // medium title size
-    lineHeight: 34,      // slightly tighter than body text
-    fontWeight: FontWeight.semibold,  // bold weight for emphasis
-    fontFamily: 'Satoshi-Bold',  // specific font family for react native
+    fontWeight: FontWeight.bold,
+   // fontFamily: 'Inter-Bold',
   },
   'heading-3': {
     fontSize: 22,        // small title size
-    lineHeight: 27,      // comfortable line height
-    fontWeight: FontWeight.bold,  // bold for medium emphasis
-    fontFamily: 'Satoshi-Bold',  // specific font family for react native
+    fontWeight: FontWeight.semibold,
+    //fontFamily: 'Inter-Bold',
   },
   'heading-4': {
-    fontSize: 16,        // section header size
-    lineHeight: 20,      // standard line height
-    fontWeight: FontWeight.bold,  // bold for emphasis
-    fontFamily: 'Satoshi-Bold',  // specific font family for react native
+    fontSize: 17,        // section header size
+    fontWeight: FontWeight.medium,
+ 
   },
-  
+
   // body text styles - for main content
   'body-large': {
-    fontSize: 16,        // standard body text size
-    lineHeight: 18,      // comfortable reading line height
-    fontWeight: FontWeight.regular,  // regular weight for readability
-    fontFamily: 'Satoshi',  // specific font family for react native
+    fontSize: 17,        // standard body text size
+    fontWeight: FontWeight.regular,
+   
   },
   'body-medium': {
-    fontSize: 13,        // smaller body text
-    lineHeight: 16,      // tighter line height
-    fontWeight: FontWeight.regular,  // regular weight
-    fontFamily: 'Satoshi',  // specific font family for react native
+    fontSize: 15,        // smaller body text
+    fontWeight: FontWeight.regular,
+    //fontFamily: 'Inter-Medium',
   },
   'body-small': {
-    fontSize: 10,        // smallest readable text
-    lineHeight: 14,      // tight line height
-    fontWeight: FontWeight.regular,  // regular weight
-    fontFamily: 'Satoshi',  // specific font family for react native
+    fontSize: 13,        // smallest readable text
+    lineHeight: 14,
+    fontWeight: FontWeight.regular,
+    //fontFamily: 'Inter',
   },
-  
+
+  // context menu text - for ActionContextMenu, DropdownList, recurrence picker
+  'context-menu': {
+    fontSize: 16,
+    fontWeight: FontWeight.regular,
+  },
+
   // button text styles - for interactive elements
   'button-primary': {
     fontSize: 18,        // standard button text
-    lineHeight: 20,      // comfortable line height for buttons
-    fontWeight: FontWeight.bold,  // medium weight for emphasis
-    fontFamily: 'Satoshi-Bold',  // specific font family for react native
+    
+    fontWeight: FontWeight.bold,
+    fontFamily: 'Inter-Bold',
   },
   'button-secondary': {
     fontSize: 16,        // same size as primary button
-    lineHeight: 18,      // slightly tighter line height
-    fontWeight: FontWeight.bold,  // medium weight
-    fontFamily: 'Satoshi-Bold',  // specific font family for react native
+    
+    fontWeight: FontWeight.bold,
+    fontFamily: 'Inter-Bold',
   },
   'button-text': {
     fontSize: 10,        // small button text (like links)
-    lineHeight: 14,      // tight line height
-    fontWeight: FontWeight.medium,  // medium weight for emphasis
-    fontFamily: 'Satoshi-Medium',  // specific font family for react native
+ 
+    fontWeight: FontWeight.medium,
+    fontFamily: 'Inter-Medium',
   },
-  
+
   // navigation text styles - for navigation elements
   'navbar': {
     fontSize: 10,        // small text for tab labels
-    lineHeight: 12,      // very tight line height
-    fontWeight: FontWeight.medium,  // medium weight for readability
-    fontFamily: 'Satoshi-Medium',  // specific font family for react native
+   
+    fontWeight: FontWeight.semibold,
+    //fontFamily: 'Inter-Medium',
   },
 } as const;
 
@@ -233,7 +233,7 @@ export function getFontFamily(platform: 'ios' | 'android' | 'web' = 'ios'): stri
  * @param platform - The platform ('ios', 'android', 'web')
  * @returns The font family string with specific weight
  */
-export function getFontFamilyWithWeight(weight: 'light' | 'regular' | 'medium' | 'bold', platform: 'ios' | 'android' | 'web' = 'ios'): string {
+export function getFontFamilyWithWeight(weight: 'light' | 'regular' | 'medium' | 'semibold' | 'bold', platform: 'ios' | 'android' | 'web' = 'ios'): string {
   // for web, use the base font name with fallbacks
   if (platform === 'web') {
     const fallbacks = FontFamily.fallback[platform];
@@ -242,10 +242,11 @@ export function getFontFamilyWithWeight(weight: 'light' | 'regular' | 'medium' |
   
   // for react native, use the specific weight variant
   const weightMap = {
-    light: 'Satoshi-Light',
-    regular: 'Satoshi',
-    medium: 'Satoshi-Medium',
-    bold: 'Satoshi-Bold',
+    light: 'Inter-Light',
+    regular: 'Inter',
+    medium: 'Inter-Medium',
+    semibold: 'Inter-SemiBold',
+    bold: 'Inter-Bold',
   };
   
   return weightMap[weight] || FontFamily.primary;

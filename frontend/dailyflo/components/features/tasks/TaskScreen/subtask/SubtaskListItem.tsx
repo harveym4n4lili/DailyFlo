@@ -13,16 +13,14 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
-import { TrashIcon } from '@/components/ui/icon';
+import { TrashIcon, SFSymbolIcon } from '@/components/ui/icon';
 import Checkbox from '@/components/ui/button/Checkbox/Checkbox';
-
-// no extra vertical padding - GroupedList contentPaddingVertical handles row spacing
-const CONTENT_PADDING_VERTICAL = 0;
+import { Paddings } from '@/constants/Paddings';
 // checkbox size matches TaskCard checkbox size (16px)
 const CHECKBOX_SIZE = 16;
 // spacing between checkbox (icon) and text input — matches SubtaskCreateButton icon–text gap
 const ICON_TEXT_GAP = 10;
-const TRASH_ICON_SIZE = 18;
+const TRASH_ICON_SIZE = 20;
 
 export interface SubtaskListItemProps {
   /** current title value */
@@ -106,8 +104,9 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
         onFocus={onFocus}
         onBlur={onBlur}
         editable={!disabled}
-        style={[getTextStyle('body-large'), styles.input, { color: themeColors.text.primary(), fontWeight: '900' }]}
-        selectionColor={themeColors.text.primary()}
+        style={[getTextStyle('body-large'), styles.input, { color: themeColors.text.primary() }]}
+        selectionColor="white"
+        cursorColor="white"
         multiline={false}
         returnKeyType="done"
       />
@@ -121,7 +120,12 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={styles.deleteButton}
         >
-          <TrashIcon size={TRASH_ICON_SIZE} color={themeColors.text.tertiary()} />
+          <SFSymbolIcon
+            name="trash.fill"
+            size={TRASH_ICON_SIZE}
+            color={themeColors.text.tertiary()}
+            fallback={<TrashIcon size={TRASH_ICON_SIZE} color={themeColors.text.tertiary()} />}
+          />
         </TouchableOpacity>
       )}
     </View>
@@ -132,7 +136,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: CONTENT_PADDING_VERTICAL,
+    paddingVertical: Paddings.none,
     gap: ICON_TEXT_GAP,
   },
   // checkbox container - provides proper alignment and spacing
@@ -142,11 +146,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    padding: 0,
+    padding: Paddings.none,
     minHeight: 22,
   },
   deleteButton: {
-    padding: 0,
+    padding: Paddings.none,
     justifyContent: 'center',
     alignItems: 'center',
   },

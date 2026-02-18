@@ -87,7 +87,7 @@ const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>
 ) => StyleSheet.create({
-  // content area (title and time label)
+  // --- LAYOUT STYLES ---
   content: {
     flex: 1, // take available space
   },
@@ -100,34 +100,10 @@ const createStyles = (
     gap: 12, // spacing between title and time label
   },
 
-  // task title text styling
-  // using typography system for consistent text styling
-  title: {
-    // use the heading-4 text style from typography system (16px, bold, satoshi font)
-    ...typography.getTextStyle('heading-4'),
-    // use theme-aware primary text color from color system
-    color: themeColors.text.primary(),
-    marginBottom: 2, // spacing between title and metadata (reduced for closer spacing)
-    flex: 1, // take remaining space, allowing title to shrink if needed
-    flexShrink: 1, // allow title to shrink when time label is present
-  },
-
   // completed title styling
   completedTitle: {
     textDecorationLine: 'line-through', // strikethrough for completed tasks
     color: themeColors.text.secondary(), // dimmed color for completed
-  },
-
-  // time label styling - fixed width to fit "XX:XX - XX:XX" format
-  timeLabel: {
-    // use the body-medium text style from typography system (12px, regular, satoshi font)
-    ...typography.getTextStyle('body-large'),
-    // use theme-aware tertiary text color from color system
-    color: themeColors.text.tertiary(),
-    width: 90, // fixed width to fit "23:59 - 23:59" format (max width needed)
-    textAlign: 'right', // right-align time label text
-    flexShrink: 0, // prevent time label from shrinking
-    fontWeight: '900',
   },
 
   // completed time label styling
@@ -140,6 +116,22 @@ const createStyles = (
   timeLabelPlaceholder: {
     width: 90, // same width as time label to maintain consistent layout
     flexShrink: 0, // prevent placeholder from shrinking
+  },
+
+  // --- TYPOGRAPHY STYLES ---
+  title: {
+    ...typography.getTextStyle('heading-4'),
+    color: themeColors.text.primary(),
+    marginTop: 1,
+    flex: 1,
+    flexShrink: 1,
+  },
+  timeLabel: {
+    ...typography.getTextStyle('body-medium'),
+    color: themeColors.text.tertiary(),
+    width: 90,
+    textAlign: 'right',
+    flexShrink: 0,
   },
 });
 

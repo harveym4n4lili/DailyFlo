@@ -24,6 +24,7 @@ import GlassView from 'expo-glass-effect/build/GlassView';
 import { Host, ContextMenu, Button } from '@expo/ui/swift-ui';
 import { DropdownList } from '@/components/ui/list';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { Paddings } from '@/constants/Paddings';
 
 export interface ActionContextMenuItem {
   id: string;
@@ -155,16 +156,16 @@ export function ActionContextMenu({
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 2,
-    paddingHorizontal: 12,
+    paddingVertical: Paddings.indicatorVertical,
+    paddingHorizontal: Paddings.contextMenuHorizontal,
     borderRadius: 20,
     alignSelf: 'flex-start',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iosWrapper: {
-    paddingVertical: 2,
-    paddingHorizontal: 12,
+    paddingVertical: Paddings.indicatorVertical,
+    paddingHorizontal: Paddings.contextMenuHorizontal,
     borderRadius: 20,
     overflow: 'hidden',
     alignItems: 'center',

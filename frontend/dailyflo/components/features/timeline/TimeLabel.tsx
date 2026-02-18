@@ -12,6 +12,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 interface TimeLabelProps {
   // time string in HH:MM format
@@ -109,54 +110,48 @@ const createStyles = (
     position: 'absolute',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    paddingRight: 4,
+    paddingRight: Paddings.timeLabelRight,
   },
 
   // top-aligned container - positions label at top edge of card
   topAlignedContainer: {
     alignItems: 'flex-end',
     justifyContent: 'flex-start', // align text to top
-    paddingRight: 4,
+    paddingRight: Paddings.timeLabelRight,
   },
 
   // containerized label that spans task card height
   containerized: {
     justifyContent: 'center',
-    paddingRight: 4,
+    paddingRight: Paddings.timeLabelRight,
   },
 
   // end time container - aligns bottom edge of label with bottom edge of task card
   // position is the bottom edge of the card, container aligns text to its bottom
-  // use fixed height matching text lineHeight and justifyContent: 'flex-end'
+  // use fixed height matching body-small lineHeight (14) and justifyContent: 'flex-end'
   endTimeContainer: {
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
-    paddingRight: 4,
-    height: 12, // match lineHeight of end time text for precise alignment
+    paddingRight: Paddings.timeLabelRight,
+    height: 14,
   },
 
-  // time text styling - more compact
+  // time text styling - uses body-small from typography system
   timeText: {
-    // use smaller font size for compact display
-    fontSize: 11,
+    ...typography.getTextStyle('body-small'),
     color: themeColors.text.tertiary(),
-    fontWeight: '600',
-    lineHeight: 14,
   },
 
-  // end time text styling (lighter/smaller for end times)
+  // end time text styling (lighter for end times)
   endTimeText: {
-    fontSize: 9,
+    ...typography.getTextStyle('body-small'),
     opacity: 0.7,
-    lineHeight: 12,
   },
 
   // drag time text styling (highlighted during drag)
   dragTimeText: {
+    ...typography.getTextStyle('body-small'),
     color: themeColors.interactive.primary(),
-    fontWeight: '700',
-    fontSize: 11,
-    lineHeight: 14,
   },
 });
 

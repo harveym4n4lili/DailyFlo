@@ -13,6 +13,7 @@ import { View, Text, StyleSheet, Platform } from 'react-native';
 import AnimatedReanimated, { useAnimatedStyle, useSharedValue, withSpring, SharedValue } from 'react-native-reanimated';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { Task } from '@/types';
 import { getTaskColorValue } from '@/utils/taskColors';
 import TaskIcon from '@/components/ui/card/TaskCard/TaskIcon';
@@ -118,6 +119,7 @@ export default function DragOverlay({
     <AnimatedReanimated.View
       style={[
         styles.overlayContainer,
+          styles.overlayContainerPadding,
         animatedOverlayStyle, // animated position that follows thumb
         {
           height: cardHeight, // use the actual card height from drag state
@@ -128,7 +130,7 @@ export default function DragOverlay({
       {/* icon container - separate background for the icon */}
       {/* matches the layout from TimelineItem */}
       {task.icon && (
-        <View style={[styles.iconContainer, { height: minCardHeight }]}>
+        <View style={[styles.iconContainer, styles.iconContainerPadding, { height: minCardHeight }]}>
           <TaskIcon icon={task.icon} color={themeColors.background.invertedPrimary()} size={20} />
         </View>
       )}
@@ -147,6 +149,7 @@ export default function DragOverlay({
         <View
           style={[
             styles.combinedContainer,
+            styles.combinedContainerPadding,
             {
               height: minCardHeight, // fixed height at base height
             },
@@ -200,6 +203,7 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   taskColor: string
 ) => StyleSheet.create({
+  // --- LAYOUT STYLES ---
   // overlay container - positioned absolutely to follow thumb
   // matches the container style from TimelineItem
   overlayContainer: {
@@ -208,21 +212,18 @@ const createStyles = (
     right: 0,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingLeft: 0,
-    paddingRight: 16,
-    zIndex: 2000, // high z-index to appear above all task cards
+    zIndex: 2000,
   },
   
   // icon container - separate background for the icon
   // matches the icon container from TimelineItem
   iconContainer: {
-    width: 44, // fixed width: 20px icon + 24px padding (12px each side)
+    width: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: taskColor, // task color background for icon container
-    borderRadius: 24, // matches task card border radius
-    paddingHorizontal: 12, // horizontal padding for icon spacing
-    marginRight: 12, // spacing between icon container and content
+    backgroundColor: taskColor,
+    borderRadius: 24,
+    marginRight: 12,
   },
   
   // content column - contains task content
@@ -242,8 +243,6 @@ const createStyles = (
     alignItems: 'center',
     position: 'relative',
     backgroundColor: themeColors.background.primarySecondaryBlend(),
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     gap: 12,
   },
   
@@ -276,26 +275,34 @@ const createStyles = (
     alignSelf: 'stretch',
   },
   
-  // time range text styling - matches TaskCard metadata styling
-  // matches the time range style from TimelineItem
-  timeRange: {
-    ...typography.getTextStyle('body-medium'),
-    color: themeColors.text.tertiary(),
-    fontWeight: '900',
-  },
-  
-  // task title text styling - matches TaskCard title styling
-  // matches the title style from TimelineItem
-  title: {
-    ...typography.getTextStyle('heading-4'),
-    color: themeColors.text.primary(),
-  },
-  
   // completed title styling - matches TaskCard completed styling
   // matches the completed title style from TimelineItem
   completedTitle: {
-    textDecorationLine: 'line-through', // strikethrough for completed tasks
-    color: themeColors.text.secondary(), // dimmed color for completed
+    textDecorationLine: 'line-through',
+    color: themeColors.text.secondary(),
+  },
+
+  // --- PADDING STYLES ---
+  overlayContainerPadding: {
+    paddingLeft: Paddings.none,
+    paddingRight: Paddings.card,
+  },
+  iconContainerPadding: {
+    paddingHorizontal: Paddings.cardCompact,
+  },
+  combinedContainerPadding: {
+    paddingHorizontal: Paddings.card,
+    paddingVertical: Paddings.listItemVertical,
+  },
+
+  // --- TYPOGRAPHY STYLES ---
+  timeRange: {
+    ...typography.getTextStyle('body-medium'),
+    color: themeColors.text.tertiary(),
+  },
+  title: {
+    ...typography.getTextStyle('heading-4'),
+    color: themeColors.text.primary(),
   },
 });
 
