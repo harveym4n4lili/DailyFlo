@@ -19,12 +19,13 @@ class Task(models.Model):
         ('orange', 'Orange'),
     ]
     
-    # routine type choices
+    # routine type choices - how often the task repeats (once = no repeat)
     ROUTINE_TYPE_CHOICES = [
         ('once', 'Once'),
         ('daily', 'Daily'),
         ('weekly', 'Weekly'),
         ('monthly', 'Monthly'),
+        ('yearly', 'Yearly'),
     ]
     
     # primary key

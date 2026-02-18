@@ -11,14 +11,18 @@ import React from 'react';
 // react native components we need for the UI
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 
-// icons from expo vector icons
+// icons from expo vector icons (for options that are not calendar)
 import { Ionicons } from '@expo/vector-icons';
+// custom calendar icon for date options
+import { CalendarIcon } from '@/components/ui/icon';
 
 // typography system for consistent text styling
 import { getTextStyle } from '@/constants/Typography';
 
 // hooks for theme-aware colors
 import { useThemeColors, useTaskColors, useSemanticColors } from '@/hooks/useColorPalette';
+// dashed separator component
+import { DashedSeparator } from '@/components/ui/borders';
 
 /**
  * Props for QuickDateOptions component
@@ -36,6 +40,12 @@ export interface QuickDateOptionsProps {
    * @param optionName - The name of the option selected (for analytics/debugging)
    */
   onSelectDate: (date: string, optionName: string) => void;
+
+  /**
+   * When true, option buttons use transparent background (e.g. when parent has elevated background).
+   * @default false
+   */
+  transparentOptionBackground?: boolean;
 }
 
 /**
@@ -47,6 +57,7 @@ export interface QuickDateOptionsProps {
 export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
   selectedDate,
   onSelectDate,
+  transparentOptionBackground = false,
 }) => {
   // get theme-aware colors for styling buttons
   const themeColors = useThemeColors();
@@ -135,7 +146,7 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
   return (
     <View style={styles.container}>
       {/* quick date options list */}
-      {quickOptions.map((option) => {
+      {quickOptions.map((option, index) => {
         // calculate the actual date for this option
         // special handling for "This Weekend" and "No Deadline"
         let optionDate = '';
@@ -150,62 +161,76 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
         // get the day of week for this date (empty for "No Deadline")
         const dayOfWeek = option.isSpecial === 'no-deadline' ? '—' : getDayOfWeek(optionDate);
 
+        const isLastOption = index === quickOptions.length - 1;
+        
         return (
-          <Pressable
-            key={option.label}
-            onPress={() => onSelectDate(optionDate, option.label)}
-            style={({ pressed }) => [
-              styles.optionButton,
-              {
-                // Highlight background only while pressing
-                backgroundColor: pressed
-                  ? themeColors.background.tertiary()
-                  : themeColors.background.elevated(),
-                borderColor: themeColors.border.primary(),
-              },
-            ]}
-            // accessibility features for screen readers
-            accessibilityRole="button"
-            accessibilityLabel={`Select ${option.label}${dayOfWeek ? ", " + dayOfWeek : ''}`}
-            accessibilityState={{ selected: false }}
-          >
-            {/* icon and label on the left with proper spacing */}
-            <View style={styles.leftContent}>
-              <View style={styles.iconContainer}>
-                <Ionicons 
-                  name={option.icon} 
-                  size={20} 
-                  color={option.iconColor()}
-                />
+          <View key={option.label}>
+            <Pressable
+              onPress={() => onSelectDate(optionDate, option.label)}
+              style={({ pressed }) => [
+                styles.optionButton,
+                {
+                  // transparent option background (e.g. when parent is elevated) or default elevated
+                  backgroundColor: transparentOptionBackground
+                    ? pressed
+                      ? themeColors.background.tertiary()
+                      : 'transparent'
+                    : pressed
+                      ? themeColors.background.tertiary()
+                      : themeColors.background.elevated(),
+                },
+              ]}
+              // accessibility features for screen readers
+              accessibilityRole="button"
+              accessibilityLabel={`Select ${option.label}${dayOfWeek ? ", " + dayOfWeek : ''}`}
+              accessibilityState={{ selected: false }}
+            >
+              {/* icon and label on the left with proper spacing */}
+              <View style={styles.leftContent}>
+                <View style={styles.iconContainer}>
+                  {option.icon === 'calendar-outline' ? (
+                    <CalendarIcon size={20} color={option.iconColor()} />
+                  ) : (
+                    <Ionicons
+                      name={option.icon}
+                      size={20}
+                      color={option.iconColor()}
+                    />
+                  )}
+                </View>
+                
+                {/* option label next to the icon */}
+                <Text
+                  style={[
+                    getTextStyle('body-large'),
+                    styles.optionText,
+                    {
+                      color: themeColors.text.primary()
+                    },
+                  ]}
+                >
+                  {option.label}
+                </Text>
               </View>
               
-              {/* option label next to the icon */}
+              {/* day of week on the right */}
               <Text
                 style={[
                   getTextStyle('body-large'),
-                  styles.optionText,
+                  styles.dayOfWeekText,
                   {
-                    color: themeColors.text.primary()
+                    color: themeColors.text.tertiary?.() || themeColors.text.secondary(),
                   },
                 ]}
               >
-                {option.label}
+                {dayOfWeek}
               </Text>
-            </View>
-            
-            {/* day of week on the right */}
-            <Text
-              style={[
-                getTextStyle('body-large'),
-                styles.dayOfWeekText,
-                {
-                  color: themeColors.text.tertiary?.() || themeColors.text.secondary(),
-                },
-              ]}
-            >
-              {dayOfWeek}
-            </Text>
-          </Pressable>
+            </Pressable>
+            {/* dashed separator below each option except the last one - matches button paddingHorizontal (16px) */}
+            {!isLastOption && (
+              <DashedSeparator paddingHorizontal={16} />
+            )}
+          </View>
         );
       })}
     </View>
@@ -216,18 +241,16 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
  * Styles for QuickDateOptions
  */
 const styles = StyleSheet.create({
-  // container for all quick date options
+  // container for all quick date options (no horizontal padding, 12px space below before calendar)
   container: {
     paddingHorizontal: 0,
+    marginBottom: 12,
   },
   
   // individual option button styling
   optionButton: {
     // full width to touch edges
     width: '100%',
-    
-    // border
-    borderBottomWidth: 1,
     
     // use flexbox to position left content (icon + label) and right content (day)
     flexDirection: 'row',

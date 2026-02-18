@@ -14,10 +14,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TouchableOpacity, TextInput, View, Keyboard, Text, Pressable } from 'react-native';
 
-// UI COMPONENTS IMPORTS
-// GroupedListButton: button-style item for GroupedList
-import { GroupedListButton } from '@/components/ui/List/GroupedList';
-
 // EXPO VECTOR ICONS IMPORT
 import { Ionicons } from '@expo/vector-icons';
 
@@ -163,8 +159,7 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
     return (
       <View
         style={{
-          paddingHorizontal: 16, // match horizontal padding of grouped list items in elevated container
-          paddingVertical: 16,
+      
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -235,7 +230,6 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
     <View
       style={{
         paddingHorizontal: 16, // match horizontal padding of grouped list items in elevated container
-        paddingVertical: 16,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',

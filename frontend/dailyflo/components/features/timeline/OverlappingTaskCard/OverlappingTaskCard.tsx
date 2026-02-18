@@ -100,8 +100,7 @@ export default function OverlappingTaskCard({
       } else {
         // fallback to calculated height
         const taskDuration = task.duration || 0;
-        const taskHasSubtasks = !!(task.metadata?.subtasks && Array.isArray(task.metadata.subtasks) && task.metadata.subtasks.length > 0);
-        total += getTaskCardHeight(taskDuration, taskHasSubtasks);
+        total += getTaskCardHeight(taskDuration);
       }
       
       // add 4px spacing between tasks (not after the last one)
@@ -114,7 +113,6 @@ export default function OverlappingTaskCard({
   }, [safeTasks, individualTaskHeights]);
 
   // report total height to parent when it changes
-  // this allows the timeline to update spacing when subtasks expand/collapse
   // use the combined task ID so the timeline can track the overlapping card's total height
   useEffect(() => {
     if (safeTasks.length > 0 && totalHeight > 0 && combinedTaskId) {
@@ -141,12 +139,10 @@ export default function OverlappingTaskCard({
         position: currentAbsolutePosition,
       });
       
-      // use measured height if available (includes expanded subtasks), otherwise fall back to calculated height
-      // this ensures positions update correctly when subtasks expand/collapse
+      // use measured height if available, otherwise fall back to calculated height
       const measuredHeight = individualTaskHeights.get(task.id);
       const taskDuration = task.duration || 0;
-      const taskHasSubtasks = !!(task.metadata?.subtasks && Array.isArray(task.metadata.subtasks) && task.metadata.subtasks.length > 0);
-      const fallbackHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+      const fallbackHeight = getTaskCardHeight(taskDuration);
       const taskHeight = measuredHeight ?? fallbackHeight;
       
       // move to the next absolute position: current position + task height + 4px spacing

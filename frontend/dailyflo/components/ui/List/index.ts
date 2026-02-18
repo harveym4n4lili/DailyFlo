@@ -2,10 +2,10 @@
  * List Components Barrel Export
  * 
  * Central export point for all list-related components.
- * Allows importing from '@/components/ui/List' instead of full paths.
+ * Allows importing from '@/components/ui/list' instead of full paths.
  * 
  * Usage:
- * import { GroupedList, DropdownList } from '@/components/ui/List';
+ * import { GroupedList, DropdownList } from '@/components/ui/list';
  */
 
 // export all GroupedList exports

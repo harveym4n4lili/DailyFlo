@@ -16,10 +16,10 @@
  *   <CustomComponent3 />
  * </GroupedList>
  * 
- * Usage with button-style items (for settings pages):
+ * Usage with button-style items (for task forms):
  * <GroupedList>
- *   <GroupedListButton icon="calendar" label="Date" value="Today" onPress={() => {}} />
- *   <GroupedListButton icon="time" label="Time" value="9:00 AM" onPress={() => {}} />
+ *   <FormDetailButton icon="calendar" label="Date" value="Today" onPress={() => {}} />
+ *   <FormDetailButton icon="time" label="Time" value="9:00 AM" onPress={() => {}} />
  * </GroupedList>
  */
 
@@ -33,11 +33,42 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   children,
   containerStyle,
   separatorColor,
-  borderRadius = 12, // default iOS-style border radius
+  separatorInsetLeft = 0,
+  separatorInsetRight = 0,
+  borderRadius = 28, // default iOS-style border radius
+  backgroundColor,
+  borderWidth,
+  borderColor,
+  contentPaddingHorizontal = 20,
+  contentPaddingVertical = 14,
+  contentMinHeight = 44,
+  listStyle = 'roundedStyle',
+  minimalStyle = false,
+  fullWidthSeparators = false,
+  itemWrapperPaddingVertical,
+  separatorConsiderIconColumn = false,
+  iconColumnWidth = 32,
 }) => {
   // get theme-aware colors for default separator color
   const themeColors = useThemeColors();
+
+  // when minimalStyle is true, remove h/v padding, background, border radius, and min height from item wrappers
+  const finalContentPaddingHorizontal = minimalStyle ? 0 : contentPaddingHorizontal;
+  const finalContentPaddingVertical = minimalStyle ? 0 : contentPaddingVertical;
+  const finalBackgroundColor = minimalStyle ? 'transparent' : backgroundColor;
+  const finalBorderRadius = minimalStyle ? 0 : borderRadius;
+  const finalContentMinHeight = minimalStyle ? undefined : contentMinHeight;
+
+  // when fullWidthSeparators is true, separators span full width (no inset)
+  // when separatorConsiderIconColumn is true, calculate inset to skip icon column
+  let finalSeparatorInsetLeft = fullWidthSeparators ? 0 : separatorInsetLeft;
+  const finalSeparatorInsetRight = fullWidthSeparators ? 0 : separatorInsetRight;
   
+  // if separator should consider icon column, override left inset with icon column width
+  if (separatorConsiderIconColumn && !fullWidthSeparators) {
+    finalSeparatorInsetLeft = iconColumnWidth;
+  }
+
   // use provided separator color or default to theme border color
   const finalSeparatorColor = separatorColor || themeColors.border.primary();
 
@@ -82,16 +113,24 @@ export const GroupedList: React.FC<GroupedListProps> = ({
     <View style={[{ gap: 0 }, containerStyle]}>
       {childrenArray.map((child, index) => {
         const position = getItemPosition(index);
-        // show separator for all items except the last one
         const showSeparator = index < childrenArray.length - 1;
-
         return (
           <GroupedListItemWrapper
-            key={getChildKey(child, index)} // use child's key if available, otherwise use index
+            key={getChildKey(child, index)}
             position={position}
             showSeparator={showSeparator}
-            borderRadius={borderRadius}
+            borderRadius={finalBorderRadius}
             separatorColor={finalSeparatorColor}
+            separatorInsetLeft={finalSeparatorInsetLeft}
+            separatorInsetRight={finalSeparatorInsetRight}
+            backgroundColor={finalBackgroundColor}
+            borderWidth={borderWidth}
+            borderColor={borderColor}
+            contentPaddingHorizontal={finalContentPaddingHorizontal}
+            contentPaddingVertical={finalContentPaddingVertical}
+            contentMinHeight={finalContentMinHeight}
+            listStyle={listStyle}
+            itemWrapperPaddingVertical={itemWrapperPaddingVertical}
           >
             {child}
           </GroupedListItemWrapper>

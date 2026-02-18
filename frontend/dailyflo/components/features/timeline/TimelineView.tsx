@@ -18,6 +18,8 @@ import TimelineItem from './TimelineItem/TimelineItem';
 import TimeLabel from './TimeLabel';
 import { OverlappingTaskCard } from './OverlappingTaskCard';
 import DragOverlay from './DragOverlay';
+import { DashedVerticalLine } from '@/components/ui/borders';
+import { SparklesIcon } from '@/components/ui/icon';
 import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag, getTaskCardHeight } from './timelineUtils';
 
 // type for combined overlapping tasks
@@ -148,10 +150,7 @@ export default function TimelineView({
           color: firstTask.color,
           routineType: firstTask.routineType,
           sortOrder: 0,
-          metadata: {
-            subtasks: [],
-            reminders: [],
-          },
+          metadata: { subtasks: [], reminders: [] },
           softDeleted: false,
           createdAt: firstTask.createdAt,
           updatedAt: firstTask.updatedAt,
@@ -219,20 +218,44 @@ export default function TimelineView({
   }, [dynamicStartHour, startHour, endHour, timeInterval, tasksWithTime]);
 
   // spacing constants - adjust these to change spacing between tasks
-  const SPACING_LESS_THAN_30_MIN = 30;
-  const SPACING_30_MIN_TO_1_HOUR = 90;
-  const SPACING_MORE_THAN_1_HOUR = 90;
+  const SPACING_LESS_THAN_30_MIN = 16;
+  const SPACING_30_MIN_TO_2_HOURS = 64;
+  const SPACING_MORE_THAN_2_HOURS = 120;
   
   // calculate spacing between tasks based on time difference
   const getTaskSpacing = (timeDifferenceMinutes: number): number => {
     if (timeDifferenceMinutes < 30) {
       return SPACING_LESS_THAN_30_MIN;
-    } else if (timeDifferenceMinutes <= 60) {
-      return SPACING_30_MIN_TO_1_HOUR;
+    } else if (timeDifferenceMinutes <= 120) {
+      return SPACING_30_MIN_TO_2_HOURS;
     } else {
-      return SPACING_MORE_THAN_1_HOUR;
+      return SPACING_MORE_THAN_2_HOURS;
     }
   };
+
+  // 20 messages for 30 min to 2 hours free time segments - short, about enjoying a break (max 6-7 words)
+  const FREE_TIME_BREAK_MESSAGES = [
+    'Take a moment to breathe.',
+    'You deserve a little rest.',
+    'Enjoy this pocket of calm.',
+    'Stretch and unwind a bit.',
+    'Step outside for fresh air.',
+    'Grab a drink and relax.',
+    'Let your mind wander free.',
+    'Quick recharge before what\'s next.',
+    'Sit back and take it in.',
+    'A brief pause does wonders.',
+    'Ease into this quiet moment.',
+    'Reset before the next task.',
+    'Savor this small slice of time.',
+    'Unplug for a few minutes.',
+    'Allow yourself to slow down.',
+    'A short break, well earned.',
+    'Breathe deep and feel ease.',
+    'Enjoy the empty space.',
+    'Nice little pocket of peace.',
+    'Pause and appreciate the quiet.',
+  ];
 
   // sort tasks by time to calculate equal spacing positions
   const sortedTasks = useMemo(() => {
@@ -264,8 +287,7 @@ export default function TimelineView({
         let combinedHeight = 0;
         combinedTask.tasks.forEach((taskItem, index) => {
           const taskDuration = taskItem.duration || 0;
-          const taskHasSubtasks = taskItem.metadata?.subtasks && taskItem.metadata.subtasks.length > 0;
-          const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+          const taskHeight = getTaskCardHeight(taskDuration);
           combinedHeight += taskHeight;
           // add 4px spacing between cards (not after the last one)
           if (index < combinedTask.tasks.length - 1) {
@@ -280,12 +302,9 @@ export default function TimelineView({
       } else {
         // regular task - use standard height calculation
         const duration = task.duration || 0;
-        const hasSubtasks = task.metadata?.subtasks && task.metadata.subtasks.length > 0;
-
         // prefer the live measured/animated height so spacing animates with the card
-        // fall back to the base height from centralized helper if we don't have it yet
         const measuredHeight = taskCardHeights.get(task.id);
-        const fallbackHeight = getTaskCardHeight(duration, hasSubtasks);
+        const fallbackHeight = getTaskCardHeight(duration);
         cardHeight = measuredHeight ?? fallbackHeight;
       }
       
@@ -333,8 +352,7 @@ export default function TimelineView({
             let nextCombinedHeight = 0;
             nextCombinedTask.tasks.forEach((taskItem, index) => {
               const taskDuration = taskItem.duration || 0;
-              const taskHasSubtasks = taskItem.metadata?.subtasks && taskItem.metadata.subtasks.length > 0;
-              const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+              const taskHeight = getTaskCardHeight(taskDuration);
               nextCombinedHeight += taskHeight;
               // add 4px spacing between cards (not after the last one)
               if (index < nextCombinedTask.tasks.length - 1) {
@@ -346,9 +364,8 @@ export default function TimelineView({
           } else {
             // regular next task
             const nextTaskDuration = nextTask.duration || 0;
-            const nextTaskHasSubtasks = nextTask.metadata?.subtasks && nextTask.metadata.subtasks.length > 0;
             const nextMeasuredHeight = taskCardHeights.get(nextTask.id);
-            const nextFallbackHeight = getTaskCardHeight(nextTaskDuration, nextTaskHasSubtasks);
+            const nextFallbackHeight = getTaskCardHeight(nextTaskDuration);
             nextTaskSpacingHeight = nextMeasuredHeight ?? nextFallbackHeight;
           }
 
@@ -359,6 +376,48 @@ export default function TimelineView({
     
     return positions;
   }, [sortedTasks, taskCardHeights, combinedOverlappingTasks]); // recalc when tasks or heights change so spacing matches animated card heights
+
+  // free time segments - gaps between non-overlapping tasks where we show contextual messages
+  // derived from equalSpacingPositions: gap = space between bottom of current task and top of next
+  // includes timeDifferenceMinutes to pick message type: 30-60 min = break messages, >60 min = duration message
+  const freeTimeSegments = useMemo(() => {
+    const segments: Array<{ top: number; height: number; timeDifferenceMinutes: number }> = [];
+    if (sortedTasks.length < 2) return segments;
+
+    for (let i = 0; i < sortedTasks.length - 1; i++) {
+      const task = sortedTasks[i];
+      const nextTask = sortedTasks[i + 1];
+      if (!task.time || !nextTask.time) continue;
+
+      const taskEndMinutes = timeToMinutes(task.time) + (task.duration || 0);
+      const nextTaskMinutes = timeToMinutes(nextTask.time);
+      const timeDifferenceMinutes = nextTaskMinutes - taskEndMinutes;
+      const isOverlapping =
+        taskEndMinutes > nextTaskMinutes ||
+        timeToMinutes(task.time) === nextTaskMinutes ||
+        timeToMinutes(task.time) === nextTaskMinutes + (nextTask.duration || 0) ||
+        nextTaskMinutes === taskEndMinutes;
+
+      if (isOverlapping) continue;
+
+      const curr = equalSpacingPositions.get(task.id);
+      const next = equalSpacingPositions.get(nextTask.id);
+      if (!curr || !next) continue;
+
+      const gapTop = curr.equalSpacingPosition + curr.cardHeight / 2;
+      const nextTaskTop = next.equalSpacingPosition - next.cardHeight / 2;
+      const gapHeight = nextTaskTop - gapTop;
+      if (gapHeight > 0) segments.push({ top: gapTop, height: gapHeight, timeDifferenceMinutes });
+    }
+    return segments;
+  }, [sortedTasks, equalSpacingPositions]);
+
+  // format minutes as "Xh Ym" for free time duration display
+  const formatMinutesToDuration = (minutes: number): string => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h}h ${m}m`;
+  };
 
   // calculate dynamic pixelsPerMinute for each segment between tasks
   // returns a map of segment index -> pixelsPerMinute
@@ -682,6 +741,10 @@ export default function TimelineView({
   // using ref to persist shared values across renders
   // note: we can't call useSharedValue conditionally, so we create them lazily using a helper
   const labelPositionAnimationsRef = useRef<Map<string, ReturnType<typeof useSharedValue<number>>>>(new Map());
+  
+  // skip label animation during initial layout (~250ms) - prevents jank when positions update
+  // after task height measurements cascade
+  const timelineMountTimeRef = useRef(Date.now());
 
   // helper function to get or create shared value for a label
   // using makeMutable allows us to create shared values conditionally (inside useEffect)
@@ -699,24 +762,34 @@ export default function TimelineView({
   // create and update animated positions for time labels
   // this makes labels smoothly move when tasks expand/collapse
   useEffect(() => {
+    const isInitialLayout = Date.now() - timelineMountTimeRef.current < 250;
+    
     allTimeLabels.forEach((label) => {
       const startLabelKey = `${label.taskId}-${label.time}-start`;
       
       // get or create shared value for start time label
       const positionAnimation = getOrCreateLabelAnimation(startLabelKey, label.position);
       
-      // animate position smoothly when it changes
-      positionAnimation.value = withTiming(label.position, {
-        duration: 75, // matches card expansion animation duration
-      });
+      // during initial layout, set immediately to prevent jank; later, animate smoothly
+      if (isInitialLayout) {
+        positionAnimation.value = label.position;
+      } else {
+        positionAnimation.value = withTiming(label.position, {
+          duration: 75, // matches card expansion animation duration
+        });
+      }
       
       // handle end time label if it exists
       if (label.endTime && label.endPosition !== undefined) {
         const endLabelKey = `${label.taskId}-${label.endTime}-end`;
         const endPositionAnimation = getOrCreateLabelAnimation(endLabelKey, label.endPosition);
-        endPositionAnimation.value = withTiming(label.endPosition, {
-          duration: 75, // matches card expansion animation duration
-        });
+        if (isInitialLayout) {
+          endPositionAnimation.value = label.endPosition;
+        } else {
+          endPositionAnimation.value = withTiming(label.endPosition, {
+            duration: 75, // matches card expansion animation duration
+          });
+        }
       }
     });
     
@@ -1560,14 +1633,49 @@ export default function TimelineView({
 
         {/* tasks column on the right */}
         <View style={styles.tasksContainer}>
-          {/* vertical line connecting all time slots - extends only between first and last task */}
-          <View style={[
-            styles.timelineLine, 
-            { 
-              top: timelineLineBounds.top,
-              height: timelineLineBounds.height 
-            }
-          ]} />
+          {/* vertical dashed line connecting all time slots - extends only between first and last task */}
+          <DashedVerticalLine
+            height={timelineLineBounds.height}
+            color={themeColors.border.secondary()}
+            style={[
+              styles.timelineLine,
+              { top: timelineLineBounds.top },
+            ]}
+          />
+
+          {/* free time blocks - rendered in the gap between non-overlapping tasks (30+ min only) */}
+          {freeTimeSegments
+            .filter((seg) => seg.timeDifferenceMinutes >= 30)
+            .map((seg, i) => {
+              const isLongBreak = seg.timeDifferenceMinutes > 120;
+              const isMediumBreak = seg.timeDifferenceMinutes >= 30 && seg.timeDifferenceMinutes <= 120;
+              return (
+                <View
+                  key={`free-time-${i}`}
+                  style={[
+                    styles.freeTimeBlock,
+                    { top: seg.top, height: seg.height },
+                  ]}
+                >
+                  <View style={styles.freeTimeContentRow}>
+                    <SparklesIcon size={14} color={themeColors.background.quaternary()} />
+                    {isLongBreak ? (
+                      <Text style={[styles.freeTimeTextSegments, { color: themeColors.background.tertiary() }]}>
+                        Woah! you have{' '}
+                        <Text style={styles.freeTimeDurationBold}>
+                          {formatMinutesToDuration(seg.timeDifferenceMinutes)}
+                        </Text>
+                        {' '}of free time!
+                      </Text>
+                    ) : (
+                      <Text style={[styles.freeTimeTextSegments, { color: themeColors.background.tertiary() }]}>
+                        {FREE_TIME_BREAK_MESSAGES[i % FREE_TIME_BREAK_MESSAGES.length]}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
           
           {/* drag overlay - follows thumb position during drag */}
           {/* only rendered when dragState exists and task is available (during active drag) */}
@@ -1612,8 +1720,7 @@ export default function TimelineView({
                 let combinedHeight = 0;
                 combinedTask.tasks.forEach((taskItem, index) => {
                   const taskDuration = taskItem.duration || 0;
-                  const taskHasSubtasks = taskItem.metadata?.subtasks && taskItem.metadata.subtasks.length > 0;
-                  const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+                  const taskHeight = getTaskCardHeight(taskDuration);
                   combinedHeight += taskHeight;
                   // add 4px spacing between cards (not after the last one)
                   if (index < combinedTask.tasks.length - 1) {
@@ -1627,7 +1734,7 @@ export default function TimelineView({
                 const taskPpm = taskPixelsPerMinute.get(task.id) || 0.3;
                 
                 // for overlapping tasks, position based on the first task's time
-                // this ensures the first task aligns with its time label even when subtasks expand
+                // this ensures the first task aligns with its time label
                 const firstTask = combinedTask.tasks[0];
                 const firstTaskTime = firstTask?.time;
                 let overlappingCardPosition: number;
@@ -1666,8 +1773,7 @@ export default function TimelineView({
                       const draggedTask = combinedTask.tasks.find(t => t.id === taskId);
                       if (draggedTask) {
                         const taskDuration = draggedTask.duration || 0;
-                        const taskHasSubtasks = !!(draggedTask.metadata?.subtasks && Array.isArray(draggedTask.metadata.subtasks) && draggedTask.metadata.subtasks.length > 0);
-                        const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+                        const taskHeight = getTaskCardHeight(taskDuration);
                         const measuredHeight = taskCardHeights.get(taskId) || taskHeight;
                         handleDragEnd(taskId, newY, measuredHeight);
                       }
@@ -1683,16 +1789,14 @@ export default function TimelineView({
                         // calculate position by summing heights of all previous tasks
                         for (let i = 0; i < taskIndex; i++) {
                           const prevTask = combinedTask.tasks[i];
-                          // use measured height if available (includes expanded subtasks)
+                          // use measured height if available
                           const prevMeasuredHeight = taskCardHeights.get(prevTask.id);
                           const prevTaskDuration = prevTask.duration || 0;
-                          const prevTaskHasSubtasks = !!(prevTask.metadata?.subtasks && Array.isArray(prevTask.metadata.subtasks) && prevTask.metadata.subtasks.length > 0);
-                          const prevTaskHeight = prevMeasuredHeight ?? getTaskCardHeight(prevTaskDuration, prevTaskHasSubtasks);
+                          const prevTaskHeight = prevMeasuredHeight ?? getTaskCardHeight(prevTaskDuration);
                           taskTopPosition += prevTaskHeight + 4; // 4px spacing between cards
                         }
                         const taskDuration = draggedTask.duration || 0;
-                        const taskHasSubtasks = !!(draggedTask.metadata?.subtasks && Array.isArray(draggedTask.metadata.subtasks) && draggedTask.metadata.subtasks.length > 0);
-                        const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+                        const taskHeight = getTaskCardHeight(taskDuration);
                         const measuredHeight = taskCardHeights.get(taskId) || taskHeight;
                         handleDragStart(taskId, taskTopPosition, measuredHeight, draggedTask);
                       }
@@ -1704,8 +1808,7 @@ export default function TimelineView({
                       const draggedTask = combinedTask.tasks.find(t => t.id === taskId);
                       if (draggedTask) {
                         const taskDuration = draggedTask.duration || 0;
-                        const taskHasSubtasks = !!(draggedTask.metadata?.subtasks && Array.isArray(draggedTask.metadata.subtasks) && draggedTask.metadata.subtasks.length > 0);
-                        const taskHeight = getTaskCardHeight(taskDuration, taskHasSubtasks);
+                        const taskHeight = getTaskCardHeight(taskDuration);
                         const measuredHeight = taskCardHeights.get(taskId) || taskHeight;
                         handleDragPositionChange(taskId, yPosition, measuredHeight);
                       }
@@ -1733,7 +1836,7 @@ export default function TimelineView({
               // - After updating a task
               // - After initially loading
               // spacingHeight uses fallback height from TASK_CARD_HEIGHTS constants
-              // values: 64px (no duration), 80px (duration), 88px (duration + subtasks)
+              // values: 64px (no duration), 72px (duration)
               const spacingHeight = equalSpacing.cardHeight;
               const measuredHeight = taskCardHeights.get(task.id) || spacingHeight;
               const taskPpm = taskPixelsPerMinute.get(task.id) || 0.3;
@@ -1812,7 +1915,7 @@ const createStyles = (
   // scroll content container with calculated height
   scrollContent: {
     flexDirection: 'row',
-    paddingTop: 80, // increased top padding to see just the top
+    paddingTop: 52, // increased top padding to see just the top
     paddingBottom: 200, // bottom padding
   },
 
@@ -1831,23 +1934,43 @@ const createStyles = (
     paddingRight: 14,
   },
 
-  // vertical line connecting all time slots
-  // positioned to be horizontally centered with icon container
-  // icon container: 44px wide, center at 22px from its left edge
-  // icon container starts at tasksContainer paddingLeft (20px)
-  // icon container center from tasksContainer left: 20 + 22 = 42px
-  // timeline line is 4px wide, so to center it: left = 42 - (4/2) = 40px
-  // but if appearing on right edge, recalculate: icon container right edge is at 20 + 44 = 64px
-  // to center: left should be at icon container center minus half line width
+  // vertical dashed line connecting all time slots - aligns with icon container line (left: 21)
   timelineLine: {
     position: 'absolute',
-    // icon container: starts at tasksContainer.paddingLeft (20px), width 44px, center at 22px from start
-    // icon container center from tasksContainer left: 20 + 22 = 42px
-    // timeline line width: 4px, so to center: left = 42 - 2 = 40px
     left: 21,
-    top: 0,
-    width: 4,
-    backgroundColor: themeColors.border.secondary(),
+  },
+
+  // free time block - fills the gap between non-overlapping tasks
+  // positioned absolutely at gap top/height, text vertically centered
+  // 32px left padding and left-aligned for all segment messages
+  freeTimeBlock: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 36,
+  },
+
+  // row containing sparkles icon (14px) + message text
+  freeTimeContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  // free time text - base color background tertiary, used for all segment messages
+  freeTimeTextSegments: {
+    ...typography.getTextStyle('body-medium'),
+    color: themeColors.background.tertiary(),
+    fontWeight: '900',
+  },
+
+  // bold white/accent duration (e.g. "4h 32m") inside the long break message
+  // uses primary text for contrast (white in dark mode, dark in light mode)
+  freeTimeDurationBold: {
+    fontWeight: '700',
+    color: themeColors.text.primary(),
   },
 
   // empty state container

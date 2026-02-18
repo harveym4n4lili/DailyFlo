@@ -1,29 +1,28 @@
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { StyleSheet, RefreshControl, View, Text, Alert, TouchableOpacity, Animated } from 'react-native';
+import { StyleSheet, RefreshControl, View, Text, Alert, Animated } from 'react-native';
+import AnimatedReanimated, { useSharedValue, useAnimatedStyle, useAnimatedReaction, withTiming } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 // import our custom layout components
 import { ScreenContainer, SafeAreaWrapper } from '@/components';
 
 // import our new task components
-import { ListCard } from '@/components/ui/Card';
-import { FloatingActionButton } from '@/components/ui/Button';
-import { DropdownList } from '@/components/ui/List';
-import { ModalContainer, ModalBackdrop } from '@/components/layout/ModalLayout';
-import { TaskViewModal, TaskCreationModal } from '@/components/features/tasks';
-// date picker modal for selecting a new due date when rescheduling overdue tasks
-import { DatePickerModal } from '@/components/features/calendar';
+import { ListCard } from '@/components/ui/card';
+import { FloatingActionButton } from '@/components/ui/button';
+import { ActionContextMenu } from '@/components/ui';
+import { ClockIcon } from '@/components/ui/icon';
+import { ModalContainer } from '@/components/layout/ModalLayout';
+import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 
 // import color palette system for consistent theming
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
-
-// useThemeColor: hook that provides the global theme color selected by the user
-import { useThemeColor } from '@/hooks/useThemeColor';
 
 // STORE FOLDER IMPORTS - Redux state management
 // The store folder contains all Redux-related code for managing app state
@@ -45,30 +44,45 @@ import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSl
 // The types folder contains all TypeScript interfaces and type definitions
 import { Task, TaskColor } from '@/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  expandTasksForDates,
+  getTargetDatesForTodayScreen,
+  isExpandedRecurrenceId,
+  getBaseTaskId,
+  getOccurrenceDateFromId,
+} from '@/utils/recurrenceUtils';
 
 export default function TodayScreen() {
   // REFRESH STATE - Controls the pull-to-refresh indicator
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+
+  // scroll offset for Today header fade - updated on scroll, drives reanimated opacity (0→48px = fade out)
+  const scrollY = useSharedValue(0);
+
+  // mini Today header opacity - animates in/out based on scroll threshold (not tied to scroll position)
+  // withTiming allows interruption: fade out can interrupt fade in and vice versa
+  const miniHeaderOpacity = useSharedValue(0);
+  useAnimatedReaction(
+    () => scrollY.value > 48,
+    (shouldShow) => {
+      miniHeaderOpacity.value = withTiming(shouldShow ? 1 : 0, { duration: 200 });
+    }
+  );
+
+  const miniTodayHeaderStyle = useAnimatedStyle(() => ({
+    opacity: miniHeaderOpacity.value,
+  }));
   
   // TASK DETAIL MODAL STATE
-  const [isTaskDetailModalVisible, setIsTaskDetailModalVisible] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  // Store task color separately to maintain it during modal close animation
-  const [selectedTaskColor, setSelectedTaskColor] = useState<TaskColor>('blue');
   
-  // TASK CREATION MODAL STATE - separate state for modal controlled by Redux
-  const [isCreateTaskModalVisible, setIsCreateTaskModalVisible] = useState(false);
+  // task creation is the task Stack screen (presentation: 'modal'); opened via router
 
-  // OVERDUE RESCHEDULE STATE - controls bulk reschedule for the "Overdue" group on Today screen
-  // we store the IDs of the overdue tasks we want to move plus modal visibility
-  const [isOverdueDatePickerVisible, setIsOverdueDatePickerVisible] = useState(false);
-  const [overdueTaskIdsToReschedule, setOverdueTaskIdsToReschedule] = useState<string[]>([]);
+  // OVERDUE RESCHEDULE: we push date-select and apply selected date via callback (avoids race with draft state)
+  const { setDraft, registerOverdueReschedule, clearOverdueReschedule } = useCreateTaskDraft();
   
   // get UI state from Redux to check if createTask modal should be opened
-  const { modals, closeModal } = useUI();
-  
-  // DROPDOWN STATE - Controls the visibility of the dropdown menu
-  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  const { modals, closeModal, enterSelectionMode } = useUI();
   
   // TITLE STATE - Controls the visibility of the title header
   const [showTitle, setShowTitle] = useState(false);
@@ -90,14 +104,10 @@ export default function TodayScreen() {
   // This gives us access to predefined text styles and satoshi font family
   const typography = useTypography();
   
-  // THEME COLOR USAGE
-  // get the global theme color selected by the user (default: red)
-  // this is used for interactive elements like the ellipse button
-  const { getThemeColorValue } = useThemeColor();
-  const themeColor = getThemeColorValue(500); // use shade 500 for ellipse button color
-  
   // SAFE AREA INSETS - Get safe area insets for proper positioning
   const insets = useSafeAreaInsets();
+  // router: used to open test modal (liquid glass) from main FAB for testing
+  const router = useRouter();
   
   // create dynamic styles using the color palette system and typography system
   // we pass typography and insets to the createStyles function so it can use typography styles and safe area
@@ -122,31 +132,23 @@ export default function TodayScreen() {
   // useTasks: Custom hook that provides typed access to the tasks slice state
   // This is defined in store/hooks.ts and wraps Redux's useSelector
 
+  // reset scrollY when refresh completes so Today header fades back in
+  useEffect(() => {
+    if (!isLoading) scrollY.value = 0;
+  }, [isLoading, scrollY]);
+
   // Get authentication state from Redux
   // Only fetch tasks if user is authenticated
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
-  // filter tasks to show today's, overdue, and completed tasks
-  // useMemo ensures this calculation only runs when tasks change
+  // expand and filter tasks: one-off + recurring occurrences for today and overdue (last 14 days)
+  // recurring tasks generate virtual occurrences per date; completion tracked per-occurrence in metadata.recurrence_completions
   const todaysTasks = useMemo(() => {
-    const today = new Date();
-    const todayString = today.toDateString(); // get date in "Mon Jan 15 2024" format
-    
-    const filtered = tasks.filter(task => {
-      // include completed tasks (they'll be grouped separately)
-      if (task.isCompleted) return true;
-      
-      // include tasks that are due today or overdue
-      if (task.dueDate) {
-        const taskDate = new Date(task.dueDate);
-        const isToday = taskDate.toDateString() === todayString;
-        // include overdue tasks (due before today)
-        const isOverdue = taskDate < today;
-        return isToday || isOverdue;
-      }
-      return false;
+    const targetDates = getTargetDatesForTodayScreen();
+    const expanded = expandTasksForDates(tasks, targetDates, {
+      includeOneOffBeforeRange: true, // include one-off tasks overdue before our 14-day window
     });
-    return filtered;
+    return expanded;
   }, [tasks]);
 
   // calculate total task count for header display (only incomplete tasks)
@@ -157,10 +159,10 @@ export default function TodayScreen() {
   // grouping explanation:
   // the listcard component will automatically group tasks by due date when groupBy="dueDate" is set
   // this creates separate sections for:
-  // - "overdue" tasks (due before today and not completed)
-  // - "today" tasks (due today and not completed)
-  // - specific dates if any tasks are due on future dates (and not completed)
-  // completed tasks are filtered out and will not appear in any group
+  // - "overdue" tasks (due before today, including completed ones)
+  // - "today" tasks (due today, including completed ones)
+  // - specific dates if any tasks are due on future dates (including completed ones)
+  // completed tasks remain in their date groups and are not filtered out
   // the grouping logic is handled internally by the listcard component
 
   // STORE USAGE - Dispatching actions to fetch data
@@ -220,16 +222,13 @@ export default function TodayScreen() {
     }
   }, [isAuthenticated, lastFetched, isLoading, error, dispatch]);
   
-  // watch Redux createTask modal state and open local modal when it becomes true
-  // this allows opening the modal from navigation (e.g., from onboarding completion screen)
+  // when Redux says open createTask (e.g. onboarding completion), push task Stack screen
   useEffect(() => {
     if (modals.createTask) {
-      // open the local modal state
-      setIsCreateTaskModalVisible(true);
-      // immediately close the Redux modal state to prevent it from staying open
       closeModal('createTask');
+      router.push('/task-create' as any);
     }
-  }, [modals.createTask, closeModal]);
+  }, [modals.createTask, closeModal, router]);
 
   // STORE USAGE - Dispatching actions for user interactions
   // Handle pull-to-refresh
@@ -244,62 +243,55 @@ export default function TodayScreen() {
   // TASK INTERACTION HANDLERS - Functions that handle user interactions with tasks
   // These functions demonstrate the flow: User interaction → Redux action → State update → UI re-render
   
-  // handle task press - shows task detail modal with haptic feedback
+  // handle task press - opens task screen in edit mode
+  // for recurring occurrences, pass occurrenceDate so save can offer "this instance" vs "all"
   const handleTaskPress = (task: Task) => {
-    console.log('📱 Task pressed:', task.title);
-    
-    // provide medium haptic feedback
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
-    
-    // show task detail modal
-    // store both task and color separately to maintain color during close animation
-    setSelectedTask(task);
-    setSelectedTaskColor(task.color);
-    setIsTaskDetailModalVisible(true);
-  };
-  
-  // handle task detail modal close
-  const handleTaskDetailModalClose = () => {
-    setIsTaskDetailModalVisible(false);
-    // delay clearing task to allow modal animation to complete
-    // this ensures task color persists during slide-down animation
-    setTimeout(() => {
-      setSelectedTask(null);
-    }, 350); // slightly longer than modal animation duration (300ms)
+    const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+    const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
+    router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
   // handle task completion toggle
+  // for recurring occurrences (id format: baseId__dateStr), update metadata.recurrence_completions instead of isCompleted
   const handleTaskComplete = (task: Task) => {
-    console.log('✅ Task completion toggled:', task.title);
-    // STORE USAGE - Dispatching updateTask action to toggle completion status
-    // dispatch(updateTask()): Sends the updateTask action to the Redux store
-    // This triggers the async thunk defined in store/slices/tasks/tasksSlice.ts
-    // The thunk will make an API call and update the store with the results
-    dispatch(updateTask({ 
-      id: task.id, 
-      updates: { 
+    if (isExpandedRecurrenceId(task.id)) {
+      // recurring occurrence: add/remove date from recurrence_completions on the base task
+      const baseId = getBaseTaskId(task.id);
+      const occurrenceDate = getOccurrenceDateFromId(task.id);
+      if (!occurrenceDate) return;
+      const baseTask = tasks.find((t) => t.id === baseId);
+      if (!baseTask) return;
+      const completions = baseTask.metadata?.recurrence_completions ?? [];
+      const newCompletions = task.isCompleted
+        ? completions.filter((d) => d !== occurrenceDate)
+        : [...completions, occurrenceDate];
+      dispatch(updateTask({
+        id: baseId,
+        updates: {
+          id: baseId,
+          metadata: { ...baseTask.metadata, recurrence_completions: newCompletions },
+        },
+      }));
+    } else {
+      // one-off task: toggle isCompleted as usual
+      dispatch(updateTask({
         id: task.id,
-        isCompleted: !task.isCompleted
-      } 
-    }));
+        updates: { id: task.id, isCompleted: !task.isCompleted },
+      }));
+    }
   };
   
-  // handle task edit (for future task edit modal)
+  // handle task edit - opens task screen in edit mode (same as task press)
   const handleTaskEdit = (task: Task) => {
-    console.log('✏️ Task edit requested:', task.title);
-    // TODO: Open task edit modal
-    // This will be implemented when we add task editing functionality
+    const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+    const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
+    router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
   // handle task delete (for future confirmation modal)
   const handleTaskDelete = (task: Task) => {
-    console.log('🗑️ Task delete requested:', task.title);
-    // STORE USAGE - Dispatching deleteTask action to remove task
-    // dispatch(deleteTask()): Sends the deleteTask action to the Redux store
-    // This triggers the async thunk defined in store/slices/tasks/tasksSlice.ts
-    // The thunk will make an API call and update the store by removing the task
-    // TODO: Add confirmation modal before deletion
-    dispatch(deleteTask(task.id));
+    const taskId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+    dispatch(deleteTask(taskId));
   };
 
 
@@ -340,74 +332,36 @@ export default function TodayScreen() {
     );
   };
 
-  // DROPDOWN HANDLERS
-  // handle ellipse button press - toggles dropdown menu visibility
-  const handleEllipsePress = () => {
-    setIsDropdownVisible(!isDropdownVisible);
-  };
+  // clear overdue reschedule callback when screen gains focus (e.g. user backed out without selecting)
+  useFocusEffect(
+    React.useCallback(() => {
+      clearOverdueReschedule();
+    }, [clearOverdueReschedule]),
+  );
 
-  // handle select all menu item press
-  const handleSelectAll = () => {
-    console.log('📋 Select all tasks requested');
-    // TODO: Implement select all functionality
-    setIsDropdownVisible(false);
-  };
-
-  // create dropdown menu items array
-  // each item defines a menu option with label, icon, and action
-  const dropdownMenuItems = [
-    {
-      id: 'select-all',
-      label: 'Select All',
-      icon: 'checkmark-circle-outline',
-      onPress: handleSelectAll,
-    },
-  ];
-
-  // OVERDUE RESCHEDULE HANDLERS
-  // handle press on "Reschedule" in the Overdue group header
-  // this opens the date picker modal and remembers which overdue tasks to update
+  // handle press on "Reschedule" in the Overdue group header: open date-select, apply date via callback
   const handleOverdueReschedulePress = (overdueTasks: Task[]) => {
-    // store the overdue task IDs so we know which tasks to update after date selection
-    setOverdueTaskIdsToReschedule(overdueTasks.map((task) => task.id));
-    // open the date picker modal so user can pick a new due date
-    setIsOverdueDatePickerVisible(true);
-  };
+    // use base task ids (recurring occurrences share same base; reschedule updates the template)
+    const ids = [...new Set(overdueTasks.map((t) => (isExpandedRecurrenceId(t.id) ? getBaseTaskId(t.id) : t.id)))];
+    const initialDate =
+      overdueTasks[0]?.dueDate ?? new Date().toISOString();
+    setDraft({ dueDate: initialDate, time: undefined, duration: undefined, alerts: [] });
 
-  // handle date selection from the overdue date picker modal
-  // this will update the dueDate field for all stored overdue task IDs
-  const handleOverdueDateSelect = async (date: string) => {
-    try {
-      // dispatch an updateTask action for each overdue task to set the new due date
-      // each dispatch calls the Django API via the tasks slice async thunk
-      const updatePromises = overdueTaskIdsToReschedule.map((taskId) =>
-        dispatch(
-          updateTask({
-            id: taskId,
-            updates: {
-              id: taskId,
-              // store the ISO date string returned by the date picker as the new due date
-              // the backend expects an ISO string and the slice will transform it correctly
-              dueDate: date,
-            },
-          }),
-        ),
-      );
+    registerOverdueReschedule((date) => {
+      (async () => {
+        try {
+          await Promise.all(
+            ids.map((taskId) =>
+              dispatch(updateTask({ id: taskId, updates: { id: taskId, dueDate: date } })),
+            ),
+          );
+        } catch (err) {
+          console.error('Failed to bulk reschedule overdue tasks:', err);
+        }
+      })();
+    });
 
-      await Promise.all(updatePromises);
-    } catch (err) {
-      console.error('Failed to bulk reschedule overdue tasks:', err);
-    } finally {
-      // close the date picker and clear stored IDs after the operation completes
-      setIsOverdueDatePickerVisible(false);
-      setOverdueTaskIdsToReschedule([]);
-    }
-  };
-
-  // handle close for the overdue date picker without applying changes
-  const handleOverdueDatePickerClose = () => {
-    setIsOverdueDatePickerVisible(false);
-    setOverdueTaskIdsToReschedule([]);
+    router.push('/date-select');
   };
 
   // render loading state when no tasks are loaded yet
@@ -434,67 +388,46 @@ export default function TodayScreen() {
   // render main content with today's tasks
   return (
     <View style={{ flex: 1 }}>
-      {/* Fixed top section with title and ellipse button - stays at top */}
-      {/* background and border fade in with title animation */}
-      <View style={styles.fixedTopSection}>
-        {/* animated background that fades in */}
-        <Animated.View 
-          style={[
-            styles.fixedTopSectionBackground,
-            {
-              opacity: titleOpacity,
-              backgroundColor: themeColors.background.elevated(),
-            }
-          ]}
+      {/* top section anchor - blur + opacity gradient + mini Today header that fades in on scroll */}
+      <View style={[styles.topSectionAnchor, { height: insets.top + 64 }]}>
+        <BlurView
+          tint={themeColors.isDark ? 'dark' : 'light'}
+          intensity={2}
+          style={StyleSheet.absoluteFill}
         />
-        {/* animated border that fades in */}
-        {/* border matches navbar styling: same color and width, but at bottom of section */}
-        <Animated.View 
-          style={[
-            styles.fixedTopSectionBorder,
-            {
-              opacity: titleOpacity,
-              borderBottomColor: themeColors.border.primary(), // same color as navbar borderTopColor
-              borderBottomWidth: 1, // match navbar border width
-            }
+        <LinearGradient
+          colors={[
+            themeColors.background.primary(),
+            themeColors.withOpacity(themeColors.background.primary(), 0),
           ]}
+          locations={[0.4, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
         />
-        <View style={styles.titleContainer}>
-          {showTitle && (
-            <Animated.View style={{ opacity: titleOpacity }}>
-              <Text style={styles.titleHeader}>Today</Text>
-            </Animated.View>
-          )}
-        </View>
-        <TouchableOpacity
-          style={styles.ellipseButton}
-          onPress={handleEllipsePress}
-          activeOpacity={0.7}
-        >
-          <Ionicons 
-            name="ellipsis-horizontal" 
-            size={32} 
-            color={themeColor} 
+        <View style={styles.topSectionRow}>
+          <AnimatedReanimated.View style={[styles.miniTodayHeader, miniTodayHeaderStyle]} pointerEvents="none">
+            <Text style={[styles.miniTodayHeaderText, { color: themeColors.text.primary() }]}>Today</Text>
+          </AnimatedReanimated.View>
+          <ActionContextMenu
+            items={[
+              { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
+              { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
+            
+            ]}
+            style={styles.topSectionContextButton}
+            accessibilityLabel="Open menu"
+            dropdownAnchorTopOffset={insets.top + 48}
+            dropdownAnchorRightOffset={24}
+            tint="primary"
           />
-        </TouchableOpacity>
+        </View>
       </View>
-
-      {/* dropdown list - using reusable DropdownList component */}
-      <DropdownList
-        visible={isDropdownVisible}
-        onClose={() => setIsDropdownVisible(false)}
-        items={dropdownMenuItems}
-        anchorPosition="top-right"
-        topOffset={72}
-        rightOffset={20}
-      />
-
-      <ScreenContainer 
+      <ScreenContainer
         scrollable={false}
         paddingHorizontal={0}
+        paddingVertical={0}
         safeAreaTop={false}
         safeAreaBottom={false}
-        paddingVertical={0}
       >
       {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
       {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
@@ -510,6 +443,14 @@ export default function TodayScreen() {
         onTaskSwipeRight={handleTaskSwipeRight}
         showCategory={false}
         compact={false}
+        showIcon={false}
+        showIndicators={false}
+        showMetadata={false}
+        metadataVariant="today"
+        cardSpacing={0}
+        showDashedSeparator={true}
+        hideBackground={true}
+        removeInnerPadding={true}
         emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
         loading={isLoading && todaysTasks.length === 0}
         groupBy="dueDate" // group tasks by due date to separate overdue and today's tasks
@@ -518,74 +459,31 @@ export default function TodayScreen() {
         // enable bulk reschedule action specifically for the "Overdue" group on the Today screen
         // when the user taps "Reschedule", we open the date picker and then update all overdue tasks
         onOverdueReschedule={handleOverdueReschedulePress}
+        hideTodayHeader={false} // show today's date as group header in the task list
+        bigTodayHeader={true} // show big "Today" title at top of list
         onRefresh={handleRefresh}
         refreshing={isLoading}
         onScroll={(event) => {
-          // Notify the layout about scroll position changes
+          const offsetY = event.nativeEvent.contentOffset.y;
+          scrollY.value = offsetY;
           if ((global as any).trackScrollToTodayLayout) {
-            (global as any).trackScrollToTodayLayout(event.nativeEvent.contentOffset.y);
+            (global as any).trackScrollToTodayLayout(offsetY);
           }
         }}
         scrollEventThrottle={16}
-        headerTitle="Today"
-        paddingTop={insets.top+ 64} // add top padding equal to safe area inset
+        scrollYSharedValue={scrollY}
+        paddingTop={48}
+        paddingHorizontal={24} // remove horizontal padding for full-width cards
+        scrollPastTopInset={true} // let content scroll up into status bar area without cutoff
       />
-      {/* Floating Action Button for quick task creation */}
+      </ScreenContainer>
       <FloatingActionButton
-        onPress={() => {
-          setIsCreateTaskModalVisible(true);
-        }}
+        onPress={() => router.push('/task-create' as any)}
+        backgroundColor={themeColors.background.invertedPrimary()}
+        iconColor={themeColors.text.invertedPrimary()}
         accessibilityLabel="Add new task"
         accessibilityHint="Double tap to create a new task"
       />
-      
-      {/* separate backdrop that fades in independently behind the task detail modal */}
-      {/* rendered at screen level, behind the modal in z-index */}
-      <ModalBackdrop
-        isVisible={isTaskDetailModalVisible}
-        onPress={handleTaskDetailModalClose}
-        zIndex={10000}
-      />
-      
-      {/* separate backdrop for overdue date picker modal - fades in independently */}
-      {/* rendered at screen level, behind the modal in z-index */}
-      <ModalBackdrop
-        isVisible={isOverdueDatePickerVisible}
-        onPress={handleOverdueDatePickerClose}
-        zIndex={10000}
-      />
-      
-      {/* Task Detail Modal - displays task details using TaskViewModal */}
-      <TaskViewModal
-        visible={isTaskDetailModalVisible}
-        onClose={handleTaskDetailModalClose}
-        taskColor={selectedTaskColor}
-        taskId={selectedTask?.id}
-        task={selectedTask || undefined}
-      />
-      
-      {/* Task Creation Modal - can be opened from Redux state (e.g., from onboarding) */}
-      <TaskCreationModal
-        visible={isCreateTaskModalVisible}
-        onClose={() => setIsCreateTaskModalVisible(false)}
-      />
-
-      {/* Overdue date picker modal - used to bulk move all overdue tasks to a new date */}
-      {/* uses WrappedDraggableModal for slide-up animation with separate backdrop */}
-      <DatePickerModal
-        visible={isOverdueDatePickerVisible}
-        // use the first overdue task's due date as the selected date when available, otherwise default to today
-        selectedDate={
-          tasks.find((task) => overdueTaskIdsToReschedule.includes(task.id))?.dueDate ||
-          new Date().toISOString()
-        }
-        onClose={handleOverdueDatePickerClose}
-        onSelectDate={handleOverdueDateSelect}
-        title="Reschedule Overdue"
-        // we don't have a single task color for the whole group, so leave this undefined
-        useWrappedModal={true} // use WrappedDraggableModal for slide animation (backdrop handled separately)
-      />
-      </ScreenContainer>
     </View>
   );
 }
@@ -598,70 +496,54 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
-  // fixed top section with ellipse button - stays at top of screen
-  // background and border are animated (start transparent, fade in with title)
-  fixedTopSection: {
-    position: 'absolute',
-    top: insets.top,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-    paddingHorizontal: 20,
-    height: insets.top + 10,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    // overflow removed to allow background to extend upward to cover insets
-  },
-  
-  // animated background layer that fades in
-  // extends upward to cover safe area insets
-  fixedTopSectionBackground: {
-    position: 'absolute',
-    top: -insets.top, // extend upward to cover safe area insets
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: insets.top + insets.top + 10, // cover insets + section height
-    zIndex: -1, // behind content
-  },
-  
-  // animated border layer that fades in
-  // matches navbar border styling: borderTopColor with borderTopWidth
-  fixedTopSectionBorder: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    // borderTopWidth and borderTopColor are set dynamically in component
-    zIndex: -1, // behind content
-  },
-
-  // title container - ensures consistent layout structure
-  titleContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // title header styling
+  // title header styling (used by task detail modal)
   titleHeader: {
     ...typography.getTextStyle('heading-2'),
     color: themeColors.text.primary(),
     fontWeight: '600',
   },
 
-  // ellipse button styling
-  ellipseButton: {
+  // top section anchor - fixed blur + gradient at top, list content scrolls under it
+  topSectionAnchor: {
     position: 'absolute',
-    right: 20,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    overflow: 'hidden',
   },
 
-  
+  // row container for mini header + context button, vertically centered between insets.top and insets.top + 48
+  topSectionRow: {
+    position: 'absolute',
+    top: insets.top,
+    left: 0,
+    right: 0,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  // mini Today header in top section - h and v centered in full width, fades in on scroll
+  miniTodayHeader: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniTodayHeaderText: {
+    ...typography.getTextStyle('heading-3'),
+    fontWeight: '600',
+  },
+  // context menu button on right side - matches task screen ActionContextMenu (transparent bg, liquid glass)
+  topSectionContextButton: {
+    marginLeft: 'auto',
+    backgroundColor: 'transparent',
+  },
+
   // loading text styling for initial load state
   // using typography system for consistent text styling
   loadingText: {

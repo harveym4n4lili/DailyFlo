@@ -26,6 +26,7 @@ import {
 // UpdateTaskInput: Type for updating tasks (from types/common/Task.ts)
 // These are the frontend formats with camelCase field names
 import { CreateTaskInput, UpdateTaskInput } from '../../types/common/Task';
+import { normalizeTimeToHHMM } from '../../utils/taskFormatters';
 
 /**
  * Tasks API service class
@@ -108,11 +109,13 @@ class TasksApiService {
       if (taskData.description !== undefined && taskData.description !== null) {
         apiData.description = taskData.description;
       }
-      if (taskData.icon !== undefined && taskData.icon !== null) {
-        apiData.icon = taskData.icon;
+      // only include icon if it's explicitly set and not empty
+      // tasks don't require icons - icon is optional
+      if (taskData.icon !== undefined && taskData.icon !== null && taskData.icon.trim() !== '') {
+        apiData.icon = taskData.icon.trim();
       }
       if (taskData.time !== undefined && taskData.time !== null) {
-        apiData.time = taskData.time; // Django TimeField accepts HH:MM format string
+        apiData.time = normalizeTimeToHHMM(taskData.time) ?? taskData.time; // normalize HH:MM:SS to HH:MM for Django
       }
       if (taskData.duration !== undefined && taskData.duration !== null) {
         apiData.duration = taskData.duration;
@@ -211,8 +214,10 @@ class TasksApiService {
       if (taskData.description !== undefined && taskData.description !== null) {
         apiData.description = taskData.description;
       }
-      if (taskData.icon !== undefined && taskData.icon !== null) {
-        apiData.icon = taskData.icon;
+      // only include icon if it's explicitly set and not empty
+      // tasks don't require icons - icon is optional
+      if (taskData.icon !== undefined && taskData.icon !== null && taskData.icon.trim() !== '') {
+        apiData.icon = taskData.icon.trim();
       }
       // Handle time field - distinguish between not provided vs explicitly cleared
       // If time is undefined, null, or empty string, send null to clear it in Django
@@ -223,8 +228,8 @@ class TasksApiService {
           // Explicitly clearing time - send null to Django to remove the time
           apiData.time = null;
         } else {
-          // Time has a value - send it to Django
-          apiData.time = taskData.time; // Django TimeField accepts HH:MM format string
+          // Time has a value - normalize HH:MM:SS to HH:MM for Django
+          apiData.time = normalizeTimeToHHMM(taskData.time) ?? taskData.time;
         }
       }
       // Handle duration field - distinguish between not provided vs explicitly cleared

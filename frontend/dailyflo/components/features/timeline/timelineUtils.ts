@@ -14,49 +14,26 @@ import { useState, useCallback, useRef } from 'react';
 /**
  * Task Card Height Constants
  * 
- * defines the base and expanded heights for different task card types.
+ * defines the base heights for different task card types.
  * these values are used by both the timeline spacing logic and the card
  * rendering logic so that visual height and spacing stay in sync.
  */
 export const TASK_CARD_HEIGHTS = {
-  // base height for tasks without duration and without subtasks
-  NO_DURATION_NO_SUBTASK: 64,
+  // base height for tasks without duration
+  NO_DURATION: 60,
   
-  // base height for tasks without duration but with subtasks (collapsed)
-  NO_DURATION_WITH_SUBTASK: 88,
-  
-  // base height for tasks with duration but without subtasks
-  WITH_DURATION_NO_SUBTASK: 88,
-  
-  // base height for tasks with duration and with subtasks (collapsed)
-  WITH_DURATION_WITH_SUBTASK: 88,
-
-  // expanded height for tasks without duration but with subtasks
-  // this represents the full height once the subtask section is opened
-  NO_DURATION_WITH_SUBTASK_EXPANDED: 138,
-
-  // expanded height for tasks with duration and with subtasks
-  // this also represents the full height once the subtask section is opened
-  WITH_DURATION_WITH_SUBTASK_EXPANDED: 138,
+  // base height for tasks with duration
+  WITH_DURATION: 60,
 } as const;
 
 /**
- * Calculates the appropriate task card height based on duration and subtask presence
+ * Calculates the appropriate task card height based on duration
  * 
  * @param duration - Task duration in minutes (0 if no duration)
- * @param hasSubtasks - Whether the task has subtasks
  * @returns Height in pixels for the task card
  */
-export function getTaskCardHeight(duration: number, hasSubtasks: boolean): number {
-  if (duration > 0) {
-    return hasSubtasks 
-      ? TASK_CARD_HEIGHTS.WITH_DURATION_WITH_SUBTASK 
-      : TASK_CARD_HEIGHTS.WITH_DURATION_NO_SUBTASK;
-  } else {
-    return hasSubtasks 
-      ? TASK_CARD_HEIGHTS.NO_DURATION_WITH_SUBTASK 
-      : TASK_CARD_HEIGHTS.NO_DURATION_NO_SUBTASK;
-  }
+export function getTaskCardHeight(duration: number): number {
+  return duration > 0 ? TASK_CARD_HEIGHTS.WITH_DURATION : TASK_CARD_HEIGHTS.NO_DURATION;
 }
 
 /**
