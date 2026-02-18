@@ -1975,7 +1975,7 @@ const createStyles = (
     color: themeColors.background.tertiary(),
   },
   freeTimeDurationBold: {
-    ...typography.getTextStyle('body-medium'),
+    ...typography.getTextStyle('body-small'),
     color: themeColors.text.primary(),
   },
   emptyStateText: {

@@ -9,18 +9,18 @@
 import React from 'react';
 
 // react native components we need for the UI
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-// icons from expo vector icons (for options that are not calendar)
+// icons from expo vector icons (fallback on Android/Web where SF Symbols unavailable)
 import { Ionicons } from '@expo/vector-icons';
-// custom calendar icon for date options
-import { CalendarIcon } from '@/components/ui/icon';
+// SF Symbols on iOS, custom/vector icons as fallback
+import { CalendarIcon, SFSymbolIcon } from '@/components/ui/icon';
 
 // typography system for consistent text styling
 import { getTextStyle } from '@/constants/Typography';
 
 // hooks for theme-aware colors
-import { useThemeColors, useTaskColors, useSemanticColors } from '@/hooks/useColorPalette';
+import { useThemeColors } from '@/hooks/useColorPalette';
 // dashed separator component
 import { DashedSeparator } from '@/components/ui/borders';
 // padding constants for consistent spacing
@@ -61,10 +61,8 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
   onSelectDate,
   transparentOptionBackground = false,
 }) => {
-  // get theme-aware colors for styling buttons
+  // get theme-aware colors for styling buttons and icons
   const themeColors = useThemeColors();
-  const taskColors = useTaskColors();
-  const semanticColors = useSemanticColors();
   
   /**
    * Helper function to calculate a date relative to today
@@ -127,22 +125,24 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
 
   /**
    * Quick date options configuration
-   * Each option has a label, the number of days from today, and an icon
+   * Each option has a label, days from today, SF Symbol name (iOS), and fallback icon (Android/Web)
    */
   // this array defines all the quick date options we want to show
   // each option calculates its date relative to today using daysFromToday
+  // icon color matches label text - ensures visibility in both light and dark modes
+  const iconColor = themeColors.text.primary();
   const quickOptions: { 
     label: string; 
     daysFromToday: number | null; 
-    icon: keyof typeof Ionicons.glyphMap;
-    iconColor: () => string;
+    systemImage: string; // SF Symbol name (filled variants for iOS)
+    fallbackIcon: keyof typeof Ionicons.glyphMap; // Ionicons filled variant for Android/Web
     isSpecial?: 'weekend' | 'no-deadline'; // special handling for non-standard dates
   }[] = [
-    { label: 'Today', daysFromToday: 0, icon: 'calendar-outline', iconColor: () => semanticColors.success() }, // green
-    { label: 'Tomorrow', daysFromToday: 1, icon: 'sunny-outline', iconColor: () => semanticColors.warning() }, // yellow
-    { label: 'This Weekend', daysFromToday: null, icon: 'calendar-outline', iconColor: () => semanticColors.info(), isSpecial: 'weekend' }, // blue (special case)
-    { label: 'Next Week', daysFromToday: 7, icon: 'arrow-forward-outline', iconColor: () => taskColors.purple() }, // purple
-    { label: 'No Deadline', daysFromToday: null, icon: 'remove-circle-outline', iconColor: () => themeColors.text.tertiary(), isSpecial: 'no-deadline' }, // grey
+    { label: 'Today', daysFromToday: 0, systemImage: 'calendar', fallbackIcon: 'calendar' },
+    { label: 'Tomorrow', daysFromToday: 1, systemImage: 'sun.max.fill', fallbackIcon: 'sunny' },
+    { label: 'This Weekend', daysFromToday: null, systemImage: 'calendar.badge.clock', fallbackIcon: 'calendar-outline', isSpecial: 'weekend' },
+    { label: 'Next Week', daysFromToday: 7, systemImage: 'arrow.right', fallbackIcon: 'arrow-forward' },
+    { label: 'No Deadline', daysFromToday: null, systemImage: 'xmark.circle.fill', fallbackIcon: 'remove-circle', isSpecial: 'no-deadline' },
   ];
   
   return (
@@ -167,22 +167,16 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
         
         return (
           <View key={option.label}>
-            <Pressable
+            <TouchableOpacity
               onPress={() => onSelectDate(optionDate, option.label)}
-              style={({ pressed }) => [
+              activeOpacity={0.6}
+              style={[
                 styles.optionButton,
                 {
-                  // transparent option background (e.g. when parent is elevated) or default elevated
-                  backgroundColor: transparentOptionBackground
-                    ? pressed
-                      ? themeColors.background.tertiary()
-                      : 'transparent'
-                    : pressed
-                      ? themeColors.background.tertiary()
-                      : themeColors.background.elevated(),
+                  // no press highlight - background stays static; TouchableOpacity fades icon and text on press
+                  backgroundColor: transparentOptionBackground ? 'transparent' : themeColors.background.elevated(),
                 },
               ]}
-              // accessibility features for screen readers
               accessibilityRole="button"
               accessibilityLabel={`Select ${option.label}${dayOfWeek ? ", " + dayOfWeek : ''}`}
               accessibilityState={{ selected: false }}
@@ -190,15 +184,18 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
               {/* icon and label on the left with proper spacing */}
               <View style={styles.leftContent}>
                 <View style={styles.iconContainer}>
-                  {option.icon === 'calendar-outline' ? (
-                    <CalendarIcon size={20} color={option.iconColor()} />
-                  ) : (
-                    <Ionicons
-                      name={option.icon}
-                      size={20}
-                      color={option.iconColor()}
-                    />
-                  )}
+                  <SFSymbolIcon
+                    name={option.systemImage}
+                    size={20}
+                    color={iconColor}
+                    fallback={
+                      option.systemImage === 'calendar_today' ? (
+                        <CalendarIcon size={20} color={iconColor} isSolid />
+                      ) : (
+                        <Ionicons name={option.fallbackIcon} size={20} color={iconColor} />
+                      )
+                    }
+                  />
                 </View>
                 
                 {/* option label next to the icon */}
@@ -227,10 +224,12 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
               >
                 {dayOfWeek}
               </Text>
-            </Pressable>
-            {/* dashed separator below each option except the last one - matches button paddingHorizontal (16px) */}
+            </TouchableOpacity>
+            {/* dashed separator below each option - wrapped in same padding as option buttons so left/right align */}
             {!isLastOption && (
-              <DashedSeparator paddingHorizontal={Paddings.card} />
+              <View style={styles.separatorWrapper}>
+                <DashedSeparator paddingHorizontal={0} />
+              </View>
             )}
           </View>
         );
@@ -248,13 +247,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: Paddings.none,
     marginBottom: 12,
   },
+  // same horizontal padding as option buttons - ensures separator aligns left and right
+  separatorWrapper: {
+    paddingHorizontal: Paddings.card,
+  },
   // container for icon and label on the left
   leftContent: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1, // take up available space
   },
-  // container for the icon on the left
+  // container for the icon on the left (20px icon size)
   iconContainer: {
     width: 20,
     alignItems: 'center',
