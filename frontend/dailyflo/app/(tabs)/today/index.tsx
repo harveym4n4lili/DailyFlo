@@ -12,8 +12,9 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 
 // import our new task components
 import { ListCard } from '@/components/ui/card';
-import { FloatingActionButton, ScreenContextButton } from '@/components/ui/button';
-import { DropdownList } from '@/components/ui/list';
+import { FloatingActionButton } from '@/components/ui/button';
+import { ActionContextMenu } from '@/components/ui';
+import { ClockIcon } from '@/components/ui/icon';
 import { ModalContainer } from '@/components/layout/ModalLayout';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 
@@ -55,8 +56,6 @@ export default function TodayScreen() {
   // REFRESH STATE - Controls the pull-to-refresh indicator
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // top section context menu visibility
-  const [isTopSectionMenuVisible, setIsTopSectionMenuVisible] = useState(false);
 
   // scroll offset for Today header fade - updated on scroll, drives reanimated opacity (0→48px = fade out)
   const scrollY = useSharedValue(0);
@@ -83,7 +82,7 @@ export default function TodayScreen() {
   const { setDraft, registerOverdueReschedule, clearOverdueReschedule } = useCreateTaskDraft();
   
   // get UI state from Redux to check if createTask modal should be opened
-  const { modals, closeModal } = useUI();
+  const { modals, closeModal, enterSelectionMode } = useUI();
   
   // TITLE STATE - Controls the visibility of the title header
   const [showTitle, setShowTitle] = useState(false);
@@ -409,24 +408,20 @@ export default function TodayScreen() {
           <AnimatedReanimated.View style={[styles.miniTodayHeader, miniTodayHeaderStyle]} pointerEvents="none">
             <Text style={[styles.miniTodayHeaderText, { color: themeColors.text.primary() }]}>Today</Text>
           </AnimatedReanimated.View>
-          <ScreenContextButton
-            onPress={() => setIsTopSectionMenuVisible(true)}
+          <ActionContextMenu
+            items={[
+              { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
+              { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
+            
+            ]}
             style={styles.topSectionContextButton}
             accessibilityLabel="Open menu"
+            dropdownAnchorTopOffset={insets.top + 48}
+            dropdownAnchorRightOffset={24}
+            tint="primary"
           />
         </View>
       </View>
-      <DropdownList
-        visible={isTopSectionMenuVisible}
-        onClose={() => setIsTopSectionMenuVisible(false)}
-        items={[
-          { id: 'refresh', label: 'Refresh', icon: 'refresh-outline', onPress: () => { setIsTopSectionMenuVisible(false); handleRefresh(); } },
-          { id: 'settings', label: 'Settings', icon: 'settings-outline', onPress: () => { setIsTopSectionMenuVisible(false); router.push('/(tabs)/settings'); } },
-        ]}
-        anchorPosition="top-right"
-        topOffset={insets.top + 48}
-        rightOffset={24}
-      />
       <ScreenContainer
         scrollable={false}
         paddingHorizontal={0}
@@ -543,13 +538,10 @@ const createStyles = (
     ...typography.getTextStyle('heading-3'),
     fontWeight: '600',
   },
-  // context menu button on right side of mini header
+  // context menu button on right side - matches task screen ActionContextMenu (transparent bg, liquid glass)
   topSectionContextButton: {
     marginLeft: 'auto',
-    padding: 8,
-    marginRight: -8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
 
   // loading text styling for initial load state

@@ -15,7 +15,8 @@
  */
 
 import React from 'react';
-import { View, Text, Pressable, ViewStyle, TextStyle } from 'react-native';
+import { View, Text, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
@@ -83,10 +84,18 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
     ...customStyles?.container, // allow custom container style override
   };
 
+  const handlePress = () => {
+    if (!disabled && onPress) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
+      onPress();
+    }
+  };
+
   return (
-    <Pressable
-      onPress={onPress}
+    <TouchableOpacity
+      onPress={handlePress}
       disabled={disabled}
+      activeOpacity={0.7}
       style={containerStyle}
     >
       {/* left icon: custom iconComponent or Ionicons when icon name provided */}
@@ -159,7 +168,7 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
           style={{ marginLeft: 8 }}
         />
       )}
-    </Pressable>
+    </TouchableOpacity>
   );
 };
 

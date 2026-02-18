@@ -7,8 +7,9 @@ import * as Haptics from 'expo-haptics';
 
 // import our custom layout components
 import { ScreenContainer } from '@/components';
-import { FloatingActionButton, ScreenContextButton } from '@/components/ui/button';
-import { DropdownList } from '@/components/ui/list';
+import { FloatingActionButton } from '@/components/ui/button';
+import { ActionContextMenu } from '@/components/ui';
+import { ClockIcon } from '@/components/ui/icon';
 import { ModalBackdrop } from '@/components/layout/ModalLayout';
 import { CalendarNavigationModal } from '@/components/features/calendar/modals';
 import { WeekView } from '@/components/features/calendar/sections';
@@ -25,7 +26,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // redux store hooks for task management
-import { useTasks } from '@/store/hooks';
+import { useTasks, useUI } from '@/store/hooks';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
 
@@ -41,9 +42,6 @@ import {
 export default function PlannerScreen() {
   // CALENDAR MODAL STATE - Controls the visibility of the calendar modal
   const [isCalendarModalVisible, setIsCalendarModalVisible] = useState(false);
-  
-  // top section context menu visibility (for ellipse button)
-  const [isTopSectionMenuVisible, setIsTopSectionMenuVisible] = useState(false);
   
   // SELECTED DATE STATE - Currently selected date for calendar navigation
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -68,6 +66,7 @@ export default function PlannerScreen() {
   // REDUX STORE - Accessing task state from Redux store
   const dispatch = useAppDispatch();
   const { tasks, isLoading } = useTasks();
+  const { enterSelectionMode } = useUI();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   
   // calculate border radius based on iOS version to match modal styling
@@ -222,24 +221,20 @@ export default function PlannerScreen() {
       {/* top section - 48px row for context ellipse button, matches Today screen */}
       <View style={[styles.topSectionAnchor, { height: insets.top + 48 }]}>
         <View style={styles.topSectionRow}>
-          <ScreenContextButton
-            onPress={() => setIsTopSectionMenuVisible(true)}
+          <ActionContextMenu
+            items={[
+              { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
+              { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
+            
+            ]}
             style={styles.topSectionContextButton}
             accessibilityLabel="Open menu"
+            dropdownAnchorTopOffset={insets.top + 48}
+            dropdownAnchorRightOffset={24}
+            tint="primary"
           />
         </View>
       </View>
-      <DropdownList
-        visible={isTopSectionMenuVisible}
-        onClose={() => setIsTopSectionMenuVisible(false)}
-        items={[
-          { id: 'refresh', label: 'Refresh', icon: 'refresh-outline', onPress: () => { setIsTopSectionMenuVisible(false); handleRefresh(); } },
-          { id: 'settings', label: 'Settings', icon: 'settings-outline', onPress: () => { setIsTopSectionMenuVisible(false); router.push('/(tabs)/settings'); } },
-        ]}
-        anchorPosition="top-right"
-        topOffset={insets.top + 48}
-        rightOffset={24}
-      />
       <ScreenContainer 
         scrollable={false}
         paddingHorizontal={0}
@@ -343,11 +338,9 @@ const createStyles = (
     justifyContent: 'flex-end',
     paddingHorizontal: 24,
   },
+  // matches task screen ActionContextMenu (transparent bg, liquid glass)
   topSectionContextButton: {
-    padding: 8,
-    marginRight: -8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'primary',
   },
 
   // week view container - positioned below top section (insets.top + 48 for context button row)
