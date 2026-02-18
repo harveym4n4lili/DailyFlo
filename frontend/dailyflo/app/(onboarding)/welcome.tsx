@@ -16,6 +16,7 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { useFadeZoomAnimation } from '@/hooks';
 
 // animation configuration - adjust delay between sequential fade-ins (in milliseconds)
@@ -39,7 +40,7 @@ export default function WelcomeScreen() {
   const styles = createStyles(themeColors, typography, insets);
   
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, styles.containerPadding]}>
       {/* Main Content */}
       {/* this section contains the app name and tagline, centered vertically */}
       {/* navigation and buttons are handled globally in the layout */}
@@ -79,42 +80,37 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
+  // --- LAYOUT STYLES ---
   container: {
     flex: 1,
-    // use regular primary background - adapts to user's theme preference
     backgroundColor: themeColors.background.primary(),
-    paddingHorizontal: 24,
-    // padding top accounts for global navigation component (60px = 40px height + 20px spacing)
-    paddingTop: insets.top,
-    // padding bottom accounts for global actions component (100px = button height + spacing)
-    paddingBottom: insets.bottom + 100,
-    justifyContent: 'center', // center content vertically
+    justifyContent: 'center',
   },
   content: {
     // content takes up available space and centers vertically, positioned slightly higher
     justifyContent: 'center',
     alignItems: 'center', // center content horizontally
-    marginTop: -80, // move content slightly higher while maintaining center alignment
+    marginTop: -80,
   },
-  appName: {
-    // use typography heading-1 style - this provides fontSize, lineHeight, fontWeight, fontFamily
-    // we override fontSize to make it larger for the welcome screen (48 instead of 36)
-   
-    color: themeColors.text.primary(), // text color using theme color hook
-    marginBottom: 16,
 
-    // use typography system for fontFamily, fontWeight, lineHeight from heading-1 style
+  // --- PADDING STYLES ---
+  containerPadding: {
+    paddingHorizontal: Paddings.screen,
+    paddingTop: insets.top,
+    paddingBottom: insets.bottom + 100,
+  },
+
+  // --- TYPOGRAPHY STYLES ---
+  appName: {
     ...typography.getTextStyle('heading-1'),
-    fontSize: 48, // override typography: large headline size
-    lineHeight: 64, // override typography: line height
+    color: themeColors.text.primary(),
+    marginBottom: 16,
+    fontSize: 48,
+    lineHeight: 64,
   },
   tagline: {
-    // use typography body-large style - this provides fontSize, lineHeight, fontWeight, fontFamily
-   
-    color: themeColors.text.primary(), // text color using theme color hook
-    textAlign: 'center',
-    
-    // use typography system for fontFamily and fontWeight from body-large style
     ...typography.getTextStyle('body-large'),
+    color: themeColors.text.primary(),
+    textAlign: 'center',
   },
 });

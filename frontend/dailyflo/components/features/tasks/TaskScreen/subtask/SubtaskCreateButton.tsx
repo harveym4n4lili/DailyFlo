@@ -7,6 +7,7 @@ import React from 'react';
 import { Text, Pressable, StyleSheet, View } from 'react-native';
 import { getTextStyle } from '@/constants/Typography';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { Paddings } from '@/constants/Paddings';
 import Checkbox from '@/components/ui/button/Checkbox/Checkbox';
 
 // match SubtaskListItem checkbox so the add row lines up visually (16px matches TaskCard)
@@ -58,16 +59,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: ICON_TEXT_GAP,
-    paddingVertical: CONTENT_PADDING_TOP,
-    paddingHorizontal: 0,
+    paddingVertical: Paddings.none,
+    paddingHorizontal: Paddings.none,
   },
   checkboxContainer: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  label: {
-    fontWeight: '700',
-  },
+  label: {},
 });
 
 export default SubtaskCreateButton;

@@ -23,6 +23,7 @@ import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 // STORE FOLDER IMPORTS - Redux state management
 // The store folder contains all Redux-related code for managing app state
@@ -101,7 +102,7 @@ export default function TodayScreen() {
   
   // TYPOGRAPHY USAGE - Getting typography system for consistent text styling
   // useTypography: Hook that provides typography styles, font families, and text utilities
-  // This gives us access to predefined text styles and satoshi font family
+  // This gives us access to predefined text styles and Inter font family
   const typography = useTypography();
   
   // SAFE AREA INSETS - Get safe area insets for proper positioning
@@ -472,8 +473,8 @@ export default function TodayScreen() {
         }}
         scrollEventThrottle={16}
         scrollYSharedValue={scrollY}
-        paddingTop={48}
-        paddingHorizontal={24} // remove horizontal padding for full-width cards
+        paddingTop={64}
+        paddingHorizontal={Paddings.screen}
         scrollPastTopInset={true} // let content scroll up into status bar area without cutoff
       />
       </ScreenContainer>
@@ -496,13 +497,7 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
-  // title header styling (used by task detail modal)
-  titleHeader: {
-    ...typography.getTextStyle('heading-2'),
-    color: themeColors.text.primary(),
-    fontWeight: '600',
-  },
-
+  // --- LAYOUT STYLES ---
   // top section anchor - fixed blur + gradient at top, list content scrolls under it
   topSectionAnchor: {
     position: 'absolute',
@@ -513,17 +508,6 @@ const createStyles = (
     overflow: 'hidden',
   },
 
-  // row container for mini header + context button, vertically centered between insets.top and insets.top + 48
-  topSectionRow: {
-    position: 'absolute',
-    top: insets.top,
-    left: 0,
-    right: 0,
-    height: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
   // mini Today header in top section - h and v centered in full width, fades in on scroll
   miniTodayHeader: {
     position: 'absolute',
@@ -534,107 +518,87 @@ const createStyles = (
     alignItems: 'center',
     justifyContent: 'center',
   },
-  miniTodayHeaderText: {
-    ...typography.getTextStyle('heading-3'),
-    fontWeight: '600',
-  },
   // context menu button on right side - matches task screen ActionContextMenu (transparent bg, liquid glass)
   topSectionContextButton: {
     marginLeft: 'auto',
     backgroundColor: 'transparent',
   },
 
-  // loading text styling for initial load state
-  // using typography system for consistent text styling
-  loadingText: {
-    // use the body-large text style from typography system (14px, regular, satoshi font)
-    ...typography.getTextStyle('body-large'),
-    // add top margin for spacing
-    marginTop: 20,
-    // center the text
-    textAlign: 'center',
-    // use theme-aware tertiary text color from color system
-    color: themeColors.text.tertiary(),
-  },
-  
-  // error text styling with semantic error color
-  // using typography system for consistent text styling
-  errorText: {
-    // use the body-large text style from typography system (14px, regular, satoshi font)
-    ...typography.getTextStyle('body-large'),
-    // use semantic error color from color palette
-    color: semanticColors.error(),
-    // center the text
-    textAlign: 'center',
-    // add margins for spacing
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  
-  // hint text styling for helpful user instructions
-  // using typography system for consistent text styling
-  hint: {
-    // use the body-large text style from typography system (14px, regular, satoshi font)
-    ...typography.getTextStyle('body-large'),
-    // add top margin for spacing
-    marginTop: 8,
-    // center the text
-    textAlign: 'center',
-    // use theme-aware tertiary text color from color system
-    color: themeColors.text.tertiary(),
-  },
-  
-  // empty state text styling when no tasks exist
-  // using typography system for consistent text styling
-  emptyText: {
-    // use the heading-3 text style from typography system (18px, bold, satoshi font)
-    ...typography.getTextStyle('heading-3'),
-    // center the text
-    textAlign: 'center',
-    // add extra top margin for visual separation
-    marginTop: 40,
-    // add bottom margin for spacing
-    marginBottom: 8,
-    // use theme-aware primary text color from color system
-    color: themeColors.text.primary(),
-  },
-  
   // TASK DETAIL MODAL STYLES
+  taskDetailSection: {
+    marginBottom: 20,
+  },
+
+  // --- PADDING STYLES ---
+  topSectionRow: {
+    position: 'absolute',
+    top: insets.top,
+    left: 0,
+    right: 0,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Paddings.screen,
+  },
   taskDetailContent: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: Paddings.touchTarget,
   },
-  
+
+  // --- TYPOGRAPHY STYLES ---
+  titleHeader: {
+    ...typography.getTextStyle('heading-2'),
+    color: themeColors.text.primary(),
+  },
+  miniTodayHeaderText: {
+    ...typography.getTextStyle('heading-3'),
+  },
+  loadingText: {
+    ...typography.getTextStyle('body-large'),
+    marginTop: 20,
+    textAlign: 'center',
+    color: themeColors.text.tertiary(),
+  },
+  errorText: {
+    ...typography.getTextStyle('body-large'),
+    color: semanticColors.error(),
+    textAlign: 'center',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  hint: {
+    ...typography.getTextStyle('body-large'),
+    marginTop: 8,
+    textAlign: 'center',
+    color: themeColors.text.tertiary(),
+  },
+  emptyText: {
+    ...typography.getTextStyle('heading-3'),
+    textAlign: 'center',
+    marginTop: 40,
+    marginBottom: 8,
+    color: themeColors.text.primary(),
+  },
   taskDetailTitle: {
     ...typography.getTextStyle('heading-2'),
     color: themeColors.text.primary(),
     marginBottom: 24,
     textAlign: 'center',
   },
-  
-  taskDetailSection: {
-    marginBottom: 20,
-  },
-  
   taskDetailSectionTitle: {
     ...typography.getTextStyle('body-large'),
     color: themeColors.text.secondary(),
-    fontWeight: '600',
     marginBottom: 8,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
-  
   taskDetailValue: {
     ...typography.getTextStyle('body-large'),
     color: themeColors.text.primary(),
     lineHeight: 20,
   },
-  
   taskDetailDescription: {
     ...typography.getTextStyle('body-large'),
     color: themeColors.text.primary(),
     lineHeight: 22,
   },
-  
 });

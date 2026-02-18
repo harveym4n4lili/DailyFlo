@@ -33,7 +33,7 @@ interface DashedVerticalLineProps {
  */
 export default function DashedVerticalLine({
   height,
-  dashWidth = 4,
+  dashWidth = 2,
   style,
   color,
 }: DashedVerticalLineProps) {
@@ -41,7 +41,7 @@ export default function DashedVerticalLine({
   const lineColor = color ?? themeColors.background.primarySecondaryBlend();
 
   // pattern: 10px dash + 4px gap = 14px per segment (matches DashedSeparator proportions)
-  const dashHeight = 8;
+  const dashHeight = 4;
   const gapHeight = 4;
   const segmentHeight = dashHeight + gapHeight;
   const dashCount = Math.floor(height / segmentHeight);

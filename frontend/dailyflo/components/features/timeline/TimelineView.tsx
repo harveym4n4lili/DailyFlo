@@ -13,6 +13,7 @@ import { View, StyleSheet, ScrollView, Text, Platform } from 'react-native';
 import { useSharedValue, withTiming, makeMutable, withSpring } from 'react-native-reanimated';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { Task } from '@/types';
 import TimelineItem from './TimelineItem/TimelineItem';
 import TimeLabel from './TimeLabel';
@@ -218,9 +219,9 @@ export default function TimelineView({
   }, [dynamicStartHour, startHour, endHour, timeInterval, tasksWithTime]);
 
   // spacing constants - adjust these to change spacing between tasks
-  const SPACING_LESS_THAN_30_MIN = 16;
-  const SPACING_30_MIN_TO_2_HOURS = 64;
-  const SPACING_MORE_THAN_2_HOURS = 120;
+  const SPACING_LESS_THAN_30_MIN = 20;
+  const SPACING_30_MIN_TO_2_HOURS = 84;
+  const SPACING_MORE_THAN_2_HOURS = 140;
   
   // calculate spacing between tasks based on time difference
   const getTaskSpacing = (timeDifferenceMinutes: number): number => {
@@ -1901,7 +1902,7 @@ const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>
 ) => StyleSheet.create({
-  // main container for the timeline view
+  // --- LAYOUT STYLES ---
   container: {
     flex: 1,
     backgroundColor: themeColors.background.primary(),
@@ -1915,14 +1916,14 @@ const createStyles = (
   // scroll content container with calculated height
   scrollContent: {
     flexDirection: 'row',
-    paddingTop: 52, // increased top padding to see just the top
-    paddingBottom: 200, // bottom padding
+    paddingTop: Paddings.timelineScrollTop,
+    paddingBottom: Paddings.timelineScrollBottom,
   },
 
   // time labels container on the left side - more compact
   timeLabelsContainer: {
     marginLeft: 28,
-    paddingRight: 20,
+    paddingRight: Paddings.timelineLabelsRight,
     alignItems: 'flex-end',
   },
 
@@ -1930,8 +1931,8 @@ const createStyles = (
   tasksContainer: {
     flex: 1,
     position: 'relative',
-    paddingLeft: 20,
-    paddingRight: 14,
+    paddingLeft: Paddings.timelineTasksLeft,
+    paddingRight: Paddings.timelineTasksRight,
   },
 
   // vertical dashed line connecting all time slots - aligns with icon container line (left: 21)
@@ -1949,7 +1950,7 @@ const createStyles = (
     right: 0,
     justifyContent: 'center',
     alignItems: 'flex-start',
-    paddingLeft: 36,
+    paddingLeft: Paddings.timelineFreeTimeLeft,
   },
 
   // row containing sparkles icon (14px) + message text
@@ -1959,38 +1960,30 @@ const createStyles = (
     gap: 8,
   },
 
-  // free time text - base color background tertiary, used for all segment messages
-  freeTimeTextSegments: {
-    ...typography.getTextStyle('body-medium'),
-    color: themeColors.background.tertiary(),
-    fontWeight: '900',
-  },
-
-  // bold white/accent duration (e.g. "4h 32m") inside the long break message
-  // uses primary text for contrast (white in dark mode, dark in light mode)
-  freeTimeDurationBold: {
-    fontWeight: '700',
-    color: themeColors.text.primary(),
-  },
-
   // empty state container
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
-    paddingTop: 100,
+    paddingHorizontal: Paddings.timelineEmptyHorizontal,
+    paddingTop: Paddings.timelineEmptyTop,
   },
 
-  // empty state text
+  // --- TYPOGRAPHY STYLES ---
+  freeTimeTextSegments: {
+    ...typography.getTextStyle('body-small'),
+    color: themeColors.background.tertiary(),
+  },
+  freeTimeDurationBold: {
+    ...typography.getTextStyle('body-medium'),
+    color: themeColors.text.primary(),
+  },
   emptyStateText: {
     ...typography.getTextStyle('body-large'),
     color: themeColors.text.secondary(),
     textAlign: 'center',
     marginBottom: 8,
   },
-
-  // empty state subtext
   emptyStateSubtext: {
     ...typography.getTextStyle('body-medium'),
     color: themeColors.text.tertiary(),

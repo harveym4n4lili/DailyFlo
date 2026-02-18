@@ -33,6 +33,7 @@ import { useTypography } from '@/hooks/useTypography';
 // design system constants for styling
 import { getTextStyle } from '@/constants/Typography';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
+import { Paddings } from '@/constants/Paddings';
 
 // EXPO GLASS EFFECT IMPORTS
 // GlassView: native iOS UIVisualEffectView liquid glass surface (same pattern as MainCloseButton).
@@ -201,7 +202,6 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
       style={{
         ...getTextStyle('button-secondary'),
         color: getIconColor(),
-        fontWeight: '900',
         marginRight: 12,
         alignSelf: 'center',
       }}
@@ -231,7 +231,7 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
             }
           : null),
         // when showLabel, add padding so the row has room
-        ...(showLabel ? { paddingHorizontal: 12, paddingVertical: 0 } : null),
+        ...(showLabel ? { paddingHorizontal: Paddings.contextMenuHorizontal, paddingVertical: Paddings.none } : null),
         // when pressed: use inactive state opacity (0.4), no animations
         // inactive state: 0.4 opacity, loading state: 0.6 opacity, active state: 1.0 opacity
         opacity: pressed ? 0.4 : (!isActive ? 0.4 : isLoading ? 0.6 : 1),
@@ -254,7 +254,6 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
           ...getTextStyle('button-secondary'),
           // use white text for contrast on colored backgrounds
           color: '#FFFFFF',
-          fontWeight: '900', // save button is bold
         }}>
           {labelText}
         </Text>
@@ -280,7 +279,7 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
       <GlassView
         style={{
           ...(showLabel
-            ? { alignSelf: 'flex-start' as const, minHeight: containerSize, paddingLeft: 12, paddingRight: 0, paddingVertical: 8, borderRadius: 28, justifyContent: 'center' as const, alignItems: 'center' as const }
+            ? { alignSelf: 'flex-start' as const, minHeight: containerSize, paddingLeft: Paddings.contextMenuHorizontal, paddingRight: Paddings.none, paddingVertical: Paddings.contextMenuVertical, borderRadius: 28, justifyContent: 'center' as const, alignItems: 'center' as const }
             : { width: containerSize, height: containerSize, borderRadius: outerBorderRadius }),
           overflow: 'visible',
         }}
@@ -306,7 +305,7 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
         ...(isNewerIOS
           ? {
               ...(showLabel
-                ? { minWidth: containerSize, minHeight: containerSize, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 64, flexDirection: 'row' as const, alignItems: 'center', justifyContent: 'center' }
+                ? { minWidth: containerSize, minHeight: containerSize, paddingHorizontal: Paddings.contextMenuHorizontal, paddingVertical: Paddings.contextMenuVertical, borderRadius: 64, flexDirection: 'row' as const, alignItems: 'center', justifyContent: 'center' }
                 : { width: containerSize, height: containerSize, borderRadius: innerBorderRadius, alignItems: 'center', justifyContent: 'center' }),
               backgroundColor: saveButtonBackgroundColor,
               // when pressed: use inactive state opacity (0.4), no animations
@@ -315,8 +314,8 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
             }
           : {
               // iOS < 15 (older): text button with colored background (preserve old design)
-              paddingHorizontal: 12,
-              paddingVertical: 8,
+              paddingHorizontal: Paddings.contextMenuHorizontal,
+              paddingVertical: Paddings.contextMenuVertical,
               borderRadius: 64,
               backgroundColor: TaskCategoryColors[taskCategoryColor][500],
               justifyContent: 'center',
@@ -341,7 +340,6 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
           ...getTextStyle('button-secondary'),
           // use white text for contrast on colored backgrounds
           color: '#FFFFFF',
-          fontWeight: '900', // save button is bold
         }}>
           {isLoading ? loadingText : text}
         </Text>

@@ -14,6 +14,7 @@ import { useTasks, useUI } from '@/store/hooks';
 import { useAppDispatch } from '@/store';
 import { createTask } from '@/store/slices/tasks/tasksSlice';
 import { getTextStyle } from '@/constants/Typography';
+import { Paddings } from '@/constants/Paddings';
 import { TaskCategoryColorName } from '@/constants/ColorPalette';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import type { PriorityLevel, RoutineType } from '@/types';
@@ -146,9 +147,9 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, onSubmitted }) => {
           <View
             style={{
               paddingTop: insets.top + 60,
-              paddingBottom: 20,
+              paddingBottom: Paddings.screenSmall,
               backgroundColor: themeColors.background.secondary(),
-              paddingHorizontal: 20,
+              paddingHorizontal: Paddings.groupedListContentHorizontal,
             }}
           >
           {/* title input styled as heading-2 with bottom accent border */}
@@ -161,8 +162,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, onSubmitted }) => {
             style={{
               ...getTextStyle('heading-2'),
               color: themeColors.text.primary(),
-              paddingVertical: 8,
-              paddingHorizontal: 0,
+              paddingVertical: Paddings.touchTarget,
+              paddingHorizontal: Paddings.none,
               borderBottomWidth: 2,
               borderBottomColor: themeColors.border.primary(),
             }}
@@ -180,9 +181,9 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, onSubmitted }) => {
           style={{ flex: 1 }}
           contentContainerStyle={{ 
             flexGrow: 1,
-            paddingHorizontal: 24,
-            paddingTop: 24,
-            paddingBottom: insets.bottom + 20,
+            paddingHorizontal: Paddings.screen,
+            paddingTop: Paddings.screen,
+            paddingBottom: insets.bottom + Paddings.screenSmall,
             gap: 12,
           }}
           keyboardShouldPersistTaps="handled"
@@ -201,8 +202,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, onSubmitted }) => {
                 //borderWidth: 1,
                 //borderColor: borderNeutral,
                 borderRadius: 12,
-                paddingHorizontal: 20,
-                paddingVertical: 12,
+                paddingHorizontal: Paddings.groupedListContentHorizontal,
+                paddingVertical: Paddings.listItemVertical,
                 backgroundColor: themeColors.background.elevated(),
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -251,7 +252,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, onSubmitted }) => {
                 <Pressable
                   onPress={handleClearDate}
                   style={{
-                    padding: 4,
+                    padding: Paddings.touchTargetSmall,
                     marginLeft: 8,
                   }}
                 >

@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { useFadeZoomAnimation } from '@/hooks';
 
 // animation configuration - adjust delay between sequential fade-ins (in milliseconds)
@@ -45,7 +46,7 @@ export default function RemindersScreen() {
   const styles = createStyles(themeColors, typography, insets);
   
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, styles.containerPadding]}>
       {/* Main Content */}
       {/* centered content with icon, headline, and description */}
       {/* navigation and buttons are handled globally in the layout */}
@@ -85,6 +86,7 @@ export default function RemindersScreen() {
         {/* fades in and scales up last (bottom element) */}
         <Animated.Text style={[
           styles.description,
+          styles.descriptionPadding,
           {
             opacity: descriptionOpacity,
             transform: [{ scale: descriptionScale }],
@@ -102,16 +104,11 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
+  // --- LAYOUT STYLES ---
   container: {
     flex: 1,
-    // use regular primary background - adapts to user's theme preference
     backgroundColor: themeColors.background.primary(),
-    paddingHorizontal: 24,
-    // padding top accounts for global navigation component (60px = 40px height + 20px spacing)
-    paddingTop: insets.top,
-    // padding bottom accounts for global actions component (100px = button height + spacing)
-    paddingBottom: insets.bottom + 100,
-    justifyContent: 'center', // center content vertically
+    justifyContent: 'center',
   },
   content: {
     // content takes up available space and centers vertically
@@ -120,30 +117,36 @@ const createStyles = (
     gap: 32, // spacing between icon, headline, and description
   },
   iconContainer: {
-    width: 120, // container size for icon
+    width: 120,
     height: 120,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: themeColors.background.elevated(),
     borderRadius: 100,
   },
+
+  // --- PADDING STYLES ---
+  containerPadding: {
+    paddingHorizontal: Paddings.screen,
+    paddingTop: insets.top,
+    paddingBottom: insets.bottom + 100,
+  },
+  descriptionPadding: {
+    paddingHorizontal: Paddings.screenLarge,
+  },
+
+  // --- TYPOGRAPHY STYLES ---
   headline: {
-    // use typography heading-1 style for headline
-    
-    color: themeColors.text.primary(), // text color using theme color hook
-    textAlign: 'center',
-    // use typography system for fontFamily, fontWeight, lineHeight
     ...typography.getTextStyle('heading-1'),
-    fontSize: 32, // override typography: large headline size
+    color: themeColors.text.primary(),
+    textAlign: 'center',
+    fontSize: 32,
   },
   description: {
-    // use typography body-large style for description
-    fontSize: 16, // readable body text size
-    color: themeColors.text.primary(), // text color using theme color hook
-    textAlign: 'center',
-    lineHeight: 24, // comfortable line height for readability
-    paddingHorizontal: 32, // horizontal padding for text
-    // use typography system for fontFamily and fontWeight
     ...typography.getTextStyle('body-large'),
+    fontSize: 16,
+    color: themeColors.text.primary(),
+    textAlign: 'center',
+    lineHeight: 24,
   },
 });

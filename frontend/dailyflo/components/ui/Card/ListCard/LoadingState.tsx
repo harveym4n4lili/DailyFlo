@@ -11,6 +11,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 interface LoadingStateProps {
   // message to display
@@ -42,23 +43,20 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>
 ) =>
   StyleSheet.create({
-    // loading state container
+    // --- PADDING STYLES ---
     container: {
-      flex: 1, // take up available space
-      justifyContent: 'center', // center vertically
-      alignItems: 'center', // center horizontally
-      paddingHorizontal: 32, // horizontal padding
-      paddingVertical: 64, // vertical padding
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: Paddings.contentHorizontal,
+      paddingVertical: Paddings.contentVertical,
     },
 
-    // loading message text styling
-    // using typography system for consistent text styling
+    // --- TYPOGRAPHY STYLES ---
     message: {
-      // use the body-large text style from typography system (14px, regular, satoshi font)
       ...typography.getTextStyle('body-large'),
-      // use theme-aware secondary text color from color system
       color: themeColors.text.secondary(),
-      textAlign: 'center', // center the text
+      textAlign: 'center',
     },
   });
 

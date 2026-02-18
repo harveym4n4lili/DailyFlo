@@ -23,11 +23,12 @@ import { useRouter } from 'expo-router';
 import { IconColorModal } from './modals';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { FormDetailSection, SubtaskSection } from './sections';
-import { TrashIcon, ClockIcon } from '@/components/ui/icon';
+import { TrashIcon, ClockIcon, SFSymbolIcon } from '@/components/ui/icon';
 import { SaveButton } from '@/components/ui/button';
 import { ActionContextMenu } from '@/components/ui';
 import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisplay } from '@/components/ui/button';
 import { getTextStyle } from '@/constants/Typography';
+import { Paddings } from '@/constants/Paddings';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { DashedSeparator } from '@/components/ui/borders';
@@ -308,7 +309,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
     const items: { id: string; label: string; onPress: () => void; destructive?: boolean; systemImage?: string; icon?: string; iconComponent?: (color: string) => React.ReactNode }[] = [
       { id: 'activity', label: 'Activity log', systemImage: 'clock.arrow.circlepath', iconComponent: (color) => <ClockIcon size={20} color={color} isSolid />, onPress: onActivityLog ?? (() => {}) },
       { id: 'duplicate', label: 'Duplicate', systemImage: 'doc.on.doc', icon: 'copy-outline', onPress: onDuplicateTask ?? (() => {}) },
-      { id: 'delete', label: 'Delete task', onPress: onDeleteTask ?? (() => {}), destructive: true, systemImage: 'trash', iconComponent: (color) => <TrashIcon size={20} color={color} /> },
+      { id: 'delete', label: 'Delete task', onPress: onDeleteTask ?? (() => {}), destructive: true, systemImage: 'trash.fill', iconComponent: (color) => <SFSymbolIcon name="trash.fill" size={20} color={color} fallback={<TrashIcon size={20} color={color} />} /> },
     ];
     return items;
   }, [onActivityLog, onDuplicateTask, onDeleteTask]);
@@ -369,20 +370,25 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
               onChangeText={(t) => onChange('title', t)}
               placeholder="e.g., Answering emails"
               placeholderTextColor={themeColors.text.tertiary()}
-              selectionColor={themeColors.text.primary()}
+              selectionColor="white"
+              cursorColor="white"
               style={[
                 getTextStyle('heading-2'),
                 {
                   color: themeColors.text.primary(),
-                  paddingBottom: 0,
-                  paddingHorizontal: 0,
+                  paddingBottom: Paddings.none,
+                  paddingHorizontal: Paddings.none,
+                  maxHeight: 68, // 2 lines max (fontSize 26 * ~1.3 line height)
                 },
               ]}
+              multiline
+              numberOfLines={2}
+              scrollEnabled={true}
               autoFocus={!isEditMode}
               returnKeyType="next"
             />
             {/* dashed separator underline for task title - matches scrollContent padding */}
-            <DashedSeparator style={{ marginTop: 12 }} />
+            <DashedSeparator style={{ marginTop: 8 }} />
             <View style={styles.titleSpacer} />
           </View>
         </View>
@@ -421,10 +427,10 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
         {(createError ?? updateError ?? validationError) && (
           <View
             style={{
-              marginHorizontal: 20,
+              marginHorizontal: Paddings.groupedListContentHorizontal,
               marginTop: 16,
               marginBottom: 24,
-              padding: 12,
+              padding: Paddings.cardCompact,
               borderRadius: 8,
               borderWidth: 1,
               borderColor: colors.getSemanticColor('error', 500),
@@ -460,7 +466,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
                 flexDirection: 'row',
                 justifyContent: 'flex-end',
                 alignItems: 'center',
-                paddingHorizontal: 20,
+                paddingHorizontal: Paddings.groupedListContentHorizontal,
               },
             ]}
           >
@@ -524,10 +530,11 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   // top spacing: drag indicator area; paddingTop overridden inline (36 create, 60 edit)
-  scrollContent: { padding: 24, paddingBottom: 40 },
+  scrollContent: { padding: Paddings.screen, paddingBottom: Paddings.scrollBottomExtra },
   titleRow: { flexDirection: 'row', alignItems: 'center' },
-  titleInputWrap: { flex: 1, minWidth: 0, paddingHorizontal: 0 },
+  // right padding matches left side: checkbox (20) + gap (16) for visual symmetry
+  titleInputWrap: { flex: 1, minWidth: 0, paddingLeft: Paddings.none, paddingRight: 20 + Paddings.card },
   titleSpacer: { height: 8 },
-  checkboxWrap: { paddingRight: 16, flexShrink: 0, alignItems: 'center', justifyContent: 'center', marginTop: -16 },
-  pickerSectionWrap: { marginTop: 20 },
+  checkboxWrap: { paddingRight: Paddings.card, flexShrink: 0, alignItems: 'center', justifyContent: 'center', marginTop: -12 },
+  pickerSectionWrap: { marginTop: 12 },
 });

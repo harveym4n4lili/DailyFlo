@@ -16,6 +16,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFadeZoomAnimation } from '@/hooks';
 
@@ -30,7 +31,7 @@ export default function SignupScreen() {
   const styles = createStyles(themeColors, typography, insets);
   
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, styles.containerPadding]}>
       {/* Main Content */}
       {/* navigation and buttons are handled globally in the layout */}
       <View style={styles.content}>
@@ -55,29 +56,32 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
+  // --- LAYOUT STYLES ---
   container: {
     flex: 1,
     backgroundColor: themeColors.background.primary(),
-    paddingHorizontal: 24,
-    // padding top accounts for global navigation component (60px = 40px height + 20px spacing)
-    paddingTop: insets.top,
-    // padding bottom accounts for global actions component (100px = button height + spacing)
-    paddingBottom: insets.bottom + 100,
-    justifyContent: 'center', // center content vertically
+    justifyContent: 'center',
   },
   content: {
     // content takes up available space and centers vertically
     justifyContent: 'center',
     alignItems: 'center', // center content horizontally
-    gap: 32, // spacing between elements
+    gap: 32,
   },
+
+  // --- PADDING STYLES ---
+  containerPadding: {
+    paddingHorizontal: Paddings.screen,
+    paddingTop: insets.top,
+    paddingBottom: insets.bottom + 100,
+  },
+
+  // --- TYPOGRAPHY STYLES ---
   headline: {
-    // use typography heading-1 style for headline
-    color: themeColors.text.primary(), // text color using theme color hook
+    ...typography.getTextStyle('heading-1'),
+    color: themeColors.text.primary(),
     textAlign: 'center',
     marginBottom: 48,
-    // use typography system for fontFamily, fontWeight, lineHeight
-    ...typography.getTextStyle('heading-1'),
-    fontSize: 32, // override typography: large headline size
+    fontSize: 32,
   },
 });

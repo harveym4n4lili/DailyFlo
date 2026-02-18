@@ -27,7 +27,8 @@ import { useColorScheme } from 'react-native';
 
 // import design system constants
 import { ThemeColors, getTaskCategoryColor } from '@/constants/ColorPalette';
-import { getTextStyle, getFontFamily } from '@/constants/Typography';
+import { getTextStyle } from '@/constants/Typography';
+import { Paddings } from '@/constants/Paddings';
 
 // import types
 import type { TaskColor } from '@/types';
@@ -236,8 +237,8 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   
   // get theme colors
   const colors = ThemeColors[colorScheme];
-  // use secondary text color for cursor/stylus - subtle but visible
-  const stylusColor = colors.text.secondary;
+  // use white for cursor/stylus - matches iOS-style caret
+  const stylusColor = 'white';
   
   // safely split text into lines for rendering first
   // ensure localText is always a string to prevent undefined errors
@@ -458,9 +459,8 @@ const styles = StyleSheet.create({
     top: -1000, // move off screen
     left: -1000,
     opacity: 0,
-    // use same text styling as visible text for accurate measurement
-    ...getTextStyle('heading-4'),
-    fontFamily: getFontFamily('ios'),
+    // use same text styling as visible text for accurate measurement (getTextStyle includes fontFamily)
+    ...getTextStyle('body-large'),
     lineHeight: 20,
   },
   
@@ -469,8 +469,8 @@ const styles = StyleSheet.create({
     // border removed - no border around description input
     borderWidth: 0,
     borderRadius: 0,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: Paddings.groupedListContentHorizontal,
+    paddingVertical: Paddings.listItemVertical,
     minHeight: 40,
     // no height constraints by default - allows natural expansion
     // height constraints are applied conditionally based on keyboard state
@@ -506,10 +506,9 @@ const styles = StyleSheet.create({
     minHeight: 20, // ensure empty lines have height
   },
   
-  // text styling
+  // text styling (getTextStyle includes fontFamily)
   text: {
-    ...getTextStyle('heading-4'),
-    fontFamily: getFontFamily('ios'),
+    ...getTextStyle('body-large'),
     lineHeight: 20,
     textAlignVertical: 'top',
     includeFontPadding: false,

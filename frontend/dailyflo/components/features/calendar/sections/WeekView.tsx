@@ -26,6 +26,7 @@ import { getTextStyle } from '@/constants/Typography';
 
 // hooks for theme-aware colors that adapt to light/dark mode
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { Paddings } from '@/constants/Paddings';
 import { useTypography } from '@/hooks/useTypography';
 
 /**
@@ -117,7 +118,17 @@ const DayCell: React.FC<DayCellProps> = ({
   }, [isSelected, scaleAnim, opacityAnim]);
   
   return (
-    <View style={styles.dateCellContainer}>
+    <View style={[
+      styles.dateCellContainer,
+      // dashed circular outline for non-selected days
+      !isSelected && {
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderRadius: 19,
+        borderColor: themeColors.text.tertiary(),
+
+      },
+    ]}>
       {/* animated background highlight */}
       <Animated.View
         style={[
@@ -149,7 +160,6 @@ const DayCell: React.FC<DayCellProps> = ({
             color: isSelected
               ? themeColors.background.primary()
               : themeColors.text.primary(),
-            fontWeight: isTodayDate ? '700' : '400',
           }
         ]}>
           {dayNumber}
@@ -424,14 +434,14 @@ export const WeekView: React.FC<WeekViewProps> = ({
   const dayHeaders = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   
   return (
-    <View style={styles.container}>
+    <View>
       {/* 
-        WEEK VIEW HEADER SECTION
+        WEEK VIEW HEADER SECTION - separate from week grid, uses Paddings.screen for left spacing
         Contains: formatted date text (day month year)
         Styled to match today screen header title
       */}
       <TouchableOpacity 
-        style={styles.header}
+        style={[styles.header, styles.headerContainer]}
         onPress={onHeaderPress}
         activeOpacity={0.7}
         disabled={!onHeaderPress}
@@ -453,6 +463,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
         Layout: Swipeable pages - one week per page
         listWrapper uses negative margin to break out of container padding so full pages are visible during swipe
       */}
+      <View style={styles.weekSectionContainer}>
       <View style={styles.listWrapper}>
       <FlatList
         ref={flatListRef}
@@ -488,7 +499,6 @@ export const WeekView: React.FC<WeekViewProps> = ({
                           styles.dayHeaderText,
                           { 
                             color: themeColors.text.tertiary?.() || themeColors.text.secondary(),
-                            fontWeight: '900',
                           }
                         ]}>
                         {dayHeaders[index]}
@@ -522,6 +532,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
         scrollEventThrottle={16}
       />
       </View>
+      </View>
     </View>
   );
 };
@@ -539,25 +550,17 @@ const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>
 ) => StyleSheet.create({
-  // main container
-  container: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+  // --- LAYOUT STYLES ---
+  // header container - separate from week grid, left spacing from Paddings.screen
+  headerContainer: {
+    paddingLeft: Paddings.screen,
   },
   
   // week view header - contains formatted date text and chevron icon
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  
-  // header title styling - matches today screen header title style
-  headerTitle: {
-    ...typography.getTextStyle('heading-2'),
-    color: themeColors.text.primary(),
-    fontWeight: '600',
-    marginLeft: 8,
+    marginTop: 16,
   },
   
   // chevron icon styling - positioned to the right of the date header
@@ -565,7 +568,14 @@ const createStyles = (
     marginLeft: 8,
   },
   
+  // week grid section - padding for the swipeable list (listWrapper breaks out with negative margin)
+  weekSectionContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: Paddings.card,
+  },
+  
   // breaks out of container padding so FlatList scrolls full-width (no cut-off during swipe)
+  // margin matches weekSectionContainer padding (16) so list extends to screen edges for pagination
   listWrapper: {
     marginHorizontal: -16,
   },
@@ -590,22 +600,20 @@ const createStyles = (
   
   // day header pressable - clickable area for day header
   dayHeaderPressable: {
-    marginBottom: 4,
-    paddingVertical: 0,
-    paddingHorizontal: 8,
+    marginBottom: 8,
+    paddingVertical: Paddings.none,
+    paddingHorizontal: Paddings.touchTarget,
   },
   
   // day header text styling
   dayHeaderText: {
-    fontWeight: '600',
     textAlign: 'center',
-    letterSpacing: 0.8,
   },
   
   // date cell container - holds background and pressable
   dateCellContainer: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -614,9 +622,9 @@ const createStyles = (
   // animated background highlight
   dateCellBackground: {
     position: 'absolute',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 19,
   },
   
   // date cell pressable - clickable area
@@ -629,8 +637,13 @@ const createStyles = (
   },
   
   // date number text styling
-  dateText: {
-    fontWeight: '400',
+  dateText: {},
+
+  // --- TYPOGRAPHY STYLES ---
+  headerTitle: {
+    ...typography.getTextStyle('heading-2'),
+    color: themeColors.text.primary(),
+    marginLeft: 0,
   },
 });
 

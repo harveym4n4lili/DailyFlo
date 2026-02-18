@@ -12,6 +12,7 @@ import { getTextStyle } from '@/constants/Typography';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from 'react-native-reanimated';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
+import { Paddings } from '@/constants/Paddings';
 
 const DURATION_PRESETS = [
   { value: undefined, label: 'None' },
@@ -89,9 +90,9 @@ export function TimeDurationSelectScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: 20,
-            paddingBottom: insets.bottom + 24,
-            paddingHorizontal: 20,
+            paddingTop: Paddings.screenSmall,
+            paddingBottom: insets.bottom + Paddings.modalBottomExtra,
+            paddingHorizontal: Paddings.screenSmall,
             gap: 24,
           },
         ]}
@@ -105,8 +106,8 @@ export function TimeDurationSelectScreen() {
               style={({ pressed }) => ({
                 backgroundColor: pressed ? themeColors.background.tertiary() : 'transparent',
                 borderRadius: 8,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
+                paddingHorizontal: Paddings.contextMenuHorizontal,
+                paddingVertical: Paddings.listItemVertical - 2,
               })}
             >
               <Text style={[getTextStyle('body-large'), { color: themeColors.text.primary?.() }]}>
@@ -116,9 +117,9 @@ export function TimeDurationSelectScreen() {
           </View>
         </View>
 
-        <View style={{ gap: 16, paddingTop: 8 }}>
+        <View style={{ gap: 16, paddingTop: Paddings.touchTarget }}>
           <Text style={[getTextStyle('heading-4'), { color: themeColors.text.primary() }]}>Duration</Text>
-          <View style={{ paddingVertical: 20, position: 'relative' }}>
+          <View style={{ paddingVertical: Paddings.screenSmall, position: 'relative' }}>
             <View
               style={{ height: 28, width: '100%', alignSelf: 'center', position: 'relative' }}
               onLayout={(e) => {
@@ -239,7 +240,6 @@ export function TimeDurationSelectScreen() {
                         getTextStyle('body-medium'),
                         {
                           color: isSelected ? themeColors.interactive.primary() : themeColors.text.secondary(),
-                          fontWeight: isSelected ? '600' : '400',
                           textAlign: 'center',
                         },
                       ]}

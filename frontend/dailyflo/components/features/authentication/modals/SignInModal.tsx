@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { useFadeZoomAnimation } from '@/hooks';
 import { useUI } from '@/store/hooks';
 import { useAppDispatch } from '@/store';
@@ -406,7 +407,7 @@ export function SignInModal() {
       {/* main content area */}
       {/* conditionally shows social auth buttons or email auth form based on viewMode */}
       {viewMode === 'social' ? (
-        <View style={styles.contentContainer}>
+        <View style={[styles.contentContainer, styles.contentContainerPadding]}>
           {/* Social Auth Buttons */}
           {/* social buttons fade in and scale up sequentially (handled by SocialAuthActions component) */}
           {/* uses signin variant to show "Sign in with [Provider]" text */}
@@ -427,7 +428,7 @@ export function SignInModal() {
             }}
           >
             <TouchableOpacity
-              style={styles.secondaryLink}
+              style={[styles.secondaryLink, styles.secondaryLinkPadding]}
               onPress={handleOpenEmailAuth}
               activeOpacity={0.7}
               disabled={!!socialAuthInProgress}
@@ -450,6 +451,7 @@ export function SignInModal() {
           <Animated.View
             style={[
               styles.emailAuthSectionContainer,
+              styles.emailAuthSectionContainerPadding,
               {
                 opacity: emailAuthSectionOpacity,
                 transform: [{ scale: emailAuthSectionScale }],
@@ -470,6 +472,7 @@ export function SignInModal() {
             <Animated.View
               style={[
                 styles.signInButtonContainer,
+                styles.signInButtonContainerPadding,
                 { paddingBottom: insets.bottom },
                 {
                   opacity: signInButtonOpacity,
@@ -478,7 +481,7 @@ export function SignInModal() {
               ]}
             >
               <TouchableOpacity
-                style={styles.signInButton}
+                style={[styles.signInButton, styles.signInButtonPadding]}
                 onPress={handleEmailSignIn}
                 activeOpacity={0.8}
                 disabled={emailAuthInProgress || !emailAuthEmail || !emailAuthPassword}
@@ -505,6 +508,7 @@ const createStyles = (
   headerHeight: number,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
+  // --- LAYOUT STYLES ---
   closeButton: {
     // absolutely position close button at top left within ModalHeader
     // positioned to match ModalHeader's close button position (16px from top and left for iOS 15+)
@@ -522,25 +526,12 @@ const createStyles = (
   },
   contentContainer: {
     flex: 1,
-    // add top padding to account for absolutely positioned header
-    // headerHeight is calculated based on iOS version (70px for iOS 15+, 56px for older iOS)
-    // add extra 16px for visual breathing room between header and social auth buttons
-    paddingTop: headerHeight + 16, // header height + spacing
-    paddingHorizontal: 24, // horizontal padding to match other screens
-    gap: 16, // spacing between social buttons and email link
+    gap: 16,
   },
   secondaryLink: {
-    paddingVertical: 12, // padding for touch target
     alignItems: 'center',
   },
-  secondaryLinkText: {
-    color: themeColors.text.secondary(), // text color using theme color hook
-    textAlign: 'center',
-    // use typography system for fontFamily and fontWeight
-    ...typography.getTextStyle('body-large'),
-  },
   secondaryLinkHighlight: {
-    fontWeight: '800', // make highlighted part slightly bolder
     color: themeColors.text.primary(), // text color using theme color hook
   },
   emailAuthWrapper: {
@@ -550,38 +541,52 @@ const createStyles = (
   },
   emailAuthSectionContainer: {
     flex: 1,
-    // add top padding to account for absolutely positioned header
-    // headerHeight is calculated based on iOS version (70px for iOS 15+, 56px for older iOS)
-    paddingTop: headerHeight + 24, // header height + spacing
-    paddingHorizontal: 24, // horizontal padding to match other screens
-    paddingBottom: 24, // bottom padding for content
-    // flex: 1 allows this container to take available space above the keyboard-anchored button
   },
   signInButtonContainer: {
-    paddingVertical: 12,
-    paddingHorizontal: 24, // matches other button container padding
-    // paddingBottom for safe area is added inline (insets.bottom)
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
   },
   signInButton: {
-    // use interactive primary color for button background (same as register button)
     backgroundColor: themeColors.interactive.primary(),
-    borderRadius: 28, // rounded rectangular button (same as register button)
-    paddingVertical: 16, // vertical padding for button height (same as register button)
-    paddingHorizontal: 32, // horizontal padding (same as register button)
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 58, // minimum touch target size for accessibility (same as register button)
-    width: '100%', // full width button (same as register button)
+    minHeight: 58,
+    width: '100%',
+  },
+
+  // --- PADDING STYLES ---
+  contentContainerPadding: {
+    paddingTop: headerHeight + Paddings.card,
+    paddingHorizontal: Paddings.screen,
+  },
+  secondaryLinkPadding: {
+    paddingVertical: Paddings.listItemVertical,
+  },
+  emailAuthSectionContainerPadding: {
+    paddingTop: headerHeight + Paddings.screen,
+    paddingHorizontal: Paddings.screen,
+    paddingBottom: Paddings.screen,
+  },
+  signInButtonContainerPadding: {
+    paddingVertical: Paddings.listItemVertical,
+    paddingHorizontal: Paddings.screen,
+  },
+  signInButtonPadding: {
+    paddingVertical: Paddings.buttonVertical,
+    paddingHorizontal: Paddings.buttonHorizontal,
+  },
+
+  // --- TYPOGRAPHY STYLES ---
+  secondaryLinkText: {
+    ...typography.getTextStyle('body-large'),
+    color: themeColors.text.secondary(),
+    textAlign: 'center',
   },
   signInButtonText: {
-    // use interactive quaternary color for text (same as register button)
-    // this provides contrasting text color on the primary button background
-    color: themeColors.interactive.quaternary(),
-    // use typography system for fontFamily and fontWeight (same as register button)
     ...typography.getTextStyle('button-primary'),
+    color: themeColors.interactive.quaternary(),
   },
 });
 

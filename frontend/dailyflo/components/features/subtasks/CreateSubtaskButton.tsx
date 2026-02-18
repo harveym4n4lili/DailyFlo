@@ -9,6 +9,7 @@ import React from 'react';
 import { FormDetailButton } from '@/components/ui/list/GroupedList';
 import { ClockIcon } from '@/components/ui/icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { Paddings } from '@/constants/Paddings';
 
 const ADD_SUBTASK_ICON_SIZE = 18;
 
@@ -51,12 +52,11 @@ export const CreateSubtaskButton: React.FC<CreateSubtaskButtonProps> = ({
       showChevron={false}
       customStyles={{
         container: {
-          paddingVertical: 0,
-          paddingHorizontal: 0,
+          paddingVertical: Paddings.none,
+          paddingHorizontal: Paddings.none,
         },
         label: {
           color: tertiaryColor,
-          fontWeight: '700',
         },
       }}
     />

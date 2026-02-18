@@ -10,6 +10,7 @@
 import React, { useRef } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { GroupedList } from '@/components/ui/list/GroupedList';
+import { Paddings } from '@/constants/Paddings';
 import { SubtaskCreateButton, SubtaskListItem } from '../subtask';
 import { Description } from './Description';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -71,10 +72,10 @@ export const SubtaskSection: React.FC<SubtaskSectionProps> = ({
       <GroupedList
         containerStyle={styles.subtaskListContainer}
         contentPaddingHorizontal={0}
-        contentPaddingVertical={16}
+       
         backgroundColor={'transparent'}
         separatorColor={themeColors.border.primary()}
-        separatorInsetRight={0}
+        separatorInsetRight={Paddings.groupedListContentHorizontal}
         borderRadius={24}
         minimalStyle={false}
         fullWidthSeparators={false}

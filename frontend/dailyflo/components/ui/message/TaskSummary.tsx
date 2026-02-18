@@ -11,6 +11,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import type { Task } from '@/types';
 
 // wake and sleep times in 24h format - user's assumed active day
@@ -123,7 +124,7 @@ export interface TaskSummaryProps {
 export function TaskSummary({
   tasks,
   userName = 'Harvey',
-  paddingHorizontal = 20,
+  paddingHorizontal = Paddings.screenSmall,
   
   marginTop,
 }: TaskSummaryProps) {
@@ -188,7 +189,7 @@ export function TaskSummary({
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 8,
+    paddingVertical: Paddings.touchTarget,
     backgroundColor: 'transparent',
   },
 });

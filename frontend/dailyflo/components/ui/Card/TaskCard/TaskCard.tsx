@@ -25,6 +25,7 @@ import { Task } from '@/types';
 
 // import color palette system for consistent theming
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { Paddings } from '@/constants/Paddings';
 
 // import utility functions for task formatting and colors
 import { getTaskColorValue } from '@/utils/taskColors';
@@ -256,10 +257,13 @@ export default function TaskCard({
         )}
       </SwipeableCard>
       
-      {/* dashed separator below card - shown when showDashedSeparator is true and not the last item */}
+      {/* dashed separator below card - starts where task title starts (checkbox + gap + optional icon) */}
       {showDashedSeparator && !isLastItem && (
-        <DashedSeparator 
-          paddingHorizontal={separatorPaddingHorizontal} // separator padding matches list padding
+        <DashedSeparator
+          paddingLeft={
+            checkboxSize + 12 + (showIcon && task.icon ? 24 + 16 : 0)
+          }
+          paddingRight={separatorPaddingHorizontal}
         />
       )}
     </View>
@@ -285,8 +289,8 @@ const createStyles = (
       width: '100%', // ensure full width
       backgroundColor: themeColors.background.elevated(), // use theme-aware elevated background
       borderRadius: 0, // no border radius for flat card appearance
-      padding: 16,
-      paddingRight: 56, // add right padding to avoid overlap with completion indicator (24px indicator + 16px margin + 16px spacing)
+      padding: Paddings.card,
+      paddingRight: Paddings.taskCardRightPadding,
       position: 'relative', // needed for absolute positioning of completion indicator and bottom indicators
       overflow: 'visible', // ensure content is visible
     },
@@ -319,8 +323,8 @@ const createStyles = (
 
     // compact version for smaller displays
     compactCard: {
-      padding: 12,
-      paddingRight: 52, // add right padding for compact version too (24px indicator + 16px margin + 12px spacing)
+      padding: Paddings.cardCompact,
+      paddingRight: Paddings.taskCardRightPaddingCompact,
       marginBottom: 8,
     },
 
@@ -336,11 +340,11 @@ const createStyles = (
 
     // no inner padding styling (when removeInnerPadding is true)
     noInnerPadding: {
-      paddingHorizontal: 0, // remove horizontal padding inside the card
-      paddingLeft: 0,
-      paddingRight: 0,
-      paddingTop: 16, // maintain vertical padding of 16px
-      paddingBottom: 16, // maintain vertical padding of 16px
+      paddingHorizontal: Paddings.none,
+      paddingLeft: Paddings.none,
+      paddingRight: Paddings.none,
+      paddingTop: Paddings.card,
+      paddingBottom: Paddings.card,
     },
   });
 

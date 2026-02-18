@@ -13,7 +13,8 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { GroupedList, FormDetailButton } from '@/components/ui/list/GroupedList';
 import { DropdownList } from '@/components/ui/list';
 import { getTextStyle } from '@/constants/Typography';
-import { CalendarIcon, ClockIcon, BellIcon, RepeatIcon } from '@/components/ui/icon';
+import { Paddings } from '@/constants/Paddings';
+import { CalendarIcon, ClockIcon, BellIcon, RepeatIcon, SFSymbolIcon } from '@/components/ui/icon';
 import { getTimeDurationDisplayLabels } from '@/components/ui/button';
 import type { RoutineType } from '@/types';
 import { Host, ContextMenu, Button } from '@expo/ui/swift-ui';
@@ -107,20 +108,25 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
         <View style={styles.groupedListWrap}>
           <GroupedList
             containerStyle={styles.listContainer}
-            contentPaddingHorizontal={12}
-            contentPaddingVertical={0}
             backgroundColor={themeColors.background.primarySecondaryBlend()}
             separatorColor={themeColors.border.primary()}
-            separatorInsetRight={0}
+            separatorInsetRight={Paddings.groupedListContentHorizontal}
+            separatorVariant="solid"
             borderRadius={24}
             minimalStyle={false}
-            itemWrapperPaddingVertical={16}
             separatorConsiderIconColumn={true}
             iconColumnWidth={30}
           >
             <FormDetailButton
               key="date"
-              iconComponent={<CalendarIcon size={18} color={themeColors.text.primary()} isSolid />}
+              iconComponent={
+                <SFSymbolIcon
+                  name="calendar"
+                  size={20}
+                  color={themeColors.text.primary()}
+                  fallback={<CalendarIcon size={18} color={themeColors.text.primary()} isSolid />}
+                />
+              }
               label={dateMainLabel}
               value={dateValue}
               onPress={onShowDatePicker}
@@ -128,7 +134,14 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
             />
             <FormDetailButton
               key="time"
-              iconComponent={<ClockIcon size={18} color={themeColors.text.primary()} isSolid />}
+              iconComponent={
+                <SFSymbolIcon
+                  name="clock.fill"
+                  size={20}
+                  color={themeColors.text.primary()}
+                  fallback={<ClockIcon size={18} color={themeColors.text.primary()} isSolid />}
+                />
+              }
               label={timeMainLabel}
               value={timeSubLabel}
               onPress={onShowTimeDurationPicker}
@@ -136,7 +149,14 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
             />
             <FormDetailButton
               key="alerts"
-              iconComponent={<BellIcon size={18} color={themeColors.text.primary()} isSolid />}
+              iconComponent={
+                <SFSymbolIcon
+                  name="bell.fill"
+                  size={20}
+                  color={themeColors.text.primary()}
+                  fallback={<BellIcon size={18} color={themeColors.text.primary()} isSolid />}
+                />
+              }
               label={alertsMainLabel}
               value={alertsSubLabel}
               onPress={onShowAlertsPicker}
@@ -157,7 +177,13 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
                           { backgroundColor: themeColors.background.primarySecondaryBlend() },
                         ]}
                       >
-                        <RepeatIcon size={18} color={themeColors.text.primary()} style={styles.repeatingIcon} />
+                        <SFSymbolIcon
+                          name="repeat"
+                          size={18}
+                          color={themeColors.text.primary()}
+                          fallback={<RepeatIcon size={18} color={themeColors.text.primary()} style={styles.repeatingIcon} />}
+                          style={styles.repeatingIcon}
+                        />
                         <Text style={[styles.repeatingText, { color: themeColors.text.primary() }]}>
                           {ROUTINE_TYPE_LABELS[routineType]}
                         </Text>
@@ -219,7 +245,7 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
 };
 
 const styles = StyleSheet.create({
-  // outer container: no padding (parent handles spacing)
+  // --- LAYOUT STYLES ---
   container: {
     overflow: 'visible',
   },
@@ -244,22 +270,24 @@ const styles = StyleSheet.create({
     marginTop: 12,
     minHeight: 48,
   },
-  // pill with background - fits content, left-aligned within tap area
+  repeatingIcon: {
+    marginRight: Paddings.groupedListIconTextSpacing,
+  },
+
+  // --- PADDING STYLES ---
   repeatingPill: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     alignSelf: 'flex-start' as const,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: Paddings.listItemVertical,
+    paddingHorizontal: Paddings.groupedListContentHorizontal,
     borderRadius: 24,
     overflow: 'hidden',
   },
-  repeatingIcon: {
-    marginRight: 4,
-  },
+
+  // --- TYPOGRAPHY STYLES ---
   repeatingText: {
     ...getTextStyle('body-large'),
-    fontWeight: '900',
   },
 });
 

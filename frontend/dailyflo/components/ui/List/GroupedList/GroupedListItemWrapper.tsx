@@ -9,7 +9,7 @@
 import React from 'react';
 import { View, ViewStyle, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { DashedSeparator } from '@/components/ui/borders';
+import { DashedSeparator, SolidSeparator } from '@/components/ui/borders';
 
 export interface GroupedListItemWrapperProps {
   /** The child element to wrap */
@@ -31,6 +31,9 @@ export interface GroupedListItemWrapperProps {
   separatorInsetLeft?: number;
   /** Right inset for separator line in pt (0 = align to right edge) */
   separatorInsetRight?: number;
+
+  /** Separator style: 'dashed' or 'solid' full line */
+  separatorVariant?: 'dashed' | 'solid';
   
   /** Optional background color override (defaults to theme elevated background) */
   backgroundColor?: string;
@@ -72,6 +75,7 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
   separatorColor,
   separatorInsetLeft = 0,
   separatorInsetRight = 0,
+  separatorVariant = 'dashed',
   backgroundColor,
   borderWidth,
   borderColor,
@@ -145,7 +149,7 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
     };
   };
 
-  // outer container: background, border radius, minHeight; no padding so separator can sit below padded content
+  // outer container: background, border radius, minHeight; no overflow so separator is not clipped
   // lineStyle: transparent background, no radius, full-length top/bottom borders instead of inset separator
   // itemWrapperPaddingVertical adds vertical padding to the wrapper itself (separate from content padding)
   // when separator exists, only apply paddingTop (paddingBottom is handled by separator margin for equal spacing)
@@ -154,7 +158,6 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
       listStyle === 'lineStyle'
         ? 'transparent'
         : (backgroundColor ?? themeColors.background.primarySecondaryBlend()),
-    overflow: 'hidden',
     ...(listStyle === 'roundedStyle' ? getBorderRadiusStyle() : {}),
     ...getBorderEdgeStyle(),
     ...getLineStyleBorders(),
@@ -166,6 +169,14 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
     }),
     ...style,
   };
+
+  // content clip: overflow hidden + border radius clips content to rounded shape; separator stays outside to avoid clipping glitch
+  // only for first/last/only - middle items skip to avoid layout flash on mount
+  const needsContentClip = listStyle === 'roundedStyle' && position !== 'middle';
+  const contentClipStyle: ViewStyle =
+    needsContentClip
+      ? { overflow: 'hidden' as const, ...getBorderRadiusStyle() }
+      : {};
 
   // inner wrapper: same vertical and horizontal padding so content has space on all sides; separator is outside this
   // both styles use content padding; lineStyle uses borders instead of separate separator view
@@ -179,19 +190,37 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
       }
     : {};
 
+  const content = (
+    <View style={contentWrapperStyle}>
+      {children}
+    </View>
+  );
+
   return (
     <View style={outerStyle}>
-      <View style={contentWrapperStyle}>
-        {children}
-      </View>
-      {/* roundedStyle only: separator below padded content; lineStyle uses borderBottomWidth instead */}
-      {/* when itemWrapperPaddingVertical is set, add marginTop to separator to create equal spacing above and below */}
+      {needsContentClip ? (
+        <View style={contentClipStyle}>{content}</View>
+      ) : (
+        content
+      )}
+      {/* roundedStyle only: separator below padded content, outside overflow container to prevent first-separator clipping glitch */}
+      {/* collapsable={false} on SolidSeparator prevents view flattening that can cause flash on mount */}
       {listStyle === 'roundedStyle' && showSeparator && (
-        <DashedSeparator 
-          paddingLeft={separatorInsetLeft}
-          paddingRight={separatorInsetRight}
-          style={itemWrapperPaddingVertical != null ? { marginTop: itemWrapperPaddingVertical } : undefined}
-        />
+        separatorVariant === 'solid' ? (
+          <SolidSeparator
+            paddingLeft={separatorInsetLeft}
+            paddingRight={separatorInsetRight}
+            color={separatorColor}
+            style={itemWrapperPaddingVertical != null ? { marginTop: itemWrapperPaddingVertical } : undefined}
+            collapsable={false}
+          />
+        ) : (
+          <DashedSeparator
+            paddingLeft={separatorInsetLeft}
+            paddingRight={separatorInsetRight}
+            style={itemWrapperPaddingVertical != null ? { marginTop: itemWrapperPaddingVertical } : undefined}
+          />
+        )
       )}
     </View>
   );

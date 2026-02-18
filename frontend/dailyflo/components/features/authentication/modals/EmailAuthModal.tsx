@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { useFadeZoomAnimation } from '@/hooks';
 import { useUI } from '@/store/hooks';
 import { useAppDispatch } from '@/store';
@@ -238,7 +239,7 @@ export function EmailAuthRegisterModal({ variant = 'register' }: { variant?: 're
         <Animated.View
           style={{
             flex: 1,
-            paddingHorizontal: 24,
+            paddingHorizontal: Paddings.screen,
             paddingTop: insets.top + 60 + 24,
             opacity: emailAuthOpacity,
             transform: [{ scale: emailAuthScale }],
@@ -257,8 +258,8 @@ export function EmailAuthRegisterModal({ variant = 'register' }: { variant?: 're
         <KeyboardAnchoredContainer offset={64}>
           <Animated.View
             style={{
-              paddingVertical: 12,
-              paddingHorizontal: 24, // matches get started button container padding
+              paddingVertical: Paddings.listItemVertical,
+              paddingHorizontal: Paddings.screen,
               flexDirection: 'row',
               justifyContent: 'center',
               alignItems: 'center',
@@ -299,8 +300,8 @@ const createStyles = (
     // absolutely position close button at top left
     // circular button matching iOS 15+ style from MainCloseButton
     position: 'absolute',
-    left: 16,
-    top: 16 + insets.top,
+    left: Paddings.card,
+    top: Paddings.card + insets.top,
     zIndex: 10, // ensure button appears above other content
     width: 42,
     height: 42,
@@ -313,8 +314,8 @@ const createStyles = (
     // use interactive primary color for button background
     backgroundColor: themeColors.interactive.primary(),
     borderRadius: 28, // rounded rectangular button
-    paddingVertical: 16, // vertical padding for button height
-    paddingHorizontal: 32, // horizontal padding
+    paddingVertical: Paddings.buttonVertical,
+    paddingHorizontal: Paddings.buttonHorizontal,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 58, // minimum touch target size for accessibility

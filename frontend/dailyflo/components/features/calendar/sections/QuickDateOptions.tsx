@@ -23,6 +23,8 @@ import { getTextStyle } from '@/constants/Typography';
 import { useThemeColors, useTaskColors, useSemanticColors } from '@/hooks/useColorPalette';
 // dashed separator component
 import { DashedSeparator } from '@/components/ui/borders';
+// padding constants for consistent spacing
+import { Paddings } from '@/constants/Paddings';
 
 /**
  * Props for QuickDateOptions component
@@ -228,7 +230,7 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
             </Pressable>
             {/* dashed separator below each option except the last one - matches button paddingHorizontal (16px) */}
             {!isLastOption && (
-              <DashedSeparator paddingHorizontal={16} />
+              <DashedSeparator paddingHorizontal={Paddings.card} />
             )}
           </View>
         );
@@ -241,25 +243,10 @@ export const QuickDateOptions: React.FC<QuickDateOptionsProps> = ({
  * Styles for QuickDateOptions
  */
 const styles = StyleSheet.create({
-  // container for all quick date options (no horizontal padding, 12px space below before calendar)
+  // --- LAYOUT STYLES ---
   container: {
-    paddingHorizontal: 0,
+    paddingHorizontal: Paddings.none,
     marginBottom: 12,
-  },
-  
-  // individual option button styling
-  optionButton: {
-    // full width to touch edges
-    width: '100%',
-    
-    // use flexbox to position left content (icon + label) and right content (day)
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    height: 48,
   },
   // container for icon and label on the left
   leftContent: {
@@ -269,22 +256,27 @@ const styles = StyleSheet.create({
   },
   // container for the icon on the left
   iconContainer: {
-    width: 20, // fixed width to align icons consistently
+    width: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12, // space between icon and label
+    marginRight: 12,
   },
-  // text style for option label
-  optionText: {
-    fontWeight: '700',
+
+  // --- PADDING STYLES ---
+  optionButton: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Paddings.listItemVertical,
+    paddingHorizontal: Paddings.card,
+    height: 48,
   },
-  optionTextSelected: {
-    fontWeight: '600',
-  },
-  // text style for day of week (right side)
-  dayOfWeekText: {
-    fontWeight: '700',
-  },
+
+  // --- TYPOGRAPHY STYLES ---
+  optionText: {},
+  optionTextSelected: {},
+  dayOfWeekText: {},
 });
 
 export default QuickDateOptions;

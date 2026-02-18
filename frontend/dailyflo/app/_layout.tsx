@@ -40,18 +40,16 @@ export default function RootLayout() {
   const hasNavigatedRef = useRef(false);
   
   // load all the fonts we need for the app
-  // this tells expo-font to load the satoshi font files
+  // this tells expo-font to load the Inter font files (18pt optical size for UI)
   // each font gets a name that we can use in our typography system
   const [loaded] = useFonts({
-    // keep the existing space mono font (we can remove this later if not needed)
-    //SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    
-    // satoshi font family - these are the main fonts for our app
-    // for react native, we need to use the exact font family names
-    'Satoshi': require('../assets/fonts/Satoshi-Regular.otf'),
-    'Satoshi-Light': require('../assets/fonts/Satoshi-Light.otf'),
-    'Satoshi-Medium': require('../assets/fonts/Satoshi-Medium.otf'),
-    'Satoshi-Bold': require('../assets/fonts/Satoshi-Bold.otf'),
+    // Inter font family - these are the main fonts for our app
+    // using Inter_18pt variants for optimal UI readability
+    'Inter': require('../assets/fonts/Inter_18pt-Regular.ttf'),
+    'Inter-Light': require('../assets/fonts/Inter_18pt-Light.ttf'),
+    'Inter-Medium': require('../assets/fonts/Inter_18pt-Medium.ttf'),
+    'Inter-SemiBold': require('../assets/fonts/Inter_18pt-SemiBold.ttf'),
+    'Inter-Bold': require('../assets/fonts/Inter_18pt-Bold.ttf'),
   });
 
   /**

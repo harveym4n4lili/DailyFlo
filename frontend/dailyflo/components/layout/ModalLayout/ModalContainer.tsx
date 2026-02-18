@@ -15,6 +15,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform, ViewStyle, TextStyl
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 export type ModalPresentationStyle = 'fullScreen' | 'pageSheet' | 'pageSheetWithHeight';
 
@@ -68,8 +69,8 @@ export function ModalContainer({
     position: 'absolute',
     top: insets.top + 8,
     left: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: Paddings.contextMenuHorizontal,
+    paddingVertical: Paddings.contextMenuVertical,
     borderRadius: 16,
     backgroundColor: colors.background.lightOverlay(),
     zIndex: 1000,
@@ -83,8 +84,8 @@ export function ModalContainer({
   const contentStyle: ViewStyle = {
     flex: 1,
     // apply padding unless noPadding prop is true or fullScreen style
-    paddingHorizontal: noPadding || isFullScreen ? 0 : 16,
-    paddingVertical: noPadding || isFullScreen ? 0 : 20,
+    paddingHorizontal: noPadding || isFullScreen ? Paddings.none : Paddings.card,
+    paddingVertical: noPadding || isFullScreen ? Paddings.none : Paddings.screenSmall,
   };
 
   return (

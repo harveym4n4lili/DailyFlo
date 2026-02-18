@@ -16,6 +16,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated } from 're
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { useFadeZoomAnimation } from '@/hooks';
 
 // animation configuration - adjust delay between sequential fade-ins (in milliseconds)
@@ -122,7 +123,7 @@ export function SocialAuthActions({
         }}
       >
         <TouchableOpacity
-          style={styles.socialButton}
+          style={[styles.socialButton, styles.socialButtonPadding]}
           onPress={() => handleSocialAuth('facebook')}
           activeOpacity={0.8}
           disabled={disabled}
@@ -141,7 +142,7 @@ export function SocialAuthActions({
         }}
       >
         <TouchableOpacity
-          style={styles.socialButton}
+          style={[styles.socialButton, styles.socialButtonPadding]}
           onPress={() => handleSocialAuth('google')}
           activeOpacity={0.8}
           disabled={disabled}
@@ -161,7 +162,7 @@ export function SocialAuthActions({
           }}
         >
           <TouchableOpacity
-            style={styles.socialButton}
+            style={[styles.socialButton, styles.socialButtonPadding]}
             onPress={() => handleSocialAuth('apple')}
             activeOpacity={0.8}
             disabled={disabled}
@@ -183,28 +184,31 @@ const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>
 ) => StyleSheet.create({
+  // --- LAYOUT STYLES ---
   socialButtons: {
     gap: 16, // spacing between social buttons
   },
   socialButton: {
-    // semi-transparent background for social buttons
     backgroundColor: themeColors.withOpacity(themeColors.text.primary(), 0.1),
-    borderRadius: 28, // rounded rectangular button
-    paddingVertical: 16, // vertical padding
-    paddingHorizontal: 24, // horizontal padding
-    flexDirection: 'row', // horizontal layout for icon and text
+    borderRadius: 28,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12, // spacing between icon and text
-    
-    minHeight: 56, // minimum touch target size
+    gap: 12,
+    minHeight: 56,
   },
+
+  // --- PADDING STYLES ---
+  socialButtonPadding: {
+    paddingVertical: Paddings.buttonVertical,
+    paddingHorizontal: Paddings.screen,
+  },
+
+  // --- TYPOGRAPHY STYLES ---
   socialButtonText: {
-    color: themeColors.text.primary(), // text color using theme color hook
-    // use typography system for fontFamily
     ...typography.getTextStyle('button-secondary'),
-    fontSize: 16, // override typography: standard social button text size
-    fontWeight: '500', // override typography: medium weight for social buttons
+    color: themeColors.text.primary(),
+    fontSize: 16,
   },
 });
 

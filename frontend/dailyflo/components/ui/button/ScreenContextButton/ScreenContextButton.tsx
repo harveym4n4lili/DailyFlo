@@ -19,6 +19,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import GlassView from 'expo-glass-effect/build/GlassView';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { Paddings } from '@/constants/Paddings';
 
 export interface ScreenContextButtonProps {
   /** callback when the button is pressed (e.g. toggle dropdown visibility) */
@@ -74,8 +75,8 @@ export function ScreenContextButton({
 
 const styles = StyleSheet.create({
   glassContainer: {
-    paddingVertical: 2,
-    paddingHorizontal: 12,
+    paddingVertical: Paddings.indicatorVertical,
+    paddingHorizontal: Paddings.contextMenuHorizontal,
     borderRadius: 20,
     backgroundColor: 'transparent',
     overflow: 'visible',

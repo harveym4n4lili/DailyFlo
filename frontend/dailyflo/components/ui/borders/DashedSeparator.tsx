@@ -51,8 +51,8 @@ export default function DashedSeparator({
   // pattern: 8px dash + 4px gap = 12px per dash segment
   const screenWidth = Dimensions.get('window').width;
   const availableWidth = screenWidth - paddingLeft - paddingRight;
-  const dashWidth = 8;
-  const gapWidth = 4;
+  const dashWidth = 4;
+  const gapWidth = 2;
   const segmentWidth = dashWidth + gapWidth;
   // calculate dash count to cover available width exactly (no extra dashes)
   const dashCount = Math.floor(availableWidth / segmentWidth);
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     flexWrap: 'nowrap', // prevent wrapping
   },
   dash: {
-    width: 8, // dash width
+    width: 4, // dash width
     height: 1, // dash height (1px line)
     marginRight: 4, // gap between dashes
   },
