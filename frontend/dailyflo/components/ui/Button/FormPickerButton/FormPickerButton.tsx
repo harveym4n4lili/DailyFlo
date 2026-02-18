@@ -25,10 +25,16 @@
  */
 
 import React from 'react';
-import { TouchableOpacity, Text, Animated, View } from 'react-native';
+import { TouchableOpacity, Pressable, Text, Animated, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
+
+// EXPO GLASS EFFECT IMPORTS
+// GlassView: native iOS liquid glass surface used for selected picker states.
+// We don't call isGlassEffectAPIAvailable here; GlassView will safely no-op on
+// unsupported platforms, we just gate on Platform.OS === 'ios'.
+import GlassView from 'expo-glass-effect/build/GlassView';
 
 /**
  * Props for FormPickerButton component
@@ -118,6 +124,12 @@ export interface FormPickerButtonProps {
    * Allows for custom styling and content (like color palette icon)
    */
   rightContainer?: React.ReactNode;
+
+  /**
+   * Custom icon element to render instead of Ionicons (e.g. ClockIcon).
+   * When provided, this is shown in place of the icon-name-based Ionicons icon.
+   */
+  customIcon?: React.ReactNode;
 }
 
 /**
@@ -139,6 +151,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   overlayIcon,
   forceSelected = false,
   rightContainer,
+  customIcon,
 }) => {
   // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
@@ -153,6 +166,16 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   // determine if button has a value set (affects styling and animation)
   // use forceSelected to override the hasValue logic for cases like icon picker
   const hasValue = forceSelected || !!finalDisplayText;
+
+  // determine if we should render any text label next to the icon
+  // this drives spacing between icon and text so it's consistent in all cases
+  // - show text when: not forceSelected AND (we have a selected value OR a default/base label)
+  // - hide text for forceSelected icon-only pills
+  const shouldShowText = !forceSelected && ((hasValue && finalDisplayText) || defaultText);
+
+  // check if liquid glass API is available at runtime (prevents crashes on unsupported iOS versions)
+  // on iOS we wrap the selected state in GlassView; expo-glass-effect safely falls back elsewhere
+  const glassAvailable = Platform.OS === 'ios';
   
   // create animated container - always use View (not Fragment) so we can apply styles
   // use Animated.View when highlightOpacity is provided, regular View otherwise
@@ -166,9 +189,12 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   // the highlight is a separate overlay that fades in/out smoothly
   const animatedStyle = (highlightOpacity && hasValue) ? {
     backgroundColor: 'transparent', // static background color
-    borderRadius: 20,
+    borderRadius: 16,
+    // lock in a consistent pill height for all picker buttons with values
+    minHeight: 32,
     paddingVertical: 0, // Icons have their own padding container
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
+    // border removed - no border on picker buttons
     borderWidth: 1,
     borderColor: themeColors.border.primary(),
     alignSelf: 'flex-start' as const,
@@ -179,11 +205,14 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   // static styles when no animation is needed or no value is set
   const staticStyle = !highlightOpacity || !hasValue ? {
     backgroundColor: 'transparent',
-    borderRadius: hasValue ? 20 : 0,
-    paddingVertical: hasValue ? 0 : 8, // Default state has vertical padding, selected state has no vertical padding
-    paddingHorizontal: hasValue ? 12 : 0, // Default state has no horizontal padding, selected state has horizontal padding
-    borderWidth: hasValue ? 1 : 0,
-    borderColor: hasValue ? themeColors.border.primary() : 'transparent',
+    borderRadius: hasValue ? 16 : 0,
+    // ensure buttons without values use the same base height
+    // so the date picker doesn't appear taller than its siblings
+    minHeight: 32,
+  
+    // border removed - no border on picker buttons
+    borderWidth: 1,
+    borderColor: 'transparent',
     alignSelf: 'flex-start' as const,
     ...containerStyle,
   } : {};
@@ -194,7 +223,15 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
     onPress();
   };
 
-  return (
+  // choose inner button component:
+  // - when using GlassView (hasValue + glassAvailable) we prefer Pressable for better
+  //   interaction feedback inside the glass surface
+  // - otherwise we keep using TouchableOpacity (to preserve existing behavior)
+  const InnerButton = hasValue && glassAvailable ? Pressable : TouchableOpacity;
+
+  // core button content (icon + text + overlays)
+  // wrapped in AnimatedContainer so we can reuse it inside or outside GlassView
+  const content = (
     <AnimatedContainer style={highlightOpacity ? animatedStyle : staticStyle}>
       {/* highlight overlay - only shown when button has value and highlightOpacity is provided */}
       {/* uses opacity animation which can use native driver for smooth performance */}
@@ -209,7 +246,8 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
             bottom: 0,
             backgroundColor: themeColors.background.quaternary(),
             opacity: highlightOpacity,
-            borderRadius: 20,
+         
+            
           }}
           pointerEvents="none" // don't intercept touches
         />
@@ -218,45 +256,72 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
       {/* touchable inner content with icon and text */}
       {/* uses TouchableOpacity to prevent keyboard dismissal (same as SubtaskSection) */}
       {/* flow: user taps button → onPress callback → picker modal opens → keyboard stays open */}
-      <TouchableOpacity
+      <InnerButton
         onPress={handlePress}
         disabled={disabled}
-        activeOpacity={0.7}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: hasValue && finalDisplayText ? 8 : 0,
+          // keep a consistent fixed gap between icon and text whenever text is shown
+          // when there is no text (icon-only pill), gap is 0
+          gap: shouldShowText ? 4 : 0,
+          // when there is no value, add a subtle border so the pill is still clearly visible
+          // when there is a value, keep the existing styling (no extra border here)
+          borderWidth: hasValue ? 0 : 1,
+          borderColor: hasValue ? 'transparent' : themeColors.border.primary(),
+          borderRadius: hasValue ? 0 : 16,
+          // uniform vertical padding so icon-only and text pills have identical height
+          paddingVertical: 8,
+          paddingHorizontal: hasValue ? 0 : 10,
+          // add right-side padding so text does not touch the pill border **only**
+          // when there is no value (when InnerButton owns the border).
+          // when there IS a value, the outer animated container already supplies horizontal padding,
+          // so we set this back to 0 to avoid "extra" right padding on selected pills.
+        
           // reduce opacity when disabled for visual feedback
           opacity: disabled ? 0.5 : 1,
           // ensure content is above highlight overlay
           zIndex: 1,
-        }}
-      >
-        {/* icon on the left */}
-        <View style={{
-          paddingVertical: 8, // Always add vertical padding for consistent icon spacing
-          alignItems: 'center',
-          justifyContent: 'center',
         }}>
+        {/* icon on the left - customIcon (e.g. ClockIcon) or Ionicons by name */}
+        <View
+          style={{
+            // no extra vertical padding here; we center the whole row via InnerButton
+            alignItems: 'center',
+            justifyContent: 'center',
+            // add consistent horizontal padding around the icon so the visual
+            // space between the icon and the text is the same for ALL picker buttons
+            // regardless of whether they currently have a value or not
+            marginRight: 2,
+          }}
+        >
           {hasValue ? (
-            <Ionicons
-              name={icon as any}
-              size={24}
-              color={finalIconColor}
-            />
-          ) : (
-            <Animated.View style={{
-              opacity: highlightOpacity ? highlightOpacity.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 0.6],
-              }) : 1,
-            }}>
+            customIcon ?? (
               <Ionicons
                 name={icon as any}
-                size={24}
+                size={18}
                 color={finalIconColor}
               />
+            )
+          ) : (
+            <Animated.View
+              style={{
+                opacity: highlightOpacity
+                  ? highlightOpacity.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 0.6],
+                    })
+                  : 1,
+              }}
+            >
+              {customIcon ?? (
+                <Ionicons
+                  name={icon as any}
+                  size={18}
+                  color={finalIconColor}
+                />
+              )}
             </Animated.View>
           )}
         </View>
@@ -272,21 +337,35 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
           </View>
         ) : null}
         
-        {/* label text on the right - only render if there's text to display and has value */}
-        {/* For forceSelected buttons, don't show text even if hasValue is true */}
-        {hasValue && finalDisplayText && !forceSelected ? (
-          <Text
-            style={{
-              ...getTextStyle('body-large'),
-              color: finalTextColor,
-              textAlignVertical: 'center',
-              includeFontPadding: false,
-            }}
-          >
-            {finalDisplayText}
-          </Text>
-        ) : null}
-      </TouchableOpacity>
+        {/* label text on the right - show selected text when there is a value, otherwise show base/default text */}
+        {/* for example: time button can pass "Time" and reminders button can pass "Reminders" as defaultText */}
+        {/* for forceSelected buttons, don't show any text even if there is a value */}
+        {shouldShowText && (
+          hasValue && finalDisplayText ? (
+            <Text
+              style={{
+                ...getTextStyle('body-large'),
+                fontWeight: '900',
+                color: finalTextColor,
+                includeFontPadding: false,
+              }}
+            >
+              {finalDisplayText}
+            </Text>
+          ) : defaultText ? (
+            <Text
+              style={{
+                ...getTextStyle('body-large'),
+                fontWeight: '900',
+                color: finalTextColor,
+                includeFontPadding: false,
+              }}
+            >
+              {defaultText}
+            </Text>
+          ) : null
+        )}
+      </InnerButton>
       
       {/* overlay icon - only render if provided */}
       {overlayIcon ? (
@@ -306,13 +385,46 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
         >
           <Ionicons
             name={overlayIcon as any}
-            size={12}
+            size={18}
             color="white" // white color as requested
           />
         </View>
       ) : null}
     </AnimatedContainer>
   );
+
+  // when liquid glass is available on iOS, always wrap the picker button in a GlassView
+  // so both "no value" and "has value" states share the same glass surface styling.
+  // flow: glassAvailable → GlassView → AnimatedContainer → InnerButton
+  if (glassAvailable) {
+    return (
+      <GlassView
+        style={{
+          borderRadius: 16,
+          // keep background transparent so we rely on the system glass effect only
+          backgroundColor: 'transparent',
+          // add a subtle border only when we actually have a value selected
+          // this mirrors the close button's glass border but keeps "no value" state lighter
+          borderWidth: hasValue ? 0 : 0,
+          borderColor: hasValue ? themeColors.border.primary() : 'transparent',
+          // allow the glass effect to expand beyond the container bounds
+          // this prevents clipping of the liquid glass highlight animation
+          overflow: 'visible',
+        }}
+        glassEffectStyle="clear"
+        // mark as interactive so touches pass correctly through the glass view
+        isInteractive
+        // tintColor uses the same background quaternary color as other glass elements
+        tintColor={themeColors.background.primarySecondaryBlend() as any}
+      >
+        {content}
+      </GlassView>
+    );
+  }
+
+  // fallback for Android/web or when no glass is available:
+  // return the regular animated button without any glass wrapper
+  return content;
 };
 
 export default FormPickerButton;

@@ -1,25 +1,16 @@
 /**
  * CreateSubtaskButton Component
- * 
+ *
  * A reusable button component for creating subtasks.
- * Uses GroupedListButton for consistent styling with other sections.
- * 
- * Features:
- * - GroupedListButton with plus icon on the left
- * - "Create Subtask" label
- * - Callback for handling subtask creation
+ * Uses FormDetailButton with clock icon (18px) and "Add subtask" label; icon and text use tertiary color.
  */
 
-// REACT IMPORTS
 import React from 'react';
-
-// UI COMPONENTS IMPORTS
-// GroupedListButton: button-style item for GroupedList
-import { GroupedListButton } from '@/components/ui/List/GroupedList';
-
-// CUSTOM HOOKS IMPORTS
-// useThemeColors: hook for accessing theme-aware colors
+import { FormDetailButton } from '@/components/ui/list/GroupedList';
+import { ClockIcon } from '@/components/ui/icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
+
+const ADD_SUBTASK_ICON_SIZE = 18;
 
 /**
  * Props interface for CreateSubtaskButton component
@@ -30,27 +21,20 @@ export interface CreateSubtaskButtonProps {
    * This is where the parent component handles creating a new subtask
    */
   onPress?: () => void;
-  
+
   /**
    * Whether the button is disabled
    */
   disabled?: boolean;
 }
 
-/**
- * CreateSubtaskButton Component
- * 
- * Renders a GroupedListButton for creating subtasks.
- * The button displays a plus icon on the left and "Create Subtask" label.
- */
 export const CreateSubtaskButton: React.FC<CreateSubtaskButtonProps> = ({
   onPress,
   disabled = false,
 }) => {
-  // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
+  const tertiaryColor = themeColors.text.tertiary();
 
-  // handle button press - call parent callback
   const handlePress = () => {
     if (!disabled && onPress) {
       onPress();
@@ -58,27 +42,21 @@ export const CreateSubtaskButton: React.FC<CreateSubtaskButtonProps> = ({
   };
 
   return (
-    <GroupedListButton
-      icon="add" // full plus icon (not outlined)
-      label="Create Subtask"
-      value="" // empty value since this is an action button
+    <FormDetailButton
+      iconComponent={<ClockIcon size={ADD_SUBTASK_ICON_SIZE} color={tertiaryColor} />}
+      label="Add subtask"
+      value=""
       onPress={handlePress}
       disabled={disabled}
-      showChevron={false} // hide the right arrow icon
+      showChevron={false}
       customStyles={{
-        // container style - match padding of list section in elevated container
-        // list section uses padding: 16 (from firstSectionWrapper/listSection styles)
-        // GroupedListButton default is paddingVertical: 12, so we override to match
         container: {
-          paddingVertical: 16, // match list section vertical padding in elevated container
+          paddingVertical: 0,
+          paddingHorizontal: 0,
         },
-        // make text and icon a step lighter and set font weight to 700 (bold)
         label: {
-          color: themeColors.text.secondary(), // use secondary text color (one step lighter)
-          fontWeight: '700', // bold font weight for emphasis
-        },
-        icon: {
-          color: themeColors.text.secondary(), // use secondary text color for icon (one step lighter)
+          color: tertiaryColor,
+          fontWeight: '700',
         },
       }}
     />
@@ -86,4 +64,3 @@ export const CreateSubtaskButton: React.FC<CreateSubtaskButtonProps> = ({
 };
 
 export default CreateSubtaskButton;
-

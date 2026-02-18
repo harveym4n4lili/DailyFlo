@@ -6,11 +6,20 @@
  */
 
 // export button components
-export { FloatingActionButton } from './Button';
-export type { FloatingActionButtonProps } from './Button';
+export { FloatingActionButton } from './button';
+export type { FloatingActionButtonProps } from './button';
 
-export { FormPickerButton } from './Button';
-export type { FormPickerButtonProps } from './Button';
+export { FormPickerButton } from './button';
+export type { FormPickerButtonProps } from './button';
+
+export { TaskOptionButton } from './button';
+export type { TaskOptionButtonProps } from './button';
+
+export { ScreenContextButton } from './button';
+export type { ScreenContextButtonProps } from './button';
+
+export { ActionContextMenu } from './contextMenu';
+export type { ActionContextMenuProps, ActionContextMenuItem } from './contextMenu';
 
 // export FormPickerButton utilities
 export {
@@ -18,24 +27,48 @@ export {
   getTimeDurationPickerDisplay,
   getAlertsPickerDisplay,
   getRelativeDateMessage,
-} from './Button';
-export type { PickerButtonDisplay } from './Button';
+} from './button';
+export type { PickerButtonDisplay } from './button';
 
 // export task-related components
-export { TaskCard } from './Card';
-export type { TaskCardProps } from './Card';
+export { TaskCard } from './card';
+export type { TaskCardProps } from './card';
 
-export { ListCard } from './Card';
-export type {ListCardProps } from './Card';
+export { ListCard } from './card';
+export type {ListCardProps } from './card';
 
 // export text input components
-export { CustomTextInput } from './TextInput';
-export type { CustomTextInputProps } from './TextInput';
+export { CustomTextInput } from './textinput';
+export type { CustomTextInputProps } from './textinput';
 
 // export list components (includes DropdownList)
-export { DropdownList } from './List';
+export { DropdownList } from './list';
 export type { 
   DropdownListProps, 
   DropdownListItem, 
   DropdownListAnchorPosition 
-} from './List';
+} from './list';
+
+// export custom icon components (SVG-based; paste your SVG path d in each icon file)
+export {
+  AddIcon,
+  CloseIcon,
+  SaveIcon,
+  CalendarIcon,
+  ClockIcon,
+  BellIcon,
+  BrowseIcon,
+} from './icon';
+
+// export message components (dynamic today message, etc.)
+export { TaskSummary } from './message';
+export type { TaskSummaryProps } from './message';
+export type {
+  AddIconProps,
+  CloseIconProps,
+  SaveIconProps,
+  CalendarIconProps,
+  ClockIconProps,
+  BellIconProps,
+  BrowseIconProps,
+} from './icon';

@@ -12,10 +12,21 @@
 
 // REACT IMPORTS
 import React from 'react';
+import { View, Platform } from 'react-native';
 
 // UI COMPONENTS IMPORTS
 // GroupedList: flexible iOS-style grouped list component
-import { GroupedList } from '@/components/ui/List/GroupedList';
+import { GroupedList } from '@/components/ui/list/GroupedList';
+
+// EXPO GLASS EFFECT IMPORTS
+// glass view: native ios uivisualeffectview liquid glass surface for the subtask card.
+// We don't call isGlassEffectAPIAvailable here; GlassView will safely no-op on
+// unsupported platforms, we just gate on Platform.OS === 'ios'.
+import GlassView from 'expo-glass-effect/build/GlassView';
+
+// CUSTOM HOOKS IMPORTS
+// useThemeColors: hook for accessing theme-aware colors
+import { useThemeColors } from '@/hooks/useColorPalette';
 
 // SUBTASKS COMPONENTS IMPORTS
 // SubtaskListItem: component for displaying individual subtasks
@@ -78,6 +89,26 @@ export interface SubtaskListProps {
    * Whether the list is disabled
    */
   disabled?: boolean;
+
+  /**
+   * Optional background color for the grouped list item wrappers (passed to GroupedList)
+   */
+  backgroundColor?: string;
+
+  /**
+   * Optional border radius for the grouped list (defaults to 24 when not provided)
+   */
+  borderRadius?: number;
+
+  /**
+   * Optional border width for the grouped list item wrappers
+   */
+  borderWidth?: number;
+
+  /**
+   * Optional border color for the grouped list item wrappers
+   */
+  borderColor?: string;
 }
 
 /**
@@ -94,30 +125,89 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
   onFinishEditing,
   onCreateSubtask,
   disabled = false,
+  backgroundColor,
+  borderRadius = 24,
+  borderWidth,
+  borderColor,
 }) => {
+  // get theme-aware colors so the glass tint matches the rest of the ui
+  const themeColors = useThemeColors();
+
+  // helper to get ios major version so we only enable glass on ios 15+
+  const getIOSVersion = (): number => {
+    if (Platform.OS !== 'ios') return 0;
+    const version = Platform.Version as string;
+    // platform.version can be "15.0" (string) or 15 (number)
+    // here we always convert it to a whole number like 15, 16, 17
+    const majorVersion =
+      typeof version === 'string'
+        ? parseInt(version.split('.')[0], 10)
+        : Math.floor(version as number);
+    return majorVersion;
+  };
+
+  // true when we are on ios 15+ (newer glass ui)
+  const isNewerIOS = getIOSVersion() >= 15;
+
+  // check if liquid glass api is available at runtime (prevents crashes on some betas)
+  // on iOS we wrap the subtask group in GlassView; expo-glass-effect safely falls back elsewhere
+  const glassAvailable = Platform.OS === 'ios';
+
+  // shared grouped list content so we can render it inside or outside glass
+  // pass through list styling props from parent (e.g. TaskCreationContent)
+  // subtask items only inside the list (with background); create button below with no background and no inner padding
+  const listContent = (
+    <>
+      <GroupedList
+        borderRadius={borderRadius}
+        backgroundColor={backgroundColor}
+        borderWidth={borderWidth}
+        borderColor={borderColor}
+      >
+        {subtasks.map((subtask) => (
+          <SubtaskListItem
+            key={subtask.id}
+            id={subtask.id}
+            title={subtask.title}
+            isCompleted={subtask.isCompleted}
+            isEditing={subtask.isEditing}
+            onPress={() => onToggle(subtask.id)}
+            onDelete={() => onDelete(subtask.id)}
+            onTitleChange={(newTitle) => onTitleChange(subtask.id, newTitle)}
+            onFinishEditing={() => onFinishEditing(subtask.id)}
+            disabled={disabled}
+          />
+        ))}
+      </GroupedList>
+      <View style={{ marginTop: 8 }}>
+        <CreateSubtaskButton onPress={onCreateSubtask} disabled={disabled} />
+      </View>
+    </>
+  );
+
+  // when glass is available on newer ios we wrap the entire grouped list
+  // inside a glassview so the subtasks feel like a single glass card
+  if (isNewerIOS && glassAvailable) {
+    return (
+      <GlassView
+        // use same border radius as grouped list so glass card matches
+        style={{
+          borderRadius,
+          overflow: 'hidden',
+        }}
+        // use "clear" for a subtle glass effect for now
+        glassEffectStyle="regular"
+        tintColor={themeColors.background.primarySecondaryBlend() as any}
+        isInteractive
+      >
+        {listContent}
+      </GlassView>
+    );
+  }
+
   return (
-    <GroupedList borderRadius={24}>
-      {/* render all subtasks */}
-      {/* map through subtasks array and create a SubtaskListItem for each one */}
-      {subtasks.map((subtask) => (
-        <SubtaskListItem
-          key={subtask.id}
-          id={subtask.id}
-          title={subtask.title}
-          isCompleted={subtask.isCompleted}
-          isEditing={subtask.isEditing}
-          onPress={() => onToggle(subtask.id)}
-          onDelete={() => onDelete(subtask.id)}
-          onTitleChange={(newTitle) => onTitleChange(subtask.id, newTitle)}
-          onFinishEditing={() => onFinishEditing(subtask.id)}
-          disabled={disabled}
-        />
-      ))}
-      
-      {/* create subtask button - always at the bottom */}
-      {/* this button allows users to add new subtasks to the list */}
-      <CreateSubtaskButton onPress={onCreateSubtask} disabled={disabled} />
-    </GroupedList>
+    // fallback for android, web, and older ios: plain groupedlist as before
+    listContent
   );
 };
 

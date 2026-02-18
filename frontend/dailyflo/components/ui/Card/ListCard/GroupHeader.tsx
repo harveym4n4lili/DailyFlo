@@ -54,52 +54,49 @@ export default function GroupHeader({
   const styles = createStyles(themeColors, semanticColors, typography);
 
   return (
-    <TouchableOpacity
-      style={styles.groupHeader}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      {/* left side: title/count and optional secondary action (e.g. Reschedule) */}
-      <View style={styles.leftContainer}>
-        {/* group title and count container */}
+    <View style={styles.groupHeader}>
+      {/* title/count - tappable to toggle expand/collapse */}
+      <TouchableOpacity
+        style={styles.leftContainer}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
         <View style={styles.groupTitleContainer}>
           <Text style={styles.groupTitle}>{title}</Text>
-          {/* show count only when group is collapsed */}
           {isCollapsed && <Text style={styles.groupCount}>({count})</Text>}
         </View>
+      </TouchableOpacity>
 
-        {/* optional secondary action label shown before the dropdown arrow */}
-        {showSecondaryAction && onSecondaryActionPress && (
-          <TouchableOpacity
-            onPress={(event) => {
-              // prevent this tap from also toggling the group collapse state
-              event.stopPropagation();
-              onSecondaryActionPress();
-            }}
-            activeOpacity={0.7}
-            style={styles.secondaryActionButton}
-          >
-            <Text style={styles.secondaryActionText}>Reschedule</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      {/* Reschedule button - separate touchable so tap doesn't trigger group toggle */}
+      {showSecondaryAction && onSecondaryActionPress && (
+        <TouchableOpacity
+          onPress={onSecondaryActionPress}
+          activeOpacity={0.7}
+          style={styles.secondaryActionButton}
+        >
+          <Text style={styles.secondaryActionText}>Reschedule</Text>
+        </TouchableOpacity>
+      )}
 
-      {/* dropdown arrow icon with smooth rotation animation - positioned on the right */}
-      <Animated.View
-        style={[
-          styles.animatedArrowContainer,
-          {
-            transform: [{ rotate: arrowRotation }], // apply rotation animation transform
-          },
-        ]}
+      {/* dropdown arrow - tappable to toggle */}
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.7}
+        style={styles.animatedArrowContainer}
       >
-        <Ionicons
-          name="chevron-down" // always use chevron-down icon since we handle rotation with animation
-          size={16}
-          color={themeColors.text.tertiary()}
-        />
-      </Animated.View>
-    </TouchableOpacity>
+        <Animated.View
+          style={{
+            transform: [{ rotate: arrowRotation }],
+          }}
+        >
+          <Ionicons
+            name="chevron-down"
+            size={16}
+            color={themeColors.text.tertiary()}
+          />
+        </Animated.View>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -115,7 +112,7 @@ const createStyles = (
       flexDirection: 'row', // horizontal layout
       alignItems: 'center', // center align
       justifyContent: 'space-between', // space between title/count and arrow
-      marginBottom: 12, // space between header and tasks
+      marginBottom: 0, // space between header and tasks
       paddingHorizontal: 4, // slight padding for alignment
       paddingVertical: 8, // add vertical padding for better touch target
     },
@@ -155,12 +152,12 @@ const createStyles = (
     },
 
     // secondary action button styling (e.g. "Reschedule")
-    // no background - transparent container for text-only button
+    // separate touchable so tap doesn't trigger parent - positioned between title and arrow
     secondaryActionButton: {
       marginLeft: 8,
+      marginRight: 4,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      // no backgroundColor - transparent background
     },
 
     // secondary action text styling
@@ -171,11 +168,11 @@ const createStyles = (
       fontWeight: '700', // heavier weight (was '600', now '700' for more emphasis)
     },
 
-    // animated arrow container for smooth rotation animations
+    // animated arrow container - touchable for toggle, centers the chevron icon
     animatedArrowContainer: {
-      marginLeft: 8, // space between count and arrow
-      justifyContent: 'center', // center the arrow icon
-      alignItems: 'center', // center the arrow icon
+      marginLeft: 4,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
   });
 

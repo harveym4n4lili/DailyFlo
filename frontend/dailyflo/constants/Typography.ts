@@ -65,21 +65,27 @@ export const FontWeight = {
  */
 export const TextStyles = {
   // heading styles - for titles and section headers
+  'large-heading-1': {
+    fontSize: 48,        // extra large for date/number display
+    // tight line height
+    fontWeight: FontWeight.bold,
+    fontFamily: 'Satoshi-Bold',
+  },
   'heading-1': {
-    fontSize: 36,        // large title size
-    lineHeight: 40,      // tight line height for headings
+    fontSize: 40,        // large title size
+      // tight line height for headings
     fontWeight: FontWeight.bold,  // bold weight for emphasis
     fontFamily: 'Satoshi-Bold',  // specific font family for react native
   },
   'heading-2': {
     fontSize: 26,        // medium title size
-    lineHeight: 32,      // slightly tighter than body text
-    fontWeight: FontWeight.bold,  // bold weight for emphasis
+    lineHeight: 34,      // slightly tighter than body text
+    fontWeight: FontWeight.semibold,  // bold weight for emphasis
     fontFamily: 'Satoshi-Bold',  // specific font family for react native
   },
   'heading-3': {
-    fontSize: 20,        // small title size
-    lineHeight: 22,      // comfortable line height
+    fontSize: 22,        // small title size
+    lineHeight: 27,      // comfortable line height
     fontWeight: FontWeight.bold,  // bold for medium emphasis
     fontFamily: 'Satoshi-Bold',  // specific font family for react native
   },

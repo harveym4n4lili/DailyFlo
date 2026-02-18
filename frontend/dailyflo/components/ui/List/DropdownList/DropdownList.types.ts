@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 /**
  * DropdownList Types
  * 
@@ -19,8 +21,12 @@ export interface DropdownListItem {
   label: string;
   
   // optional icon name from Ionicons (e.g., "checkmark-circle-outline", "trash-outline")
-  // if not provided, no icon will be shown
+  // if iconComponent is provided, it takes precedence over icon
   icon?: string;
+  
+  // optional custom icon - render function receives color for theme-aware icons (e.g. TrashIcon)
+  // takes precedence over icon when provided
+  iconComponent?: (color: string) => ReactNode;
   
   // callback function called when this menu item is pressed
   // this allows the parent component to handle the action

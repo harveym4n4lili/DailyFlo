@@ -25,21 +25,80 @@ export interface GroupedListProps {
   // custom separator color (defaults to theme border color)
   separatorColor?: string;
   
+  // left inset for separator line in pt (default 0 = align to left edge)
+  separatorInsetLeft?: number;
+  // right inset for separator line in pt (default 0 = align to right edge)
+  separatorInsetRight?: number;
+  
   // custom border radius for first/last items (defaults to 12)
   borderRadius?: number;
+  
+  // optional background color for all list item wrappers (defaults to theme elevated)
+  backgroundColor?: string;
+  
+  // optional border width for list item wrappers (no border when undefined)
+  borderWidth?: number;
+  
+  // optional border color for list item wrappers (defaults to theme border when borderWidth is set)
+  borderColor?: string;
+
+  // content padding and min height applied by each item wrapper (defaults match iOS Settings row)
+  contentPaddingHorizontal?: number;
+  contentPaddingVertical?: number;
+  contentMinHeight?: number;
+
+  /**
+   * Visual style for the list.
+   * - roundedStyle: background color, border radius, inset separators (current iOS Settings look)
+   * - lineStyle: no background, full-length top and bottom borders on each item
+   */
+  listStyle?: 'roundedStyle' | 'lineStyle';
+
+  /**
+   * When true, removes content padding (h and v), background, and border radius from item wrappers.
+   * Useful for embedded lists (e.g. subtask list) that should be visually minimal.
+   */
+  minimalStyle?: boolean;
+
+  /**
+   * When true, separator lines span the full width (no left/right inset).
+   * Equivalent to separatorInsetLeft={0} and separatorInsetRight={0}.
+   */
+  fullWidthSeparators?: boolean;
+
+  /**
+   * Vertical padding applied to each item wrapper (paddingTop and paddingBottom).
+   * This is separate from contentPaddingVertical which controls padding inside the wrapper.
+   * Useful for adding spacing around the entire wrapper (default: undefined, no wrapper padding).
+   */
+  itemWrapperPaddingVertical?: number;
+
+  /**
+   * When true, separators will automatically calculate left inset to align with content (skipping icon column).
+   * Requires iconColumnWidth to be provided for accurate calculation.
+   * When enabled, separatorInsetLeft is overridden with calculated value (iconColumnWidth).
+   */
+  separatorConsiderIconColumn?: boolean;
+
+  /**
+   * Width of the icon column (icon size + gap) used for calculating separator inset.
+   * Only used when separatorConsiderIconColumn is true.
+   * Default: 32 (18px icon + 12px gap for FormDetailButton, or 18px icon + 8px gap + some padding for Description)
+   */
+  iconColumnWidth?: number;
 }
 
 /**
- * Props for GroupedListButton component
- * 
- * Button-style item for settings pages and similar use cases.
- * This is the extracted button-style functionality from the original GroupedListItem.
+ * Props for FormDetailButton component
+ *
+ * Button-style item for task forms (Date, Time, Alerts pickers, etc.).
  */
-export interface GroupedListButtonProps {
-  // icon name from Ionicons library (e.g., 'calendar-outline')
-  // optional - if not provided, no icon will be shown
+export interface FormDetailButtonProps {
+  // icon name from Ionicons library (e.g., 'calendar-outline'); ignored when iconComponent is set
   icon?: keyof typeof Ionicons.glyphMap;
-  
+  // custom icon element (e.g. your own SVG icon); when set, used instead of icon
+  iconComponent?: React.ReactNode;
+
   // main label text displayed on the left (e.g., 'Date Picker')
   label: string;
   
@@ -82,7 +141,7 @@ export interface GroupedListButtonProps {
 /**
  * Configuration for a single item in the grouped list (DEPRECATED)
  * 
- * @deprecated Use GroupedListButton component instead, or pass custom ReactNode children to GroupedList
+ * @deprecated Use FormDetailButton component instead, or pass custom ReactNode children to GroupedList
  * This type is kept for backward compatibility but is no longer used by GroupedList.
  */
 export interface GroupedListItemConfig {
@@ -130,7 +189,7 @@ export interface GroupedListItemConfig {
 /**
  * Props for the individual GroupedListItem component (DEPRECATED)
  * 
- * @deprecated This component is no longer used. Use GroupedListButton wrapped in GroupedList instead.
+ * @deprecated This component is no longer used. Use FormDetailButton wrapped in GroupedList instead.
  * This type is kept for backward compatibility.
  */
 export interface GroupedListItemProps {

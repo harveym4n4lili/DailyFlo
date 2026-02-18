@@ -184,20 +184,22 @@ export default function DropdownList({
         activeOpacity={0.7}
         disabled={item.disabled}
       >
+        {/* optional icon on the left side - use custom iconComponent or Ionicons */}
+        {(item.iconComponent || item.icon) && (
+          <View style={styles.menuItemIcon}>
+            {item.iconComponent ? item.iconComponent(iconColor) : (
+              <Ionicons
+                name={item.icon as any}
+                size={20}
+                color={iconColor}
+              />
+            )}
+          </View>
+        )}
         {/* menu item label text */}
         <Text style={[styles.menuItemText, { color: textColor }]}>
           {item.label}
         </Text>
-
-        {/* optional icon on the right side of the item */}
-        {item.icon && (
-          <Ionicons
-            name={item.icon as any}
-            size={20}
-            color={iconColor}
-            style={styles.menuItemIcon}
-          />
-        )}
       </TouchableOpacity>
     );
   };
@@ -218,7 +220,6 @@ export default function DropdownList({
       >
         {/* dropdown list container with rounded corners */}
         <View style={styles.listContainer}>
-          {/* render each menu item */}
           {items.map(renderMenuItem)}
         </View>
       </TouchableOpacity>
@@ -258,27 +259,23 @@ const createStyles = (
     },
 
     // individual menu item styling
-    // each item is a horizontal row with label and optional icon
+    // each item is a horizontal row with optional icon and label
     menuItem: {
-      flexDirection: 'row', // horizontal layout for label and icon
+      flexDirection: 'row', // horizontal layout for icon and label
       alignItems: 'center', // center align vertically
-      justifyContent: 'space-between', // space between label and icon
       paddingHorizontal: 16, // horizontal padding inside each item
       paddingVertical: 12, // vertical padding inside each item
     },
 
-    // menu item text styling
-    // using typography system for consistent text styling
+    // menu item text styling - body-large (16px, regular, satoshi)
     menuItemText: {
-      // use the body-large text style from typography system (14px, regular, satoshi font)
       ...typography.getTextStyle('body-large'),
-      fontWeight: '500', // medium weight for better readability
     },
 
     // menu item icon styling
-    // icon appears on the right side of each menu item
+    // icon appears on the left side of each menu item
     menuItemIcon: {
-      marginLeft: 8, // space between label and icon
+      marginRight: 8, // space between icon and label
     },
   });
 

@@ -1,16 +1,19 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
 // import our custom layout components
 import { ScreenContainer } from '@/components';
-import { FloatingActionButton } from '@/components/ui/Button';
+import { FloatingActionButton } from '@/components/ui/button';
+import { ActionContextMenu } from '@/components/ui';
+import { ClockIcon } from '@/components/ui/icon';
 import { ModalBackdrop } from '@/components/layout/ModalLayout';
 import { CalendarNavigationModal } from '@/components/features/calendar/modals';
 import { WeekView } from '@/components/features/calendar/sections';
-import { ListCard } from '@/components/ui/Card';
-import { TaskViewModal, TaskCreationModal } from '@/components/features/tasks';
+import { ListCard } from '@/components/ui/card';
 import { TimelineView } from '@/components/features/timeline';
 
 // import color palette system for consistent theming
@@ -23,12 +26,18 @@ import { useTypography } from '@/hooks/useTypography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // redux store hooks for task management
-import { useTasks } from '@/store/hooks';
+import { useTasks, useUI } from '@/store/hooks';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
 
 // types for tasks
 import { Task, TaskColor } from '@/types';
+import {
+  expandTasksForDates,
+  isExpandedRecurrenceId,
+  getBaseTaskId,
+  getOccurrenceDateFromId,
+} from '@/utils/recurrenceUtils';
 
 export default function PlannerScreen() {
   // CALENDAR MODAL STATE - Controls the visibility of the calendar modal
@@ -41,13 +50,10 @@ export default function PlannerScreen() {
   });
   
   // TASK DETAIL MODAL STATE - Controls the visibility of task detail modal
-  const [isTaskDetailModalVisible, setIsTaskDetailModalVisible] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [selectedTaskColor, setSelectedTaskColor] = useState<TaskColor>('blue');
   
-  // TASK CREATION MODAL STATE - Controls the visibility of task creation modal
-  const [isCreateTaskModalVisible, setIsCreateTaskModalVisible] = useState(false);
-  
+  // router: open task Stack screen from FAB (with optional dueDate from selected date)
+  const router = useRouter();
+
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
   
@@ -60,6 +66,7 @@ export default function PlannerScreen() {
   // REDUX STORE - Accessing task state from Redux store
   const dispatch = useAppDispatch();
   const { tasks, isLoading } = useTasks();
+  const { enterSelectionMode } = useUI();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   
   // calculate border radius based on iOS version to match modal styling
@@ -96,21 +103,11 @@ export default function PlannerScreen() {
     setSelectedDate(date);
   };
   
-  // filter tasks for the selected date
-  // useMemo ensures this calculation only runs when tasks or selectedDate changes
+  // expand tasks for selected date: one-off + recurring occurrences that fall on selectedDate
   const selectedDateTasks = useMemo(() => {
     if (!selectedDate) return [];
-    
-    // convert selected date to date string for comparison (YYYY-MM-DD format)
-    const selectedDateObj = new Date(selectedDate);
-    const selectedDateString = selectedDateObj.toDateString(); // "Mon Jan 15 2024" format
-    
-    // filter tasks that match the selected date
-    return tasks.filter(task => {
-      if (!task.dueDate) return false;
-      const taskDate = new Date(task.dueDate);
-      return taskDate.toDateString() === selectedDateString;
-    });
+    const selectedDateStr = new Date(selectedDate).toISOString().slice(0, 10);
+    return expandTasksForDates(tasks, [selectedDateStr]);
   }, [tasks, selectedDate]);
   
   // fetch tasks when component mounts or when authentication state changes
@@ -121,74 +118,63 @@ export default function PlannerScreen() {
   }, [isAuthenticated, dispatch]);
   
   // TASK HANDLERS - Functions to handle task interactions
-  // handle when user taps on a task card to view details
+  // handle when user taps on a task card - opens task screen in edit mode
+  // for recurring occurrences, pass occurrenceDate so save can offer "this instance" vs "all"
   const handleTaskPress = (task: Task) => {
-    // provide medium haptic feedback when opening task detail 
-    
-    setSelectedTask(task);
-    setSelectedTaskColor(task.color || 'blue');
-    setIsTaskDetailModalVisible(true);
-  };
-  
-  // handle closing the task detail modal
-  const handleTaskDetailModalClose = () => {
-    setIsTaskDetailModalVisible(false);
-    // delay clearing selected task to allow modal close animation
-    setTimeout(() => {
-      setSelectedTask(null);
-    }, 300);
+    const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+    const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
+    router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
   // handle marking a task as complete/uncomplete
-  // when completing a task, also completes all its subtasks
-  // when uncompleting a task, also uncompletes all its subtasks
+  // for recurring occurrences (expanded id), update metadata.recurrence_completions on base task
   const handleTaskComplete = async (task: Task) => {
     try {
-      const newCompletionStatus = !task.isCompleted;
-      
-      // prepare updates object
-      const updates: any = {
-        id: task.id,
-        isCompleted: newCompletionStatus,
-      };
-      
-      // if task has subtasks, update all subtasks to match the task's completion status
-      if (task.metadata?.subtasks && task.metadata.subtasks.length > 0) {
-        // create updated subtasks array with all subtasks matching the task's completion status
-        const updatedSubtasks = task.metadata.subtasks.map(subtask => ({
-          ...subtask,
-          isCompleted: newCompletionStatus, // match the task's new completion status
-        }));
-        
-        // include updated subtasks in metadata
-        updates.metadata = {
-          ...task.metadata,
-          subtasks: updatedSubtasks,
-        };
+      if (isExpandedRecurrenceId(task.id)) {
+        const baseId = getBaseTaskId(task.id);
+        const occurrenceDate = getOccurrenceDateFromId(task.id);
+        if (!occurrenceDate) return;
+        const baseTask = tasks.find((t) => t.id === baseId);
+        if (!baseTask) return;
+        const completions = baseTask.metadata?.recurrence_completions ?? [];
+        const newCompletions = task.isCompleted
+          ? completions.filter((d) => d !== occurrenceDate)
+          : [...completions, occurrenceDate];
+        await dispatch(updateTask({
+          id: baseId,
+          updates: {
+            id: baseId,
+            metadata: { ...baseTask.metadata, recurrence_completions: newCompletions },
+          },
+        })).unwrap();
+      } else {
+        const newCompletionStatus = !task.isCompleted;
+        const updates: any = { id: task.id, isCompleted: newCompletionStatus };
+        if (task.metadata?.subtasks?.length) {
+          updates.metadata = {
+            ...task.metadata,
+            subtasks: task.metadata.subtasks.map((s) => ({ ...s, isCompleted: newCompletionStatus })),
+          };
+        }
+        await dispatch(updateTask({ id: task.id, updates })).unwrap();
       }
-      
-      // dispatch updateTask action to Redux store
-      // this will trigger the async thunk that updates the task via API
-      await dispatch(updateTask({ 
-        id: task.id, 
-        updates 
-      })).unwrap();
     } catch (error) {
       console.error('Failed to update task:', error);
     }
   };
   
-  // handle editing a task (opens task detail modal)
+  // handle editing a task - opens task screen in edit mode (same as task press)
   const handleTaskEdit = (task: Task) => {
-    setSelectedTask(task);
-    setSelectedTaskColor(task.color || 'blue');
-    setIsTaskDetailModalVisible(true);
+    const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+    const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
+    router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
-  // handle deleting a task
+  // handle deleting a task (for expanded recurring, delete base task)
   const handleTaskDelete = async (task: Task) => {
+    const taskId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     try {
-      await dispatch(deleteTask(task.id)).unwrap();
+      await dispatch(deleteTask(taskId)).unwrap();
     } catch (error) {
       console.error('Failed to delete task:', error);
     }
@@ -214,27 +200,16 @@ export default function PlannerScreen() {
   };
 
   // handle when a task's time is changed via dragging on the timeline
-  // updates the task's time and optionally duration
+  // for expanded recurring tasks, update the base task
   const handleTaskTimeChange = async (taskId: string, newTime: string, newDuration?: number) => {
     try {
-      // find the task to update
-      const task = tasks.find(t => t.id === taskId);
+      const baseId = isExpandedRecurrenceId(taskId) ? getBaseTaskId(taskId) : taskId;
+      const task = tasks.find((t) => t.id === baseId);
       if (!task) return;
 
-      // prepare update data with new time
-      const updates: any = {
-        id: taskId,
-        time: newTime,
-      };
-
-      // include duration if provided
-      if (newDuration !== undefined) {
-        updates.duration = newDuration;
-      }
-
-      // dispatch updateTask action to Redux store
-      // this will trigger the async thunk that updates the task via API
-      await dispatch(updateTask({ id: taskId, updates })).unwrap();
+      const updates: any = { id: baseId, time: newTime };
+      if (newDuration !== undefined) updates.duration = newDuration;
+      await dispatch(updateTask({ id: baseId, updates })).unwrap();
     } catch (error) {
       console.error('Failed to update task time:', error);
     }
@@ -243,7 +218,23 @@ export default function PlannerScreen() {
   // render main content
   return (
     <View style={{ flex: 1 }}>
-
+      {/* top section - 48px row for context ellipse button, matches Today screen */}
+      <View style={[styles.topSectionAnchor, { height: insets.top + 48 }]}>
+        <View style={styles.topSectionRow}>
+          <ActionContextMenu
+            items={[
+              { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
+              { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
+            
+            ]}
+            style={styles.topSectionContextButton}
+            accessibilityLabel="Open menu"
+            dropdownAnchorTopOffset={insets.top + 48}
+            dropdownAnchorRightOffset={24}
+            tint="primary"
+          />
+        </View>
+      </View>
       <ScreenContainer 
         scrollable={false}
         paddingHorizontal={0}
@@ -262,6 +253,17 @@ export default function PlannerScreen() {
         
         {/* Content area with rounded top and left corners */}
         <View style={styles.contentContainer}>
+          {/* fade opacity overlay - starts 48px below date selection border, matches Today screen */}
+          <View style={styles.fadeOverlay} pointerEvents="none">
+            <LinearGradient
+              colors={[
+                themeColors.background.primary(),
+                themeColors.withOpacity(themeColors.background.primary(), 0),
+              ]}
+              locations={[0.0, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
           {/* TimelineView component displays tasks in a timeline format */}
           {/* shows tasks positioned at their scheduled times with drag functionality */}
           <TimelineView
@@ -272,14 +274,17 @@ export default function PlannerScreen() {
             startHour={6}
             endHour={23}
             timeInterval={60}
+
           />
         </View>
 
-        {/* Floating Action Button for quick task creation */}
+        {/* Floating Action Button – opens task Stack screen with selected date pre-filled */}
         <FloatingActionButton
           onPress={() => {
-            setIsCreateTaskModalVisible(true);
+            router.push({ pathname: '/task-create' as any, params: { dueDate: selectedDate } });
           }}
+          backgroundColor={themeColors.background.invertedPrimary()}
+          iconColor={themeColors.text.invertedPrimary()}
           accessibilityLabel="Add new task"
           accessibilityHint="Double tap to create a new task"
         />
@@ -292,13 +297,6 @@ export default function PlannerScreen() {
         zIndex={10000}
       />
       
-      {/* separate backdrop that fades in independently behind the task detail modal */}
-      <ModalBackdrop
-        isVisible={isTaskDetailModalVisible}
-        onPress={handleTaskDetailModalClose}
-        zIndex={10000}
-      />
-      
       {/* Calendar Navigation Modal */}
       <CalendarNavigationModal
         visible={isCalendarModalVisible}
@@ -306,25 +304,6 @@ export default function PlannerScreen() {
         onClose={handleCalendarClose}
         onSelectDate={handleDateSelect}
         title="Select Date"
-      />
-      
-      {/* Task Detail Modal - displays task details using TaskViewModal */}
-      <TaskViewModal
-        visible={isTaskDetailModalVisible}
-        onClose={handleTaskDetailModalClose}
-        taskColor={selectedTaskColor}
-        taskId={selectedTask?.id}
-        task={selectedTask || undefined}
-      />
-      
-      {/* Task Creation Modal - rendered last to ensure proper z-ordering */}
-      {/* this modal has its own built-in backdrop via WrappedFullScreenModal */}
-      <TaskCreationModal
-        visible={isCreateTaskModalVisible}
-        onClose={() => setIsCreateTaskModalVisible(false)}
-        initialValues={{
-          dueDate: selectedDate, // pre-fill with selected date
-        }}
       />
     </View>
   );
@@ -337,9 +316,36 @@ const createStyles = (
   insets: ReturnType<typeof useSafeAreaInsets>,
   modalBorderRadius: number // border radius value that matches modal styling
 ) => StyleSheet.create({
-  // week view container - positioned at top with safe area padding
+  // top section anchor - fixed row for context button, matches Today screen (insets.top + 48)
+  topSectionAnchor: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    backgroundColor: themeColors.background.primary(),
+  },
+
+  // row container for context button - matches Today screen topSectionRow
+  topSectionRow: {
+    position: 'absolute',
+    top: insets.top,
+    left: 0,
+    right: 0,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 24,
+  },
+  // matches task screen ActionContextMenu (transparent bg, liquid glass)
+  topSectionContextButton: {
+    backgroundColor: 'primary',
+  },
+
+  // week view container - positioned below top section (insets.top + 48 for context button row)
   weekViewContainer: {
-    paddingTop: insets.top,
+    paddingTop: insets.top + 48,
     backgroundColor: themeColors.background.primary(),
   },
 
@@ -350,13 +356,24 @@ const createStyles = (
   // uses primary secondary blend background color for subtle visual distinction
   contentContainer: {
     flex: 1,
+    position: 'relative',
     backgroundColor: themeColors.background.primarySecondaryBlend(), // primary secondary blend background color
-    borderRadius: modalBorderRadius,
-    borderWidth: 1, // 1px border matching task creation border width
-    borderColor: themeColors.border.primary(), // border color matching task creation border color
-    margin: 4, // 8px spacing from all screen edges
+   
+
+    margin: 0, // 8px spacing from all screen edges
     paddingHorizontal: 0, // remove horizontal padding since ListCard handles its own padding
     paddingTop: 0, // top padding for content spacing
     overflow: 'hidden', // ensure content respects border radius
+  },
+
+  // fade overlay - 48px below date selection border, same gradient as Today screen (locations 0.4-1 = solid to transparent)
+  fadeOverlay: {
+    position: 'absolute',
+    top: 0, // 48px below the border of the date selection
+    left: 0,
+    right: 0,
+    height: 32, // matches Today screen fade height
+    zIndex: 5,
+    overflow: 'hidden',
   },
 });

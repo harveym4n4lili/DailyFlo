@@ -1,8 +1,6 @@
 /**
  * Calendar Components
- * 
- * Barrel export file for calendar-related components.
- * This allows clean imports like: import { DatePickerModal } from '@/components/features/calendar'
+ * Barrel export for calendar sections (QuickDateOptions, CalendarView, etc.) and modals.
  */
 
 // export calendar modal components

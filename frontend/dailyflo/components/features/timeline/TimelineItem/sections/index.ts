@@ -5,6 +5,4 @@
  */
 
 export { default as TimelineCheckbox } from './TimelineCheckbox';
-export { default as TimelineSubtaskButton } from './TimelineSubtaskButton';
-export { default as TimelineSubtaskList } from './TimelineSubtaskList';
 

@@ -52,6 +52,8 @@ export interface CustomTextInputProps {
   multiline?: boolean;
   /** Custom style for the container */
   containerStyle?: any;
+  /** Optional style merged with the visible text area (e.g. to override padding) */
+  inputStyle?: any;
   /** Callback when input is focused */
   onFocus?: () => void;
   /** Callback when input is blurred */
@@ -73,6 +75,7 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   taskColor = 'blue',
   multiline = true,
   containerStyle,
+  inputStyle,
   onFocus: onFocusProp,
   onBlur: onBlurProp,
 }) => {
@@ -231,9 +234,10 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
     }
   };
   
-  // get theme colors and task color
+  // get theme colors
   const colors = ThemeColors[colorScheme];
-  const stylusColor = getTaskCategoryColor(taskColor, 500);
+  // use secondary text color for cursor/stylus - subtle but visible
+  const stylusColor = colors.text.secondary;
   
   // safely split text into lines for rendering first
   // ensure localText is always a string to prevent undefined errors
@@ -346,7 +350,8 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
             flexShrink: 0, // prevent shrinking to allow expansion
             // use content height to size the container naturally
             height: finalHeight,
-          }
+          },
+          inputStyle,
         ]}
       >
         <ScrollView

@@ -8,10 +8,20 @@
  * This component follows the composition pattern - it wraps content and adds swipe behavior.
  */
 
-import React, { useRef } from 'react';
+import React, { useRef, createContext, useContext } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import SwipeBackgrounds, { SwipeAction } from './SwipeBackgrounds';
+
+// context to pass translateX animated value to child components
+// this allows child components (like TaskCard) to animate border radius based on swipe
+const SwipeContext = createContext<Animated.Value | null>(null);
+
+// hook to access translateX animation value from SwipeableCard
+export const useSwipeAnimation = () => {
+  const translateX = useContext(SwipeContext);
+  return translateX;
+};
 
 interface SwipeableCardProps {
   // children to wrap with swipe functionality
@@ -93,32 +103,42 @@ export default function SwipeableCard({
   };
 
   return (
-    <View style={[styles.container, containerStyle]}>
-      {/* swipe action backgrounds that appear during swipe */}
-      <SwipeBackgrounds
-        translateX={translateX}
-        leftAction={leftAction}
-        rightAction={rightAction}
-        borderRadius={borderRadius}
-      />
+    <SwipeContext.Provider value={translateX}>
+      <View style={[styles.container, containerStyle]}>
+        {/* swipe action backgrounds that appear during swipe */}
+        <SwipeBackgrounds
+          translateX={translateX}
+          leftAction={leftAction}
+          rightAction={rightAction}
+          borderRadius={borderRadius}
+        />
 
-      {/* pan gesture handler - wraps content to detect horizontal swipes */}
-      <PanGestureHandler
-        onGestureEvent={onGestureEvent} // handles continuous swipe movement
-        onHandlerStateChange={onHandlerStateChange} // handles swipe start/end events
-        activeOffsetX={[-10, 10]} // horizontal movement threshold to activate gesture
-      >
-        {/* animated view that moves horizontally during swipe gestures */}
-        <Animated.View
-          style={[
-            styles.swipeContainer,
-            { transform: [{ translateX }] }, // applies horizontal translation based on swipe
-          ]}
+        {/* pan gesture handler - wraps content to detect horizontal swipes */}
+        <PanGestureHandler
+          onGestureEvent={onGestureEvent} // handles continuous swipe movement
+          onHandlerStateChange={onHandlerStateChange} // handles swipe start/end events
+          activeOffsetX={[-10, 10]} // horizontal movement threshold to activate gesture
         >
-          {children}
-        </Animated.View>
-      </PanGestureHandler>
-    </View>
+          {/* animated view that moves horizontally during swipe gestures */}
+          <Animated.View
+            style={[
+              styles.swipeContainer,
+              { 
+              transform: [{ translateX }], // applies horizontal translation based on swipe
+              // animate border radius based on swipe distance - increases as card is swiped
+              borderRadius: translateX.interpolate({
+                inputRange: [-200, 0, 200], // swipe range from -200px to +200px
+                outputRange: [28, 12, 28], // border radius animates from 12px (initial) to 28px when swiped
+                extrapolate: 'clamp', // clamp values outside the range
+              }),
+              },
+            ]}
+          >
+            {children}
+          </Animated.View>
+        </PanGestureHandler>
+      </View>
+    </SwipeContext.Provider>
   );
 }
 

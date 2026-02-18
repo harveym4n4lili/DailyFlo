@@ -3,12 +3,16 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, useRef } from 'react';
+import { Platform } from 'react-native';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useThemeColors } from '@/hooks/useColorPalette';
 import { ReduxProvider } from '@/store/Provider';
+import { CreateTaskDraftProvider } from './task/CreateTaskDraftContext';
+import { DuplicateTaskProvider } from './task/DuplicateTaskContext';
 import { store } from '@/store';
 import { logout, checkAuthStatus } from '@/store/slices/auth/authSlice';
 
@@ -20,6 +24,12 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const segments = useSegments();
+  // theme background used when liquid glass is not available (android or older ios)
+  const themeColors = useThemeColors();
+  const tabBarBackgroundColor = themeColors.background.primary();
+  // liquid glass: on iOS (not iPad) we let expo-glass-effect decide if glass is supported internally.
+  // older SDKs may not export isGlassEffectAPIAvailable, so we avoid calling it directly.
+  const useLiquidGlass = Platform.OS === 'ios' && !Platform.isPad;
   
   // state to track if we're still checking onboarding status
   // this prevents showing the app before we know where to route the user
@@ -180,11 +190,81 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ReduxProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          {/* Task stack and sub-screens share draft via context; DuplicateTaskProvider for pre-filling create from Duplicate */}
+          <CreateTaskDraftProvider>
+          <DuplicateTaskProvider>
           <Stack>
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            {/* task-create: full screen, no indent, drag to close only */}
+            <Stack.Screen
+              name="task-create"
+              options={{
+                headerShown: false,
+                presentation: 'formSheet',
+                gestureEnabled: true,
+                contentStyle: {
+                  backgroundColor: themeColors.background.primary(),
+                },
+              }}
+            />
+            {/* task: view/edit form sheet with indent (detents) */}
+            <Stack.Screen
+              name="task"
+              options={{
+                headerShown: false,
+                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+                gestureEnabled: true,
+                sheetAllowedDetents: [0.7, 1],
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.primary(),
+                },
+              }}
+            />
+            {/* root-level picker screens (each has own folder with _layout + index) */}
+            <Stack.Screen
+              name="date-select"
+              options={{
+                headerShown: false,
+                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+                sheetGrabberVisible: false,
+                sheetAllowedDetents: [0.8],
+                sheetInitialDetentIndex: 0,
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
+                },
+              }}
+            />
+            <Stack.Screen
+              name="time-duration-select"
+              options={{
+                headerShown: false,
+                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+                sheetGrabberVisible: false,
+                sheetAllowedDetents: [0.7],
+                sheetInitialDetentIndex: 0,
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
+                },
+              }}
+            />
+            <Stack.Screen
+              name="alert-select"
+              options={{
+                headerShown: false,
+                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+                sheetGrabberVisible: false,
+                sheetAllowedDetents: [0.7],
+                sheetInitialDetentIndex: 0,
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
+                },
+              }}
+            />
             <Stack.Screen name="+not-found" />
           </Stack>
+          </DuplicateTaskProvider>
+          </CreateTaskDraftProvider>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         </ThemeProvider>
       </ReduxProvider>

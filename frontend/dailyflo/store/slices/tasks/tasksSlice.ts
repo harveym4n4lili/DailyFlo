@@ -26,6 +26,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // tasksApiService: service that handles all task-related API calls to Django backend
 // this service makes HTTP requests and returns formatted responses
 import tasksApiService from '../../../services/api/tasks';
+import { normalizeTimeToHHMM } from '../../../utils/taskFormatters';
+import { isExpandedRecurrenceId, getBaseTaskId } from '../../../utils/recurrenceUtils';
 
 /**
  * Define the shape of the tasks state
@@ -240,7 +242,7 @@ function transformApiTaskToTask(apiTask: any): Task {
     title: apiTask.title || '',
     description: apiTask.description || '',
     icon: apiTask.icon,
-    time: apiTask.time,
+    time: normalizeTimeToHHMM(apiTask.time) ?? apiTask.time,
     duration: apiTask.duration || 0,
     dueDate: apiTask.due_date || apiTask.dueDate || null,
     isCompleted: apiTask.is_completed !== undefined ? apiTask.is_completed : (apiTask.isCompleted !== undefined ? apiTask.isCompleted : false),
@@ -254,6 +256,8 @@ function transformApiTaskToTask(apiTask: any): Task {
       reminders: apiTask.metadata?.reminders || [],
       notes: apiTask.metadata?.notes,
       tags: apiTask.metadata?.tags,
+      recurrence_completions: apiTask.metadata?.recurrence_completions,
+      recurrence_exceptions: apiTask.metadata?.recurrence_exceptions,
     },
     softDeleted: apiTask.soft_deleted !== undefined ? apiTask.soft_deleted : (apiTask.softDeleted !== undefined ? apiTask.softDeleted : false),
     createdAt: apiTask.created_at || apiTask.createdAt || new Date().toISOString(),
@@ -851,6 +855,31 @@ export const deleteTask = createAsyncThunk(
   }
 );
 
+// Duplicate a task - creates a copy via API
+export const duplicateTask = createAsyncThunk(
+  'tasks/duplicateTask',
+  async (taskId: string, { rejectWithValue }) => {
+    try {
+      const response = await retryWithExponentialBackoff(() => tasksApiService.duplicateTask(taskId));
+      const responseAny = response as any;
+      let apiTask: any;
+      if (responseAny?.data && typeof responseAny.data === 'object') {
+        apiTask = responseAny.data;
+      } else if (response && typeof response === 'object' && 'id' in response) {
+        apiTask = response;
+      } else if (Array.isArray(response) && response.length > 0) {
+        apiTask = response[0];
+      } else {
+        throw new Error(`Unexpected response format from duplicate API`);
+      }
+      return transformApiTaskToTask(apiTask);
+    } catch (error) {
+      console.error('❌ duplicateTask failed:', error);
+      return rejectWithValue(getErrorMessage(error));
+    }
+  }
+);
+
 /**
  * Create the tasks slice
  * 
@@ -1055,14 +1084,33 @@ const tasksSlice = createSlice({
       })
       .addCase(deleteTask.fulfilled, (state, action) => {
         state.isDeleting = false;
-        const taskId = action.payload;
-        state.tasks = state.tasks.filter(task => task.id !== taskId);
-        state.filteredTasks = state.filteredTasks.filter(task => task.id !== taskId);
-        state.selectedTaskIds = state.selectedTaskIds.filter(id => id !== taskId);
+        const deletedBaseId = action.payload;
+        // remove base task and any expanded recurrence occurrences (baseId__dateStr)
+        // recurring tasks have one record; occurrences are virtual, but we filter both for robustness
+        const shouldRemove = (task: Task) =>
+          task.id === deletedBaseId || (isExpandedRecurrenceId(task.id) && getBaseTaskId(task.id) === deletedBaseId);
+        state.tasks = state.tasks.filter(task => !shouldRemove(task));
+        state.filteredTasks = state.filteredTasks.filter(task => !shouldRemove(task));
+        state.selectedTaskIds = state.selectedTaskIds.filter(id => id !== deletedBaseId && !(isExpandedRecurrenceId(id) && getBaseTaskId(id) === deletedBaseId));
       })
       .addCase(deleteTask.rejected, (state, action) => {
         state.isDeleting = false;
         state.deleteError = action.payload as string;
+      })
+      // Handle duplicateTask - same as createTask (add new task to state)
+      .addCase(duplicateTask.pending, (state) => {
+        state.isCreating = true;
+        state.createError = null;
+      })
+      .addCase(duplicateTask.fulfilled, (state, action) => {
+        state.isCreating = false;
+        state.tasks.push(action.payload);
+        state.filteredTasks = applyFilters(state.tasks, state.filters);
+        state.lastFetched = Date.now();
+      })
+      .addCase(duplicateTask.rejected, (state, action) => {
+        state.isCreating = false;
+        state.createError = action.payload as string;
       });
   },
 });
