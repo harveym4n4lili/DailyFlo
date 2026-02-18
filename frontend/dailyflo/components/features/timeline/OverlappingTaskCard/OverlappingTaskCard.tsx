@@ -12,6 +12,8 @@ import { View, StyleSheet } from 'react-native';
 import { Task } from '@/types';
 import { getTaskCardHeight } from '../timelineUtils';
 import TimelineItem from '../TimelineItem/TimelineItem';
+import DashedSeparator from '@/components/ui/borders/DashedSeparator';
+import { Paddings } from '@/constants/Paddings';
 
 interface OverlappingTaskCardProps {
   // array of tasks sorted by start time (earliest first)
@@ -73,6 +75,9 @@ export default function OverlappingTaskCard({
   // this allows us to calculate total height and update positions when subtasks expand
   const [individualTaskHeights, setIndividualTaskHeights] = useState<Map<string, number>>(new Map());
 
+  // container width for DashedSeparator - prevents separator from extending past task bounds
+  const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
+
   // handle height measurement from individual TimelineItems
   // this tracks each task's height (including expanded subtasks) so we can calculate total height
   const handleIndividualHeightMeasured = useCallback((taskId: string, height: number) => {
@@ -103,10 +108,7 @@ export default function OverlappingTaskCard({
         total += getTaskCardHeight(taskDuration);
       }
       
-      // add 4px spacing between tasks (not after the last one)
-      if (index < safeTasks.length - 1) {
-        total += 4;
-      }
+      // no spacing between tasks - cards connect seamlessly with flattened border radius
     });
     
     return total;
@@ -120,24 +122,16 @@ export default function OverlappingTaskCard({
     }
   }, [totalHeight, safeTasks, combinedTaskId, onHeightMeasured]);
 
-  // calculate absolute position for each task on the timeline
-  // tasks are stacked vertically with 4px spacing between them
+  // calculate absolute position and height for each task on the timeline
   // each TimelineItem positions itself absolutely on the timeline
   const taskPositions = useMemo(() => {
     if (!safeTasks || safeTasks.length === 0) return [];
     
-    const positions: Array<{ task: Task; position: number }> = [];
+    const positions: Array<{ task: Task; position: number; height: number }> = [];
     let currentAbsolutePosition = position; // start at the overlapping card's position on timeline
     
     safeTasks.forEach((task) => {
       if (!task) return;
-      
-      // store the absolute position for this task on the timeline
-      // TimelineItem will use this to position itself absolutely
-      positions.push({
-        task,
-        position: currentAbsolutePosition,
-      });
       
       // use measured height if available, otherwise fall back to calculated height
       const measuredHeight = individualTaskHeights.get(task.id);
@@ -145,8 +139,15 @@ export default function OverlappingTaskCard({
       const fallbackHeight = getTaskCardHeight(taskDuration);
       const taskHeight = measuredHeight ?? fallbackHeight;
       
-      // move to the next absolute position: current position + task height + 4px spacing
-      currentAbsolutePosition += taskHeight + 4;
+      // store the absolute position and height for this task (height needed for separator placement)
+      positions.push({
+        task,
+        position: currentAbsolutePosition,
+        height: taskHeight,
+      });
+      
+      // move to the next absolute position: current position + task height (no spacing - connected cards)
+      currentAbsolutePosition += taskHeight;
     });
     
     return positions;
@@ -156,12 +157,21 @@ export default function OverlappingTaskCard({
   // TimelineItems inside position themselves absolutely and inherit the same padding
   // this ensures overlapping tasks have the same horizontal padding as standalone tasks
   return (
-    <View style={{ position: 'absolute', left: 0, right: 0 }}>
-      {taskPositions.map(({ task, position: taskPosition }) => {
+    <View
+      style={{ position: 'absolute', left: 0, right: 0 }}
+      onLayout={(e) => {
+        const w = e.nativeEvent.layout.width;
+        if (w > 0) setContainerWidth(w);
+      }}
+    >
+      {taskPositions.map(({ task, position: taskPosition, height: taskHeight }, index) => {
         const taskDuration = task.duration || 0;
         const isDragged = draggedTaskId === task.id;
+        // overlap position for connected card styling: first=top, last=bottom, middle=between
+        const overlapPosition = safeTasks.length === 1 ? undefined : index === 0 ? 'first' : index === safeTasks.length - 1 ? 'last' : 'middle';
         
         return (
+          <React.Fragment key={task.id}>
           <TimelineItem
             key={task.id}
             task={task}
@@ -194,11 +204,39 @@ export default function OverlappingTaskCard({
               onPress?.(task);
             }}
             onTaskComplete={onTaskComplete}
-            // pass isDraggedTask prop so this task can apply higher z-index when being dragged
             isDraggedTask={isDragged}
+            overlapPosition={overlapPosition}
           />
+          {/* separator between tasks - positioned at bottom of this task */}
+          {index < taskPositions.length - 1 && (
+            <View
+              style={[
+                styles.separatorWrapper,
+                { top: taskPosition + taskHeight },
+              ]}
+              pointerEvents="none"
+            >
+              <DashedSeparator
+                paddingHorizontal={Paddings.card}
+                maxWidth={containerWidth}
+              />
+            </View>
+          )}
+        </React.Fragment>
         );
       })}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  // separator positioned at boundary between tasks - aligns with TimelineItem content padding
+  // overflow hidden clips separator to task card bounds (prevents extending past right edge)
+  separatorWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 1,
+    overflow: 'hidden',
+  },
+});

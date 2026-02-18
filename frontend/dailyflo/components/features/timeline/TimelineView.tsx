@@ -885,36 +885,29 @@ export default function TimelineView({
       throw new Error('All tasks must have time to calculate combined properties');
     }
     
-    // sort tasks by start time (earliest first)
+    // sort tasks by start time (earliest first) - used for start time and display order
     const sortedTasks = [...tasksWithTime].sort((a, b) => {
       if (!a.time || !b.time) return 0;
       return timeToMinutes(a.time) - timeToMinutes(b.time);
     });
     
     const firstTask = sortedTasks[0];
-    const lastTask = sortedTasks[sortedTasks.length - 1];
-    
     const firstTaskMinutes = timeToMinutes(firstTask.time!);
-    const firstTaskDuration = firstTask.duration || 0;
     
-    const lastTaskMinutes = timeToMinutes(lastTask.time!);
-    const lastTaskDuration = lastTask.duration || 0;
-    const lastTaskEndMinutes = lastTaskMinutes + lastTaskDuration;
-    
-    // start time is the start time of the first task
+    // start time = earliest start of any task
     const startTime = firstTask.time!;
     
-    // end time is the end time of the last task (if duration), or start time of last task (if no duration)
-    let endTimeMinutes: number;
-    if (lastTaskDuration > 0) {
-      // last task has duration, use its end time
-      endTimeMinutes = lastTaskEndMinutes;
-    } else {
-      // last task has no duration, use its start time
-      endTimeMinutes = lastTaskMinutes;
-    }
+    // end time = latest end of any task (not the task that starts last)
+    // e.g. task 1: 14:00-15:00, task 2: 14:30-14:50 → combined: 14:00-15:00
+    const endTimeMinutes = Math.max(
+      ...tasksWithTime.map(t => {
+        const startMinutes = timeToMinutes(t.time!);
+        const dur = t.duration || 0;
+        return dur > 0 ? startMinutes + dur : startMinutes;
+      })
+    );
     
-    // duration is from start of first task to end of last task
+    // duration = from start of first task to end of last-ending task
     const duration = endTimeMinutes - firstTaskMinutes;
     
     return {

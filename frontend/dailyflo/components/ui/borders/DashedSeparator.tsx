@@ -24,6 +24,9 @@ interface DashedSeparatorProps {
   // optional asymmetric padding - when set, overrides paddingHorizontal for that side
   paddingLeft?: number;
   paddingRight?: number;
+  // optional max width - when provided, limits dash count to fit within this width
+  // use when inside a narrower container (e.g. timeline tasks area) to prevent overflow
+  maxWidth?: number;
   // optional style override for the container (useful for adding marginTop, etc.)
   style?: ViewStyle;
 }
@@ -38,6 +41,7 @@ export default function DashedSeparator({
   paddingHorizontal = 0,
   paddingLeft: paddingLeftProp,
   paddingRight: paddingRightProp,
+  maxWidth,
   style,
 }: DashedSeparatorProps) {
   // get theme colors internally so component is self-contained
@@ -47,12 +51,13 @@ export default function DashedSeparator({
   const paddingLeft = paddingLeftProp ?? paddingHorizontal;
   const paddingRight = paddingRightProp ?? paddingHorizontal;
 
-  // calculate number of dashes needed based on available width (screen width minus padding)
-  // pattern: 8px dash + 4px gap = 12px per dash segment
+  // calculate number of dashes - use maxWidth when provided (e.g. timeline) to prevent overflow
+  // otherwise use screen width. pattern: 4px dash + 4px gap (marginRight) = 8px per segment
   const screenWidth = Dimensions.get('window').width;
-  const availableWidth = screenWidth - paddingLeft - paddingRight;
+  const effectiveWidth = maxWidth ?? screenWidth;
+  const availableWidth = Math.max(0, effectiveWidth - paddingLeft - paddingRight);
   const dashWidth = 4;
-  const gapWidth = 2;
+  const gapWidth = 4; // matches marginRight in dash style
   const segmentWidth = dashWidth + gapWidth;
   // calculate dash count to cover available width exactly (no extra dashes)
   const dashCount = Math.floor(availableWidth / segmentWidth);
