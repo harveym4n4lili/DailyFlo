@@ -89,7 +89,7 @@ export interface ListCardProps {
   loading?: boolean; // whether the list is currently loading
 
   // optional list configuration
-  groupBy?: 'priority' | 'dueDate' | 'color' | 'none'; // how to group tasks
+  groupBy?: 'priority' | 'dueDate' | 'color' | 'allDay' | 'none'; // how to group tasks (allDay = single "All day tasks" group for planner)
   sortBy?: 'createdAt' | 'dueDate' | 'priority' | 'title'; // how to sort tasks
   sortDirection?: 'asc' | 'desc'; // sort direction
 
@@ -108,6 +108,7 @@ export interface ListCardProps {
   // padding support
   paddingTop?: number; // top padding for the list container
   paddingHorizontal?: number; // horizontal padding for the list container
+  paddingBottom?: number; // bottom padding (default: space for FAB; use smaller value when inside ScrollView)
   
   // dropdown menu support
   // array of menu items to display in the dropdown menu (shown as ellipse button in header)
@@ -143,6 +144,9 @@ export interface ListCardProps {
 
   // optional shared value for scroll offset - when provided with bigTodayHeader, Today header fades out on scroll
   scrollYSharedValue?: SharedValue<number>;
+
+  // when false, disables internal scrolling - use when ListCard is inside another ScrollView (e.g. planner footer)
+  scrollEnabled?: boolean;
 }
 
 /**
@@ -186,6 +190,7 @@ export default function ListCard({
   headerSubtitle,
   paddingTop,
   paddingHorizontal = Paddings.screenSmall,
+  paddingBottom,
   dropdownItems,
   dropdownAnchorPosition = 'top-right',
   dropdownTopOffset = 0,
@@ -196,6 +201,7 @@ export default function ListCard({
   bigTodayHeader = false,
   scrollPastTopInset = false,
   scrollYSharedValue,
+  scrollEnabled = true,
 }: ListCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -253,8 +259,8 @@ export default function ListCard({
 
   // create dynamic styles using the color palette system and typography system
   const styles = useMemo(
-    () => createStyles(themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal, scrollPastTopInset),
-    [themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal, scrollPastTopInset]
+    () => createStyles(themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal, paddingBottom, scrollPastTopInset),
+    [themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal, paddingBottom, scrollPastTopInset]
   );
 
   // use custom hooks for animation management
@@ -496,6 +502,7 @@ export default function ListCard({
           onScroll={onScroll}
           scrollEventThrottle={scrollEventThrottle}
           ListHeaderComponent={renderHeader}
+          scrollEnabled={scrollEnabled}
           // prevent scroll position restoration between instances
           maintainVisibleContentPosition={null}
         />
@@ -592,6 +599,7 @@ export default function ListCard({
           onScroll={onScroll}
           scrollEventThrottle={scrollEventThrottle}
           ListHeaderComponent={renderHeader}
+          scrollEnabled={scrollEnabled}
           // prevent scroll position restoration between instances
           maintainVisibleContentPosition={null}
         />
@@ -608,6 +616,7 @@ const createStyles = (
   insets: { top: number; bottom: number; left: number; right: number },
   paddingTop?: number,
   paddingHorizontal?: number,
+  paddingBottom?: number,
   scrollPastTopInset?: boolean
 ) =>
   StyleSheet.create({
@@ -644,7 +653,7 @@ const createStyles = (
     // --- PADDING STYLES ---
     listContainer: {
       paddingTop: (paddingTop ?? 0) + (scrollPastTopInset ? insets.top : 0),
-      paddingBottom: 58 + 80 + 16 + insets.bottom + Paddings.scrollBottomExtra,
+      paddingBottom: paddingBottom ?? 58 + 80 + 16 + insets.bottom + Paddings.scrollBottomExtra,
       paddingHorizontal: paddingHorizontal ?? Paddings.screenSmall,
       flexGrow: 1,
     },

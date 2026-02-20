@@ -110,6 +110,12 @@ export default function PlannerScreen() {
     const selectedDateStr = new Date(selectedDate).toISOString().slice(0, 10);
     return expandTasksForDates(tasks, [selectedDateStr]);
   }, [tasks, selectedDate]);
+
+  // all-day tasks: selected day's tasks with no time set (not shown on timeline)
+  // these are displayed in the "All day tasks" list below the timeline
+  const allDayTasks = useMemo(() => {
+    return selectedDateTasks.filter((task) => !task.time || task.time === '');
+  }, [selectedDateTasks]);
   
   // fetch tasks when component mounts or when authentication state changes
   useEffect(() => {
@@ -265,8 +271,7 @@ export default function PlannerScreen() {
               style={StyleSheet.absoluteFill}
             />
           </View>
-          {/* TimelineView component displays tasks in a timeline format */}
-          {/* shows tasks positioned at their scheduled times with drag functionality */}
+          {/* TimelineView - timeline + all-day tasks in same scroll container */}
           <TimelineView
             tasks={selectedDateTasks}
             onTaskTimeChange={handleTaskTimeChange}
@@ -275,7 +280,39 @@ export default function PlannerScreen() {
             startHour={6}
             endHour={23}
             timeInterval={60}
-
+            scrollContentPaddingTop={16}
+            footerComponent={
+              <View style={styles.allDayFooter}>
+                <ListCard
+                  key="planner-allday-listcard"
+                  tasks={allDayTasks}
+                  onTaskPress={handleTaskPress}
+                  onTaskComplete={handleTaskComplete}
+                  onTaskEdit={handleTaskEdit}
+                  onTaskDelete={handleTaskDelete}
+                  onTaskSwipeLeft={handleTaskSwipeLeft}
+                  onTaskSwipeRight={handleTaskSwipeRight}
+                  showCategory={false}
+                  compact={false}
+                  showIcon={false}
+                  showIndicators={false}
+                  showMetadata={false}
+                  metadataVariant="today"
+                  cardSpacing={0}
+                  showDashedSeparator={true}
+                  hideBackground={true}
+                  removeInnerPadding={true}
+                  emptyMessage="No all-day tasks for this date."
+                  loading={false}
+                  groupBy="allDay"
+                  sortBy="createdAt"
+                  sortDirection="desc"
+                  paddingHorizontal={Paddings.screen}
+                  paddingBottom={16}
+                  scrollEnabled={false}
+                />
+              </View>
+            }
           />
         </View>
 
@@ -357,14 +394,18 @@ const createStyles = (
   // uses primary secondary blend background color for subtle visual distinction
   contentContainer: {
     flex: 1,
+    flexDirection: 'column',
     position: 'relative',
-    backgroundColor: themeColors.background.primarySecondaryBlend(), // primary secondary blend background color
-   
-
-    margin: 0, // 8px spacing from all screen edges
+    backgroundColor: themeColors.background.primarySecondaryBlend(),
+    margin: 0,
     paddingHorizontal: Paddings.none,
     paddingTop: Paddings.none,
-    overflow: 'hidden', // ensure content respects border radius
+    overflow: 'hidden',
+  },
+
+  // all-day tasks footer - inside timeline ScrollView, 8px gap before timeline
+  allDayFooter: {
+    marginBottom: 8,
   },
 
   // fade overlay - 48px below date selection border, same gradient as Today screen (locations 0.4-1 = solid to transparent)

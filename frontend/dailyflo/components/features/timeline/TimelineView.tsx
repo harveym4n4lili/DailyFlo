@@ -48,6 +48,10 @@ interface TimelineViewProps {
   endHour?: number;
   // interval between time labels in minutes (default: 60)
   timeInterval?: number;
+  // optional footer rendered at bottom of scroll content (e.g. "All day tasks" list)
+  footerComponent?: React.ReactNode;
+  // optional override for top padding when footer is first (e.g. reduced spacing above list)
+  scrollContentPaddingTop?: number;
 }
 
 /**
@@ -62,6 +66,8 @@ export default function TimelineView({
   onTaskPress,
   onTaskComplete,
   startHour = 6,
+  footerComponent,
+  scrollContentPaddingTop,
   endHour = 23,
   timeInterval = 60,
 }: TimelineViewProps) {
@@ -1573,11 +1579,16 @@ export default function TimelineView({
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent, 
-          { minHeight: timelineHeight + 220 } // timelineHeight + paddingTop (20) + paddingBottom (200)
+          { minHeight: timelineHeight + 220 }, // timelineHeight + paddingTop (20) + paddingBottom (200)
+          ...(scrollContentPaddingTop !== undefined ? [{ paddingTop: scrollContentPaddingTop }] : []),
         ]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={true}
       >
+        {/* "All day tasks" list first - appears before (above) the timeline */}
+        {footerComponent}
+        {/* timeline row: time labels + tasks */}
+        <View style={styles.timelineRow}>
         {/* time labels column on the left */}
         <View style={styles.timeLabelsContainer}>
           {allTimeLabels.map((label) => {
@@ -1885,6 +1896,7 @@ export default function TimelineView({
             })
           )}
         </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -1906,11 +1918,16 @@ const createStyles = (
     flex: 1,
   },
 
-  // scroll content container with calculated height
+  // scroll content container - column so timeline row + footer stack vertically
   scrollContent: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     paddingTop: Paddings.timelineScrollTop,
     paddingBottom: Paddings.timelineScrollBottom,
+  },
+
+  // timeline row - time labels + tasks side by side
+  timelineRow: {
+    flexDirection: 'row',
   },
 
   // time labels container on the left side - more compact
