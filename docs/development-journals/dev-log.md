@@ -1250,8 +1250,87 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - no notes
+## [28/01/2026] - [Saturday]
+### Today's Goals
+- [X] Attempted liquid glass refactor on FAB
+---
+## [29/01/2026] - [Sunday]
+### Today's Goals
+- [X] Refactored clsoe buttons and form picker buttons to liquid glass
+- [X] Implemented custom icons using SVG
+---
+## [02/02/2026] - [Monday]
+### Today's Goals
+- [X] Implemented test modals in liquid glass
+- [X] Attempted scree nstack implementation
+---
+## [04/02/2026] - [Wednesday]
+### Today's Goals
+- [X] Downgraded to expo SDK 54
+- [X] Re-implemented task full screen modal
+---
+## [05/02/2026] - [Thursday]
+### Today's Goals
+- [X] Made components for task screen
+---
+## [07/02/2026] - [Saturday]
+### Today's Goals
+- [X] Refined subtask section in task screen
+- [X] Added save button to new task modal component
+---
+## [08/02/2026] - [Sunday]
+### Today's Goals
+- [X] Brought form picker mdoals to stack screen implementation
+- [X] Overhauled task card and started today screen UI overhaul
+---
+## [09/02/2026] - [Monday]
+### Today's Goals
+- [X] Further refinement and refactor on timeline screen UI
+- [X] Fixed loading jank, swipe flash and removed subtask expansion
+---
+## [11/02/2026] - [Wednesday]
+### Today's Goals
+- [X] Further refinement and refactor on timeline screen UI
+- [X] Fixed loading jank, swipe flash and removed subtask expansion
+- [X] Added freetime segment messsages feature
+---
+## [12/02/2026] - [Thursday]
+### Today's Goals
+- [X] Implemented recurring tasks with CRUD
+---
+## [14/02/2026] - [Saturday]
+### Today's Goals
+- [X] Wired task screen to be opened for "create" and "view".
+- [X] Started Designed task screen for "view" mode
+---
+## [15/02/2026] - [Sunday]
+### Today's Goals
+- [X] Implement task sceren "view" save button
+- [X] Added reccurence display
+---
+## [17/02/2026] - [Tuesday]
+### Today's Goals
+- [X] Implement task sceren "view" save button
+- [X] Added reccurence display
+---
+## [18/02/2026] - [Wednesday]
+### Today's Goals
+- [X] Refactored font UI to apple's SF font
+- [X] Styled overlapping tasks in timeline
 
+### Plans For Future
+- Add non-timed task display in planner screen
+- Add animated checkboxes
+---
+## [20/02/2026] - [Friday]
+### Today's Goals
+- [X] 
+
+### Plans For Future
+- 
 
 - ### TASK CREATION/VIEW MODAL PLAN
-- CHANGE TOP SECTION TO BE A TASKCARD LOOING SECTION AT TOP WITH TITLE AND DESCRIPTION.
-- DESCRIPTION EXPANDS THE TASKCARD CONTAINER SECITON AND THEREFORE FOLLOWS DESIGN PATTERN.
+- FIND SF COMPLEMENT FONT
+- CUSTOM FONTS: NAVBAR ICON FOR TODAY, PLANNER, BROWSE AND SETTINGS
+- SF ICONS FOR TASK SCREEN
+- ANIMATE CHECBOX, THEN POSSIBLY NAVBAR ICONS
