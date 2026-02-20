@@ -572,6 +572,7 @@ const createStyles = (
   weekSectionContainer: {
     paddingHorizontal: 16,
     paddingVertical: Paddings.card,
+    paddingBottom: Paddings.card - 12,
   },
   
   // breaks out of container padding so FlatList scrolls full-width (no cut-off during swipe)
