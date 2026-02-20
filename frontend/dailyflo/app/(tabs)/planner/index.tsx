@@ -403,10 +403,8 @@ const createStyles = (
     overflow: 'hidden',
   },
 
-  // all-day tasks footer - inside timeline ScrollView, 8px gap before timeline
-  allDayFooter: {
-    marginBottom: 8,
-  },
+  // all-day tasks footer - inside timeline ScrollView
+  allDayFooter: {},
 
   // fade overlay - 48px below date selection border, same gradient as Today screen (locations 0.4-1 = solid to transparent)
   fadeOverlay: {
