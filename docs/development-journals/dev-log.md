@@ -1324,13 +1324,9 @@ Updated User app, models, serializers, views and urls
 ---
 ## [20/02/2026] - [Friday]
 ### Today's Goals
-- [X] 
+- [X] Researched lottie implementation 
+- [X] Began lottie implenetation
 
 ### Plans For Future
-- 
+- [X] plan how to implement particles to checkbox toggle
 
-- ### TASK CREATION/VIEW MODAL PLAN
-- FIND SF COMPLEMENT FONT
-- CUSTOM FONTS: NAVBAR ICON FOR TODAY, PLANNER, BROWSE AND SETTINGS
-- SF ICONS FOR TASK SCREEN
-- ANIMATE CHECBOX, THEN POSSIBLY NAVBAR ICONS
