@@ -624,6 +624,7 @@ export default function TimelineItem({
                   size={CHECKBOX_SIZE_TASK_CARD}
                   checked={task.isCompleted}
                   onPress={() => onTaskComplete?.(task)}
+                  expandTapArea
                 />
               </View>
               <View style={styles.taskContent}>

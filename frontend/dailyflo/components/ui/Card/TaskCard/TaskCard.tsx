@@ -185,52 +185,53 @@ export default function TaskCard({
         rightAction={rightSwipeAction}
         borderRadius={0}
       >
-        {/* main card touchable area - applies conditional styles based on compact and completion state */}
-        <TouchableOpacity
+        {/* card: row with checkbox (separate touch) + touchable content (opens task) */}
+        <View
           style={[
             styles.card,
-            compact && styles.compactCard, // conditionally applies compact padding when compact prop is true
-            task.isCompleted && styles.completedCard, // conditionally applies transparent background when task is completed
-            hideBackground && styles.transparentBackground, // conditionally applies transparent background when hideBackground is true
-            removeInnerPadding && styles.noInnerPadding, // conditionally removes horizontal padding when removeInnerPadding is true
-            // animate border radius based on swipe distance - increases as card is swiped
+            compact && styles.compactCard,
+            task.isCompleted && styles.completedCard,
+            hideBackground && styles.transparentBackground,
+            removeInnerPadding && styles.noInnerPadding,
             translateX && {
               borderRadius: translateX.interpolate({
-                inputRange: [-200, 0, 200], // swipe range from -200px to +200px
-                outputRange: [28, 12, 28], // border radius animates from 12px (initial) to 28px when swiped
-                extrapolate: 'clamp', // clamp values outside the range
+                inputRange: [-200, 0, 200],
+                outputRange: [28, 12, 28],
+                extrapolate: 'clamp',
               }),
             },
           ]}
-          onPress={handlePress}
-          activeOpacity={0.7}
         >
-          {/* row container for checkbox, icon and content - ensures proper alignment */}
           <View style={styles.contentRow}>
-            {/* checkbox on the left - for task completion */}
+            {/* checkbox - own touch area so fill animates on tap without card opening */}
             <View style={styles.checkboxWrapper}>
               <Checkbox
                 size={CHECKBOX_SIZE_TASK_CARD}
                 checked={task.isCompleted}
                 onPress={() => onComplete?.(task)}
+                expandTapArea
               />
             </View>
 
-            {/* task icon on the left - conditionally rendered when showIcon prop is true */}
-            {showIcon && task.icon && (
-              <View style={styles.iconWrapper}>
-                <TaskIcon icon={task.icon} color={taskColor} />
-              </View>
-            )}
+            {/* rest of card - touchable, opens task */}
+            <TouchableOpacity
+              style={styles.cardContentTouchable}
+              onPress={handlePress}
+              activeOpacity={0.7}
+            >
+              {showIcon && task.icon && (
+                <View style={styles.iconWrapper}>
+                  <TaskIcon icon={task.icon} color={taskColor} />
+                </View>
+              )}
 
-            {/* content column - title and metadata */}
-            <View style={styles.contentColumn}>
-              {/* main content area - title */}
-              <TaskCardContent
-                task={task}
-                taskColor={taskColor}
-                compact={compact}
-              />
+              <View style={styles.contentColumn}>
+                {/* main content area - title */}
+                <TaskCardContent
+                  task={task}
+                  taskColor={taskColor}
+                  compact={compact}
+                />
 
               {/* task metadata - date, time, duration (hidden when showMetadata is false) */}
               {showMetadata && (
@@ -244,9 +245,10 @@ export default function TaskCard({
                   metadataVariant={metadataVariant}
                 />
               )}
-            </View>
+              </View>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
 
         {/* bottom indicators - routine type and list/inbox status (hidden when showIndicators is false) */}
         {showIndicators && (
@@ -307,6 +309,13 @@ const createStyles = (
       alignItems: 'center',
       alignSelf: 'center',
     },
+    // touchable area for icon + content - opens task (checkbox has separate touch)
+    cardContentTouchable: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+
 
     // icon wrapper - provides spacing for icon
     iconWrapper: {
