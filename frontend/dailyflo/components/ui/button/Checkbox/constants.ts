@@ -15,3 +15,6 @@ export const CHECKBOX_EFFECTIVE_SIZE = CHECKBOX_BASE_SIZE * SCALE;
 
 // particles layer: larger than checkbox so burst animation can extend past boundaries
 export const PARTICLE_LAYER_MULTIPLIER = 3;
+
+// minimum tap target size (iOS recommendation 44pt) - used when expandTapArea is true
+export const CHECKBOX_MIN_TAP_AREA = 44;
