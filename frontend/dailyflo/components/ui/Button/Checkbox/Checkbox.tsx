@@ -92,15 +92,18 @@ export default function Checkbox({
     if (disabled) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newValue = checked ? 0 : 1;
-    if (showParticles && Platform.OS !== 'web') {
-      prevCheckedRef.current = newValue === 1;
-      if (newValue === 1) {
-        particleLottieRef.current?.play(0, PARTICLE_ANIMATION_END);
-      } else {
-        particleLottieRef.current?.play(0, 0);
+    // fire both on same animation frame so they start together
+    requestAnimationFrame(() => {
+      runFillAnimation(newValue);
+      if (showParticles && Platform.OS !== 'web') {
+        prevCheckedRef.current = newValue === 1;
+        if (newValue === 1) {
+          particleLottieRef.current?.play(0, PARTICLE_ANIMATION_END);
+        } else {
+          particleLottieRef.current?.play(0, 0);
+        }
       }
-    }
-    runFillAnimation(newValue);
+    });
     onPress();
   };
 
