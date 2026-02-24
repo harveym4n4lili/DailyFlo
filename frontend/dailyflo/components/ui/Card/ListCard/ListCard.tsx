@@ -84,7 +84,6 @@ export interface ListCardProps {
   separatorPaddingHorizontal?: number; // horizontal padding for separators to match list padding (defaults to paddingHorizontal)
   hideBackground?: boolean; // whether to hide task card backgrounds (default false)
   removeInnerPadding?: boolean; // whether to remove horizontal padding inside task cards (default false)
-  checkboxSize?: number; // size of the checkbox in task cards (default 24)
   emptyMessage?: string; // message to show when no tasks are available
   loading?: boolean; // whether the list is currently loading
 
@@ -176,7 +175,6 @@ export default function ListCard({
   separatorPaddingHorizontal,
   hideBackground = false,
   removeInnerPadding = false,
-  checkboxSize = 18,
   emptyMessage = 'No tasks available',
   loading = false,
   groupBy = 'none',
@@ -338,7 +336,6 @@ export default function ListCard({
           separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
           hideBackground={hideBackground}
           removeInnerPadding={removeInnerPadding}
-          checkboxSize={checkboxSize}
           isLastItem={isLastItem}
           isFirstItem={isFirstItem}
         />
@@ -567,7 +564,6 @@ export default function ListCard({
                     separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
                     hideBackground={hideBackground}
                     removeInnerPadding={removeInnerPadding}
-                    checkboxSize={checkboxSize}
                     isLastItem={isLastItem}
                     isFirstItem={isFirstItem}
                   />

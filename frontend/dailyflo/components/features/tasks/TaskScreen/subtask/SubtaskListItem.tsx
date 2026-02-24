@@ -15,9 +15,8 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 import { TrashIcon, SFSymbolIcon } from '@/components/ui/icon';
 import Checkbox from '@/components/ui/button/Checkbox/Checkbox';
+import { CHECKBOX_SIZE_SUBTASK } from '@/components/ui/button';
 import { Paddings } from '@/constants/Paddings';
-// checkbox size matches TaskCard checkbox size (16px)
-const CHECKBOX_SIZE = 16;
 // spacing between checkbox (icon) and text input — matches SubtaskCreateButton icon–text gap
 const ICON_TEXT_GAP = 10;
 const TRASH_ICON_SIZE = 20;
@@ -87,9 +86,9 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
       {/* checkbox on the left - using new Checkbox component */}
       <View style={styles.checkboxContainer}>
         <Checkbox
+          size={CHECKBOX_SIZE_SUBTASK}
           checked={isCompleted}
           onPress={handleCheckboxPress}
-          size={CHECKBOX_SIZE}
           disabled={disabled}
         />
       </View>
@@ -139,8 +138,10 @@ const styles = StyleSheet.create({
     paddingVertical: Paddings.none,
     gap: ICON_TEXT_GAP,
   },
-  // checkbox container - provides proper alignment and spacing
+  // checkbox container - provides proper alignment and spacing (44px to match Checkbox)
   checkboxContainer: {
+    width: CHECKBOX_SIZE_SUBTASK,
+    height: CHECKBOX_SIZE_SUBTASK,
     justifyContent: 'center',
     alignItems: 'center',
   },

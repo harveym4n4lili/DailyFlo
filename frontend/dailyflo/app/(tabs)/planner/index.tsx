@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -133,9 +133,8 @@ export default function PlannerScreen() {
     router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
-  // handle marking a task as complete/uncomplete
-  // for recurring occurrences (expanded id), update metadata.recurrence_completions on base task
-  const handleTaskComplete = async (task: Task) => {
+  // handle marking a task as complete/uncomplete - useCallback keeps reference stable for memoized TimelineItem
+  const handleTaskComplete = useCallback(async (task: Task) => {
     try {
       if (isExpandedRecurrenceId(task.id)) {
         const baseId = getBaseTaskId(task.id);
@@ -168,7 +167,7 @@ export default function PlannerScreen() {
     } catch (error) {
       console.error('Failed to update task:', error);
     }
-  };
+  }, [tasks, dispatch]);
   
   // handle editing a task - opens task screen in edit mode (same as task press)
   const handleTaskEdit = (task: Task) => {
