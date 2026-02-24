@@ -41,7 +41,7 @@ import TaskIndicators from './TaskIndicators';
 import TaskIcon from './TaskIcon';
 
 // import checkbox component
-import { Checkbox } from '@/components/ui/button';
+import { Checkbox, CHECKBOX_SIZE_TASK_CARD } from '@/components/ui/button';
 
 // import border components
 import { DashedSeparator } from '@/components/ui/borders';
@@ -78,7 +78,6 @@ export interface TaskCardProps {
   separatorPaddingHorizontal?: number; // horizontal padding for separator to match list padding (default 0)
   hideBackground?: boolean; // whether to hide the card background (default false)
   removeInnerPadding?: boolean; // whether to remove horizontal padding inside the card (default false)
-  checkboxSize?: number; // size of the checkbox (default 24)
   isLastItem?: boolean; // whether this is the last item in the list (default false)
   isFirstItem?: boolean; // whether this is the first item in the list (default false)
 }
@@ -117,7 +116,6 @@ export default function TaskCard({
   separatorPaddingHorizontal = 0,
   hideBackground = false,
   removeInnerPadding = false,
-  checkboxSize = 16,
   isLastItem = false,
   isFirstItem = false,
 }: TaskCardProps) {
@@ -212,10 +210,9 @@ export default function TaskCard({
             {/* checkbox on the left - for task completion */}
             <View style={styles.checkboxWrapper}>
               <Checkbox
+                size={CHECKBOX_SIZE_TASK_CARD}
                 checked={task.isCompleted}
                 onPress={() => onComplete?.(task)}
-                size={checkboxSize}
-                borderRadius={6}
               />
             </View>
 
@@ -261,7 +258,7 @@ export default function TaskCard({
       {showDashedSeparator && !isLastItem && (
         <DashedSeparator
           paddingLeft={
-            checkboxSize + 12 + (showIcon && task.icon ? 24 + 16 : 0)
+            CHECKBOX_SIZE_TASK_CARD + 12 + (showIcon && task.icon ? 24 + 16 : 0)
           }
           paddingRight={separatorPaddingHorizontal}
         />
@@ -303,10 +300,12 @@ const createStyles = (
 
     // checkbox wrapper - provides spacing for checkbox and ensures vertical centering
     checkboxWrapper: {
+      width: CHECKBOX_SIZE_TASK_CARD,
+      height: CHECKBOX_SIZE_TASK_CARD,
       marginRight: 12, // spacing between checkbox and icon/content
-      justifyContent: 'center', // vertically center checkbox within wrapper
-      alignItems: 'center', // horizontally center checkbox within wrapper
-      alignSelf: 'center', // ensure wrapper itself is centered vertically in the row
+      justifyContent: 'center',
+      alignItems: 'center',
+      alignSelf: 'center',
     },
 
     // icon wrapper - provides spacing for icon

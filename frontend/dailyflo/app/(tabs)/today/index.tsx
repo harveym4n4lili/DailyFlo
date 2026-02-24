@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { StyleSheet, RefreshControl, View, Text, Alert, Animated } from 'react-native';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, useAnimatedReaction, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -252,11 +252,9 @@ export default function TodayScreen() {
     router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
-  // handle task completion toggle
-  // for recurring occurrences (id format: baseId__dateStr), update metadata.recurrence_completions instead of isCompleted
-  const handleTaskComplete = (task: Task) => {
+  // handle task completion toggle - useCallback keeps reference stable to avoid TaskCard re-renders
+  const handleTaskComplete = useCallback((task: Task) => {
     if (isExpandedRecurrenceId(task.id)) {
-      // recurring occurrence: add/remove date from recurrence_completions on the base task
       const baseId = getBaseTaskId(task.id);
       const occurrenceDate = getOccurrenceDateFromId(task.id);
       if (!occurrenceDate) return;
@@ -274,13 +272,12 @@ export default function TodayScreen() {
         },
       }));
     } else {
-      // one-off task: toggle isCompleted as usual
       dispatch(updateTask({
         id: task.id,
         updates: { id: task.id, isCompleted: !task.isCompleted },
       }));
     }
-  };
+  }, [tasks, dispatch]);
   
   // handle task edit - opens task screen in edit mode (same as task press)
   const handleTaskEdit = (task: Task) => {

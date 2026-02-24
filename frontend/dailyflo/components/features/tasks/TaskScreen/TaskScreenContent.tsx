@@ -33,6 +33,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { DashedSeparator } from '@/components/ui/borders';
 import Checkbox from '@/components/ui/button/Checkbox/Checkbox';
+import { CHECKBOX_SIZE_TASK_VIEW } from '@/components/ui/button';
 import type { TaskColor, RoutineType } from '@/types';
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
 import type { Subtask } from '@/components/features/subtasks';
@@ -331,12 +332,12 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
         <View style={styles.titleRow}>
           <View style={styles.checkboxWrap}>
             <Checkbox
+              size={CHECKBOX_SIZE_TASK_VIEW}
               checked={titleCheckboxChecked}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setTitleCheckboxChecked((prev) => !prev);
               }}
-              size={20}
             />
           </View>
           <View style={styles.titleInputWrap}>
@@ -557,9 +558,9 @@ const styles = StyleSheet.create({
   // top spacing: drag indicator area; paddingTop overridden inline (36 create, 60 edit)
   scrollContent: { padding: Paddings.screen, paddingBottom: Paddings.scrollBottomExtra },
   titleRow: { flexDirection: 'row', alignItems: 'center' },
-  // right padding matches left side: checkbox (20) + gap (16) for visual symmetry
-  titleInputWrap: { flex: 1, minWidth: 0, paddingLeft: Paddings.none, paddingRight: 20 + Paddings.card },
+  // right padding matches left: checkbox (18) + gap (16) for visual symmetry
+  titleInputWrap: { flex: 1, minWidth: 0, paddingLeft: Paddings.none, paddingRight: CHECKBOX_SIZE_TASK_VIEW + 16 },
   titleSpacer: { height: 8 },
-  checkboxWrap: { paddingRight: Paddings.card, flexShrink: 0, alignItems: 'center', justifyContent: 'center', marginTop: -12 },
+  checkboxWrap: { width: CHECKBOX_SIZE_TASK_VIEW, marginTop: -10, height: CHECKBOX_SIZE_TASK_VIEW, marginRight: Paddings.groupedListIconTextSpacing + 4, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   pickerSectionWrap: { marginTop: 12 },
 });

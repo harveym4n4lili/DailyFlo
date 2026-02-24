@@ -1,153 +1,157 @@
 /**
  * Checkbox Component
- * 
- * A square checkbox with rounded borders that animates to filled with primary text color when tapped.
- * Used for task completion and other boolean selections.
+ *
+ * Standard View + Ionicons checkbox on all platforms.
+ * On iOS/Android: a particles layer (Particles2 Lottie) sits inside the checkbox
+ * with absolute positioning so it can extend past the checkbox boundaries when
+ * the burst animation plays on check.
  */
 
 import React, { useRef, useEffect } from 'react';
-import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { TouchableOpacity, StyleSheet, View, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import LottieView from 'lottie-react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
+import {
+  PARTICLE_LAYER_MULTIPLIER,
+  CHECKBOX_SIZE_TASK_CARD,
+} from './constants';
+
+const PARTICLES_ANIMATION = require('../../../../assets/animations/Particles2.json');
+
+// Particles2.json: burst runs roughly frames 0–41
+const PARTICLE_ANIMATION_END = 41;
+
 interface CheckboxProps {
-  // whether the checkbox is checked
   checked: boolean;
-  // callback function called when checkbox is tapped
   onPress: () => void;
-  // optional size of the checkbox (default 24)
-  size?: number;
-  // optional border radius (default 6)
-  borderRadius?: number;
-  // optional disabled state
   disabled?: boolean;
+  fillColor?: string;
+  /** size in px (TaskCard/subtask: 16, Task view: 18) */
+  size?: number;
+  /** when false, particles burst animation is hidden (e.g. timeline subtask count icon) */
+  showParticles?: boolean;
 }
 
-/**
- * Checkbox Component
- * 
- * Renders a square checkbox with rounded borders that animates to filled
- * with primary text color when checked. Uses smooth animations for state transitions.
- */
 export default function Checkbox({
   checked,
   onPress,
-  size = 24,
-  borderRadius = 6,
   disabled = false,
-}: CheckboxProps) {
-  // get theme-aware colors from the color palette system
+  fillColor,
+  size = CHECKBOX_SIZE_TASK_CARD,
+  showParticles = true,
+}: CheckboxProps): React.ReactElement {
+  const particleLottieRef = useRef<LottieView>(null);
+  const prevCheckedRef = useRef(checked);
   const themeColors = useThemeColors();
+  const color = fillColor ?? themeColors.text.primary();
+  const particleLayerSize = size * PARTICLE_LAYER_MULTIPLIER;
+  const styles = createStyles(color, checked, size, particleLayerSize, themeColors);
 
-  // animated value for fill animation (0 = unchecked, 1 = checked)
-  // this controls the background color and border color transitions
-  const fillAnimation = useRef(new Animated.Value(checked ? 1 : 0)).current;
-
-  // animated value for scale animation (for tap feedback)
-  // this provides visual feedback when the checkbox is tapped
-  const scaleAnimation = useRef(new Animated.Value(1)).current;
-
-  // update animation when checked state changes
-  // smoothly animates from unchecked to checked state (or vice versa)
+  // play particles burst only when transitioning to checked (not on initial load)
   useEffect(() => {
-    Animated.timing(fillAnimation, {
-      toValue: checked ? 1 : 0, // animate to 1 when checked, 0 when unchecked
-      duration: 200, // animation duration in milliseconds
-      useNativeDriver: false, // can't use native driver for color animations
-    }).start();
-  }, [checked, fillAnimation]);
+    if (!showParticles || Platform.OS === 'web') return;
+    const wasUnchecked = !prevCheckedRef.current;
+    prevCheckedRef.current = checked;
+    if (checked && wasUnchecked) {
+      particleLottieRef.current?.play(0, PARTICLE_ANIMATION_END);
+    } else if (!checked) {
+      particleLottieRef.current?.play(0, 0);
+    }
+  }, [checked, showParticles]);
 
-  // handle checkbox press - triggers scale animation and calls onPress callback
   const handlePress = () => {
     if (disabled) return;
-
-    // scale down animation for tap feedback
-    Animated.sequence([
-      Animated.timing(scaleAnimation, {
-        toValue: 0.9, // scale down to 90%
-        duration: 100,
-        useNativeDriver: true, // can use native driver for scale animations
-      }),
-      Animated.timing(scaleAnimation, {
-        toValue: 1, // scale back to 100%
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // call the onPress callback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
   };
-
-  // create dynamic styles using theme colors
-  const styles = createStyles(themeColors, size, borderRadius);
 
   return (
     <TouchableOpacity
       onPress={handlePress}
       disabled={disabled}
-      activeOpacity={1} // disable default opacity change since we're using custom scale animation
+      activeOpacity={1}
       style={styles.container}
     >
-      {/* animated view for scale animation (uses native driver for better performance) */}
-      <Animated.View
-        style={[
-          styles.checkboxContainer,
-          {
-            transform: [{ scale: scaleAnimation }], // apply scale animation for tap feedback
-          },
-        ]}
-      >
-        {/* animated view for fill animation (color transitions) */}
-        <Animated.View
-          style={[
-            styles.checkbox,
-            {
-              // animate border color from tertiary (grey) to primary text color
-              borderColor: fillAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [themeColors.text.tertiary(), themeColors.text.primary()],
-              }),
-              // animate background color from transparent to primary text color
-              backgroundColor: fillAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['transparent', themeColors.text.primary()],
-              }),
-            },
-          ]}
-        />
-      </Animated.View>
+      {/* standard checkbox: border + fill + Ionicons checkmark */}
+      <View style={styles.checkboxBox}>
+        {checked && (
+          <Ionicons
+            name="checkmark"
+            size={Math.round(size / 2)}
+            color={themeColors.text.invertedPrimary()}
+          />
+        )}
+      </View>
+
+      {/* particles layer: absolutely positioned, larger than checkbox so burst can extend past boundaries */}
+      {Platform.OS !== 'web' && showParticles && (
+        <View style={styles.particlesLayer} pointerEvents="none">
+          <LottieView
+            ref={particleLottieRef}
+            source={PARTICLES_ANIMATION}
+            style={styles.particlesLottie}
+            resizeMode="contain"
+            autoPlay={false}
+            loop={false}
+            speed={1.5}
+          />
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
 
-// create dynamic styles using theme colors
 const createStyles = (
-  themeColors: ReturnType<typeof useThemeColors>,
-  size: number,
-  borderRadius: number
+  color?: string,
+  checked?: boolean,
+  size?: number,
+  particleLayerSize?: number,
+  themeColors?: ReturnType<typeof useThemeColors>
 ) =>
   StyleSheet.create({
-    // container for the checkbox - provides touch target area
     container: {
+      width: size,
+      height: size,
+      minWidth: size,
+      minHeight: size,
+      flexShrink: 0,
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'visible',
+    },
+    checkboxBox: {
+      width: size,
+      height: size,
+      borderRadius: 8,
+      borderWidth: 1.5,
+      borderColor: checked ? (color ?? themeColors?.text.primary()) : (themeColors?.text.tertiary() ?? '#888'),
+      backgroundColor: checked ? (color ?? themeColors?.text.primary()) : 'transparent',
       justifyContent: 'center',
       alignItems: 'center',
     },
-
-    // checkbox container for scale animation
-    checkboxContainer: {
-      width: size,
-      height: size,
+    // center layer on checkbox: anchor at (size/2, size/2), then translate so layer center aligns
+    particlesLayer: {
+      position: 'absolute',
+      left: size! / 2,
+      top: size! / 2,
+      width: particleLayerSize,
+      height: particleLayerSize,
+      transform: [
+        { translateX: -particleLayerSize! / 2 },
+        { translateY: -particleLayerSize! / 2 },
+      ],
       justifyContent: 'center',
       alignItems: 'center',
     },
-
-    // checkbox square with rounded borders
-    checkbox: {
-      width: size,
-      height: size,
-      borderRadius: borderRadius,
-      borderWidth: 1.5, // border width for the checkbox outline
-      borderColor: themeColors.text.tertiary(), // default border color (grey)
-      backgroundColor: 'transparent', // default background (transparent)
+    particlesLottie: {
+      width: particleLayerSize,
+      height: particleLayerSize,
+      justifyContent: 'center',
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignItems: 'center',
     },
   });

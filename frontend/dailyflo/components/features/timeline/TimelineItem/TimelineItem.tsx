@@ -20,7 +20,7 @@ import { Task } from '@/types';
 import { getTaskColorValue } from '@/utils/taskColors';
 import TaskIcon from '@/components/ui/card/TaskCard/TaskIcon';
 import { RepeatIcon } from '@/components/ui/icon';
-import { Checkbox } from '@/components/ui/button';
+import { Checkbox, CHECKBOX_SIZE_TASK_CARD } from '@/components/ui/button';
 import { getTaskCardHeight, formatTimeRange } from '../timelineUtils';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
 
@@ -612,7 +612,7 @@ export default function TimelineItem({
           ]}
           onLayout={handleContentLayout}
         >
-          <Animated.View style={[styles.combinedContainer, styles.combinedContainerPadding, { height: minCardHeight }]}>
+          <Animated.View style={[styles.combinedContainer, styles.combinedContainerPadding, { height: minCardHeight }, overlapBorderRadius]}>
             <TouchableOpacity
               style={styles.touchableContent}
               onPress={handleTaskPress}
@@ -621,10 +621,9 @@ export default function TimelineItem({
               {/* checkbox on left - matches TaskCard layout, marginRight: 12 for checkbox-to-title spacing */}
               <View style={styles.checkboxWrapper}>
                 <Checkbox
+                  size={CHECKBOX_SIZE_TASK_CARD}
                   checked={task.isCompleted}
                   onPress={() => onTaskComplete?.(task)}
-                  size={18}
-                  borderRadius={6}
                 />
               </View>
               <View style={styles.taskContent}>
@@ -649,11 +648,11 @@ export default function TimelineItem({
                     {subtasksCount > 0 && (
                       <View style={styles.subtaskCountRow}>
                         <Checkbox
+                          size={12}
                           checked={allSubtasksComplete}
                           onPress={() => {}}
-                          size={12}
-                          borderRadius={4}
                           disabled
+                          showParticles={false}
                         />
                         <Text style={styles.subtaskCount}>
                           {completedSubtasksCount}/{subtasksCount}
@@ -714,17 +713,19 @@ const createStyles = (
     flex: 1, // take up remaining available width within container
     flexDirection: 'column', // stack combinedContainer and expandedArea vertically
     position: 'relative',
-    overflow: 'hidden', // ensure content doesn't overflow during animation
+    overflow: 'visible', // allow checkbox particles to extend past bounds
     borderRadius: 24, // outer border radius for the entire card
   },
   
   // combined container for task content - fixed height, stays at top
+  // borderRadius here so corners render (content has overflow: visible for particles, so it can't clip)
   combinedContainer: {
     flexDirection: 'row',
     width: '100%',
     alignItems: 'stretch',
     position: 'relative',
     backgroundColor: themeColors.background.primarySecondaryBlend(),
+    borderRadius: 24,
   },
   
   // touchable content area - row: checkbox on left, task content on right (matches TaskCard layout)
@@ -737,6 +738,8 @@ const createStyles = (
 
   // checkbox wrapper - left of task content, centers the Checkbox (same as TaskCard)
   checkboxWrapper: {
+    width: CHECKBOX_SIZE_TASK_CARD,
+    height: CHECKBOX_SIZE_TASK_CARD,
     alignItems: 'center',
     justifyContent: 'center',
   },
