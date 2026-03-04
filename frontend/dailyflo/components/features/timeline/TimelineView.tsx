@@ -14,6 +14,7 @@ import { useSharedValue, withTiming, makeMutable, withSpring } from 'react-nativ
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
+import { CHECKBOX_HIDE_DELAY_MS } from '@/constants/Checkbox';
 import { Task } from '@/types';
 import TimelineItem from './TimelineItem/TimelineItem';
 import TimeLabel from './TimeLabel';
@@ -42,6 +43,8 @@ interface TimelineViewProps {
   onTaskPress?: (task: Task) => void;
   // callback when a task's completion status is toggled
   onTaskComplete?: (task: Task) => void;
+  // when true, completed tasks are hidden (same local-update optimization as TaskCard/ListCard)
+  hideCompletedTasks?: boolean;
   // start hour for the timeline (default: 6 AM)
   startHour?: number;
   // end hour for the timeline (default: 23 = 11 PM)
@@ -65,6 +68,7 @@ export default function TimelineView({
   onTaskTimeChange,
   onTaskPress,
   onTaskComplete,
+  hideCompletedTasks = false,
   startHour = 6,
   footerComponent,
   scrollContentPaddingTop,
@@ -98,6 +102,74 @@ export default function TimelineView({
   // these are created when tasks overlap and represent the combined card
   const [combinedOverlappingTasks, setCombinedOverlappingTasks] = useState<Map<string, CombinedOverlappingTask>>(new Map());
 
+  // when hideCompletedTasks: same local-update optimization as ListCard - hide completed without waiting for redux
+  const [locallyCompletedIds, setLocallyCompletedIds] = useState<Set<string>>(() => new Set());
+  const hideTimeoutRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => () => {
+    Object.values(hideTimeoutRef.current).forEach(clearTimeout);
+    hideTimeoutRef.current = {};
+  }, []);
+
+  useEffect(() => {
+    if (!hideCompletedTasks || locallyCompletedIds.size === 0) return;
+    const stillCompleted = new Set<string>();
+    locallyCompletedIds.forEach((id) => {
+      const task = tasks.find((t) => t.id === id);
+      if (task?.isCompleted) stillCompleted.add(id);
+    });
+    if (stillCompleted.size !== locallyCompletedIds.size) {
+      setLocallyCompletedIds(stillCompleted);
+    }
+  }, [tasks, hideCompletedTasks, locallyCompletedIds]);
+
+  const visibleTasks = useMemo(() => {
+    if (!hideCompletedTasks) return tasks;
+    return tasks.filter((t) => !t.isCompleted && !locallyCompletedIds.has(t.id));
+  }, [tasks, hideCompletedTasks, locallyCompletedIds]);
+
+  const handleTaskCompleteImmediate = useCallback(
+    (task: Task, targetCompleted?: boolean) => {
+      if (!hideCompletedTasks) return;
+      if (targetCompleted === false) {
+        if (hideTimeoutRef.current[task.id]) {
+          clearTimeout(hideTimeoutRef.current[task.id]);
+          delete hideTimeoutRef.current[task.id];
+        }
+        setLocallyCompletedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(task.id);
+          return next;
+        });
+      } else {
+        hideTimeoutRef.current[task.id] = setTimeout(() => {
+          delete hideTimeoutRef.current[task.id];
+          setLocallyCompletedIds((prev) => new Set(prev).add(task.id));
+        }, CHECKBOX_HIDE_DELAY_MS);
+      }
+    },
+    [hideCompletedTasks]
+  );
+
+  const handleTaskComplete = useCallback(
+    (task: Task, targetCompleted?: boolean) => {
+      if (hideCompletedTasks) {
+        if (hideTimeoutRef.current[task.id]) {
+          clearTimeout(hideTimeoutRef.current[task.id]);
+          delete hideTimeoutRef.current[task.id];
+        }
+        setLocallyCompletedIds((prev) => {
+          const next = new Set(prev);
+          if (targetCompleted !== false) next.add(task.id);
+          else next.delete(task.id);
+          return next;
+        });
+      }
+      onTaskComplete?.(task);
+    },
+    [onTaskComplete, hideCompletedTasks]
+  );
+
   // create dynamic styles using theme colors and typography
   const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
 
@@ -130,7 +202,7 @@ export default function TimelineView({
   // also exclude tasks that are hidden due to overlaps
   // and include combined overlapping tasks as pseudo-tasks for rendering
   const tasksWithTime = useMemo(() => {
-    const regularTasks = tasks.filter(task => 
+    const regularTasks = visibleTasks.filter(task => 
       task.time && 
       task.dueDate && 
       !hiddenTaskIds.has(task.id)
@@ -166,7 +238,7 @@ export default function TimelineView({
     
     // combine regular tasks and combined tasks
     return [...regularTasks, ...combinedTasksAsPseudoTasks];
-  }, [tasks, hiddenTaskIds, combinedOverlappingTasks]);
+  }, [visibleTasks, hiddenTaskIds, combinedOverlappingTasks]);
 
   // calculate dynamic start time - use earliest task time or fallback to startHour
   // round down to the hour and subtract 1 hour for buffer to allow scrolling up
@@ -1525,9 +1597,9 @@ export default function TimelineView({
     // drag operations handle overlap detection themselves via handleTaskTimeChangeWithOverlap
     // this ensures overlap detection runs on initial load and when tasks are updated (but not during/after drag)
     if (dragState === null && !isProcessingDragRef.current) {
-      detectAndCreateOverlappingTasks(tasks);
+      detectAndCreateOverlappingTasks(visibleTasks);
     }
-  }, [tasks, detectAndCreateOverlappingTasks, dragState]);
+  }, [visibleTasks, detectAndCreateOverlappingTasks, dragState]);
 
   // clear hidden tasks that no longer exist in the tasks list
   // this prevents stale hidden state when tasks are removed or updated
@@ -1770,7 +1842,8 @@ export default function TimelineView({
                     startHour={dynamicStartHour}
                     combinedTaskId={task.id}
                     onPress={(pressedTask) => onTaskPress?.(pressedTask)}
-                    onTaskComplete={onTaskComplete}
+                    onTaskComplete={handleTaskComplete}
+                    onTaskCompleteImmediate={handleTaskCompleteImmediate}
                     onDrag={(taskId, newY) => {
                       // handle drag from overlapping task - use modular drag handler
                       // this converts top position to center and updates task
@@ -1887,7 +1960,8 @@ export default function TimelineView({
                     // this is called after onDrag, so state is already cleared
                   }}
                   onPress={() => onTaskPress?.(task)}
-                  onTaskComplete={onTaskComplete}
+                  onTaskComplete={handleTaskComplete}
+                  onTaskCompleteImmediate={handleTaskCompleteImmediate}
                   // pass isDraggedTask prop so this task can apply higher z-index when being dragged
                   // this ensures the dragged task appears above all other tasks on the timeline
                   isDraggedTask={dragState?.taskId === task.id}

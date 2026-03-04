@@ -2,7 +2,7 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
 // import our custom layout components
@@ -33,6 +33,7 @@ import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSl
 
 // types for tasks
 import { Task, TaskColor } from '@/types';
+import { flushAllPendingCheckboxSyncs } from '@/utils/pendingCheckboxSyncRegistry';
 import {
   expandTasksForDates,
   isExpandedRecurrenceId,
@@ -92,6 +93,9 @@ export default function PlannerScreen() {
   
   // create dynamic styles using the color palette system and typography system
   const styles = useMemo(() => createStyles(themeColors, typography, insets, modalBorderRadius), [themeColors, typography, insets, modalBorderRadius]);
+
+  // flush pending checkbox syncs when leaving (tab switch)
+  useFocusEffect(React.useCallback(() => () => flushAllPendingCheckboxSyncs(), []));
 
   // CALENDAR HANDLERS
   // handle calendar modal close
@@ -286,6 +290,7 @@ export default function PlannerScreen() {
                 <ListCard
                   key="planner-allday-listcard"
                   tasks={allDayTasks}
+                  hideCompletedTasks={true}
                   onTaskPress={handleTaskPress}
                   onTaskComplete={handleTaskComplete}
                   onTaskEdit={handleTaskEdit}

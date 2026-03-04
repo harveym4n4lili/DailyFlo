@@ -7,7 +7,7 @@ import React, { useRef, useEffect } from 'react';
 import { Animated, Pressable, View } from 'react-native';
 import { TickIcon } from '@/components/ui/icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { CHECKBOX_SIZE_DEFAULT, CHECKBOX_TICK_SIZE_RATIO } from '@/constants/Checkbox';
+import { CHECKBOX_SIZE_DEFAULT, CHECKBOX_TICK_SIZE_RATIO, CHECKBOX_TICK_ANIMATION_MS } from '@/constants/Checkbox';
 
 const MIN_TAP_AREA = 44;
 const PRESS_SCALE = 1.5;
@@ -48,12 +48,12 @@ export function Checkbox({
   useEffect(() => {
     Animated.timing(tickOpacity, {
       toValue: checked ? 1 : 0,
-      duration: 180,
+      duration: CHECKBOX_TICK_ANIMATION_MS,
       useNativeDriver: true,
     }).start();
   }, [checked, tickOpacity]);
 
-  const springConfig = { damping: 20, stiffness: 100, mass: 0.4, useNativeDriver: true };
+  const springConfig = { damping: 20, stiffness: 150, mass: 0.2, useNativeDriver: true };
   const handlePressIn = () => {
     Animated.spring(builtInScale, { toValue: PRESS_SCALE, ...springConfig }).start();
   };

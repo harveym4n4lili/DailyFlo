@@ -25,7 +25,8 @@ interface OverlappingTaskCardProps {
   // pixels per minute for reference
   pixelsPerMinute: number;
   onPress?: (task: Task) => void;
-  onTaskComplete?: (task: Task) => void;
+  onTaskComplete?: (task: Task, targetCompleted?: boolean) => void;
+  onTaskCompleteImmediate?: (task: Task, targetCompleted?: boolean) => void;
   // callback when task is dragged to a new position
   onDrag: (taskId: string, newY: number) => void;
   // callback when drag position changes (for showing time label)
@@ -57,6 +58,7 @@ export default function OverlappingTaskCard({
   pixelsPerMinute,
   onPress,
   onTaskComplete,
+  onTaskCompleteImmediate,
   onDrag,
   onDragPositionChange,
   onDragStart,
@@ -199,6 +201,7 @@ export default function OverlappingTaskCard({
             }}
             onPress={() => onPress?.(task)}
             onTaskComplete={onTaskComplete}
+            onTaskCompleteImmediate={onTaskCompleteImmediate}
             isDraggedTask={isDragged}
             overlapPosition={overlapPosition}
           />

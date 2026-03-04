@@ -35,13 +35,21 @@ import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
+import { CHECKBOX_HIDE_DELAY_MS } from '@/constants/Checkbox';
 
 // import custom hooks for animation management
 import { useGroupAnimations } from '@/hooks/useGroupAnimations';
 import { useTaskCardAnimations } from '@/hooks/useTaskCardAnimations';
-import AnimatedReanimated, { useAnimatedStyle, useSharedValue, useAnimatedScrollHandler, runOnJS, interpolate, Extrapolation, type SharedValue } from 'react-native-reanimated';
+import AnimatedReanimated, { useAnimatedStyle, useSharedValue, useAnimatedScrollHandler, runOnJS, interpolate, Extrapolation, LinearTransition, FadeOut, type SharedValue } from 'react-native-reanimated';
 
 const AnimatedFlatList = AnimatedReanimated.createAnimatedComponent(FlatList);
+
+// spring-based layout transition for smooth item removal when hideCompletedTasks
+// overshootClamping prevents bounce past target; damping 28 + stiffness 300 = quick, smooth settle
+const LAYOUT_TRANSITION = LinearTransition.springify()
+  .damping(28)
+  .stiffness(300)
+  .overshootClamping(true);
 
 // import utility functions for task grouping and sorting
 import { groupTasks, sortTasks, sortGroupEntries, formatDateForGroup } from '@/utils/taskGrouping';
@@ -148,6 +156,9 @@ export interface ListCardProps {
 
   // when false, disables internal scrolling - use when ListCard is inside another ScrollView (e.g. planner footer)
   scrollEnabled?: boolean;
+
+  // when true, completed tasks are hidden from the list - they disappear when checked (iOS-style)
+  hideCompletedTasks?: boolean;
 }
 
 /**
@@ -202,6 +213,7 @@ export default function ListCard({
   scrollPastTopInset = false,
   scrollYSharedValue,
   scrollEnabled = true,
+  hideCompletedTasks = false,
 }: ListCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -273,10 +285,79 @@ export default function ListCard({
 
   const { getTaskCardAnimation, markGroupExpanding } = useTaskCardAnimations();
 
+  // when hideCompletedTasks: hide completed tasks (local + redux). optimistically hide on tap so we don't wait for redux
+  const [locallyCompletedIds, setLocallyCompletedIds] = useState<Set<string>>(() => new Set());
+  const hideTimeoutRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => () => {
+    Object.values(hideTimeoutRef.current).forEach(clearTimeout);
+    hideTimeoutRef.current = {};
+  }, []);
+
+  // sync with redux: if a task was unchecked elsewhere (e.g. Planner), remove from locallyCompletedIds so it reappears
+  useEffect(() => {
+    if (!hideCompletedTasks || locallyCompletedIds.size === 0) return;
+    const stillCompleted = new Set<string>();
+    locallyCompletedIds.forEach((id) => {
+      const task = tasks.find((t) => t.id === id);
+      if (task?.isCompleted) stillCompleted.add(id);
+    });
+    if (stillCompleted.size !== locallyCompletedIds.size) {
+      setLocallyCompletedIds(stillCompleted);
+    }
+  }, [tasks, hideCompletedTasks, locallyCompletedIds]);
+
+  const visibleTasks = useMemo(() => {
+    if (!hideCompletedTasks) return tasks;
+    return tasks.filter((t) => !t.isCompleted && !locallyCompletedIds.has(t.id));
+  }, [tasks, hideCompletedTasks, locallyCompletedIds]);
+
+  const handleTaskCompleteImmediate = useCallback(
+    (task: Task, targetCompleted?: boolean) => {
+      if (!hideCompletedTasks) return;
+      if (targetCompleted === false) {
+        if (hideTimeoutRef.current[task.id]) {
+          clearTimeout(hideTimeoutRef.current[task.id]);
+          delete hideTimeoutRef.current[task.id];
+        }
+        setLocallyCompletedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(task.id);
+          return next;
+        });
+      } else {
+        hideTimeoutRef.current[task.id] = setTimeout(() => {
+          delete hideTimeoutRef.current[task.id];
+          setLocallyCompletedIds((prev) => new Set(prev).add(task.id));
+        }, CHECKBOX_HIDE_DELAY_MS);
+      }
+    },
+    [hideCompletedTasks]
+  );
+
+  const handleTaskComplete = useCallback(
+    (task: Task, targetCompleted?: boolean) => {
+      if (hideCompletedTasks) {
+        if (hideTimeoutRef.current[task.id]) {
+          clearTimeout(hideTimeoutRef.current[task.id]);
+          delete hideTimeoutRef.current[task.id];
+        }
+        setLocallyCompletedIds((prev) => {
+          const next = new Set(prev);
+          if (targetCompleted !== false) next.add(task.id);
+          else next.delete(task.id);
+          return next;
+        });
+      }
+      onTaskComplete?.(task, targetCompleted);
+    },
+    [onTaskComplete, hideCompletedTasks]
+  );
+
   // process and organize tasks based on grouping and sorting options
   const processedTasks = useMemo(() => {
-    return sortTasks(tasks, sortBy, sortDirection);
-  }, [tasks, sortBy, sortDirection]);
+    return sortTasks(visibleTasks, sortBy, sortDirection);
+  }, [visibleTasks, sortBy, sortDirection]);
 
   // group tasks if grouping is enabled
   const groupedTasks = useMemo(() => {
@@ -284,13 +365,10 @@ export default function ListCard({
   }, [processedTasks, groupBy]);
 
   // sort groups: Today first, then Overdue, then others, Completed last
-  // this must be called unconditionally (before the if/else) to follow Rules of Hooks
   const sortedGroupEntries = useMemo(() => {
-    // only sort if grouping is enabled, otherwise return empty array
-    if (groupBy === 'none') {
-      return [];
-    }
-    return sortGroupEntries(Object.entries(groupedTasks));
+    if (groupBy === 'none') return [];
+    const entries = Object.entries(groupedTasks).filter(([, tasks]) => tasks.length > 0);
+    return sortGroupEntries(entries);
   }, [groupedTasks, groupBy]);
 
   // handle group toggle with animation tracking
@@ -314,7 +392,8 @@ export default function ListCard({
           <TaskCard
             task={task}
             onPress={onTaskPress}
-            onComplete={onTaskComplete}
+            onComplete={handleTaskComplete}
+            onCompleteImmediate={handleTaskCompleteImmediate}
             onEdit={onTaskEdit}
             onDelete={onTaskDelete}
             onSwipeLeft={onTaskSwipeLeft}
@@ -334,19 +413,28 @@ export default function ListCard({
             isFirstItem={isFirstItem}
           />
       );
-      return shouldAnimate && opacityValue && scaleValue ? (
+      const wrapper = shouldAnimate && opacityValue && scaleValue ? (
         <Animated.View style={{ opacity: opacityValue, transform: [{ scale: scaleValue }] }}>
           {card}
         </Animated.View>
       ) : (
         <View>{card}</View>
       );
+      return hideCompletedTasks ? (
+        <AnimatedReanimated.View layout={LAYOUT_TRANSITION} exiting={FadeOut.duration(200)}>
+          {wrapper}
+        </AnimatedReanimated.View>
+      ) : (
+        wrapper
+      );
     },
     [
       getTaskCardAnimation,
       processedTasks.length,
+      hideCompletedTasks,
       onTaskPress,
-      onTaskComplete,
+      handleTaskComplete,
+      handleTaskCompleteImmediate,
       onTaskEdit,
       onTaskDelete,
       onTaskSwipeLeft,
@@ -527,6 +615,7 @@ export default function ListCard({
           data={processedTasks}
           renderItem={renderTaskCard}
           keyExtractor={(task) => `${instanceId}-${task.id}`}
+          itemLayoutAnimation={hideCompletedTasks ? LAYOUT_TRANSITION : undefined}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           refreshControl={refreshControl}
@@ -534,7 +623,7 @@ export default function ListCard({
           scrollEventThrottle={32}
           ListHeaderComponent={renderHeader}
           scrollEnabled={scrollEnabled}
-          removeClippedSubviews={true}
+          removeClippedSubviews={!hideCompletedTasks}
           maxToRenderPerBatch={6}
           windowSize={7}
           initialNumToRender={8}
@@ -559,19 +648,21 @@ export default function ListCard({
         )}
         <AnimatedFlatList
           data={sortedGroupEntries}
+          itemLayoutAnimation={hideCompletedTasks ? LAYOUT_TRANSITION : undefined}
           renderItem={({ item: [groupTitle, groupTasks] }) => {
             const isCollapsed = isGroupCollapsed(groupTitle);
             return (
               <View style={styles.group}>
                 {renderGroupHeader(groupTitle, groupTasks.length, groupTasks as Task[])}
                 {!isCollapsed && (
-                  <FlatList
+                  <AnimatedFlatList
                     data={groupTasks}
                     scrollEnabled={false}
-                    removeClippedSubviews={true}
+                    removeClippedSubviews={!hideCompletedTasks}
                     maxToRenderPerBatch={6}
                     initialNumToRender={6}
                     keyExtractor={(task) => task.id}
+                    itemLayoutAnimation={hideCompletedTasks ? LAYOUT_TRANSITION : undefined}
                     showsVerticalScrollIndicator={false}
                     renderItem={({ item: task, index }) => {
                       const { opacityValue, scaleValue, shouldAnimate } = getTaskCardAnimation(
@@ -585,7 +676,8 @@ export default function ListCard({
                         <TaskCard
                           task={task}
                           onPress={onTaskPress}
-                          onComplete={onTaskComplete}
+                          onComplete={handleTaskComplete}
+                          onCompleteImmediate={handleTaskCompleteImmediate}
                           onEdit={onTaskEdit}
                           onDelete={onTaskDelete}
                           onSwipeLeft={onTaskSwipeLeft}
@@ -605,12 +697,19 @@ export default function ListCard({
                           isFirstItem={isFirstItem}
                         />
                       );
-                      return shouldAnimate && opacityValue && scaleValue ? (
+                      const wrapper = shouldAnimate && opacityValue && scaleValue ? (
                         <Animated.View style={{ opacity: opacityValue, transform: [{ scale: scaleValue }] }}>
                           {card}
                         </Animated.View>
                       ) : (
                         <View>{card}</View>
+                      );
+                      return hideCompletedTasks ? (
+                        <AnimatedReanimated.View layout={LAYOUT_TRANSITION} exiting={FadeOut.duration(200)}>
+                          {wrapper}
+                        </AnimatedReanimated.View>
+                      ) : (
+                        wrapper
                       );
                     }}
                   />
@@ -627,7 +726,7 @@ export default function ListCard({
           scrollEventThrottle={32}
           ListHeaderComponent={renderHeader}
           scrollEnabled={scrollEnabled}
-          removeClippedSubviews={true}
+          removeClippedSubviews={!hideCompletedTasks}
           maxToRenderPerBatch={5}
           windowSize={6}
           initialNumToRender={6}

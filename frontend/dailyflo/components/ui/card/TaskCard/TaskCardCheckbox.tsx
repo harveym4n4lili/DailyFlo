@@ -10,15 +10,18 @@ import * as Haptics from 'expo-haptics';
 import { Task } from '@/types';
 import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 import { CHECKBOX_SYNC_DELAY_MS } from '@/constants/Checkbox';
+import { registerPendingCheckboxSync, unregisterPendingCheckboxSync } from '@/utils/pendingCheckboxSyncRegistry';
 
 export interface TaskCardCheckboxProps {
   task: Task;
+  onCompleteImmediate?: (task: Task, targetCompleted?: boolean) => void;
   onComplete?: (task: Task, targetCompleted?: boolean) => void;
   onDisplayChange?: (displayCompleted: boolean) => void;
 }
 
 export default function TaskCardCheckbox({
   task,
+  onCompleteImmediate,
   onComplete,
   onDisplayChange,
 }: TaskCardCheckboxProps) {
@@ -47,6 +50,7 @@ export default function TaskCardCheckbox({
   }, [task.id]);
 
   const dispatchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingExecuteRef = useRef<(() => void) | null>(null);
   const pendingTargetRef = useRef<boolean | null>(null);
   const taskRef = useRef(task);
   const onCompleteRef = useRef(onComplete);
@@ -54,25 +58,37 @@ export default function TaskCardCheckbox({
   onCompleteRef.current = onComplete;
 
   useEffect(() => () => {
+    if (pendingExecuteRef.current) unregisterPendingCheckboxSync(pendingExecuteRef.current);
     if (dispatchTimeoutRef.current) clearTimeout(dispatchTimeoutRef.current);
     if (pendingTargetRef.current !== null && onCompleteRef.current) {
       onCompleteRef.current(taskRef.current, pendingTargetRef.current);
     }
-  }, []);
+  }, []); // note: component unmount still runs pending sync; tab switch uses flushAllPendingCheckboxSyncs
 
   const handleCheckboxComplete = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const target = !displayCompleted;
     setOptimisticCompleted(target);
     pendingTargetRef.current = target;
+    onCompleteImmediate?.(task, target);
 
     if (dispatchTimeoutRef.current) clearTimeout(dispatchTimeoutRef.current);
-    dispatchTimeoutRef.current = setTimeout(() => {
-      dispatchTimeoutRef.current = null;
+
+    const executeSync = () => {
+      unregisterPendingCheckboxSync(executeSync);
+      pendingExecuteRef.current = null;
+      if (dispatchTimeoutRef.current) {
+        clearTimeout(dispatchTimeoutRef.current);
+        dispatchTimeoutRef.current = null;
+      }
       pendingTargetRef.current = null;
       onComplete?.(task, target);
-    }, CHECKBOX_SYNC_DELAY_MS);
-  }, [onComplete, task, displayCompleted]);
+    };
+
+    pendingExecuteRef.current = executeSync;
+    dispatchTimeoutRef.current = setTimeout(executeSync, CHECKBOX_SYNC_DELAY_MS);
+    registerPendingCheckboxSync(executeSync);
+  }, [onComplete, onCompleteImmediate, task, displayCompleted]);
 
   return (
     <View style={{ width: CHECKBOX_SIZE_DEFAULT, height: CHECKBOX_SIZE_DEFAULT, marginRight: 12, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', zIndex: 1 }}>
@@ -83,4 +99,6 @@ export default function TaskCardCheckbox({
       />
     </View>
   );
+}
+
 }
