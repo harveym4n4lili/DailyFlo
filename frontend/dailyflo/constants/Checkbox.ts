@@ -5,7 +5,7 @@
  */
 
 // delay before syncing checkbox changes to backend - ui stays fully local until then
-export const CHECKBOX_SYNC_DELAY_MS = 2_000;
+export const CHECKBOX_SYNC_DELAY_MS = 30_000;
 
 // --- CHECKBOX SIZES ---
 // default size for TaskCard, TimelineItem, SubtaskListItem, DragOverlay

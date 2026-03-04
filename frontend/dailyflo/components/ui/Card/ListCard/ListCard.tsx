@@ -39,7 +39,9 @@ import { Paddings } from '@/constants/Paddings';
 // import custom hooks for animation management
 import { useGroupAnimations } from '@/hooks/useGroupAnimations';
 import { useTaskCardAnimations } from '@/hooks/useTaskCardAnimations';
-import AnimatedReanimated, { useAnimatedStyle, useSharedValue, interpolate, Extrapolation, type SharedValue } from 'react-native-reanimated';
+import AnimatedReanimated, { useAnimatedStyle, useSharedValue, useAnimatedScrollHandler, runOnJS, interpolate, Extrapolation, type SharedValue } from 'react-native-reanimated';
+
+const AnimatedFlatList = AnimatedReanimated.createAnimatedComponent(FlatList);
 
 // import utility functions for task grouping and sorting
 import { groupTasks, sortTasks, sortGroupEntries, formatDateForGroup } from '@/utils/taskGrouping';
@@ -415,6 +417,18 @@ export default function ListCard({
   const fallbackScrollY = useSharedValue(0);
   const scrollY = scrollYSharedValue ?? fallbackScrollY;
 
+  // when scrollYSharedValue provided: use animated scroll handler (runs on UI thread) to avoid JS thread work during scroll
+  // scrollY is updated on UI thread; onScroll is bridged via runOnJS for parent callbacks (e.g. trackScrollToTodayLayout)
+  // reanimated event has contentOffset at top level; parent expects { nativeEvent: { contentOffset } } - wrap to match
+  const animatedScrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      const y = e.contentOffset.y;
+      scrollY.value = y;
+      if (onScroll) runOnJS(onScroll)({ nativeEvent: e });
+    },
+  });
+  const scrollHandler = scrollYSharedValue ? animatedScrollHandler : onScroll;
+
   // animated style for Today header - fades out when scrollY passes 48px (uses reanimated for smooth 60fps)
   const bigTodayHeaderAnimatedStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
@@ -508,26 +522,22 @@ export default function ListCard({
             leftOffset={dropdownLeftOffset}
           />
         )}
-        <FlatList
-          ref={flatListRef}
+        <AnimatedFlatList
+          ref={flatListRef as any}
           data={processedTasks}
           renderItem={renderTaskCard}
           keyExtractor={(task) => `${instanceId}-${task.id}`}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           refreshControl={refreshControl}
-          onScroll={onScroll}
-          scrollEventThrottle={scrollEventThrottle}
+          onScroll={scrollHandler}
+          scrollEventThrottle={32}
           ListHeaderComponent={renderHeader}
           scrollEnabled={scrollEnabled}
-          maintainVisibleContentPosition={null}
           removeClippedSubviews={true}
-          maxToRenderPerBatch={10}
-          windowSize={11}
-          initialNumToRender={12}
-          maxToRenderPerBatch={10}
-          windowSize={11}
-          initialNumToRender={12}
+          maxToRenderPerBatch={6}
+          windowSize={7}
+          initialNumToRender={8}
         />
       </View>
     );
@@ -547,7 +557,7 @@ export default function ListCard({
             leftOffset={dropdownLeftOffset}
           />
         )}
-        <FlatList
+        <AnimatedFlatList
           data={sortedGroupEntries}
           renderItem={({ item: [groupTitle, groupTasks] }) => {
             const isCollapsed = isGroupCollapsed(groupTitle);
@@ -559,8 +569,8 @@ export default function ListCard({
                     data={groupTasks}
                     scrollEnabled={false}
                     removeClippedSubviews={true}
-                    maxToRenderPerBatch={8}
-                    initialNumToRender={8}
+                    maxToRenderPerBatch={6}
+                    initialNumToRender={6}
                     keyExtractor={(task) => task.id}
                     showsVerticalScrollIndicator={false}
                     renderItem={({ item: task, index }) => {
@@ -603,28 +613,24 @@ export default function ListCard({
                         <View>{card}</View>
                       );
                     }}
-                    keyExtractor={(task) => task.id}
-                    showsVerticalScrollIndicator={false}
-                    scrollEnabled={false} // disable scrolling for nested lists
-                    keyExtractor={(task) => task.id}
-                    showsVerticalScrollIndicator={false}
-                    scrollEnabled={false} // disable scrolling for nested lists
                   />
                 )}
               </View>
             );
           }}
-          ref={groupedFlatListRef}
-          keyExtractor={([groupTitle]) => `${instanceId}-${groupTitle}`} // add instance ID to ensure unique keys
+          ref={groupedFlatListRef as any}
+          keyExtractor={([groupTitle]) => `${instanceId}-${groupTitle}`}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           refreshControl={refreshControl}
-          onScroll={onScroll}
-          scrollEventThrottle={scrollEventThrottle}
+          onScroll={scrollHandler}
+          scrollEventThrottle={32}
           ListHeaderComponent={renderHeader}
           scrollEnabled={scrollEnabled}
-          // prevent scroll position restoration between instances
-          maintainVisibleContentPosition={null}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={5}
+          windowSize={6}
+          initialNumToRender={6}
         />
       </View>
     );
