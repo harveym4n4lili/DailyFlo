@@ -15,6 +15,10 @@ export const CHECKBOX_STRIKETHROUGH_ANIMATION_MS = 100;
 // delay before hiding completed task - must exceed tick + strikethrough so linear transition starts after both
 export const CHECKBOX_HIDE_DELAY_MS = CHECKBOX_STRIKETHROUGH_ANIMATION_MS + 200;
 
+// approximate height per task card (card + spacing) - used when scrolling up after hiding completed tasks
+// so the list scrolls by the height of removed content instead of leaving a gap
+export const TASK_HEIGHT_ESTIMATE = 80;
+
 // --- CHECKBOX SIZES ---
 // default size for TaskCard, TimelineItem, SubtaskListItem, DragOverlay
 export const CHECKBOX_SIZE_DEFAULT = 22;

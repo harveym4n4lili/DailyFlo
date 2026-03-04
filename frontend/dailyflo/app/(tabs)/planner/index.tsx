@@ -313,8 +313,10 @@ export default function PlannerScreen() {
                   sortBy="createdAt"
                   sortDirection="desc"
                   paddingHorizontal={Paddings.screen}
-                  paddingBottom={16}
+                  paddingBottom={8}
                   scrollEnabled={false}
+                  delayHeightChangeOnTaskComplete={false}
+                  disableInitialLayoutTransition={true}
                 />
               </View>
             }
