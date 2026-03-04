@@ -28,7 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // redux store hooks for task management
 import { useTasks, useUI } from '@/store/hooks';
-import { useAppDispatch, useAppSelector } from '@/store';
+import { useAppDispatch, useAppSelector, store } from '@/store';
 import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
 
 // types for tasks
@@ -133,19 +133,21 @@ export default function PlannerScreen() {
     router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
-  // handle marking a task as complete/uncomplete - useCallback keeps reference stable for memoized TimelineItem
-  const handleTaskComplete = useCallback(async (task: Task) => {
+  // handle task completion - stable ref so memoized TimelineItem can skip re-renders
+  const handleTaskComplete = useCallback(async (task: Task, targetCompleted?: boolean) => {
     try {
+      const isCompleted = targetCompleted ?? !task.isCompleted;
       if (isExpandedRecurrenceId(task.id)) {
         const baseId = getBaseTaskId(task.id);
         const occurrenceDate = getOccurrenceDateFromId(task.id);
         if (!occurrenceDate) return;
-        const baseTask = tasks.find((t) => t.id === baseId);
+        const tasksFromStore = store.getState().tasks.tasks;
+        const baseTask = tasksFromStore.find((t) => t.id === baseId);
         if (!baseTask) return;
         const completions = baseTask.metadata?.recurrence_completions ?? [];
-        const newCompletions = task.isCompleted
-          ? completions.filter((d) => d !== occurrenceDate)
-          : [...completions, occurrenceDate];
+        const newCompletions = isCompleted
+          ? [...completions, occurrenceDate]
+          : completions.filter((d) => d !== occurrenceDate);
         await dispatch(updateTask({
           id: baseId,
           updates: {
@@ -154,12 +156,11 @@ export default function PlannerScreen() {
           },
         })).unwrap();
       } else {
-        const newCompletionStatus = !task.isCompleted;
-        const updates: any = { id: task.id, isCompleted: newCompletionStatus };
+        const updates: any = { id: task.id, isCompleted };
         if (task.metadata?.subtasks?.length) {
           updates.metadata = {
             ...task.metadata,
-            subtasks: task.metadata.subtasks.map((s) => ({ ...s, isCompleted: newCompletionStatus })),
+            subtasks: task.metadata.subtasks.map((s) => ({ ...s, isCompleted })),
           };
         }
         await dispatch(updateTask({ id: task.id, updates })).unwrap();
@@ -167,7 +168,7 @@ export default function PlannerScreen() {
     } catch (error) {
       console.error('Failed to update task:', error);
     }
-  }, [tasks, dispatch]);
+  }, [dispatch]);
   
   // handle editing a task - opens task screen in edit mode (same as task press)
   const handleTaskEdit = (task: Task) => {

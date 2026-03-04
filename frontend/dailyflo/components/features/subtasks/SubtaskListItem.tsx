@@ -17,6 +17,10 @@ import { TouchableOpacity, TextInput, View, Keyboard, Text, Pressable } from 're
 // EXPO VECTOR ICONS IMPORT
 import { Ionicons } from '@expo/vector-icons';
 
+// UI COMPONENTS
+import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
+import * as Haptics from 'expo-haptics';
+
 // CUSTOM HOOKS IMPORTS
 // useThemeColors: hook for accessing theme-aware colors
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -115,11 +119,12 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
     setEditTitle(title);
   }, [title]);
 
-  // determine checkbox icon based on completion status
-  const checkboxIcon = isCompleted ? 'checkmark-circle' : 'ellipse-outline';
-  const checkboxColor = isCompleted 
-    ? themeColors.text.primary() 
-    : themeColors.text.tertiary();
+  // handle checkbox press with haptic feedback
+  const handleCheckboxPress = () => {
+    if (disabled) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
+  };
 
   // handle delete button press - prevent event propagation to avoid toggling completion
   const handleDeletePress = (e: any) => {
@@ -160,19 +165,15 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
     return (
       <View
         style={{
-      
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}
       >
-        {/* checkbox icon on the left */}
-        <Ionicons
-          name={checkboxIcon}
-          size={20}
-          color={checkboxColor}
-          style={{ marginRight: 12 }}
-        />
+        {/* checkbox on the left - read-only in edit mode */}
+        <View style={{ width: CHECKBOX_SIZE_DEFAULT, height: CHECKBOX_SIZE_DEFAULT, marginRight: 12, justifyContent: 'center', alignItems: 'center' }}>
+          <Checkbox checked={isCompleted} disabled size={CHECKBOX_SIZE_DEFAULT} />
+        </View>
 
         {/* middle section: TextInput and close button */}
         <View
@@ -236,20 +237,15 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
         justifyContent: 'space-between',
       }}
     >
-      {/* checkbox icon on the left - pressable to toggle completion */}
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        activeOpacity={0.7}
-      >
-        <Ionicons
-          name={checkboxIcon}
-          size={20}
-          color={checkboxColor}
-          style={{ marginRight: 12 }}
+      {/* checkbox on the left - pressable to toggle completion */}
+      <View style={{ width: CHECKBOX_SIZE_DEFAULT, height: CHECKBOX_SIZE_DEFAULT, marginRight: 12, justifyContent: 'center', alignItems: 'center' }}>
+        <Checkbox
+          checked={isCompleted}
+          onPress={handleCheckboxPress}
+          disabled={disabled}
+          size={CHECKBOX_SIZE_DEFAULT}
         />
-      </TouchableOpacity>
+      </View>
 
       {/* middle section: label and close button */}
       <View

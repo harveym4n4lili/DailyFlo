@@ -1,7 +1,7 @@
 /**
- * TimelineCheckbox - completion checkbox for TimelineItem with optimistic ui.
+ * TaskCardCheckbox - completion checkbox for TaskCard with optimistic ui.
  * Shows tick immediately on tap, syncs to backend after CHECKBOX_SYNC_DELAY_MS.
- * Parent uses onDisplayChange to get displayCompleted for title styling.
+ * Parent uses onDisplayChange to get displayCompleted for card styling.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -11,44 +11,33 @@ import { Task } from '@/types';
 import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 import { CHECKBOX_SYNC_DELAY_MS } from '@/constants/Checkbox';
 
-export interface TimelineCheckboxProps {
+export interface TaskCardCheckboxProps {
   task: Task;
-  onTaskComplete?: (task: Task, targetCompleted?: boolean) => void;
+  onComplete?: (task: Task, targetCompleted?: boolean) => void;
   onDisplayChange?: (displayCompleted: boolean) => void;
 }
 
-export default function TimelineCheckbox({
+export default function TaskCardCheckbox({
   task,
-  onTaskComplete,
+  onComplete,
   onDisplayChange,
-}: TimelineCheckboxProps) {
+}: TaskCardCheckboxProps) {
   const [optimisticCompleted, setOptimisticCompleted] = useState<boolean | null>(null);
   const displayCompleted = optimisticCompleted ?? task.isCompleted;
 
+  // notify parent when display value changes (for card styling)
   useEffect(() => {
     onDisplayChange?.(displayCompleted);
   }, [displayCompleted, onDisplayChange]);
 
+  // clear optimistic when backend catches up
   useEffect(() => {
     if (optimisticCompleted !== null && task.isCompleted === optimisticCompleted) {
       setOptimisticCompleted(null);
     }
   }, [task.isCompleted, optimisticCompleted]);
 
-  const dispatchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingTargetRef = useRef<boolean | null>(null);
-  const taskRef = useRef(task);
-  const onTaskCompleteRef = useRef(onTaskComplete);
-  taskRef.current = task;
-  onTaskCompleteRef.current = onTaskComplete;
-
-  useEffect(() => () => {
-    if (dispatchTimeoutRef.current) clearTimeout(dispatchTimeoutRef.current);
-    if (pendingTargetRef.current !== null && onTaskCompleteRef.current) {
-      onTaskCompleteRef.current(taskRef.current, pendingTargetRef.current);
-    }
-  }, []);
-
+  // reset when task changes (e.g. list reuse)
   const prevTaskIdRef = useRef(task.id);
   useEffect(() => {
     if (prevTaskIdRef.current !== task.id) {
@@ -57,24 +46,39 @@ export default function TimelineCheckbox({
     }
   }, [task.id]);
 
+  const dispatchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingTargetRef = useRef<boolean | null>(null);
+  const taskRef = useRef(task);
+  const onCompleteRef = useRef(onComplete);
+  taskRef.current = task;
+  onCompleteRef.current = onComplete;
+
+  useEffect(() => () => {
+    if (dispatchTimeoutRef.current) clearTimeout(dispatchTimeoutRef.current);
+    if (pendingTargetRef.current !== null && onCompleteRef.current) {
+      onCompleteRef.current(taskRef.current, pendingTargetRef.current);
+    }
+  }, []);
+
   const handleCheckboxComplete = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const target = !displayCompleted;
     setOptimisticCompleted(target);
     pendingTargetRef.current = target;
+
     if (dispatchTimeoutRef.current) clearTimeout(dispatchTimeoutRef.current);
     dispatchTimeoutRef.current = setTimeout(() => {
       dispatchTimeoutRef.current = null;
       pendingTargetRef.current = null;
-      onTaskComplete?.(task, target);
+      onComplete?.(task, target);
     }, CHECKBOX_SYNC_DELAY_MS);
-  }, [onTaskComplete, task, displayCompleted]);
+  }, [onComplete, task, displayCompleted]);
 
   return (
-    <View style={{ width: CHECKBOX_SIZE_DEFAULT, height: CHECKBOX_SIZE_DEFAULT, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width: CHECKBOX_SIZE_DEFAULT, height: CHECKBOX_SIZE_DEFAULT, marginRight: 12, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', zIndex: 1 }}>
       <Checkbox
         checked={displayCompleted}
-        onPress={onTaskComplete ? handleCheckboxComplete : undefined}
+        onPress={onComplete ? handleCheckboxComplete : undefined}
         expandTapArea
       />
     </View>

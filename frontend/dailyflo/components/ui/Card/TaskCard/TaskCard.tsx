@@ -16,7 +16,7 @@
  * This component demonstrates the flow from Redux store → Component → User interaction.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
@@ -39,9 +39,9 @@ import TaskCardContent from './TaskCardContent';
 import TaskMetadata from './TaskMetadata';
 import TaskIndicators from './TaskIndicators';
 import TaskIcon from './TaskIcon';
+import TaskCardCheckbox from './TaskCardCheckbox';
 
-// import checkbox component
-import { Checkbox, CHECKBOX_SIZE_TASK_CARD } from '@/components/ui/button';
+import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 
 // import border components
 import { DashedSeparator } from '@/components/ui/borders';
@@ -58,7 +58,7 @@ export interface TaskCardProps {
 
   // callback functions for user interactions
   onPress?: (task: Task) => void; // called when user taps the card
-  onComplete?: (task: Task) => void; // called when user marks task as complete
+  onComplete?: (task: Task, targetCompleted?: boolean) => void; // targetCompleted = explicit target when provided (for debounced rapid taps)
   onEdit?: (task: Task) => void; // called when user wants to edit task
   onDelete?: (task: Task) => void; // called when user wants to delete task
 
@@ -95,9 +95,29 @@ export interface TaskCardProps {
  * - TaskCardContent: Displays icon and title
  * - TaskMetadata: Displays date/time/duration
  * - TaskIndicators: Displays routine type and list/inbox status
- * - Checkbox: Displays completion checkbox on the left
+ * - Checkbox: Displays completion status checkbox on the left
  */
-export default function TaskCard({
+function taskCardPropsAreEqual(prev: TaskCardProps, next: TaskCardProps) {
+  if (prev.task !== next.task) return false;
+  return (
+    prev.onPress === next.onPress &&
+    prev.onComplete === next.onComplete &&
+    prev.onEdit === next.onEdit &&
+    prev.onDelete === next.onDelete &&
+    prev.onSwipeLeft === next.onSwipeLeft &&
+    prev.onSwipeRight === next.onSwipeRight &&
+    prev.showCategory === next.showCategory &&
+    prev.compact === next.compact &&
+    prev.showIcon === next.showIcon &&
+    prev.showIndicators === next.showIndicators &&
+    prev.showMetadata === next.showMetadata &&
+    prev.cardSpacing === next.cardSpacing &&
+    prev.isLastItem === next.isLastItem &&
+    prev.isFirstItem === next.isFirstItem
+  );
+}
+
+const TaskCard = React.memo(function TaskCard({
   task,
   onPress,
   onComplete,
@@ -128,8 +148,13 @@ export default function TaskCard({
   // create dynamic styles using the color palette system
   const styles = useMemo(() => createStyles(themeColors, cardSpacing), [themeColors, cardSpacing]);
 
-  // get translateX animation value from SwipeableCard context to animate border radius
   const translateX = useSwipeAnimation();
+
+  // displayCompleted from TaskCardCheckbox for card styling (optimistic ui)
+  const [displayCompleted, setDisplayCompleted] = useState(task.isCompleted);
+  useEffect(() => {
+    setDisplayCompleted(task.isCompleted);
+  }, [task.id]);
 
   // configure swipe actions for SwipeableCard
   // left swipe (negative translation) = complete action (green)
@@ -166,7 +191,6 @@ export default function TaskCard({
     }
   };
 
-  // handle card press - same haptic as TimelineItem for consistent feel
   const handlePress = () => {
     if (onPress) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
@@ -190,7 +214,7 @@ export default function TaskCard({
           style={[
             styles.card,
             compact && styles.compactCard,
-            task.isCompleted && styles.completedCard,
+            displayCompleted && styles.completedCard,
             hideBackground && styles.transparentBackground,
             removeInnerPadding && styles.noInnerPadding,
             translateX && {
@@ -203,15 +227,11 @@ export default function TaskCard({
           ]}
         >
           <View style={styles.contentRow}>
-            {/* checkbox - own touch area so fill animates on tap without card opening */}
-            <View style={styles.checkboxWrapper}>
-              <Checkbox
-                size={CHECKBOX_SIZE_TASK_CARD}
-                checked={task.isCompleted}
-                onPress={() => onComplete?.(task)}
-                expandTapArea
-              />
-            </View>
+            <TaskCardCheckbox
+              task={task}
+              onComplete={onComplete}
+              onDisplayChange={setDisplayCompleted}
+            />
 
             {/* rest of card - touchable, opens task */}
             <TouchableOpacity
@@ -228,7 +248,7 @@ export default function TaskCard({
               <View style={styles.contentColumn}>
                 {/* main content area - title */}
                 <TaskCardContent
-                  task={task}
+                  task={{ ...task, isCompleted: displayCompleted }}
                   taskColor={taskColor}
                   compact={compact}
                 />
@@ -239,7 +259,7 @@ export default function TaskCard({
                   dueDate={task.dueDate}
                   time={task.time}
                   duration={task.duration}
-                  isCompleted={task.isCompleted}
+                  isCompleted={displayCompleted}
                   showCategory={showCategory}
                   listId={task.listId}
                   metadataVariant={metadataVariant}
@@ -260,14 +280,14 @@ export default function TaskCard({
       {showDashedSeparator && !isLastItem && (
         <DashedSeparator
           paddingLeft={
-            CHECKBOX_SIZE_TASK_CARD + 12 + (showIcon && task.icon ? 24 + 16 : 0)
+            CHECKBOX_SIZE_DEFAULT + 12 + (showIcon && task.icon ? 24 + 16 : 0)
           }
           paddingRight={separatorPaddingHorizontal}
         />
       )}
     </View>
   );
-}
+}, taskCardPropsAreEqual);
 
 // create dynamic styles using the color palette system
 const createStyles = (
@@ -300,15 +320,6 @@ const createStyles = (
       alignItems: 'center', // vertically center all items (checkbox, icon, content)
     },
 
-    // checkbox wrapper - provides spacing for checkbox and ensures vertical centering
-    checkboxWrapper: {
-      width: CHECKBOX_SIZE_TASK_CARD,
-      height: CHECKBOX_SIZE_TASK_CARD,
-      marginRight: 12, // spacing between checkbox and icon/content
-      justifyContent: 'center',
-      alignItems: 'center',
-      alignSelf: 'center',
-    },
     // touchable area for icon + content - opens task (checkbox has separate touch)
     cardContentTouchable: {
       flex: 1,
@@ -359,3 +370,4 @@ const createStyles = (
   return styles;
 };
 
+export default TaskCard;

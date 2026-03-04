@@ -11,7 +11,7 @@
  * This component demonstrates the flow from Redux store → ListCard → TaskCard → User interaction.
  */
 
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ListRenderItem, RefreshControl, Animated, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UIManager } from 'react-native';
@@ -302,46 +302,66 @@ export default function ListCard({
     }
   };
 
-  // render individual task card with smooth fade-in and scale animation for expansion
-  const renderTaskCard: ListRenderItem<Task> = ({ item: task, index }) => {
-    const { opacityValue, scaleValue } = getTaskCardAnimation(task.id, index || 0);
-    // check if this is the last item in the list
-    const isLastItem = index === processedTasks.length - 1;
-    // check if this is the first item in the list
-    const isFirstItem = index === 0;
-
-    return (
-      <Animated.View
-        style={{
-          opacity: opacityValue, // apply fade animation based on animated value
-          transform: [{ scale: scaleValue }], // apply scale animation for subtle zoom effect
-        }}
-      >
-        <TaskCard
-          task={task}
-          onPress={onTaskPress}
-          onComplete={onTaskComplete}
-          onEdit={onTaskEdit}
-          onDelete={onTaskDelete}
-          onSwipeLeft={onTaskSwipeLeft}
-          onSwipeRight={onTaskSwipeRight}
-          showCategory={showCategory}
-          compact={compact}
-          showIcon={showIcon}
-          showIndicators={showIndicators}
-          showMetadata={showMetadata}
-          metadataVariant={metadataVariant}
-          cardSpacing={cardSpacing}
-          showDashedSeparator={showDashedSeparator}
-          separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
-          hideBackground={hideBackground}
-          removeInnerPadding={removeInnerPadding}
-          isLastItem={isLastItem}
-          isFirstItem={isFirstItem}
-        />
-      </Animated.View>
-    );
-  };
+  // memoized render - stable ref so FlatList doesn't re-render all items when parent updates
+  const renderTaskCard = useCallback<ListRenderItem<Task>>(
+    ({ item: task, index }) => {
+      const { opacityValue, scaleValue, shouldAnimate } = getTaskCardAnimation(task.id, index || 0);
+      const isLastItem = index === processedTasks.length - 1;
+      const isFirstItem = index === 0;
+      const card = (
+          <TaskCard
+            task={task}
+            onPress={onTaskPress}
+            onComplete={onTaskComplete}
+            onEdit={onTaskEdit}
+            onDelete={onTaskDelete}
+            onSwipeLeft={onTaskSwipeLeft}
+            onSwipeRight={onTaskSwipeRight}
+            showCategory={showCategory}
+            compact={compact}
+            showIcon={showIcon}
+            showIndicators={showIndicators}
+            showMetadata={showMetadata}
+            metadataVariant={metadataVariant}
+            cardSpacing={cardSpacing}
+            showDashedSeparator={showDashedSeparator}
+            separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
+            hideBackground={hideBackground}
+            removeInnerPadding={removeInnerPadding}
+            isLastItem={isLastItem}
+            isFirstItem={isFirstItem}
+          />
+      );
+      return shouldAnimate && opacityValue && scaleValue ? (
+        <Animated.View style={{ opacity: opacityValue, transform: [{ scale: scaleValue }] }}>
+          {card}
+        </Animated.View>
+      ) : (
+        <View>{card}</View>
+      );
+    },
+    [
+      getTaskCardAnimation,
+      processedTasks.length,
+      onTaskPress,
+      onTaskComplete,
+      onTaskEdit,
+      onTaskDelete,
+      onTaskSwipeLeft,
+      onTaskSwipeRight,
+      showCategory,
+      compact,
+      showIcon,
+      showIndicators,
+      showMetadata,
+      metadataVariant,
+      cardSpacing,
+      showDashedSeparator,
+      finalSeparatorPaddingHorizontal,
+      hideBackground,
+      removeInnerPadding,
+    ]
+  );
 
   // render group header with dropdown arrow for expand/collapse functionality
   const renderGroupHeader = (title: string, count: number, groupTasks: Task[]) => {
@@ -492,7 +512,7 @@ export default function ListCard({
           ref={flatListRef}
           data={processedTasks}
           renderItem={renderTaskCard}
-          keyExtractor={(task) => `${instanceId}-${task.id}`} // add instance ID to ensure unique keys
+          keyExtractor={(task) => `${instanceId}-${task.id}`}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           refreshControl={refreshControl}
@@ -500,8 +520,14 @@ export default function ListCard({
           scrollEventThrottle={scrollEventThrottle}
           ListHeaderComponent={renderHeader}
           scrollEnabled={scrollEnabled}
-          // prevent scroll position restoration between instances
           maintainVisibleContentPosition={null}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={11}
+          initialNumToRender={12}
+          maxToRenderPerBatch={10}
+          windowSize={11}
+          initialNumToRender={12}
         />
       </View>
     );
@@ -525,60 +551,61 @@ export default function ListCard({
           data={sortedGroupEntries}
           renderItem={({ item: [groupTitle, groupTasks] }) => {
             const isCollapsed = isGroupCollapsed(groupTitle);
-
-            // create a local render function for tasks that knows which group they belong to
-            const renderTaskCardForGroup: ListRenderItem<Task> = ({ item: task, index }) => {
-              const { opacityValue, scaleValue } = getTaskCardAnimation(
-                task.id,
-                index || 0,
-                groupTitle
-              );
-              // check if this is the last item in the group
-              const isLastItem = index === groupTasks.length - 1;
-              // check if this is the first item in the group
-              const isFirstItem = index === 0;
-
-              return (
-                <Animated.View
-                  style={{
-                    opacity: opacityValue, // apply fade animation based on animated value
-                    transform: [{ scale: scaleValue }], // apply scale animation for subtle zoom effect
-                  }}
-                >
-                  <TaskCard
-                    task={task}
-                    onPress={onTaskPress}
-                    onComplete={onTaskComplete}
-                    onEdit={onTaskEdit}
-                    onDelete={onTaskDelete}
-                    onSwipeLeft={onTaskSwipeLeft}
-                    onSwipeRight={onTaskSwipeRight}
-                    showCategory={showCategory}
-                    compact={compact}
-                    showIcon={showIcon}
-                    showIndicators={showIndicators}
-                    showMetadata={showMetadata}
-                    metadataVariant={metadataVariant}
-                    cardSpacing={cardSpacing}
-                    showDashedSeparator={showDashedSeparator}
-                    separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
-                    hideBackground={hideBackground}
-                    removeInnerPadding={removeInnerPadding}
-                    isLastItem={isLastItem}
-                    isFirstItem={isFirstItem}
-                  />
-                </Animated.View>
-              );
-            };
-
             return (
               <View style={styles.group}>
                 {renderGroupHeader(groupTitle, groupTasks.length, groupTasks as Task[])}
-                {/* conditionally render tasks based on collapse state */}
                 {!isCollapsed && (
                   <FlatList
                     data={groupTasks}
-                    renderItem={renderTaskCardForGroup}
+                    scrollEnabled={false}
+                    removeClippedSubviews={true}
+                    maxToRenderPerBatch={8}
+                    initialNumToRender={8}
+                    keyExtractor={(task) => task.id}
+                    showsVerticalScrollIndicator={false}
+                    renderItem={({ item: task, index }) => {
+                      const { opacityValue, scaleValue, shouldAnimate } = getTaskCardAnimation(
+                        task.id,
+                        index || 0,
+                        groupTitle
+                      );
+                      const isLastItem = index === groupTasks.length - 1;
+                      const isFirstItem = index === 0;
+                      const card = (
+                        <TaskCard
+                          task={task}
+                          onPress={onTaskPress}
+                          onComplete={onTaskComplete}
+                          onEdit={onTaskEdit}
+                          onDelete={onTaskDelete}
+                          onSwipeLeft={onTaskSwipeLeft}
+                          onSwipeRight={onTaskSwipeRight}
+                          showCategory={showCategory}
+                          compact={compact}
+                          showIcon={showIcon}
+                          showIndicators={showIndicators}
+                          showMetadata={showMetadata}
+                          metadataVariant={metadataVariant}
+                          cardSpacing={cardSpacing}
+                          showDashedSeparator={showDashedSeparator}
+                          separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
+                          hideBackground={hideBackground}
+                          removeInnerPadding={removeInnerPadding}
+                          isLastItem={isLastItem}
+                          isFirstItem={isFirstItem}
+                        />
+                      );
+                      return shouldAnimate && opacityValue && scaleValue ? (
+                        <Animated.View style={{ opacity: opacityValue, transform: [{ scale: scaleValue }] }}>
+                          {card}
+                        </Animated.View>
+                      ) : (
+                        <View>{card}</View>
+                      );
+                    }}
+                    keyExtractor={(task) => task.id}
+                    showsVerticalScrollIndicator={false}
+                    scrollEnabled={false} // disable scrolling for nested lists
                     keyExtractor={(task) => task.id}
                     showsVerticalScrollIndicator={false}
                     scrollEnabled={false} // disable scrolling for nested lists

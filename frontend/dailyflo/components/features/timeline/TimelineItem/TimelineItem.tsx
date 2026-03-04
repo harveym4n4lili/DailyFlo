@@ -20,9 +20,10 @@ import { Task } from '@/types';
 import { getTaskColorValue } from '@/utils/taskColors';
 import TaskIcon from '@/components/ui/card/TaskCard/TaskIcon';
 import { RepeatIcon } from '@/components/ui/icon';
-import { Checkbox, CHECKBOX_SIZE_TASK_CARD } from '@/components/ui/button';
+import { Checkbox, CHECKBOX_SIZE_DEFAULT, CHECKBOX_SIZE_SMALL } from '@/components/ui/button';
 import { getTaskCardHeight, formatTimeRange } from '../timelineUtils';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
+import { TimelineCheckbox } from './sections';
 
 interface TimelineItemProps {
   // task to display
@@ -48,8 +49,8 @@ interface TimelineItemProps {
   onDragEnd?: () => void;
   // callback when task is pressed
   onPress?: () => void;
-  // callback when task completion checkbox is pressed
-  onTaskComplete?: (task: Task) => void;
+  // callback when task completion checkbox is pressed (targetCompleted = explicit target for debounced rapid taps)
+  onTaskComplete?: (task: Task, targetCompleted?: boolean) => void;
   // whether this task is currently being dragged (for z-index management)
   // this prop comes from parent to track which task should be on top layer
   isDraggedTask?: boolean;
@@ -180,6 +181,12 @@ export default function TimelineItem({
   // time range for display - shown above title when in overlapping tasks
   const timeRangeText = task.time && overlapPosition ? formatTimeRange(task.time, duration) : '';
   
+  // displayCompleted from TimelineCheckbox for title styling (optimistic ui)
+  const [displayCompleted, setDisplayCompleted] = useState(task.isCompleted);
+  useEffect(() => {
+    setDisplayCompleted(task.isCompleted);
+  }, [task.id]);
+
   // subtask count for display (0/X format)
   const subtasksCount = task.metadata?.subtasks?.length ?? 0;
   const completedSubtasksCount = task.metadata?.subtasks?.filter(st => st.isCompleted).length ?? 0;
@@ -618,13 +625,11 @@ export default function TimelineItem({
               onPress={handleTaskPress}
               activeOpacity={0.7}
             >
-              {/* checkbox on left - matches TaskCard layout, marginRight: 12 for checkbox-to-title spacing */}
               <View style={styles.checkboxWrapper}>
-                <Checkbox
-                  size={CHECKBOX_SIZE_TASK_CARD}
-                  checked={task.isCompleted}
-                  onPress={() => onTaskComplete?.(task)}
-                  expandTapArea
+                <TimelineCheckbox
+                  task={task}
+                  onTaskComplete={onTaskComplete}
+                  onDisplayChange={setDisplayCompleted}
                 />
               </View>
               <View style={styles.taskContent}>
@@ -638,7 +643,7 @@ export default function TimelineItem({
                   <Text
                     style={[
                       styles.title,
-                      task.isCompleted && styles.completedTitle,
+                      displayCompleted && styles.completedTitle,
                     ]}
                     numberOfLines={1}
                     ellipsizeMode="tail"
@@ -649,11 +654,9 @@ export default function TimelineItem({
                     {subtasksCount > 0 && (
                       <View style={styles.subtaskCountRow}>
                         <Checkbox
-                          size={12}
+                          size={CHECKBOX_SIZE_SMALL}
                           checked={allSubtasksComplete}
-                          onPress={() => {}}
                           disabled
-                          showParticles={false}
                         />
                         <Text style={styles.subtaskCount}>
                           {completedSubtasksCount}/{subtasksCount}
@@ -663,7 +666,7 @@ export default function TimelineItem({
                     {recurrenceLabel && (
                       <View style={styles.recurrenceRow}>
                         <RepeatIcon
-                          size={12}
+                          size={CHECKBOX_SIZE_SMALL}
                           color={themeColors.text.tertiary()}
                         />
                         <Text style={styles.recurrenceText}>{recurrenceLabel}</Text>
@@ -714,12 +717,12 @@ const createStyles = (
     flex: 1, // take up remaining available width within container
     flexDirection: 'column', // stack combinedContainer and expandedArea vertically
     position: 'relative',
-    overflow: 'visible', // allow checkbox particles to extend past bounds
+    overflow: 'visible',
     borderRadius: 24, // outer border radius for the entire card
   },
   
   // combined container for task content - fixed height, stays at top
-  // borderRadius here so corners render (content has overflow: visible for particles, so it can't clip)
+  // borderRadius here so corners render
   combinedContainer: {
     flexDirection: 'row',
     width: '100%',
@@ -737,10 +740,10 @@ const createStyles = (
     gap: 12, // checkbox-to-title spacing - matches TaskCard checkboxWrapper marginRight: 12
   },
 
-  // checkbox wrapper - left of task content, centers the Checkbox (same as TaskCard)
+  // checkbox wrapper - left of task content
   checkboxWrapper: {
-    width: CHECKBOX_SIZE_TASK_CARD,
-    height: CHECKBOX_SIZE_TASK_CARD,
+    width: CHECKBOX_SIZE_DEFAULT,
+    height: CHECKBOX_SIZE_DEFAULT,
     alignItems: 'center',
     justifyContent: 'center',
   },
