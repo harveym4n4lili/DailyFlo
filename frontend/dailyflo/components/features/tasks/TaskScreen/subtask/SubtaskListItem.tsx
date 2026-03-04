@@ -14,8 +14,7 @@ import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 import { TrashIcon, SFSymbolIcon } from '@/components/ui/icon';
-import Checkbox from '@/components/ui/button/Checkbox/Checkbox';
-import { CHECKBOX_SIZE_SUBTASK } from '@/components/ui/button';
+import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 import { Paddings } from '@/constants/Paddings';
 // spacing between checkbox (icon) and text input — matches SubtaskCreateButton icon–text gap
 const ICON_TEXT_GAP = 10;
@@ -83,13 +82,12 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
 
   return (
     <View style={styles.row}>
-      {/* checkbox on the left - using new Checkbox component */}
       <View style={styles.checkboxContainer}>
         <Checkbox
-          size={CHECKBOX_SIZE_SUBTASK}
           checked={isCompleted}
           onPress={handleCheckboxPress}
           disabled={disabled}
+          size={CHECKBOX_SIZE_DEFAULT}
         />
       </View>
 
@@ -138,10 +136,9 @@ const styles = StyleSheet.create({
     paddingVertical: Paddings.none,
     gap: ICON_TEXT_GAP,
   },
-  // checkbox container - provides proper alignment and spacing (44px to match Checkbox)
   checkboxContainer: {
-    width: CHECKBOX_SIZE_SUBTASK,
-    height: CHECKBOX_SIZE_SUBTASK,
+    width: CHECKBOX_SIZE_DEFAULT,
+    height: CHECKBOX_SIZE_DEFAULT,
     justifyContent: 'center',
     alignItems: 'center',
   },

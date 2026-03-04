@@ -31,7 +31,7 @@ import { useTasks, useUI } from '@/store/hooks';
 // useTasks: Custom hook that provides easy access to task-related state and actions
 // This hook wraps the Redux useSelector and useDispatch to give us typed access to tasks
 // useUI: Custom hook that provides easy access to UI-related state and actions (like modal visibility)
-import { useAppDispatch, useAppSelector } from '@/store';
+import { useAppDispatch, useAppSelector, store } from '@/store';
 // useAppDispatch: Typed version of Redux's useDispatch hook
 // This gives us the dispatch function to send actions to the Redux store
 // It's typed to ensure we can only dispatch valid actions
@@ -244,26 +244,27 @@ export default function TodayScreen() {
   // TASK INTERACTION HANDLERS - Functions that handle user interactions with tasks
   // These functions demonstrate the flow: User interaction → Redux action → State update → UI re-render
   
-  // handle task press - opens task screen in edit mode
-  // for recurring occurrences, pass occurrenceDate so save can offer "this instance" vs "all"
-  const handleTaskPress = (task: Task) => {
+  const handleTaskPress = useCallback((task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
     router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
-  };
+  }, [router]);
   
-  // handle task completion toggle - useCallback keeps reference stable to avoid TaskCard re-renders
-  const handleTaskComplete = useCallback((task: Task) => {
+  // handle task completion - stable ref (dispatch only) so TaskCard/React.memo can skip re-renders
+  // uses store.getState() for recurring logic instead of tasks in deps
+  const handleTaskComplete = useCallback((task: Task, targetCompleted?: boolean) => {
+    const isCompleted = targetCompleted ?? !task.isCompleted;
     if (isExpandedRecurrenceId(task.id)) {
       const baseId = getBaseTaskId(task.id);
       const occurrenceDate = getOccurrenceDateFromId(task.id);
       if (!occurrenceDate) return;
-      const baseTask = tasks.find((t) => t.id === baseId);
+      const tasksFromStore = store.getState().tasks.tasks;
+      const baseTask = tasksFromStore.find((t) => t.id === baseId);
       if (!baseTask) return;
       const completions = baseTask.metadata?.recurrence_completions ?? [];
-      const newCompletions = task.isCompleted
-        ? completions.filter((d) => d !== occurrenceDate)
-        : [...completions, occurrenceDate];
+      const newCompletions = isCompleted
+        ? [...completions, occurrenceDate]
+        : completions.filter((d) => d !== occurrenceDate);
       dispatch(updateTask({
         id: baseId,
         updates: {
@@ -274,37 +275,39 @@ export default function TodayScreen() {
     } else {
       dispatch(updateTask({
         id: task.id,
-        updates: { id: task.id, isCompleted: !task.isCompleted },
+        updates: { id: task.id, isCompleted },
       }));
     }
-  }, [tasks, dispatch]);
+  }, [dispatch]);
   
-  // handle task edit - opens task screen in edit mode (same as task press)
-  const handleTaskEdit = (task: Task) => {
+  const handleTaskEdit = useCallback((task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
     router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
-  };
-  
-  // handle task delete (for future confirmation modal)
-  const handleTaskDelete = (task: Task) => {
+  }, [router]);
+
+  const handleTaskDelete = useCallback((task: Task) => {
     const taskId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     dispatch(deleteTask(taskId));
-  };
+  }, [dispatch]);
 
 
   // SWIPE GESTURE HANDLERS - Functions that handle swipe gestures on task cards
   // these demonstrate how to use the new swipe functionality in TaskCard
   
-  // handle swipe left gesture - completes task directly (no confirmation)
-  const handleTaskSwipeLeft = (task: Task) => {
-    console.log('Swiped left on task to complete:', task.title);
-    // complete the task directly without confirmation
+  const handleTaskSwipeLeft = useCallback((task: Task) => {
     handleTaskComplete(task);
-  };
-  
-  // handle swipe right gesture - shows confirmation dialog before deleting task
-  const handleTaskSwipeRight = (task: Task) => {
+  }, [handleTaskComplete]);
+
+  const handleListScroll = useCallback((event: { nativeEvent: { contentOffset: { y: number } } }) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    scrollY.value = offsetY;
+    if ((global as any).trackScrollToTodayLayout) {
+      (global as any).trackScrollToTodayLayout(offsetY);
+    }
+  }, [scrollY]);
+
+  const handleTaskSwipeRight = useCallback((task: Task) => {
     console.log('Swiped right on task:', task.title);
     
     // show confirmation dialog before deleting task
@@ -326,9 +329,9 @@ export default function TodayScreen() {
           },
         },
       ],
-      { cancelable: true } // allow dismissing dialog by tapping outside
+      { cancelable: true }
     );
-  };
+  }, [handleTaskDelete]);
 
   // clear overdue reschedule callback when screen gains focus (e.g. user backed out without selecting)
   useFocusEffect(
@@ -461,13 +464,7 @@ export default function TodayScreen() {
         bigTodayHeader={true} // show big "Today" title at top of list
         onRefresh={handleRefresh}
         refreshing={isLoading}
-        onScroll={(event) => {
-          const offsetY = event.nativeEvent.contentOffset.y;
-          scrollY.value = offsetY;
-          if ((global as any).trackScrollToTodayLayout) {
-            (global as any).trackScrollToTodayLayout(offsetY);
-          }
-        }}
+        onScroll={handleListScroll}
         scrollEventThrottle={16}
         scrollYSharedValue={scrollY}
         paddingTop={64}

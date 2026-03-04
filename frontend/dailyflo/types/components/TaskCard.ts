@@ -14,7 +14,7 @@ export interface TaskCardProps {
   
   // Event handlers
   onPress: (task: Task) => void;    // Called when the task card is pressed
-  onComplete: (task: Task) => void; // Called when the task is marked as complete
+  onComplete: (task: Task, targetCompleted?: boolean) => void; // targetCompleted = explicit target when provided (for debounced rapid taps)
   onEdit: (task: Task) => void;     // Called when the task edit button is pressed
   onDelete: (task: Task) => void;   // Called when the task delete button is pressed
   

@@ -24,9 +24,7 @@ interface OverlappingTaskCardProps {
   duration: number;
   // pixels per minute for reference
   pixelsPerMinute: number;
-  // callback when task is pressed
   onPress?: (task: Task) => void;
-  // callback when task completion checkbox is pressed
   onTaskComplete?: (task: Task) => void;
   // callback when task is dragged to a new position
   onDrag: (taskId: string, newY: number) => void;
@@ -199,10 +197,7 @@ export default function OverlappingTaskCard({
               // forward drag end to parent with task id
               onDragEnd?.(task.id);
             }}
-            onPress={() => {
-              // forward press to parent with task object
-              onPress?.(task);
-            }}
+            onPress={() => onPress?.(task)}
             onTaskComplete={onTaskComplete}
             isDraggedTask={isDragged}
             overlapPosition={overlapPosition}

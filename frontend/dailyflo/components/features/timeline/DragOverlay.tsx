@@ -17,7 +17,7 @@ import { Paddings } from '@/constants/Paddings';
 import { Task } from '@/types';
 import { getTaskColorValue } from '@/utils/taskColors';
 import TaskIcon from '@/components/ui/card/TaskCard/TaskIcon';
-import { Checkbox, CHECKBOX_SIZE_TASK_CARD } from '@/components/ui/button';
+import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 import { formatTimeRange, getTaskCardHeight } from './timelineUtils';
 
 interface DragOverlayProps {
@@ -183,11 +183,7 @@ export default function DragOverlay({
           
           {/* checkbox - right of task content */}
           <View style={styles.checkboxWrapper}>
-            <Checkbox
-              size={CHECKBOX_SIZE_TASK_CARD}
-              checked={task.isCompleted}
-              onPress={() => {}}
-            />
+            <Checkbox checked={task.isCompleted} />
           </View>
         </View>
       </View>
@@ -245,10 +241,9 @@ const createStyles = (
     gap: 12,
   },
   
-  // checkbox wrapper - left of task content (44px to match Checkbox component)
   checkboxWrapper: {
-    width: CHECKBOX_SIZE_TASK_CARD,
-    height: CHECKBOX_SIZE_TASK_CARD,
+    width: CHECKBOX_SIZE_DEFAULT,
+    height: CHECKBOX_SIZE_DEFAULT,
     alignItems: 'center',
     justifyContent: 'center',
   },
