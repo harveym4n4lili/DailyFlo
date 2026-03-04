@@ -45,6 +45,7 @@ import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 
 // import border components
 import { DashedSeparator } from '@/components/ui/borders';
+import { taskDisplayEquals } from '@/utils/taskDisplayEquals';
 
 /**
  * Props interface for TaskCard component
@@ -59,6 +60,7 @@ export interface TaskCardProps {
   // callback functions for user interactions
   onPress?: (task: Task) => void; // called when user taps the card
   onComplete?: (task: Task, targetCompleted?: boolean) => void; // targetCompleted = explicit target when provided (for debounced rapid taps)
+  onCompleteImmediate?: (task: Task, targetCompleted?: boolean) => void; // called immediately on tap (e.g. for local UI); backend sync still delayed
   onEdit?: (task: Task) => void; // called when user wants to edit task
   onDelete?: (task: Task) => void; // called when user wants to delete task
 
@@ -98,10 +100,12 @@ export interface TaskCardProps {
  * - Checkbox: Displays completion status checkbox on the left
  */
 function taskCardPropsAreEqual(prev: TaskCardProps, next: TaskCardProps) {
-  if (prev.task !== next.task) return false;
+  // compare task by value - when task 1's backend completes, task 2 gets new ref but same content; skip re-render
+  if (!taskDisplayEquals(prev.task, next.task)) return false;
   return (
     prev.onPress === next.onPress &&
     prev.onComplete === next.onComplete &&
+    prev.onCompleteImmediate === next.onCompleteImmediate &&
     prev.onEdit === next.onEdit &&
     prev.onDelete === next.onDelete &&
     prev.onSwipeLeft === next.onSwipeLeft &&
@@ -111,7 +115,12 @@ function taskCardPropsAreEqual(prev: TaskCardProps, next: TaskCardProps) {
     prev.showIcon === next.showIcon &&
     prev.showIndicators === next.showIndicators &&
     prev.showMetadata === next.showMetadata &&
+    prev.metadataVariant === next.metadataVariant &&
     prev.cardSpacing === next.cardSpacing &&
+    prev.showDashedSeparator === next.showDashedSeparator &&
+    prev.separatorPaddingHorizontal === next.separatorPaddingHorizontal &&
+    prev.hideBackground === next.hideBackground &&
+    prev.removeInnerPadding === next.removeInnerPadding &&
     prev.isLastItem === next.isLastItem &&
     prev.isFirstItem === next.isFirstItem
   );
@@ -121,6 +130,7 @@ const TaskCard = React.memo(function TaskCard({
   task,
   onPress,
   onComplete,
+  onCompleteImmediate,
   onEdit,
   onDelete,
   onSwipeLeft,
@@ -230,6 +240,7 @@ const TaskCard = React.memo(function TaskCard({
             <TaskCardCheckbox
               task={task}
               onComplete={onComplete}
+              onCompleteImmediate={onCompleteImmediate}
               onDisplayChange={setDisplayCompleted}
             />
 

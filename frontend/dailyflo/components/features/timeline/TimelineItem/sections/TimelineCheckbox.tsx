@@ -10,16 +10,19 @@ import * as Haptics from 'expo-haptics';
 import { Task } from '@/types';
 import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 import { CHECKBOX_SYNC_DELAY_MS } from '@/constants/Checkbox';
+import { registerPendingCheckboxSync, unregisterPendingCheckboxSync } from '@/utils/pendingCheckboxSyncRegistry';
 
 export interface TimelineCheckboxProps {
   task: Task;
   onTaskComplete?: (task: Task, targetCompleted?: boolean) => void;
+  onTaskCompleteImmediate?: (task: Task, targetCompleted?: boolean) => void;
   onDisplayChange?: (displayCompleted: boolean) => void;
 }
 
 export default function TimelineCheckbox({
   task,
   onTaskComplete,
+  onTaskCompleteImmediate,
   onDisplayChange,
 }: TimelineCheckboxProps) {
   const [optimisticCompleted, setOptimisticCompleted] = useState<boolean | null>(null);
@@ -37,12 +40,14 @@ export default function TimelineCheckbox({
 
   const dispatchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingTargetRef = useRef<boolean | null>(null);
+  const pendingExecuteRef = useRef<(() => void) | null>(null);
   const taskRef = useRef(task);
   const onTaskCompleteRef = useRef(onTaskComplete);
   taskRef.current = task;
   onTaskCompleteRef.current = onTaskComplete;
 
   useEffect(() => () => {
+    if (pendingExecuteRef.current) unregisterPendingCheckboxSync(pendingExecuteRef.current);
     if (dispatchTimeoutRef.current) clearTimeout(dispatchTimeoutRef.current);
     if (pendingTargetRef.current !== null && onTaskCompleteRef.current) {
       onTaskCompleteRef.current(taskRef.current, pendingTargetRef.current);
@@ -62,13 +67,26 @@ export default function TimelineCheckbox({
     const target = !displayCompleted;
     setOptimisticCompleted(target);
     pendingTargetRef.current = target;
+
+    onTaskCompleteImmediate?.(task, target);
+
     if (dispatchTimeoutRef.current) clearTimeout(dispatchTimeoutRef.current);
-    dispatchTimeoutRef.current = setTimeout(() => {
-      dispatchTimeoutRef.current = null;
+
+    const executeSync = () => {
+      unregisterPendingCheckboxSync(executeSync);
+      pendingExecuteRef.current = null;
+      if (dispatchTimeoutRef.current) {
+        clearTimeout(dispatchTimeoutRef.current);
+        dispatchTimeoutRef.current = null;
+      }
       pendingTargetRef.current = null;
       onTaskComplete?.(task, target);
-    }, CHECKBOX_SYNC_DELAY_MS);
-  }, [onTaskComplete, task, displayCompleted]);
+    };
+
+    pendingExecuteRef.current = executeSync;
+    dispatchTimeoutRef.current = setTimeout(executeSync, CHECKBOX_SYNC_DELAY_MS);
+    registerPendingCheckboxSync(executeSync);
+  }, [onTaskComplete, onTaskCompleteImmediate, task, displayCompleted]);
 
   return (
     <View style={{ width: CHECKBOX_SIZE_DEFAULT, height: CHECKBOX_SIZE_DEFAULT, alignItems: 'center', justifyContent: 'center' }}>

@@ -24,6 +24,7 @@ import { Checkbox, CHECKBOX_SIZE_DEFAULT, CHECKBOX_SIZE_SMALL } from '@/componen
 import { getTaskCardHeight, formatTimeRange } from '../timelineUtils';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
 import { TimelineCheckbox } from './sections';
+import { taskDisplayEquals } from '@/utils/taskDisplayEquals';
 
 interface TimelineItemProps {
   // task to display
@@ -51,6 +52,8 @@ interface TimelineItemProps {
   onPress?: () => void;
   // callback when task completion checkbox is pressed (targetCompleted = explicit target for debounced rapid taps)
   onTaskComplete?: (task: Task, targetCompleted?: boolean) => void;
+  // called immediately on tap (e.g. for local UI); backend sync still delayed
+  onTaskCompleteImmediate?: (task: Task, targetCompleted?: boolean) => void;
   // whether this task is currently being dragged (for z-index management)
   // this prop comes from parent to track which task should be on top layer
   isDraggedTask?: boolean;
@@ -59,13 +62,26 @@ interface TimelineItemProps {
   overlapPosition?: 'first' | 'middle' | 'last';
 }
 
+// compare by value so sibling Redux updates don't interrupt checkbox/animations
+// skip callback comparison - parent often passes inline fns; we only need to avoid re-renders when task/position unchanged
+function timelineItemPropsAreEqual(prev: TimelineItemProps, next: TimelineItemProps) {
+  if (!taskDisplayEquals(prev.task, next.task)) return false;
+  if (prev.position !== next.position) return false;
+  if (prev.duration !== next.duration) return false;
+  if (prev.pixelsPerMinute !== next.pixelsPerMinute) return false;
+  if (prev.startHour !== next.startHour) return false;
+  if (prev.isDraggedTask !== next.isDraggedTask) return false;
+  if (prev.overlapPosition !== next.overlapPosition) return false;
+  return true;
+}
+
 /**
  * TimelineItem Component
  * 
  * Renders a task item on the timeline with drag functionality.
  * Shows icon in circular container, time range, and title.
  */
-export default function TimelineItem({
+const TimelineItem = React.memo(function TimelineItem({
   task,
   position,
   duration,
@@ -78,6 +94,7 @@ export default function TimelineItem({
   onDragEnd,
   onPress,
   onTaskComplete,
+  onTaskCompleteImmediate,
   isDraggedTask = false,
   overlapPosition,
 }: TimelineItemProps) {
@@ -188,8 +205,11 @@ export default function TimelineItem({
   }, [task.id]);
 
   // subtask count for display (0/X format)
+  // when task is displayed as complete (optimistic or from backend), treat all subtasks as complete
   const subtasksCount = task.metadata?.subtasks?.length ?? 0;
-  const completedSubtasksCount = task.metadata?.subtasks?.filter(st => st.isCompleted).length ?? 0;
+  const completedSubtasksCount = displayCompleted
+    ? subtasksCount
+    : (task.metadata?.subtasks?.filter(st => st.isCompleted).length ?? 0);
   const allSubtasksComplete = subtasksCount > 0 && completedSubtasksCount === subtasksCount;
 
   // recurrence display text - same labels as TaskIndicators
@@ -629,6 +649,7 @@ export default function TimelineItem({
                 <TimelineCheckbox
                   task={task}
                   onTaskComplete={onTaskComplete}
+                  onTaskCompleteImmediate={onTaskCompleteImmediate}
                   onDisplayChange={setDisplayCompleted}
                 />
               </View>
@@ -681,7 +702,7 @@ export default function TimelineItem({
       </AnimatedReanimated.View>
     </GestureDetector>
   );
-}
+}, timelineItemPropsAreEqual);
 
 // create dynamic styles using theme colors and typography
 const createStyles = (
@@ -834,3 +855,4 @@ const createStyles = (
   },
 });
 
+export default TimelineItem;

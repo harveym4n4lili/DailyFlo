@@ -45,6 +45,7 @@ import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSl
 // The types folder contains all TypeScript interfaces and type definitions
 import { Task, TaskColor } from '@/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { flushAllPendingCheckboxSyncs } from '@/utils/pendingCheckboxSyncRegistry';
 import {
   expandTasksForDates,
   getTargetDatesForTodayScreen,
@@ -333,10 +334,11 @@ export default function TodayScreen() {
     );
   }, [handleTaskDelete]);
 
-  // clear overdue reschedule callback when screen gains focus (e.g. user backed out without selecting)
+  // clear overdue reschedule callback when screen gains focus; flush pending checkbox syncs when leaving (tab switch)
   useFocusEffect(
     React.useCallback(() => {
       clearOverdueReschedule();
+      return () => flushAllPendingCheckboxSyncs();
     }, [clearOverdueReschedule]),
   );
 
@@ -436,6 +438,7 @@ export default function TodayScreen() {
       <ListCard
         key="today-screen-listcard"
         tasks={todaysTasks}
+        hideCompletedTasks={true}
         onTaskPress={handleTaskPress}
         onTaskComplete={handleTaskComplete}
         onTaskEdit={handleTaskEdit}

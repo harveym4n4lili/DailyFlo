@@ -4,8 +4,16 @@
  * Centralized sizes and timing for all checkboxes across the app.
  */
 
-// delay before syncing checkbox changes to backend - ui stays fully local until then
-export const CHECKBOX_SYNC_DELAY_MS = 30_000;
+// delay before syncing checkbox changes to backend - batches rapid taps
+// overridden: when user switches tabs, flushAllPendingCheckboxSyncs() runs pending syncs immediately
+export const CHECKBOX_SYNC_DELAY_MS = 0;
+
+// animation durations - used so hide delay waits for these to finish before linear transition
+export const CHECKBOX_TICK_ANIMATION_MS = 100;
+export const CHECKBOX_STRIKETHROUGH_ANIMATION_MS = 100;
+
+// delay before hiding completed task - must exceed tick + strikethrough so linear transition starts after both
+export const CHECKBOX_HIDE_DELAY_MS = CHECKBOX_STRIKETHROUGH_ANIMATION_MS + 200;
 
 // --- CHECKBOX SIZES ---
 // default size for TaskCard, TimelineItem, SubtaskListItem, DragOverlay
