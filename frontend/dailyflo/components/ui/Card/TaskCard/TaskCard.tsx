@@ -281,21 +281,21 @@ const TaskCard = React.memo(function TaskCard({
           </View>
         </View>
 
+        {/* dashed separator below card - starts where task title starts (checkbox + gap + optional icon) */}
+        {showDashedSeparator && !isLastItem && (
+          <DashedSeparator
+            paddingLeft={
+              CHECKBOX_SIZE_DEFAULT + 12 + (showIcon && task.icon ? 24 + 16 : 0)
+            }
+            paddingRight={separatorPaddingHorizontal}
+          />
+        )}
+
         {/* bottom indicators - routine type and list/inbox status (hidden when showIndicators is false) */}
         {showIndicators && (
           <TaskIndicators routineType={task.routineType} listId={task.listId} />
         )}
       </SwipeableCard>
-      
-      {/* dashed separator below card - starts where task title starts (checkbox + gap + optional icon) */}
-      {showDashedSeparator && !isLastItem && (
-        <DashedSeparator
-          paddingLeft={
-            CHECKBOX_SIZE_DEFAULT + 12 + (showIcon && task.icon ? 24 + 16 : 0)
-          }
-          paddingRight={separatorPaddingHorizontal}
-        />
-      )}
     </View>
   );
 }, taskCardPropsAreEqual);

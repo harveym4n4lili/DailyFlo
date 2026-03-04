@@ -175,7 +175,7 @@ export default function OverlappingTaskCard({
           <TimelineItem
             key={task.id}
             task={task}
-            position={taskPosition}
+            centerPosition={taskPosition + (taskHeight / 2)}
             duration={taskDuration}
             pixelsPerMinute={pixelsPerMinute}
             startHour={startHour}

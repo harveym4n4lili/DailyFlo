@@ -48,6 +48,8 @@ export function useTaskCardAnimations(): UseTaskCardAnimationsReturn {
 
   // track which group is currently being expanded so only those task cards animate
   const expandingGroups = useRef<Set<string>>(new Set());
+  // track which task ids already had their expand animation started this cycle - prevents restart on re-render stutter
+  const expandAnimationStartedFor = useRef<Set<string>>(new Set());
 
   // stable ref so renderTaskCard/FlatList don't get new renderItem on every ListCard render
   const getTaskCardAnimation = useCallback(
@@ -59,10 +61,7 @@ export function useTaskCardAnimations(): UseTaskCardAnimationsReturn {
       }
 
       let animatedValue = taskCardAnimations.current.get(taskId);
-      if (animatedValue) {
-        animatedValue.opacityValue.setValue(0);
-        animatedValue.scaleValue.setValue(0.95);
-      } else {
+      if (!animatedValue) {
         animatedValue = {
           opacityValue: new Animated.Value(0),
           scaleValue: new Animated.Value(0.95),
@@ -70,21 +69,28 @@ export function useTaskCardAnimations(): UseTaskCardAnimationsReturn {
         taskCardAnimations.current.set(taskId, animatedValue);
       }
 
-      const delay = index * 50;
-      Animated.parallel([
-        Animated.timing(animatedValue.opacityValue, {
-          toValue: 1,
-          duration: 400,
-          delay,
-          useNativeDriver: true,
-        }),
-        Animated.timing(animatedValue.scaleValue, {
-          toValue: 1,
-          duration: 400,
-          delay,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      // only start the animation once per task per expand - re-renders would otherwise reset and restart, causing stutter
+      const startedKey = `${groupTitle}-${taskId}`;
+      if (!expandAnimationStartedFor.current.has(startedKey)) {
+        expandAnimationStartedFor.current.add(startedKey);
+        animatedValue.opacityValue.setValue(0);
+        animatedValue.scaleValue.setValue(0.95);
+        const delay = index * 50;
+        Animated.parallel([
+          Animated.timing(animatedValue.opacityValue, {
+            toValue: 1,
+            duration: 400,
+            delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animatedValue.scaleValue, {
+            toValue: 1,
+            duration: 400,
+            delay,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
 
       return { ...animatedValue, shouldAnimate: true };
     },
@@ -93,9 +99,14 @@ export function useTaskCardAnimations(): UseTaskCardAnimationsReturn {
 
   const markGroupExpanding = useCallback((groupTitle: string) => {
     expandingGroups.current.add(groupTitle);
-    // clear the expanding flag after animations are complete
+    const prefix = `${groupTitle}-`;
     setTimeout(() => {
       expandingGroups.current.delete(groupTitle);
+      const toDelete: string[] = [];
+      expandAnimationStartedFor.current.forEach((key) => {
+        if (key.startsWith(prefix)) toDelete.push(key);
+      });
+      toDelete.forEach((key) => expandAnimationStartedFor.current.delete(key));
     }, 600); // slightly longer than animation max duration (400ms + 50ms delay)
   }, []);
 

@@ -10,7 +10,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text, Platform } from 'react-native';
-import { useSharedValue, withTiming, makeMutable, withSpring } from 'react-native-reanimated';
+import AnimatedReanimated, { useSharedValue, withTiming, makeMutable, withSpring, LinearTransition, createAnimatedComponent } from 'react-native-reanimated';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
@@ -23,6 +23,13 @@ import DragOverlay from './DragOverlay';
 import { DashedVerticalLine } from '@/components/ui/borders';
 import { SparklesIcon } from '@/components/ui/icon';
 import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag, getTaskCardHeight } from './timelineUtils';
+
+// layout transition for planner: footer + timeline slide up together when task is checked
+// duration-based linear transition so both animate in sync (no delay)
+const LAYOUT_TRANSITION = LinearTransition.duration(300);
+
+// Animated.ScrollView so layout animations work on scroll content (footer shrink, timeline move)
+const AnimatedScrollView = createAnimatedComponent(ScrollView);
 
 // type for combined overlapping tasks
 // represents multiple tasks that overlap and are combined into a single card
@@ -172,6 +179,18 @@ export default function TimelineView({
 
   // create dynamic styles using theme colors and typography
   const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
+
+  // enable layout transition only after initial mount so timeline appears in final position (no slide up)
+  // use 2s delay so all initial layout and position updates are applied without animation first
+  const [layoutTransitionEnabled, setLayoutTransitionEnabled] = useState(false);
+  const layoutTransitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const t = setTimeout(() => setLayoutTransitionEnabled(true), 2000);
+    return () => {
+      clearTimeout(t);
+      if (layoutTransitionTimeoutRef.current) clearTimeout(layoutTransitionTimeoutRef.current);
+    };
+  }, []);
 
   // helper function to check if two tasks overlap in time
   // returns true if the time ranges of two tasks overlap
@@ -821,9 +840,17 @@ export default function TimelineView({
   // note: we can't call useSharedValue conditionally, so we create them lazily using a helper
   const labelPositionAnimationsRef = useRef<Map<string, ReturnType<typeof useSharedValue<number>>>>(new Map());
   
-  // skip label animation during initial layout (~250ms) - prevents jank when positions update
+  // skip label animation during initial layout (~400ms) - prevents jank when positions update
   // after task height measurements cascade
   const timelineMountTimeRef = useRef(Date.now());
+  // when task set changes (e.g. load different day), reset so we use immediate updates and avoid label stutter
+  const prevTaskSetKeyRef = useRef<string>('');
+  // first few effect runs after task set change use immediate updates (positions may still be settling)
+  const initialRunsLeftRef = useRef(30);
+  // show time at initial position first, then switch to final position after distance calculated (prevents flash)
+  const [labelsPositionSettled, setLabelsPositionSettled] = useState(false);
+  const haveSetLabelsSettledRef = useRef(false);
+  const initialLabelPositionsRef = useRef<Map<string, number>>(new Map());
 
   // helper function to get or create shared value for a label
   // using makeMutable allows us to create shared values conditionally (inside useEffect)
@@ -841,7 +868,26 @@ export default function TimelineView({
   // create and update animated positions for time labels
   // this makes labels smoothly move when tasks expand/collapse
   useEffect(() => {
-    const isInitialLayout = Date.now() - timelineMountTimeRef.current < 250;
+    // when task set changes (e.g. user loads a different day), reset "initial layout" so we set positions
+    // immediately and avoid stutter from animating from stale/wrong positions
+    // use sorted unique task ids so order changes (from position updates) don't trigger hide again
+    const taskSetKey = [...new Set(allTimeLabels.map((l) => l.taskId))].sort().join(',');
+    if (taskSetKey !== prevTaskSetKeyRef.current) {
+      prevTaskSetKeyRef.current = taskSetKey;
+      timelineMountTimeRef.current = Date.now();
+      initialRunsLeftRef.current = 30;
+      initialLabelPositionsRef.current.clear();
+      haveSetLabelsSettledRef.current = false;
+      setLabelsPositionSettled(false);
+      // do not disable layout transition on day change - so header toggle still animates timeline smoothly
+      // (only the initial mount keeps layout off for 2s to prevent load slide)
+    }
+
+    const isInitialLayout =
+      Date.now() - timelineMountTimeRef.current < 2000 || initialRunsLeftRef.current > 0;
+    if (initialRunsLeftRef.current > 0) {
+      initialRunsLeftRef.current -= 1;
+    }
     
     allTimeLabels.forEach((label) => {
       const startLabelKey = `${label.taskId}-${label.time}-start`;
@@ -888,6 +934,12 @@ export default function TimelineView({
         labelPositionAnimations.delete(key);
       }
     });
+
+    // after initial layout, switch to animated position so labels show final position (prevents flash)
+    if (!isInitialLayout && !haveSetLabelsSettledRef.current) {
+      haveSetLabelsSettledRef.current = true;
+      setLabelsPositionSettled(true);
+    }
   }, [allTimeLabels, getOrCreateLabelAnimation]);
 
   // convert Y position (TOP edge of the card) to time for drag operations
@@ -1646,56 +1698,71 @@ export default function TimelineView({
 
   return (
     <View style={styles.container}>
-      {/* scrollable timeline content */}
-      <ScrollView
+      {/* scrollable timeline content - AnimatedScrollView for layout animations on footer/timeline */}
+      <AnimatedScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent, 
-          { minHeight: timelineHeight + 220 }, // timelineHeight + paddingTop (20) + paddingBottom (200)
+          // when footer: content = list + timeline only (no minHeight) so timeline moves up when list collapses
+          // when no footer: minHeight ensures timeline is scrollable
+          ...(footerComponent ? [] : [{ minHeight: timelineHeight + 220 }]),
           ...(scrollContentPaddingTop !== undefined ? [{ paddingTop: scrollContentPaddingTop }] : []),
         ]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={true}
       >
-        {/* "All day tasks" list first - appears before (above) the timeline */}
-        {footerComponent}
-        {/* timeline row: time labels + tasks */}
-        <View style={styles.timelineRow}>
-        {/* time labels column on the left */}
+        {/* ListCard + timeline as one stack - layout enabled after mount so they appear in final position */}
+        <AnimatedReanimated.View layout={layoutTransitionEnabled && footerComponent ? LAYOUT_TRANSITION : undefined} style={styles.listTimelineStack}>
+          {footerComponent ? (
+            <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION : undefined} style={styles.footerWrapper}>
+              {footerComponent}
+            </AnimatedReanimated.View>
+          ) : null}
+          {/* timeline row - layout enabled after mount so no initial slide up */}
+          <AnimatedReanimated.View layout={layoutTransitionEnabled && footerComponent ? LAYOUT_TRANSITION : undefined} style={[styles.timelineRow, footerComponent ? styles.timelineRowWithFooterAbove : null, ...(footerComponent ? [{ minHeight: timelineHeight }] : [])]}>
+        {/* time labels column on the left - static labels use opacity to hide briefly after day change (no layout change) */}
         <View style={styles.timeLabelsContainer}>
           {allTimeLabels.map((label) => {
-            // get animated position for this label from ref
             const labelPositionAnimations = labelPositionAnimationsRef.current;
             const startLabelKey = `${label.taskId}-${label.time}-start`;
             const positionAnimation = labelPositionAnimations.get(startLabelKey);
             const endLabelKey = label.endTime ? `${label.taskId}-${label.endTime}-end` : null;
             const endPositionAnimation = endLabelKey ? labelPositionAnimations.get(endLabelKey) : null;
+            // freeze initial position until distance is calculated, then use final (animated) position to prevent flash
+            if (!labelsPositionSettled) {
+              initialLabelPositionsRef.current.set(startLabelKey, initialLabelPositionsRef.current.get(startLabelKey) ?? label.position);
+              if (label.endTime && label.endPosition !== undefined) initialLabelPositionsRef.current.set(endLabelKey!, initialLabelPositionsRef.current.get(endLabelKey!) ?? label.endPosition);
+            }
+            const startPosition = labelsPositionSettled ? label.position : (initialLabelPositionsRef.current.get(startLabelKey) ?? label.position);
+            const endPosition = label.endPosition !== undefined ? (labelsPositionSettled ? label.endPosition : (initialLabelPositionsRef.current.get(endLabelKey!) ?? label.endPosition)) : undefined;
             
             return (
               <React.Fragment key={`${label.taskId}-${label.time}`}>
-                {/* start time label - always rendered */}
+                {/* start time label - show at initial position first, then final after distance calculated */}
                 <TimeLabel
                   time={label.time}
-                  position={label.position}
-                  animatedPosition={positionAnimation} // pass animated position for smooth animation
+                  position={startPosition}
+                  animatedPosition={labelsPositionSettled ? positionAnimation : undefined}
                   isEndTime={false}
+                  opacity={1}
                 />
                 
                 {/* end time label - only rendered if task has duration */}
-                {label.endTime && label.endPosition !== undefined && endPositionAnimation && (
+                {label.endTime && endPosition !== undefined && endPositionAnimation && (
                   <TimeLabel
                     key={`${label.taskId}-${label.endTime}-end`}
                     time={label.endTime}
-                    position={label.endPosition}
-                    animatedPosition={endPositionAnimation} // pass animated position for smooth animation
+                    position={endPosition}
+                    animatedPosition={labelsPositionSettled ? endPositionAnimation : undefined}
                     isEndTime={true}
+                    opacity={1}
                   />
                 )}
               </React.Fragment>
             );
           })}
           
-          {/* drag time label - shows current drag position */}
+          {/* drag time label - shows current drag position (always visible when dragging) */}
           {/* anchored to drag overlay position for smooth, synchronized movement */}
           {dragState && (
             <TimeLabel
@@ -1931,21 +1998,16 @@ export default function TimelineView({
                 <TimelineItem
                   key={task.id}
                   task={task}
-                  position={renderProps.position}
+                  centerPosition={equalSpacing.equalSpacingPosition}
                   duration={duration}
                   pixelsPerMinute={renderProps.pixelsPerMinute}
                   startHour={dynamicStartHour}
                   onHeightMeasured={(height: number) => handleHeightMeasured(task.id, height)}
                   onDrag={(newY: number) => {
-                    // newY is the top position from TimelineItem when drag ends
-                    // use modular drag handler which converts top to center and updates task
-                    // this handles the "after drag and drop" state
                     handleDragEnd(task.id, newY, renderProps.measuredHeight);
                   }}
                   onDragStart={() => {
-                    // drag started - use modular drag handler with initial position and task info
-                    // this initializes drag state for visual feedback and overlay rendering
-                    // get initial position from basePosition (current top position)
+                    // initial top = center - height/2 (same as renderProps.position)
                     const initialTopY = renderProps.position;
                     handleDragStart(task.id, initialTopY, renderProps.measuredHeight, task);
                   }}
@@ -1970,8 +2032,9 @@ export default function TimelineView({
             })
           )}
         </View>
-        </View>
-      </ScrollView>
+        </AnimatedReanimated.View>
+        </AnimatedReanimated.View>
+      </AnimatedScrollView>
     </View>
   );
 }
@@ -1999,9 +2062,26 @@ const createStyles = (
     paddingBottom: Paddings.timelineScrollBottom,
   },
 
+  // list + timeline stack - flexGrow: 0 so height = footer + timeline only; timeline moves up when list collapses
+  listTimelineStack: {
+    flexDirection: 'column',
+    flexGrow: 0,
+  },
+
+  // footer wrapper - flexGrow: 0 so it shrinks with list content; no white space when collapsed
+  footerWrapper: {
+    flexDirection: 'column',
+    flexGrow: 0,
+  },
+
   // timeline row - time labels + tasks side by side
   timelineRow: {
     flexDirection: 'row',
+  },
+
+  // when footer (e.g. list) is above timeline - add top spacing
+  timelineRowWithFooterAbove: {
+    marginTop: 32,
   },
 
   // time labels container on the left side - more compact

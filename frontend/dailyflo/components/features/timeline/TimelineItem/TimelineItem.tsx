@@ -29,8 +29,8 @@ import { taskDisplayEquals } from '@/utils/taskDisplayEquals';
 interface TimelineItemProps {
   // task to display
   task: Task;
-  // Y position on the timeline in pixels (start position)
-  position: number;
+  // center Y position on the timeline in pixels (used to derive top = center - height/2 so height changes don't cause slide)
+  centerPosition: number;
   // duration in minutes
   duration: number;
   // pixels per minute for reference
@@ -63,10 +63,10 @@ interface TimelineItemProps {
 }
 
 // compare by value so sibling Redux updates don't interrupt checkbox/animations
-// skip callback comparison - parent often passes inline fns; we only need to avoid re-renders when task/position unchanged
+// skip callback comparison - parent often passes inline fns; we only need to avoid re-renders when task/centerPosition unchanged
 function timelineItemPropsAreEqual(prev: TimelineItemProps, next: TimelineItemProps) {
   if (!taskDisplayEquals(prev.task, next.task)) return false;
-  if (prev.position !== next.position) return false;
+  if (prev.centerPosition !== next.centerPosition) return false;
   if (prev.duration !== next.duration) return false;
   if (prev.pixelsPerMinute !== next.pixelsPerMinute) return false;
   if (prev.startHour !== next.startHour) return false;
@@ -83,7 +83,7 @@ function timelineItemPropsAreEqual(prev: TimelineItemProps, next: TimelineItemPr
  */
 const TimelineItem = React.memo(function TimelineItem({
   task,
-  position,
+  centerPosition,
   duration,
   pixelsPerMinute,
   startHour = 6,
@@ -123,9 +123,8 @@ const TimelineItem = React.memo(function TimelineItem({
   // starts at 0, tracks drag offset during gesture
   const translateY = useSharedValue(0);
   
-  // track the base position (initial position before drag) - used for calculating absolute position
-  // using shared value so it can be accessed in worklets
-  const basePosition = useSharedValue(position);
+  // track the base position (current top = center - height/2) for drag - synced from center + height in reaction below
+  const basePosition = useSharedValue(centerPosition - (getTaskCardHeight(duration) / 2));
   
   // track drag start position - used to calculate drag offset relative to start
   const startY = useSharedValue(0);
@@ -143,9 +142,9 @@ const TimelineItem = React.memo(function TimelineItem({
   // state to store measured content height (includes padding)
   const [measuredContentHeight, setMeasuredContentHeight] = React.useState<number | null>(null);
   
-  // animated value for position using reanimated - runs on native thread for better performance
-  // this makes tasks smoothly move when other tasks expand/collapse
-  const positionAnimation = useSharedValue(position);
+  // center position as shared value - only changes when CENTER changes (e.g. task above resized), not when our height changes
+  // so when we only measure height, top = center - height/2 updates in worklet without any prop change = no slide
+  const centerPositionAnimation = useSharedValue(centerPosition);
   
   // animated value for fade-in animation using reanimated - runs on native thread for better performance
   // starts at 1 (fully visible), fades to 0 on drag end, then fades back to 1 when position updates
@@ -156,12 +155,12 @@ const TimelineItem = React.memo(function TimelineItem({
   // can be interrupted if drag ends before animation completes
   const dragIndicatorOpacity = useSharedValue(1);
   
-  // track previous position to detect when position updates after drag
-  const previousPositionRef = useRef(position);
+  // track previous center to detect when center position updates (e.g. task above expanded)
+  const previousCenterRef = useRef(centerPosition);
   
-  // skip position animation during initial layout (first ~250ms) - prevents jank when tasks measure height
-  // and equalSpacingPositions recalculates with new positions
+  // skip center-position animation during initial load so timeline appears in final position (no slide)
   const mountTimeRef = useRef(Date.now());
+  const centerUpdateCountRef = useRef(0);
   
   // track if we're waiting for position update after drag to trigger fade-in
   const waitingForRepositionRef = useRef(false);
@@ -241,7 +240,7 @@ const TimelineItem = React.memo(function TimelineItem({
   useEffect(() => {
     if (typeof minCardHeight !== 'number' || minCardHeight <= 0) return;
     
-    if (Date.now() - mountTimeRef.current < 250) {
+    if (Date.now() - mountTimeRef.current < 2000) {
       cardHeightAnimation.value = minCardHeight;
     } else {
       cardHeightAnimation.value = withTiming(minCardHeight, { duration: 75 });
@@ -297,19 +296,25 @@ const TimelineItem = React.memo(function TimelineItem({
   });
 
   // create animated style for position and fade using reanimated
-  // combines position animation (when other tasks expand) with fade
-  // note: we no longer apply translateY transform - the card stays in place during drag
-  // instead, a drag overlay follows the thumb position (handled in TimelineView)
-  // this runs on native thread for smooth 60fps performance
+  // top is derived from center - height/2 so when only our height changes (fallback→measured) there's no prop change = no slide
+  // when another task's height changes, parent passes new center and we animate that
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
-      top: positionAnimation.value,
-      // removed translateY transform - card stays in place during drag
+      top: centerPositionAnimation.value - (cardHeightAnimation.value / 2),
       opacity: fadeAnimation.value, // fade animation for drag feedback
     };
   });
+
+  // keep basePosition (current top) in sync for drag callbacks - derived from center and height
+  useAnimatedReaction(
+    () => ({ center: centerPositionAnimation.value, height: cardHeightAnimation.value }),
+    ({ center, height }) => {
+      basePosition.value = center - (height / 2);
+    },
+    []
+  );
   
-  // create animated style for drag indicator (reduced opacity when dragging)
+  // create animated style for drag indicator
   // this provides visual feedback that the task is selected for dragging
   // uses smooth iOS-style animation that can be interrupted if drag ends early
   const animatedDragIndicatorStyle = useAnimatedStyle(() => {
@@ -326,7 +331,7 @@ const TimelineItem = React.memo(function TimelineItem({
     if (measuredContentHeight !== height) {
       setMeasuredContentHeight(height);
       // during initial layout, sync displayed height to measured immediately to prevent short-then-grow flash
-      if (Date.now() - mountTimeRef.current < 250) {
+      if (Date.now() - mountTimeRef.current < 2000) {
         cardHeightAnimation.value = height;
       }
       // report the measured height to parent so timeline spacing adjusts
@@ -343,45 +348,34 @@ const TimelineItem = React.memo(function TimelineItem({
     lastReportedHeight.value = null;
   }, [task.title, duration, task.id]);
 
-  // update base position when prop changes
-  // also trigger fade-in animation if we're waiting for reposition after drag
-  // animate position smoothly when it changes (e.g., when other tasks expand)
+  // update center position when prop changes (e.g. when task above expands) - animates smooth move
+  // when only THIS task's height changes, centerPosition prop is unchanged so this effect doesn't run = no slide
   useEffect(() => {
-    const positionChanged = previousPositionRef.current !== position;
-    previousPositionRef.current = position;
-    
-    basePosition.value = position; // update shared value for worklet access
+    previousCenterRef.current = centerPosition;
+    centerPositionAnimation.value = centerPosition; // always set so worklet has latest
     translateY.value = 0; // reset translation when position changes
     
-    // if we're waiting for reposition after drag, set position and fade immediately (no animation)
-    // this prevents the slide glitch when dragging out of overlapping tasks
+    // if we're waiting for reposition after drag, set center and fade immediately (no animation)
     if (waitingForRepositionRef.current) {
-      waitingForRepositionRef.current = false; // clear the flag
-      
-      // clear fallback timeout since position update happened
+      waitingForRepositionRef.current = false;
       if (fadeInTimeoutRef.current) {
         clearTimeout(fadeInTimeoutRef.current);
         fadeInTimeoutRef.current = null;
       }
-      
-      // set position and fade immediately without animation to prevent slide glitch
-      cancelAnimation(positionAnimation);
+      cancelAnimation(centerPositionAnimation);
       cancelAnimation(fadeAnimation);
-      positionAnimation.value = position; // set immediately, no animation
-      fadeAnimation.value = 1; // set immediately, no fade animation
-    } else if (Date.now() - mountTimeRef.current < 250) {
-      // initial layout phase - skip animation to prevent jank when tasks measure height
-      // and position updates cascade (fallback heights → measured heights)
-      cancelAnimation(positionAnimation);
-      positionAnimation.value = position;
+      centerPositionAnimation.value = centerPosition;
+      fadeAnimation.value = 1;
+    } else if (Date.now() - mountTimeRef.current < 2000 || centerUpdateCountRef.current < 30) {
+      // initial load - set immediately so timeline appears in final position (no animation)
+      if (centerUpdateCountRef.current < 30) centerUpdateCountRef.current += 1;
+      cancelAnimation(centerPositionAnimation);
+      centerPositionAnimation.value = centerPosition;
     } else {
-      // animate position smoothly when it changes using reanimated
-      // this makes tasks smoothly move when other tasks expand/collapse
-      positionAnimation.value = withTiming(position, {
-        duration: 75,
-      });
+      // animate center when it changes (e.g. task above expanded)
+      centerPositionAnimation.value = withTiming(centerPosition, { duration: 75 });
     }
-  }, [position]);
+  }, [centerPosition]);
   
   // cleanup timeout on unmount
   useEffect(() => {

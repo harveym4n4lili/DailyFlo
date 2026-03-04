@@ -27,6 +27,8 @@ interface TimeLabelProps {
   isDragLabel?: boolean;
   // height for containerized labels (spans task card height)
   height?: number;
+  // optional opacity (e.g. hide static labels briefly after day change without changing layout)
+  opacity?: number;
 }
 
 /**
@@ -34,7 +36,7 @@ interface TimeLabelProps {
  * 
  * Renders a time label at the specified position on the timeline.
  */
-export default function TimeLabel({ time, position, animatedPosition, isEndTime = false, isDragLabel = false, height }: TimeLabelProps) {
+export default function TimeLabel({ time, position, animatedPosition, isEndTime = false, isDragLabel = false, height, opacity }: TimeLabelProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
 
@@ -72,15 +74,16 @@ export default function TimeLabel({ time, position, animatedPosition, isEndTime 
   // use static position if no animation, otherwise use animated style
   const containerStyle = animatedPosition
     ? (height 
-        ? [styles.container, styles.containerized, animatedStyle, { height }]
+        ? [styles.container, styles.containerized, animatedStyle, { height }, opacity !== undefined && { opacity }]
         : isEndTime
-        ? [styles.container, styles.endTimeContainer, animatedStyle]
-        : [styles.container, styles.topAlignedContainer, animatedStyle])
+        ? [styles.container, styles.endTimeContainer, animatedStyle, opacity !== undefined && { opacity }]
+        : [styles.container, styles.topAlignedContainer, animatedStyle, opacity !== undefined && { opacity }])
     : (height 
-        ? [styles.container, styles.containerized, { top: position + verticalOffset, height }]
+        ? [styles.container, styles.containerized, { top: position + verticalOffset, height }, opacity !== undefined && { opacity }]
         : isEndTime
-        ? [styles.container, styles.endTimeContainer, { top: position + verticalOffset }]
-        : [styles.container, styles.topAlignedContainer, { top: position }]);
+        ? [styles.container, styles.endTimeContainer, { top: position + verticalOffset }, opacity !== undefined && { opacity }]
+        : [styles.container, styles.topAlignedContainer, { top: position }, opacity !== undefined && { opacity }]);
+  const containerStyleFiltered = Array.isArray(containerStyle) ? containerStyle.filter(Boolean) : containerStyle;
 
   const textStyle = [
     styles.timeText,
@@ -92,7 +95,7 @@ export default function TimeLabel({ time, position, animatedPosition, isEndTime 
   const ContainerComponent = animatedPosition ? Animated.View : View;
 
   return (
-    <ContainerComponent style={containerStyle}>
+    <ContainerComponent style={containerStyleFiltered}>
       <Text style={textStyle}>
         {formattedTime}
       </Text>
