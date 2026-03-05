@@ -10,7 +10,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { CHECKBOX_SIZE_DEFAULT, CHECKBOX_TICK_SIZE_RATIO, CHECKBOX_TICK_ANIMATION_MS } from '@/constants/Checkbox';
 
 const MIN_TAP_AREA = 44;
-const PRESS_SCALE = 1.5;
+const PRESS_SCALE = 1.3;
 const BORDER_RADIUS = 8;
 
 export interface CheckboxProps {
@@ -53,12 +53,15 @@ export function Checkbox({
     }).start();
   }, [checked, tickOpacity]);
 
-  const springConfig = { damping: 20, stiffness: 150, mass: 0.2, useNativeDriver: true };
-  const handlePressIn = () => {
-    Animated.spring(builtInScale, { toValue: PRESS_SCALE, ...springConfig }).start();
-  };
-  const handlePressOut = () => {
-    Animated.spring(builtInScale, { toValue: 1, ...springConfig }).start();
+  const springConfig = { damping: 20, stiffness: 250, mass: 0.2, useNativeDriver: true };
+
+  // tap-only animation: always play scale up then down, independent of hold duration
+  const animateTap = () => {
+    builtInScale.setValue(1);
+    Animated.sequence([
+      Animated.spring(builtInScale, { toValue: PRESS_SCALE, ...springConfig }),
+      Animated.spring(builtInScale, { toValue: 1, ...springConfig }),
+    ]).start();
   };
 
   const borderStyle: any = {
@@ -101,9 +104,12 @@ export function Checkbox({
   if (onPress && !disabled) {
     return (
       <Pressable
-        onPress={onPress}
-        onPressIn={useBuiltInScale ? handlePressIn : undefined}
-        onPressOut={useBuiltInScale ? handlePressOut : undefined}
+        onPress={() => {
+          if (useBuiltInScale) {
+            animateTap();
+          }
+          onPress();
+        }}
         hitSlop={hitSlop}
         style={{ alignSelf: 'flex-start' }}
       >

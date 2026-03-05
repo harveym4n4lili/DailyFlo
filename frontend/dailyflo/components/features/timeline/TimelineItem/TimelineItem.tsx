@@ -776,7 +776,7 @@ const TimelineItem = React.memo(function TimelineItem({
                         line={line}
                         strikeProgress={strikeProgress}
                         lineStyle={styles.strikethroughLine}
-                        yOffset={timeRangeText ? 0 : 8}
+                        yOffset={timeRangeText ? 1 : 9}
                       />
                     ))}
                   </View>
