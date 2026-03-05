@@ -16,7 +16,7 @@
 import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 
 // react native components for building the calendar UI
-import { View, Text, Pressable, TouchableOpacity, StyleSheet, FlatList, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, TouchableOpacity, StyleSheet, FlatList, useWindowDimensions, Animated } from 'react-native';
 
 // expo vector icons for chevron symbol
 import { Ionicons } from '@expo/vector-icons';
@@ -64,6 +64,7 @@ interface DayCellProps {
   dayNumber: number;
   isSelected: boolean;
   isTodayDate: boolean;
+  // when user taps the circle, this lets weekview update the selected date
   onSelectDate: (date: Date) => void;
   themeColors: ReturnType<typeof useThemeColors>;
   styles: ReturnType<typeof createStyles>;
@@ -78,6 +79,36 @@ const DayCell: React.FC<DayCellProps> = ({
   themeColors,
   styles,
 }) => {
+  // quick fade for the selected day fill so the highlight feels softer on tap
+  const selectionOpacity = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+  const selectionAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    // cancel any in‑flight animation before starting a new one
+    if (selectionAnimationRef.current) {
+      selectionAnimationRef.current.stop();
+      selectionAnimationRef.current = null;
+    }
+
+    if (isSelected) {
+      // simple, cancellable fade-in when this day becomes selected
+      const animation = Animated.timing(selectionOpacity, {
+        toValue: 1,
+        duration: 140,
+        useNativeDriver: true,
+      });
+      selectionAnimationRef.current = animation;
+      animation.start(({ finished }) => {
+        if (finished) {
+          selectionAnimationRef.current = null;
+        }
+      });
+    } else {
+      // when unselected, hide the fill immediately (no fade-out)
+      selectionOpacity.setValue(0);
+    }
+  }, [isSelected, selectionOpacity]);
+
   return (
     <View style={[
       styles.dateCellContainer,
@@ -90,39 +121,44 @@ const DayCell: React.FC<DayCellProps> = ({
 
       },
     ]}>
-      {/* static background highlight when selected (no animation) */}
+      {/* background highlight for selected day with quick fade-in */}
       {isSelected && (
-        <View
+        <Animated.View
           style={[
             styles.dateCellBackground,
             {
               backgroundColor: themeColors.text.primary(),
+              opacity: selectionOpacity,
             }
           ]}
         />
       )}
       
-      {/* date number */}
+      {/* date number - pressable circle so tapping the number selects the day */}
       <Pressable
         onPress={() => onSelectDate(date)}
         style={styles.dateCellPressable}
+        // larger invisible hit area so light / off-center taps still register
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityRole="button"
-        accessibilityLabel={`${dayNumber}, ${date.toLocaleDateString('en-US', { 
-          month: 'long', 
+        accessibilityLabel={`${dayNumber}, ${date.toLocaleDateString('en-US', {
+          month: 'long',
           day: 'numeric',
-          year: 'numeric' 
+          year: 'numeric',
         })}`}
         accessibilityState={{ selected: isSelected }}
       >
-        <Text style={[
-          getTextStyle('heading-4'),
-          styles.dateText,
-          {
-            color: isSelected
-              ? themeColors.background.primary()
-              : themeColors.text.primary(),
-          }
-        ]}>
+        <Text
+          style={[
+            getTextStyle('heading-4'),
+            styles.dateText,
+            {
+              color: isSelected
+                ? themeColors.background.primary()
+                : themeColors.text.primary(),
+            },
+          ]}
+        >
           {dayNumber}
         </Text>
       </Pressable>
@@ -418,29 +454,35 @@ export const WeekView: React.FC<WeekViewProps> = ({
                 
                 return (
                   <View key={index} style={styles.dayColumn}>
+                    {/* day title pressable - tapping the title also selects the day */}
                     <Pressable
                       onPress={() => handleDateSelect(date)}
                       style={styles.dayHeaderPressable}
+                      // extra hitSlop so fast/light taps on the label still select the day
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       accessibilityRole="button"
-                      accessibilityLabel={`Select ${dayHeaders[index]}, ${date.toLocaleDateString('en-US', { 
-                        month: 'long', 
+                      accessibilityLabel={`Select ${dayHeaders[index]}, ${date.toLocaleDateString('en-US', {
+                        month: 'long',
                         day: 'numeric',
-                        year: 'numeric' 
+                        year: 'numeric',
                       })}`}
                     >
-                      <Text 
+                      <Text
                         numberOfLines={1}
                         style={[
                           getTextStyle('body-medium'),
                           styles.dayHeaderText,
-                          { 
-                            color: themeColors.text.tertiary?.() || themeColors.text.secondary(),
-                          }
-                        ]}>
+                          {
+                            color:
+                              themeColors.text.tertiary?.() ||
+                              themeColors.text.secondary(),
+                          },
+                        ]}
+                      >
                         {dayHeaders[index]}
                       </Text>
                     </Pressable>
-                    
+
                     <DayCell
                       date={date}
                       dayNumber={dayNumber}
@@ -534,7 +576,7 @@ const createStyles = (
     flex: 1,
     alignItems: 'center',
   },
-  
+
   // day header pressable - clickable area for day header
   dayHeaderPressable: {
     marginBottom: 8,
