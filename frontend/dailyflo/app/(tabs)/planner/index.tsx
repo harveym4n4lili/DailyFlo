@@ -1,5 +1,5 @@
 
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useTransition } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -50,6 +50,12 @@ export default function PlannerScreen() {
     // default to today's date as ISO string
     return new Date().toISOString();
   });
+  // timeline date state is used for heavier task expansion so the week selector ui can update instantly first
+  const [timelineDate, setTimelineDate] = useState<string>(() => {
+    return new Date().toISOString();
+  });
+  // transition lets react schedule the timeline/task updates at lower priority so taps and header animations stay smooth
+  const [isTimelinePending, startTimelineTransition] = useTransition();
   
   // TASK DETAIL MODAL STATE - Controls the visibility of task detail modal
   
@@ -105,15 +111,22 @@ export default function PlannerScreen() {
 
   // handle date selection from calendar modal or week view
   const handleDateSelect = (date: string) => {
+    // update selectedDate immediately so the header + week view highlight respond with no perceived delay
     setSelectedDate(date);
+    // update the heavier timelineDate inside a transition so expandTasksForDates + timeline recalcs do not block the tap frame
+    startTimelineTransition(() => {
+      setTimelineDate(date);
+    });
   };
   
   // expand tasks for selected date: one-off + recurring occurrences that fall on selectedDate
   const selectedDateTasks = useMemo(() => {
-    if (!selectedDate) return [];
-    const selectedDateStr = new Date(selectedDate).toISOString().slice(0, 10);
+    // prefer timelineDate for task expansion so ui selection can update first while the timeline catches up just after
+    const sourceDate = timelineDate || selectedDate;
+    if (!sourceDate) return [];
+    const selectedDateStr = new Date(sourceDate).toISOString().slice(0, 10);
     return expandTasksForDates(tasks, [selectedDateStr]);
-  }, [tasks, selectedDate]);
+  }, [tasks, selectedDate, timelineDate]);
 
   // all-day tasks: selected day's tasks with no time set (not shown on timeline)
   // these are displayed in the "All day tasks" list below the timeline
@@ -277,6 +290,11 @@ export default function PlannerScreen() {
           </View>
           {/* TimelineView - timeline + all-day tasks in same scroll container */}
           <TimelineView
+            // key by timelineDate so each planner day gets a fresh timeline instance
+            // this resets layout state per day so the timeline + all-day footer
+            // appear directly in their correct positions instead of sliding from
+            // the previous day's layout
+            key={timelineDate ? new Date(timelineDate).toISOString().slice(0, 10) : 'planner-timeline'}
             tasks={selectedDateTasks}
             onTaskTimeChange={handleTaskTimeChange}
             onTaskPress={handleTaskPress}

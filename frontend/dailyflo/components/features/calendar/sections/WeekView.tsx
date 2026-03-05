@@ -16,7 +16,7 @@
 import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 
 // react native components for building the calendar UI
-import { View, Text, Pressable, TouchableOpacity, StyleSheet, Animated, FlatList, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, TouchableOpacity, StyleSheet, FlatList, useWindowDimensions } from 'react-native';
 
 // expo vector icons for chevron symbol
 import { Ionicons } from '@expo/vector-icons';
@@ -78,45 +78,6 @@ const DayCell: React.FC<DayCellProps> = ({
   themeColors,
   styles,
 }) => {
-  // animated values for zoom fade animation - start at 0 (hidden) or 1 (visible) based on initial selection state
-  const scaleAnim = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
-  const opacityAnim = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
-  
-  // trigger animation when selection state changes
-  useEffect(() => {
-    if (isSelected) {
-      // animate in: scale from 0.8 to 1, fade from 0 to 1
-      scaleAnim.setValue(0.8);
-      opacityAnim.setValue(0);
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // animate out: scale to 0, fade to 0
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [isSelected, scaleAnim, opacityAnim]);
-  
   return (
     <View style={[
       styles.dateCellContainer,
@@ -129,17 +90,17 @@ const DayCell: React.FC<DayCellProps> = ({
 
       },
     ]}>
-      {/* animated background highlight */}
-      <Animated.View
-        style={[
-          styles.dateCellBackground,
-          {
-            backgroundColor: themeColors.text.primary(),
-            opacity: opacityAnim,
-            transform: [{ scale: scaleAnim }],
-          }
-        ]}
-      />
+      {/* static background highlight when selected (no animation) */}
+      {isSelected && (
+        <View
+          style={[
+            styles.dateCellBackground,
+            {
+              backgroundColor: themeColors.text.primary(),
+            }
+          ]}
+        />
+      )}
       
       {/* date number */}
       <Pressable
@@ -192,12 +153,6 @@ export const WeekView: React.FC<WeekViewProps> = ({
   
   // create dynamic styles
   const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
-  
-  // animated value for header title fade animation
-  const headerOpacity = useRef(new Animated.Value(1)).current;
-  
-  // track previous date to detect changes
-  const prevDateRef = useRef<string>(selectedDate);
   
   // flat list ref for horizontal pagination
   const flatListRef = useRef<FlatList>(null);
@@ -382,25 +337,6 @@ export const WeekView: React.FC<WeekViewProps> = ({
   }, [selectedDate]);
   
   /**
-   * Animate header title fade when date changes
-   * Fades in smoothly when date changes
-   */
-  useEffect(() => {
-    // check if date actually changed (not just initial render)
-    if (prevDateRef.current !== selectedDate && prevDateRef.current !== '') {
-      // start from opacity 0, then fade in smoothly
-      headerOpacity.setValue(0);
-      Animated.timing(headerOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    }
-    // update previous date ref after checking
-    prevDateRef.current = selectedDate;
-  }, [selectedDate, headerOpacity]);
-  
-  /**
    * Check if a date is the selected date
    * Compares date strings (YYYY-MM-DD format) to avoid time zone issues
    */
@@ -446,9 +382,9 @@ export const WeekView: React.FC<WeekViewProps> = ({
         activeOpacity={0.7}
         disabled={!onHeaderPress}
       >
-        <Animated.Text key={selectedDate} style={[styles.headerTitle, { opacity: headerOpacity }]}>
+        <Text key={selectedDate} style={styles.headerTitle}>
           {formattedDateText}
-        </Animated.Text>
+        </Text>
         <Ionicons 
           name="chevron-forward" 
           size={24} 
