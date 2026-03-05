@@ -852,6 +852,29 @@ export default function TimelineView({
   const haveSetLabelsSettledRef = useRef(false);
   const initialLabelPositionsRef = useRef<Map<string, number>>(new Map());
 
+  // when the visible task set changes a lot at once (for example, when the user switches day on planner),
+  // we want the timeline + all-day footer stack to jump to the new layout instantly instead of sliding
+  // this mirrors the "instant y position" behaviour of individual timeline items
+  const [suppressLayoutForTaskSetChange, setSuppressLayoutForTaskSetChange] = useState(false);
+  const layoutSuppressionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // cleanup any pending suppression timer when timeline unmounts
+    return () => {
+      if (layoutSuppressionTimeoutRef.current) {
+        clearTimeout(layoutSuppressionTimeoutRef.current);
+        layoutSuppressionTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  // when the underlying task set changes (for example, user switches planner day which passes a new tasks array),
+  // use this stable key so we can reset label animations + outer layout transition in a single place
+  const dayTaskSetKey = useMemo(
+    () => [...new Set(tasks.map((t) => t.id))].sort().join(','),
+    [tasks],
+  );
+
   // helper function to get or create shared value for a label
   // using makeMutable allows us to create shared values conditionally (inside useEffect)
   // this is the correct way to create shared values dynamically
@@ -871,16 +894,29 @@ export default function TimelineView({
     // when task set changes (e.g. user loads a different day), reset "initial layout" so we set positions
     // immediately and avoid stutter from animating from stale/wrong positions
     // use sorted unique task ids so order changes (from position updates) don't trigger hide again
-    const taskSetKey = [...new Set(allTimeLabels.map((l) => l.taskId))].sort().join(',');
-    if (taskSetKey !== prevTaskSetKeyRef.current) {
-      prevTaskSetKeyRef.current = taskSetKey;
+    // reset behaviour when the overall task set changes (day switch etc.), not just when label list changes
+    if (dayTaskSetKey !== prevTaskSetKeyRef.current) {
+      prevTaskSetKeyRef.current = dayTaskSetKey;
       timelineMountTimeRef.current = Date.now();
       initialRunsLeftRef.current = 30;
       initialLabelPositionsRef.current.clear();
       haveSetLabelsSettledRef.current = false;
       setLabelsPositionSettled(false);
-      // do not disable layout transition on day change - so header toggle still animates timeline smoothly
-      // (only the initial mount keeps layout off for 2s to prevent load slide)
+
+      // when task set changes (for example, loading a different day in planner),
+      // temporarily turn off the outer layout transition so the whole timeline + footer
+      // jumps to its new vertical position instantly instead of sliding from the previous day
+      if (footerComponent) {
+        if (layoutSuppressionTimeoutRef.current) {
+          clearTimeout(layoutSuppressionTimeoutRef.current);
+          layoutSuppressionTimeoutRef.current = null;
+        }
+        setSuppressLayoutForTaskSetChange(true);
+        layoutSuppressionTimeoutRef.current = setTimeout(() => {
+          setSuppressLayoutForTaskSetChange(false);
+          layoutSuppressionTimeoutRef.current = null;
+        }, 250);
+      }
     }
 
     const isInitialLayout =
@@ -940,7 +976,7 @@ export default function TimelineView({
       haveSetLabelsSettledRef.current = true;
       setLabelsPositionSettled(true);
     }
-  }, [allTimeLabels, getOrCreateLabelAnimation]);
+  }, [allTimeLabels, getOrCreateLabelAnimation, footerComponent, dayTaskSetKey]);
 
   // convert Y position (TOP edge of the card) to time for drag operations
   // finds closest time by testing every 5 minutes between 00:05 and 23:55
@@ -1712,14 +1748,27 @@ export default function TimelineView({
         scrollEnabled={true}
       >
         {/* ListCard + timeline as one stack - layout enabled after mount so they appear in final position */}
-        <AnimatedReanimated.View layout={layoutTransitionEnabled && footerComponent ? LAYOUT_TRANSITION : undefined} style={styles.listTimelineStack}>
+        <AnimatedReanimated.View
+          layout={layoutTransitionEnabled && footerComponent && !suppressLayoutForTaskSetChange ? LAYOUT_TRANSITION : undefined}
+          style={styles.listTimelineStack}
+        >
           {footerComponent ? (
-            <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION : undefined} style={styles.footerWrapper}>
+            <AnimatedReanimated.View
+              layout={layoutTransitionEnabled && !suppressLayoutForTaskSetChange ? LAYOUT_TRANSITION : undefined}
+              style={styles.footerWrapper}
+            >
               {footerComponent}
             </AnimatedReanimated.View>
           ) : null}
           {/* timeline row - layout enabled after mount so no initial slide up */}
-          <AnimatedReanimated.View layout={layoutTransitionEnabled && footerComponent ? LAYOUT_TRANSITION : undefined} style={[styles.timelineRow, footerComponent ? styles.timelineRowWithFooterAbove : null, ...(footerComponent ? [{ minHeight: timelineHeight }] : [])]}>
+          <AnimatedReanimated.View
+            layout={layoutTransitionEnabled && footerComponent && !suppressLayoutForTaskSetChange ? LAYOUT_TRANSITION : undefined}
+            style={[
+              styles.timelineRow,
+              footerComponent ? styles.timelineRowWithFooterAbove : null,
+              ...(footerComponent ? [{ minHeight: timelineHeight }] : []),
+            ]}
+          >
         {/* time labels column on the left - static labels use opacity to hide briefly after day change (no layout change) */}
         <View style={styles.timeLabelsContainer}>
           {allTimeLabels.map((label) => {
