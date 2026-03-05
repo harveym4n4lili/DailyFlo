@@ -42,10 +42,14 @@ import {
 } from '@/utils/recurrenceUtils';
 
 export default function PlannerScreen() {
+  // the week selector ui should always feel instant.
+  // we keep its selected state fully local to this screen and
+  // trigger heavier timeline/task work separately so backend/redux
+  // never block the visual highlight.
   // CALENDAR MODAL STATE - Controls the visibility of the calendar modal
   const [isCalendarModalVisible, setIsCalendarModalVisible] = useState(false);
   
-  // SELECTED DATE STATE - Currently selected date for calendar navigation
+  // SELECTED DATE STATE (UI) - drives week selector highlight only
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     // default to today's date as ISO string
     return new Date().toISOString();
@@ -113,20 +117,55 @@ export default function PlannerScreen() {
   const handleDateSelect = (date: string) => {
     // update selectedDate immediately so the header + week view highlight respond with no perceived delay
     setSelectedDate(date);
-    // update the heavier timelineDate inside a transition so expandTasksForDates + timeline recalcs do not block the tap frame
-    startTimelineTransition(() => {
-      setTimelineDate(date);
-    });
   };
+
+  // when the ui-selected date changes, schedule timeline/task updates
+  // in a low-priority transition so backend/redux work never blocks
+  // the feel of tapping on the week selector
+  useEffect(() => {
+    startTimelineTransition(() => {
+      setTimelineDate(selectedDate);
+    });
+  }, [selectedDate, startTimelineTransition]);
   
-  // expand tasks for selected date: one-off + recurring occurrences that fall on selectedDate
+  // derive the current week (monday→sunday) from the active planner date
+  // we only recompute this when the base date (timelineDate/selectedDate) changes
+  const weekDateStrings = useMemo(() => {
+    const sourceDate = timelineDate || selectedDate;
+    if (!sourceDate) return [];
+    const base = new Date(sourceDate);
+    // normalise to local midnight before shifting to avoid time-of-day drift
+    const baseMidnight = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+    // getDay(): 0 = Sunday, 1 = Monday, ...; we want Monday as week start
+    const dayOfWeek = baseMidnight.getDay(); // 0–6
+    const mondayOffset = (dayOfWeek + 6) % 7; // days to subtract to reach Monday
+    const dates: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(baseMidnight);
+      d.setDate(d.getDate() - mondayOffset + i);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+    return dates;
+  }, [timelineDate, selectedDate]);
+
+  // expand tasks once for the whole visible week (monday→sunday)
+  // this preloads all recurring occurrences for the week so tapping a day
+  // only filters the already-expanded array instead of recomputing expansions
+  const weekExpandedTasks = useMemo(() => {
+    if (weekDateStrings.length === 0 || tasks.length === 0) {
+      return [];
+    }
+    return expandTasksForDates(tasks, weekDateStrings);
+  }, [tasks, weekDateStrings]);
+
+  // expand tasks for selected date by filtering the pre-expanded week
+  // one-off + recurring occurrences that fall on the selectedDate only
   const selectedDateTasks = useMemo(() => {
-    // prefer timelineDate for task expansion so ui selection can update first while the timeline catches up just after
     const sourceDate = timelineDate || selectedDate;
     if (!sourceDate) return [];
     const selectedDateStr = new Date(sourceDate).toISOString().slice(0, 10);
-    return expandTasksForDates(tasks, [selectedDateStr]);
-  }, [tasks, selectedDate, timelineDate]);
+    return weekExpandedTasks.filter((task) => task.dueDate?.slice(0, 10) === selectedDateStr);
+  }, [weekExpandedTasks, selectedDate, timelineDate]);
 
   // all-day tasks: selected day's tasks with no time set (not shown on timeline)
   // these are displayed in the "All day tasks" list below the timeline
@@ -288,57 +327,56 @@ export default function PlannerScreen() {
               style={StyleSheet.absoluteFill}
             />
           </View>
-          {/* TimelineView - timeline + all-day tasks in same scroll container */}
           <TimelineView
-            // key by timelineDate so each planner day gets a fresh timeline instance
-            // this resets layout state per day so the timeline + all-day footer
-            // appear directly in their correct positions instead of sliding from
-            // the previous day's layout
-            key={timelineDate ? new Date(timelineDate).toISOString().slice(0, 10) : 'planner-timeline'}
-            tasks={selectedDateTasks}
-            onTaskTimeChange={handleTaskTimeChange}
-            onTaskPress={handleTaskPress}
-            onTaskComplete={handleTaskComplete}
-            startHour={6}
-            endHour={23}
-            timeInterval={60}
-            scrollContentPaddingTop={16}
-            footerComponent={
-              <View style={styles.allDayFooter}>
-                <ListCard
-                  key="planner-allday-listcard"
-                  tasks={allDayTasks}
-                  hideCompletedTasks={true}
-                  onTaskPress={handleTaskPress}
-                  onTaskComplete={handleTaskComplete}
-                  onTaskEdit={handleTaskEdit}
-                  onTaskDelete={handleTaskDelete}
-                  onTaskSwipeLeft={handleTaskSwipeLeft}
-                  onTaskSwipeRight={handleTaskSwipeRight}
-                  showCategory={false}
-                  compact={false}
-                  showIcon={false}
-                  showIndicators={false}
-                  showMetadata={false}
-                  metadataVariant="today"
-                  cardSpacing={0}
-                  showDashedSeparator={true}
-                  hideBackground={true}
-                  removeInnerPadding={true}
-                  emptyMessage="No all-day tasks for this date."
-                  loading={false}
-                  groupBy="allDay"
-                  sortBy="createdAt"
-                  sortDirection="desc"
-                  paddingHorizontal={Paddings.screen}
-                  paddingBottom={8}
-                  scrollEnabled={false}
-                  delayHeightChangeOnTaskComplete={false}
-                  disableInitialLayoutTransition={true}
-                />
-              </View>
-            }
-          />
+              // key by timelineDate so each planner day gets a fresh timeline instance
+              // this resets layout state per day so the timeline + all-day footer
+              // appear directly in their correct positions instead of sliding from
+              // the previous day's layout
+              key={timelineDate ? new Date(timelineDate).toISOString().slice(0, 10) : 'planner-timeline'}
+              tasks={selectedDateTasks}
+              onTaskTimeChange={handleTaskTimeChange}
+              onTaskPress={handleTaskPress}
+              onTaskComplete={handleTaskComplete}
+              startHour={6}
+              endHour={23}
+              timeInterval={60}
+              scrollContentPaddingTop={16}
+              footerComponent={
+                <View style={styles.allDayFooter}>
+                  <ListCard
+                    key="planner-allday-listcard"
+                    tasks={allDayTasks}
+                    hideCompletedTasks={true}
+                    onTaskPress={handleTaskPress}
+                    onTaskComplete={handleTaskComplete}
+                    onTaskEdit={handleTaskEdit}
+                    onTaskDelete={handleTaskDelete}
+                    onTaskSwipeLeft={handleTaskSwipeLeft}
+                    onTaskSwipeRight={handleTaskSwipeRight}
+                    showCategory={false}
+                    compact={false}
+                    showIcon={false}
+                    showIndicators={false}
+                    showMetadata={false}
+                    metadataVariant="today"
+                    cardSpacing={0}
+                    showDashedSeparator={true}
+                    hideBackground={true}
+                    removeInnerPadding={true}
+                    emptyMessage="No all-day tasks for this date."
+                    loading={false}
+                    groupBy="allDay"
+                    sortBy="createdAt"
+                    sortDirection="desc"
+                    paddingHorizontal={Paddings.screen}
+                    paddingBottom={8}
+                    scrollEnabled={false}
+                    delayHeightChangeOnTaskComplete={false}
+                    disableInitialLayoutTransition={true}
+                  />
+                </View>
+              }
+            />
         </View>
 
         {/* Floating Action Button – opens task Stack screen with selected date pre-filled */}
