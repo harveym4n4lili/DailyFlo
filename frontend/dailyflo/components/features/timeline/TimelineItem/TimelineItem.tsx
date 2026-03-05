@@ -11,7 +11,17 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming, useAnimatedReaction, runOnJS, cancelAnimation } from 'react-native-reanimated';
+import AnimatedReanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  useAnimatedReaction,
+  runOnJS,
+  cancelAnimation,
+  Easing,
+  interpolateColor,
+  type SharedValue,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -25,6 +35,41 @@ import { getTaskCardHeight, formatTimeRange } from '../timelineUtils';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
 import { TimelineCheckbox } from './sections';
 import { taskDisplayEquals } from '@/utils/taskDisplayEquals';
+import { CHECKBOX_STRIKETHROUGH_ANIMATION_MS } from '@/constants/Checkbox';
+
+// line data from Text onTextLayout - x, y, width, height per line (normally 1 line for timeline title)
+type TextLineLayout = { x: number; y: number; width: number; height: number };
+
+// Animated.Text created from reanimated so we can animate color + draw overlay lines without changing layout
+const AnimatedText = AnimatedReanimated.createAnimatedComponent(Text);
+
+/** single strikethrough line for one text line - animates width left-to-right, positioned at line's vertical center */
+function StrikethroughLine({
+  line,
+  strikeProgress,
+  lineStyle,
+  yOffset = 0,
+}: {
+  line: TextLineLayout;
+  strikeProgress: SharedValue<number>;
+  lineStyle: object;
+  yOffset?: number;
+}) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    width: line.width * strikeProgress.value,
+  }));
+
+  return (
+    <AnimatedReanimated.View
+      style={[
+        lineStyle,
+        { left: line.x, top: line.y + line.height / 2 - 1 + yOffset },
+        animatedStyle,
+      ]}
+      pointerEvents="none"
+    />
+  );
+}
 
 interface TimelineItemProps {
   // task to display
@@ -202,6 +247,43 @@ const TimelineItem = React.memo(function TimelineItem({
   useEffect(() => {
     setDisplayCompleted(task.isCompleted);
   }, [task.id]);
+
+  // store per-line layout info from title onTextLayout so we can render animated strikethrough lines
+  const [titleLines, setTitleLines] = useState<TextLineLayout[]>([]);
+
+  // reanimated shared value: 0 = no strikethrough, 1 = full strikethrough (drives left-to-right animation per line)
+  const strikeProgress = useSharedValue(displayCompleted ? 1 : 0);
+
+  // when completion display changes (including optimistic), animate the strikethrough progress
+  useEffect(() => {
+    if (displayCompleted) {
+      strikeProgress.value = withTiming(1, {
+        duration: CHECKBOX_STRIKETHROUGH_ANIMATION_MS,
+        easing: Easing.out(Easing.cubic),
+      });
+    } else {
+      strikeProgress.value = withTiming(0, {
+        duration: 250,
+        easing: Easing.in(Easing.cubic),
+      });
+    }
+  }, [displayCompleted, strikeProgress]);
+
+  // onTextLayout provides x, y, width, height for each rendered line - used to position strikethrough per line
+  const handleTitleLayout = (e: { nativeEvent: { lines: TextLineLayout[] } }) => {
+    setTitleLines(e.nativeEvent.lines ?? []);
+  };
+
+  // animate title color from primary to secondary (dimmed) as strikeProgress goes 0→1 - syncs with strikethrough
+  const primaryTitleColor = themeColors.text.primary();
+  const secondaryTitleColor = themeColors.text.secondary();
+  const titleAnimatedStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(
+      strikeProgress.value,
+      [0, 1],
+      [primaryTitleColor, secondaryTitleColor]
+    ),
+  }));
 
   // subtask count for display (0/X format)
   // when task is displayed as complete (optimistic or from backend), treat all subtasks as complete
@@ -655,16 +737,14 @@ const TimelineItem = React.memo(function TimelineItem({
                   </View>
                 ) : null}
                 <View style={styles.titleRow}>
-                  <Text
-                    style={[
-                      styles.title,
-                      displayCompleted && styles.completedTitle,
-                    ]}
+                  <AnimatedText
+                    style={[styles.title, titleAnimatedStyle]}
                     numberOfLines={1}
                     ellipsizeMode="tail"
+                    onTextLayout={handleTitleLayout}
                   >
                     {task.title}
-                  </Text>
+                  </AnimatedText>
                   <View style={styles.indicatorsRow}>
                     {subtasksCount > 0 && (
                       <View style={styles.subtaskCountRow}>
@@ -687,6 +767,18 @@ const TimelineItem = React.memo(function TimelineItem({
                         <Text style={styles.recurrenceText}>{recurrenceLabel}</Text>
                       </View>
                     )}
+                  </View>
+                  {/* strikethrough overlay - absolute so it doesn't affect layout of title + metadata */}
+                  <View pointerEvents="none" style={styles.strikeOverlay}>
+                    {titleLines.map((line, index) => (
+                      <StrikethroughLine
+                        key={index}
+                        line={line}
+                        strikeProgress={strikeProgress}
+                        lineStyle={styles.strikethroughLine}
+                        yOffset={timeRangeText ? 0 : 8}
+                      />
+                    ))}
                   </View>
                 </View>
               </View>
@@ -795,10 +887,23 @@ const createStyles = (
     flexShrink: 0,
   },
 
-  // completed title styling - matches TaskCard completed styling
-  completedTitle: {
-    textDecorationLine: 'line-through', // strikethrough for completed tasks
-    color: themeColors.text.secondary(), // dimmed color for completed
+  // absolute overlay that sits on top of the title row so we can draw animated strikethrough lines
+  // without changing the layout of the title + metadata
+  strikeOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+
+  // base style for strikethrough - left/top set per-line by StrikethroughLine using onTextLayout data
+  strikethroughLine: {
+    position: 'absolute',
+    height: 2,
+    marginTop: 1, // slight offset so line visually matches text baseline
+    backgroundColor: themeColors.text.secondary(),
+    borderRadius: 1,
   },
 
   // subtask count - checkbox icon + 0/X text
