@@ -1,5 +1,5 @@
 import React from 'react';
-import { DynamicColorIOS, Platform } from 'react-native';
+import { View, DynamicColorIOS, Platform } from 'react-native';
 import {
   NativeTabs,
   Label as NativeTabLabel,
@@ -10,11 +10,16 @@ import {
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTypography } from '@/hooks/useTypography';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { SelectionActionsBar } from '@/components/ui/SelectionActionsBar';
+import { useUI } from '@/store/hooks';
 
 export default function TabLayout() {
   const { getThemeColorValue } = useThemeColor();
   const typography = useTypography();
   const themeColors = useThemeColors();
+  const { selection } = useUI();
+  const isSelectionMode = selection.isSelectionMode;
+
   // activeColor: base brand color token (same 500 shade we use elsewhere, e.g. FAB)
   const activeColor = themeColors.text.primary();
 
@@ -29,6 +34,7 @@ export default function TabLayout() {
   const labelStyle = { ...typography.getTextStyle('navbar') };
 
   return (
+    <View style={{ flex: 1 }}>
     <NativeTabs labelStyle={labelStyle} tintColor={tintColor}>
       <NativeTabs.Trigger name="today">
         <NativeTabLabel>Today</NativeTabLabel>
@@ -50,5 +56,8 @@ export default function TabLayout() {
         <NativeTabIcon sf="gearshape" drawable="settings" />
       </NativeTabs.Trigger>
     </NativeTabs>
+    {/* selection actions bar overlays tab bar when user taps "Select Tasks" - liquid glass on iOS */}
+    {isSelectionMode && <SelectionActionsBar />}
+    </View>
   );
 }

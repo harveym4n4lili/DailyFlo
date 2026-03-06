@@ -1,6 +1,7 @@
 
 import React, { useCallback, useMemo, useState, useEffect, useTransition } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
+import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -75,7 +76,15 @@ export default function PlannerScreen() {
   // REDUX STORE - Accessing task state from Redux store
   const dispatch = useAppDispatch();
   const { tasks, isLoading } = useTasks();
-  const { enterSelectionMode } = useUI();
+  const { enterSelectionMode, selection, toggleItemSelection, exitSelectionMode } = useUI();
+
+  // FAB fade: opacity 0 in selection mode, 1 otherwise
+  const fabOpacity = useSharedValue(1);
+  useEffect(() => {
+    const isSelectionMode = selection.isSelectionMode && selection.selectionType === 'tasks';
+    fabOpacity.value = withTiming(isSelectionMode ? 0 : 1, { duration: 200 });
+  }, [selection.isSelectionMode, selection.selectionType, fabOpacity]);
+  const fabAnimatedStyle = useAnimatedStyle(() => ({ opacity: fabOpacity.value }));
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const { openMonthSelect } = usePlannerMonthSelect();
   
@@ -284,11 +293,14 @@ export default function PlannerScreen() {
       <View style={[styles.topSectionAnchor, { height: insets.top + 48 }]} pointerEvents="box-none">
         <View style={styles.topSectionRow} pointerEvents="box-none">
           <ActionContextMenu
-            items={[
-              { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
-              { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
-            
-            ]}
+            items={
+              selection.isSelectionMode && selection.selectionType === 'tasks'
+                ? [{ id: 'cancel-selection', label: 'Cancel selection', systemImage: 'xmark', onPress: exitSelectionMode }]
+                : [
+                    { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
+                    { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
+                  ]
+            }
             style={styles.topSectionContextButton}
             accessibilityLabel="Open menu"
             dropdownAnchorTopOffset={insets.top + 48}
@@ -313,8 +325,9 @@ export default function PlannerScreen() {
           />
         </View>
         
-        {/* Content area with rounded top and left corners */}
+        {/* Content area - TimelineView + all-day footer */}
         <View style={styles.contentContainer}>
+          <>
           {/* fade opacity overlay - starts 48px below date selection border, matches Today screen */}
           <View style={styles.fadeOverlay} pointerEvents="none">
             <LinearGradient
@@ -326,7 +339,7 @@ export default function PlannerScreen() {
               style={StyleSheet.absoluteFill}
             />
           </View>
-          <TimelineView
+            <TimelineView
               // key by timelineDate so each planner day gets a fresh timeline instance
               // this resets layout state per day so the timeline + all-day footer
               // appear directly in their correct positions instead of sliding from
@@ -336,6 +349,9 @@ export default function PlannerScreen() {
               onTaskTimeChange={handleTaskTimeChange}
               onTaskPress={handleTaskPress}
               onTaskComplete={handleTaskComplete}
+              selectionMode={selection.isSelectionMode && selection.selectionType === 'tasks'}
+              selectedTaskIds={selection.selectedItems}
+              onToggleTaskSelection={selection.isSelectionMode ? toggleItemSelection : undefined}
               startHour={6}
               endHour={23}
               timeInterval={60}
@@ -345,6 +361,9 @@ export default function PlannerScreen() {
                   <ListCard
                     key="planner-allday-listcard"
                     tasks={allDayTasks}
+                    selectionMode={selection.isSelectionMode && selection.selectionType === 'tasks'}
+                    selectedTaskIds={selection.selectedItems}
+                    onToggleTaskSelection={selection.isSelectionMode ? toggleItemSelection : undefined}
                     hideCompletedTasks={true}
                     onTaskPress={handleTaskPress}
                     onTaskComplete={handleTaskComplete}
@@ -376,18 +395,24 @@ export default function PlannerScreen() {
                 </View>
               }
             />
+          </>
         </View>
 
-        {/* Floating Action Button – opens task Stack screen with selected date pre-filled */}
-        <FloatingActionButton
-          onPress={() => {
-            router.push({ pathname: '/task-create' as any, params: { dueDate: selectedDate } });
-          }}
-          backgroundColor={themeColors.background.invertedPrimary()}
-          iconColor={themeColors.text.invertedPrimary()}
-          accessibilityLabel="Add new task"
-          accessibilityHint="Double tap to create a new task"
-        />
+        {/* Floating Action Button – fades out in selection mode */}
+        <AnimatedReanimated.View
+          style={[fabAnimatedStyle, { position: 'absolute', bottom: 0, right: 0, left: 0, height: 120 }]}
+          pointerEvents={selection.isSelectionMode && selection.selectionType === 'tasks' ? 'none' : 'box-none'}
+        >
+          <FloatingActionButton
+            onPress={() => {
+              router.push({ pathname: '/task-create' as any, params: { dueDate: selectedDate } });
+            }}
+            backgroundColor={themeColors.background.invertedPrimary()}
+            iconColor={themeColors.text.invertedPrimary()}
+            accessibilityLabel="Add new task"
+            accessibilityHint="Double tap to create a new task"
+          />
+        </AnimatedReanimated.View>
       </ScreenContainer>
 
     </View>

@@ -1,4 +1,11 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import {
+  Inter_400Regular,
+  Inter_300Light,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -43,14 +50,13 @@ export default function RootLayout() {
   // load all the fonts we need for the app
   // this tells expo-font to load the Inter font files (18pt optical size for UI)
   // each font gets a name that we can use in our typography system
+  // load Inter fonts from @expo-google-fonts/inter (no local font files needed)
   const [loaded] = useFonts({
-    // Inter font family - these are the main fonts for our app
-    // using Inter_18pt variants for optimal UI readability
-    'Inter': require('../assets/fonts/Inter_18pt-Regular.ttf'),
-    'Inter-Light': require('../assets/fonts/Inter_18pt-Light.ttf'),
-    'Inter-Medium': require('../assets/fonts/Inter_18pt-Medium.ttf'),
-    'Inter-SemiBold': require('../assets/fonts/Inter_18pt-SemiBold.ttf'),
-    'Inter-Bold': require('../assets/fonts/Inter_18pt-Bold.ttf'),
+    'Inter': Inter_400Regular,
+    'Inter-Light': Inter_300Light,
+    'Inter-Medium': Inter_500Medium,
+    'Inter-SemiBold': Inter_600SemiBold,
+    'Inter-Bold': Inter_700Bold,
   });
 
   /**
