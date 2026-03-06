@@ -730,20 +730,16 @@ const TimelineItem = React.memo(function TimelineItem({
               activeOpacity={0.7}
             >
               <View style={styles.checkboxWrapper}>
-                {selectionMode ? (
-                  <Checkbox
-                    checked={isSelected}
-                    onPress={onPress}
-                    expandTapArea
-                  />
-                ) : (
-                  <TimelineCheckbox
-                    task={task}
-                    onTaskComplete={onTaskComplete}
-                    onTaskCompleteImmediate={onTaskCompleteImmediate}
-                    onDisplayChange={setDisplayCompleted}
-                  />
-                )}
+                {/* single TimelineCheckbox: completion when !selectionMode, selection when selectionMode; animates shape on enter/exit */}
+                <TimelineCheckbox
+                  task={task}
+                  onTaskComplete={onTaskComplete}
+                  onTaskCompleteImmediate={onTaskCompleteImmediate}
+                  onDisplayChange={setDisplayCompleted}
+                  selectionMode={selectionMode}
+                  isSelected={isSelected}
+                  onSelect={selectionMode ? onPress : undefined}
+                />
               </View>
               <View style={styles.taskContent}>
                 {/* time display above title - only when in overlapping tasks */}
