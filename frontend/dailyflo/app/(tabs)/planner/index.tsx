@@ -74,7 +74,7 @@ export default function PlannerScreen() {
   // REDUX STORE - Accessing task state from Redux store
   const dispatch = useAppDispatch();
   const { tasks, isLoading } = useTasks();
-  const { enterSelectionMode, selection, toggleItemSelection, exitSelectionMode, selectAllItems } = useUI();
+  const { enterSelectionMode, selection, toggleItemSelection, exitSelectionMode, selectAllItems, clearSelection } = useUI();
 
   // FAB fade: opacity 0 in selection mode, 1 otherwise
   const fabOpacity = useSharedValue(1);
@@ -268,13 +268,27 @@ export default function PlannerScreen() {
     }
   };
 
-  // select all tasks currently visible on this planner day (timeline + all-day)
+  // eligible for select all: non-completed, non-deleted, on current selected day (timeline + all-day)
+  const eligiblePlannerTaskIds = useMemo(() => {
+    const combined = [...selectedDateTasks, ...allDayTasks];
+    const uniqueById = Array.from(new Map(combined.map((t) => [t.id, t])).values());
+    return uniqueById
+      .filter((t) => !t.isCompleted && !t.softDeleted)
+      .map((t) => t.id);
+  }, [selectedDateTasks, allDayTasks]);
+
+  // if every eligible task is selected, show "Deselect all" and pressing will clear selection
+  const allEligiblePlannerSelected = eligiblePlannerTaskIds.length > 0 && eligiblePlannerTaskIds.every((id) => selection.selectedItems.includes(id));
+  const selectAllPlannerLabel = allEligiblePlannerSelected ? 'Deselect all' : 'Select all';
+
   const handleSelectAllPlanner = useCallback(() => {
     if (!(selection.isSelectionMode && selection.selectionType === 'tasks')) return;
-    const ids = [...selectedDateTasks, ...allDayTasks].map((t) => t.id);
-    const uniqueIds = Array.from(new Set(ids));
-    selectAllItems(uniqueIds);
-  }, [selection.isSelectionMode, selection.selectionType, selectedDateTasks, allDayTasks, selectAllItems]);
+    if (allEligiblePlannerSelected) {
+      clearSelection();
+    } else {
+      selectAllItems(eligiblePlannerTaskIds);
+    }
+  }, [selection.isSelectionMode, selection.selectionType, allEligiblePlannerSelected, eligiblePlannerTaskIds, selectAllItems, clearSelection]);
 
   // handle when a task's time is changed via dragging on the timeline
   // for expanded recurring tasks, update the base task
@@ -303,6 +317,7 @@ export default function PlannerScreen() {
           {selection.isSelectionMode && selection.selectionType === 'tasks' ? (
             <SelectAllButton
               onPress={handleSelectAllPlanner}
+              label={selectAllPlannerLabel}
               style={styles.topSectionSelectAllButton}
             />
           ) : (
