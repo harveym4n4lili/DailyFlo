@@ -1328,5 +1328,42 @@ Updated User app, models, serializers, views and urls
 - [X] Began lottie implenetation
 
 ### Plans For Future
-- [X] plan how to implement particles to checkbox toggle
+- plan how to implement particles to checkbox toggle
+---
+## [21/02/2026] - [Saturday]
+### Today's Goals
+- [X] Implemented lottie file particles overlay
+- [X] Also added opacity fill animation to checkbox
 
+### Plans For Future
+- plan how to improve performance
+---
+## [24/02/2026] - [Tuesday]
+### Today's Goals
+- [X] Implemented lottie file particles overlay
+- [X] Also added opacity fill animation to checkbox
+
+### Plans For Future
+- plan how to improve performance of checkbox
+---
+## [04/02/2026] - [Wednesday]
+### Today's Goals
+- [X] Refactored checkbox to be simple scale animation, removed lottie.
+- [X] Added animated strikethrough to task cards
+- [X] Improved UI performance using optimistic UI, linear transitions and checkbox sync registry
+
+### Plans For Future
+- improve performance of timeline load
+- improve weekly nav performance
+---
+## [05/02/2026] - [Thursday]
+### Today's Goals
+- [X] Implemented instant timeline + listcard laout load registry for faster loading performane
+- [X] Improved weekly nav performance
+- [X] added animated strikethrough for itmeline items
+- [X] Change checkbox to have tap animation instead of reactive press and hold animation
+- [X] Added liquid glass modal screen for monthly nav
+
+### Plans For Future
+- plan to implement context button functionality, such as acitvity log, and task select.
+- plan to implement browse page.
