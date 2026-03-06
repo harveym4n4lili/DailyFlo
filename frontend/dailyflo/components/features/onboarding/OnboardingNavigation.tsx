@@ -16,6 +16,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { Paddings } from '@/constants/Paddings';
 
 // define the onboarding screens in order (including completion screen)
 const ONBOARDING_SCREENS = ['welcome', 'reminders', 'signup', 'completion'] as const;
@@ -212,7 +213,7 @@ const createStyles = (
     height: 40, // fixed height for consistent positioning
     flexDirection: 'row', // horizontal layout for back button and dots
     alignItems: 'center', // vertically center items
-    paddingHorizontal: 24, // horizontal padding
+    paddingHorizontal: Paddings.screen,
     zIndex: 10, // ensure it's above other content
   },
   backButton: {

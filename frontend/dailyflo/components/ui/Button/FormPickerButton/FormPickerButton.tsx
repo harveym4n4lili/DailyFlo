@@ -29,6 +29,7 @@ import { TouchableOpacity, Pressable, Text, Animated, View, Platform } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
+import { Paddings } from '@/constants/Paddings';
 
 // EXPO GLASS EFFECT IMPORTS
 // GlassView: native iOS liquid glass surface used for selected picker states.
@@ -192,8 +193,8 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
     borderRadius: 16,
     // lock in a consistent pill height for all picker buttons with values
     minHeight: 32,
-    paddingVertical: 0, // Icons have their own padding container
-    paddingHorizontal: 10,
+    paddingVertical: Paddings.none,
+    paddingHorizontal: Paddings.formPickerIconPadding,
     // border removed - no border on picker buttons
     borderWidth: 1,
     borderColor: themeColors.border.primary(),
@@ -272,8 +273,8 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
           borderColor: hasValue ? 'transparent' : themeColors.border.primary(),
           borderRadius: hasValue ? 0 : 16,
           // uniform vertical padding so icon-only and text pills have identical height
-          paddingVertical: 8,
-          paddingHorizontal: hasValue ? 0 : 10,
+          paddingVertical: Paddings.contextMenuVertical,
+          paddingHorizontal: hasValue ? Paddings.none : Paddings.formPickerIconPadding,
           // add right-side padding so text does not touch the pill border **only**
           // when there is no value (when InnerButton owns the border).
           // when there IS a value, the outer animated container already supplies horizontal padding,
@@ -345,7 +346,6 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
             <Text
               style={{
                 ...getTextStyle('body-large'),
-                fontWeight: '900',
                 color: finalTextColor,
                 includeFontPadding: false,
               }}
@@ -356,7 +356,6 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
             <Text
               style={{
                 ...getTextStyle('body-large'),
-                fontWeight: '900',
                 color: finalTextColor,
                 includeFontPadding: false,
               }}

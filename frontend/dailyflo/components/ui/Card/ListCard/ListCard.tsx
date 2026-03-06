@@ -11,7 +11,7 @@
  * This component demonstrates the flow from Redux store → ListCard → TaskCard → User interaction.
  */
 
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ListRenderItem, RefreshControl, Animated, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UIManager } from 'react-native';
@@ -34,11 +34,23 @@ import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
+import { CHECKBOX_HIDE_DELAY_MS, TASK_HEIGHT_ESTIMATE } from '@/constants/Checkbox';
 
 // import custom hooks for animation management
 import { useGroupAnimations } from '@/hooks/useGroupAnimations';
 import { useTaskCardAnimations } from '@/hooks/useTaskCardAnimations';
-import AnimatedReanimated, { useAnimatedStyle, useSharedValue, interpolate, Extrapolation, type SharedValue } from 'react-native-reanimated';
+import AnimatedReanimated, { useAnimatedStyle, useSharedValue, useAnimatedScrollHandler, runOnJS, interpolate, Extrapolation, LinearTransition, FadeOut, type SharedValue } from 'react-native-reanimated';
+
+const AnimatedFlatList = AnimatedReanimated.createAnimatedComponent(FlatList);
+
+// spring-based layout transition for smooth item removal when hideCompletedTasks
+// overshootClamping prevents bounce past target; damping 28 + stiffness 300 = quick, smooth settle
+const LAYOUT_TRANSITION = LinearTransition.springify()
+  .damping(28)
+  .stiffness(300)
+  .overshootClamping(true);
+
 
 // import utility functions for task grouping and sorting
 import { groupTasks, sortTasks, sortGroupEntries, formatDateForGroup } from '@/utils/taskGrouping';
@@ -83,12 +95,11 @@ export interface ListCardProps {
   separatorPaddingHorizontal?: number; // horizontal padding for separators to match list padding (defaults to paddingHorizontal)
   hideBackground?: boolean; // whether to hide task card backgrounds (default false)
   removeInnerPadding?: boolean; // whether to remove horizontal padding inside task cards (default false)
-  checkboxSize?: number; // size of the checkbox in task cards (default 24)
   emptyMessage?: string; // message to show when no tasks are available
   loading?: boolean; // whether the list is currently loading
 
   // optional list configuration
-  groupBy?: 'priority' | 'dueDate' | 'color' | 'none'; // how to group tasks
+  groupBy?: 'priority' | 'dueDate' | 'color' | 'allDay' | 'none'; // how to group tasks (allDay = single "All day tasks" group for planner)
   sortBy?: 'createdAt' | 'dueDate' | 'priority' | 'title'; // how to sort tasks
   sortDirection?: 'asc' | 'desc'; // sort direction
 
@@ -107,6 +118,7 @@ export interface ListCardProps {
   // padding support
   paddingTop?: number; // top padding for the list container
   paddingHorizontal?: number; // horizontal padding for the list container
+  paddingBottom?: number; // bottom padding (default: space for FAB; use smaller value when inside ScrollView)
   
   // dropdown menu support
   // array of menu items to display in the dropdown menu (shown as ellipse button in header)
@@ -142,6 +154,20 @@ export interface ListCardProps {
 
   // optional shared value for scroll offset - when provided with bigTodayHeader, Today header fades out on scroll
   scrollYSharedValue?: SharedValue<number>;
+
+  // when false, disables internal scrolling - use when ListCard is inside another ScrollView (e.g. planner footer)
+  scrollEnabled?: boolean;
+
+  // when true, completed tasks are hidden from the list - they disappear when checked (iOS-style)
+  hideCompletedTasks?: boolean;
+
+  // when true (default for Today), delays scroll-up and height shrink when tasks are hidden - smoother feel
+  // when false (planner), runs immediately so parent layout animation can sync
+  delayHeightChangeOnTaskComplete?: boolean;
+
+  // when true, disables layout transition on initial mount so parent (e.g. timeline) doesn't slide up on load
+  // used when ListCard is inside a scroll container (e.g. planner footer) to avoid Reanimated animating first layout
+  disableInitialLayoutTransition?: boolean;
 }
 
 /**
@@ -171,7 +197,6 @@ export default function ListCard({
   separatorPaddingHorizontal,
   hideBackground = false,
   removeInnerPadding = false,
-  checkboxSize = 20,
   emptyMessage = 'No tasks available',
   loading = false,
   groupBy = 'none',
@@ -184,7 +209,8 @@ export default function ListCard({
   headerTitle,
   headerSubtitle,
   paddingTop,
-  paddingHorizontal = 20, // default horizontal padding (20px)
+  paddingHorizontal = Paddings.screenSmall,
+  paddingBottom,
   dropdownItems,
   dropdownAnchorPosition = 'top-right',
   dropdownTopOffset = 0,
@@ -195,6 +221,10 @@ export default function ListCard({
   bigTodayHeader = false,
   scrollPastTopInset = false,
   scrollYSharedValue,
+  scrollEnabled = true,
+  hideCompletedTasks = false,
+  delayHeightChangeOnTaskComplete = true,
+  disableInitialLayoutTransition = false,
 }: ListCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -217,6 +247,33 @@ export default function ListCard({
   // using refs ensures each ListCard instance has independent scroll control
   const flatListRef = useRef<FlatList>(null);
   const groupedFlatListRef = useRef<FlatList>(null);
+  const [minContentHeight, setMinContentHeight] = useState(0);
+  // track scroll offset so we can scroll up by removed height when tasks disappear (hideCompletedTasks)
+  const scrollOffsetRef = useRef(0);
+  const prevVisibleCountRef = useRef(0);
+  // track content/layout height for scroll clamp when groups collapse - prevents white space
+  const contentHeightRef = useRef(0);
+  const layoutHeightRef = useRef(0);
+  // when grouped + scrollEnabled: shrink container height to content when collapsed (removes white space)
+  const [listHeight, setListHeight] = useState<number | null>(null);
+
+  // when disableInitialLayoutTransition is true, keep layout transition off for 2s so initial load doesn't slide timeline
+  // after 2s enable it so header toggle collapse/expand animates smoothly (timeline slides with list)
+  const [layoutTransitionEnabled, setLayoutTransitionEnabled] = useState(!disableInitialLayoutTransition);
+  const layoutTransitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!disableInitialLayoutTransition) return;
+    layoutTransitionTimeoutRef.current = setTimeout(() => {
+      layoutTransitionTimeoutRef.current = null;
+      setLayoutTransitionEnabled(true);
+    }, 2000);
+    return () => {
+      if (layoutTransitionTimeoutRef.current) {
+        clearTimeout(layoutTransitionTimeoutRef.current);
+        layoutTransitionTimeoutRef.current = null;
+      }
+    };
+  }, [disableInitialLayoutTransition]);
   
   // UNIQUE INSTANCE ID - Generate a unique ID for this ListCard instance
   // this ensures React treats each instance as completely separate
@@ -252,8 +309,8 @@ export default function ListCard({
 
   // create dynamic styles using the color palette system and typography system
   const styles = useMemo(
-    () => createStyles(themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal, scrollPastTopInset),
-    [themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal, scrollPastTopInset]
+    () => createStyles(themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal, paddingBottom, scrollPastTopInset),
+    [themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal, paddingBottom, scrollPastTopInset]
   );
 
   // use custom hooks for animation management
@@ -266,10 +323,79 @@ export default function ListCard({
 
   const { getTaskCardAnimation, markGroupExpanding } = useTaskCardAnimations();
 
+  // when hideCompletedTasks: hide completed tasks (local + redux). optimistically hide on tap so we don't wait for redux
+  const [locallyCompletedIds, setLocallyCompletedIds] = useState<Set<string>>(() => new Set());
+  const hideTimeoutRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => () => {
+    Object.values(hideTimeoutRef.current).forEach(clearTimeout);
+    hideTimeoutRef.current = {};
+  }, []);
+
+  // sync with redux: if a task was unchecked elsewhere (e.g. Planner), remove from locallyCompletedIds so it reappears
+  useEffect(() => {
+    if (!hideCompletedTasks || locallyCompletedIds.size === 0) return;
+    const stillCompleted = new Set<string>();
+    locallyCompletedIds.forEach((id) => {
+      const task = tasks.find((t) => t.id === id);
+      if (task?.isCompleted) stillCompleted.add(id);
+    });
+    if (stillCompleted.size !== locallyCompletedIds.size) {
+      setLocallyCompletedIds(stillCompleted);
+    }
+  }, [tasks, hideCompletedTasks, locallyCompletedIds]);
+
+  const visibleTasks = useMemo(() => {
+    if (!hideCompletedTasks) return tasks;
+    return tasks.filter((t) => !t.isCompleted && !locallyCompletedIds.has(t.id));
+  }, [tasks, hideCompletedTasks, locallyCompletedIds]);
+
+  const handleTaskCompleteImmediate = useCallback(
+    (task: Task, targetCompleted?: boolean) => {
+      if (!hideCompletedTasks) return;
+      if (targetCompleted === false) {
+        if (hideTimeoutRef.current[task.id]) {
+          clearTimeout(hideTimeoutRef.current[task.id]);
+          delete hideTimeoutRef.current[task.id];
+        }
+        setLocallyCompletedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(task.id);
+          return next;
+        });
+      } else {
+        hideTimeoutRef.current[task.id] = setTimeout(() => {
+          delete hideTimeoutRef.current[task.id];
+          setLocallyCompletedIds((prev) => new Set(prev).add(task.id));
+        }, CHECKBOX_HIDE_DELAY_MS);
+      }
+    },
+    [hideCompletedTasks]
+  );
+
+  const handleTaskComplete = useCallback(
+    (task: Task, targetCompleted?: boolean) => {
+      if (hideCompletedTasks) {
+        if (hideTimeoutRef.current[task.id]) {
+          clearTimeout(hideTimeoutRef.current[task.id]);
+          delete hideTimeoutRef.current[task.id];
+        }
+        setLocallyCompletedIds((prev) => {
+          const next = new Set(prev);
+          if (targetCompleted !== false) next.add(task.id);
+          else next.delete(task.id);
+          return next;
+        });
+      }
+      onTaskComplete?.(task, targetCompleted);
+    },
+    [onTaskComplete, hideCompletedTasks]
+  );
+
   // process and organize tasks based on grouping and sorting options
   const processedTasks = useMemo(() => {
-    return sortTasks(tasks, sortBy, sortDirection);
-  }, [tasks, sortBy, sortDirection]);
+    return sortTasks(visibleTasks, sortBy, sortDirection);
+  }, [visibleTasks, sortBy, sortDirection]);
 
   // group tasks if grouping is enabled
   const groupedTasks = useMemo(() => {
@@ -277,13 +403,10 @@ export default function ListCard({
   }, [processedTasks, groupBy]);
 
   // sort groups: Today first, then Overdue, then others, Completed last
-  // this must be called unconditionally (before the if/else) to follow Rules of Hooks
   const sortedGroupEntries = useMemo(() => {
-    // only sort if grouping is enabled, otherwise return empty array
-    if (groupBy === 'none') {
-      return [];
-    }
-    return sortGroupEntries(Object.entries(groupedTasks));
+    if (groupBy === 'none') return [];
+    const entries = Object.entries(groupedTasks).filter(([, tasks]) => tasks.length > 0);
+    return sortGroupEntries(entries);
   }, [groupedTasks, groupBy]);
 
   // handle group toggle with animation tracking
@@ -297,47 +420,77 @@ export default function ListCard({
     }
   };
 
-  // render individual task card with smooth fade-in and scale animation for expansion
-  const renderTaskCard: ListRenderItem<Task> = ({ item: task, index }) => {
-    const { opacityValue, scaleValue } = getTaskCardAnimation(task.id, index || 0);
-    // check if this is the last item in the list
-    const isLastItem = index === processedTasks.length - 1;
-    // check if this is the first item in the list
-    const isFirstItem = index === 0;
-
-    return (
-      <Animated.View
-        style={{
-          opacity: opacityValue, // apply fade animation based on animated value
-          transform: [{ scale: scaleValue }], // apply scale animation for subtle zoom effect
-        }}
-      >
-        <TaskCard
-          task={task}
-          onPress={onTaskPress}
-          onComplete={onTaskComplete}
-          onEdit={onTaskEdit}
-          onDelete={onTaskDelete}
-          onSwipeLeft={onTaskSwipeLeft}
-          onSwipeRight={onTaskSwipeRight}
-          showCategory={showCategory}
-          compact={compact}
-          showIcon={showIcon}
-          showIndicators={showIndicators}
-          showMetadata={showMetadata}
-          metadataVariant={metadataVariant}
-          cardSpacing={cardSpacing}
-          showDashedSeparator={showDashedSeparator}
-          separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
-          hideBackground={hideBackground}
-          removeInnerPadding={removeInnerPadding}
-          checkboxSize={checkboxSize}
-          isLastItem={isLastItem}
-          isFirstItem={isFirstItem}
-        />
-      </Animated.View>
-    );
-  };
+  // memoized render - stable ref so FlatList doesn't re-render all items when parent updates
+  const renderTaskCard = useCallback<ListRenderItem<Task>>(
+    ({ item: task, index }) => {
+      const { opacityValue, scaleValue, shouldAnimate } = getTaskCardAnimation(task.id, index || 0);
+      const isLastItem = index === processedTasks.length - 1;
+      const isFirstItem = index === 0;
+      const card = (
+          <TaskCard
+            task={task}
+            onPress={onTaskPress}
+            onComplete={handleTaskComplete}
+            onCompleteImmediate={handleTaskCompleteImmediate}
+            onEdit={onTaskEdit}
+            onDelete={onTaskDelete}
+            onSwipeLeft={onTaskSwipeLeft}
+            onSwipeRight={onTaskSwipeRight}
+            showCategory={showCategory}
+            compact={compact}
+            showIcon={showIcon}
+            showIndicators={showIndicators}
+            showMetadata={showMetadata}
+            metadataVariant={metadataVariant}
+            cardSpacing={cardSpacing}
+            showDashedSeparator={showDashedSeparator}
+            separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
+            hideBackground={hideBackground}
+            removeInnerPadding={removeInnerPadding}
+            isLastItem={isLastItem}
+            isFirstItem={isFirstItem}
+          />
+      );
+      const wrapper = shouldAnimate && opacityValue && scaleValue ? (
+        <Animated.View style={{ opacity: opacityValue, transform: [{ scale: scaleValue }] }}>
+          {card}
+        </Animated.View>
+      ) : (
+        <View>{card}</View>
+      );
+      return hideCompletedTasks ? (
+        <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION : undefined} exiting={FadeOut.duration(200)}>
+          {wrapper}
+        </AnimatedReanimated.View>
+      ) : (
+        wrapper
+      );
+    },
+    [
+      getTaskCardAnimation,
+      processedTasks.length,
+      hideCompletedTasks,
+      onTaskPress,
+      handleTaskComplete,
+      handleTaskCompleteImmediate,
+      onTaskEdit,
+      onTaskDelete,
+      onTaskSwipeLeft,
+      onTaskSwipeRight,
+      showCategory,
+      compact,
+      showIcon,
+      showIndicators,
+      showMetadata,
+      metadataVariant,
+      cardSpacing,
+      showDashedSeparator,
+      finalSeparatorPaddingHorizontal,
+      hideBackground,
+      removeInnerPadding,
+      layoutTransitionEnabled,
+    ]
+  );
 
   // render group header with dropdown arrow for expand/collapse functionality
   const renderGroupHeader = (title: string, count: number, groupTasks: Task[]) => {
@@ -356,8 +509,8 @@ export default function ListCard({
 
     // calculate arrow rotation animation - smoothly rotate arrow between down (expanded) and right (collapsed)
     const arrowRotation = animatedValuesForGroup.rotateValue.interpolate({
-      inputRange: [0, 1], // input range: 0 = collapsed (right pointing), 1 = expanded (down pointing)
-      outputRange: ['90deg', '0deg'], // output range: rotate from 90 degrees (right) to 0 degrees (down) for arrow transition
+      inputRange: [0, 1], // 0 = collapsed (right), 1 = expanded (down)
+      outputRange: ['-90deg', '0deg'], // collapsed: point right; expanded: point down
     });
 
     // determine if this group should show a secondary "Reschedule" action
@@ -390,6 +543,129 @@ export default function ListCard({
   // fallback shared value when scrollY not provided - stays at 0 so header stays visible
   const fallbackScrollY = useSharedValue(0);
   const scrollY = scrollYSharedValue ?? fallbackScrollY;
+
+  // track scroll offset in ref so we can scroll up by removed height when tasks disappear (hideCompletedTasks)
+  const updateScrollOffsetRef = useCallback((y: number) => {
+    scrollOffsetRef.current = y;
+  }, []);
+
+  // when scrollYSharedValue provided: use animated scroll handler (runs on UI thread) to avoid JS thread work during scroll
+  // scrollY is updated on UI thread; onScroll is bridged via runOnJS for parent callbacks (e.g. trackScrollToTodayLayout)
+  // reanimated event has contentOffset at top level; parent expects { nativeEvent: { contentOffset } } - wrap to match
+  const animatedScrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      const y = e.contentOffset.y;
+      scrollY.value = y;
+      runOnJS(updateScrollOffsetRef)(y);
+      if (onScroll) runOnJS(onScroll)({ nativeEvent: e });
+    },
+  });
+  // when no animated handler: wrap onScroll to also track scroll offset for scroll-up-after-hide
+  const scrollHandlerWithOffsetTracking = useCallback((e: any) => {
+    scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
+    onScroll?.(e);
+  }, [onScroll]);
+  const scrollHandler = scrollYSharedValue ? animatedScrollHandler : scrollHandlerWithOffsetTracking;
+
+  // when hideCompletedTasks: keep content container from shrinking - use max height seen so content above doesn't teleport
+  const handleContentSizeChange = useCallback(
+    (_w: number, h: number) => {
+      if (!hideCompletedTasks) return;
+      setMinContentHeight((prev) => (h > prev ? h : prev));
+    },
+    [hideCompletedTasks]
+  );
+
+  // when grouped list collapses: shrink container to content height (removes white space)
+  // Planner (scrollEnabled=false): always size to content - no viewport, embedded in ScrollView
+  // Today (scrollEnabled=true): size to content when smaller than viewport, else fill
+  // When Today content shrinks due to collapse (task count unchanged), shrink minContentHeight so no white-space scroll
+  const handleGroupedContentSizeChange = useCallback(
+    (_w: number, h: number) => {
+      const prev = contentHeightRef.current;
+      contentHeightRef.current = h;
+      const layoutH = layoutHeightRef.current;
+      if (!scrollEnabled) {
+        // Planner: always size to content - list card height = collapsible header(s) + items only
+        setListHeight(h);
+      } else if (layoutH > 0) {
+        // Today: shrink when content smaller than viewport, else fill
+        setListHeight(h < layoutH ? h : null);
+        // collapse (not task completion): task count unchanged so shrink minContentHeight - no white-space scroll
+        if (prev > 0 && h < prev && visibleTasks.length === prevVisibleCountRef.current) {
+          setMinContentHeight(h);
+        }
+      }
+      // clamp scroll when content shrinks (Today only) so user can't scroll into white space
+      if (scrollEnabled && prev > 0 && h < prev) {
+        const maxScroll = Math.max(0, h - layoutH);
+        const currentScroll = scrollOffsetRef.current;
+        if (currentScroll > maxScroll) {
+          groupedFlatListRef.current?.scrollToOffset({ offset: maxScroll, animated: false });
+          scrollOffsetRef.current = maxScroll;
+        }
+      }
+      // keep previous count for next time so we can tell collapse (count unchanged) vs task completion (count decreased)
+      prevVisibleCountRef.current = visibleTasks.length;
+    },
+    [scrollEnabled, visibleTasks.length]
+  );
+
+  // combined handler for grouped list: hideCompletedTasks minHeight + collapse scroll clamp
+  const handleGroupedListContentSizeChange = useCallback(
+    (w: number, h: number) => {
+      handleContentSizeChange(w, h);
+      handleGroupedContentSizeChange(w, h);
+    },
+    [handleContentSizeChange, handleGroupedContentSizeChange]
+  );
+
+  // reset min height and list height when refreshing or list becomes empty
+  useEffect(() => {
+    if (refreshing || visibleTasks.length === 0) {
+      setMinContentHeight(0);
+      setListHeight(null);
+    }
+  }, [refreshing, visibleTasks.length]);
+
+  // when hideCompletedTasks: scroll up by height of removed tasks so content doesn't jump
+  // minContentHeight keeps container from shrinking during transition; we scroll up, then shrink so user can't scroll into white space
+  const SCROLL_ANIMATION_MS = 350; // match typical scrollToOffset animated duration
+  const scrollDelayMs = delayHeightChangeOnTaskComplete ? 50 : 0;
+  const shrinkDelayMs = delayHeightChangeOnTaskComplete ? 50 + SCROLL_ANIMATION_MS : 0;
+  useEffect(() => {
+    if (!hideCompletedTasks || refreshing) return;
+    const prev = prevVisibleCountRef.current;
+    const curr = visibleTasks.length;
+    prevVisibleCountRef.current = curr;
+    if (prev > 0 && curr < prev) {
+      const removedCount = prev - curr;
+      const scrollUpBy = removedCount * TASK_HEIGHT_ESTIMATE;
+      const targetOffset = Math.max(0, scrollOffsetRef.current - scrollUpBy);
+      const listRef = groupBy === 'none' ? flatListRef : groupedFlatListRef;
+      const scrollTimer = setTimeout(() => {
+        listRef.current?.scrollToOffset({ offset: targetOffset, animated: true });
+      }, scrollDelayMs);
+      const shrinkTimer = setTimeout(() => {
+        setMinContentHeight((h) => Math.max(0, h - scrollUpBy));
+      }, shrinkDelayMs);
+      return () => {
+        clearTimeout(scrollTimer);
+        clearTimeout(shrinkTimer);
+      };
+    }
+  }, [hideCompletedTasks, visibleTasks.length, groupBy, refreshing, scrollDelayMs, shrinkDelayMs]);
+
+  const contentContainerStyle = useMemo(
+    () => [
+      styles.listContainer,
+      // only use minHeight when scrollable (Today) so task-completion scroll-up works; Planner must shrink on collapse
+      hideCompletedTasks && minContentHeight > 0 && scrollEnabled && { minHeight: minContentHeight },
+      // when grouped: no flexGrow so list height shrinks when groups collapse
+      groupBy !== 'none' && { flexGrow: 0 },
+    ].filter(Boolean),
+    [styles.listContainer, hideCompletedTasks, minContentHeight, groupBy, scrollEnabled]
+  );
 
   // animated style for Today header - fades out when scrollY passes 48px (uses reanimated for smooth 60fps)
   const bigTodayHeaderAnimatedStyle = useAnimatedStyle(() => ({
@@ -484,26 +760,35 @@ export default function ListCard({
             leftOffset={dropdownLeftOffset}
           />
         )}
-        <FlatList
-          ref={flatListRef}
+        <AnimatedFlatList
+          ref={flatListRef as any}
           data={processedTasks}
           renderItem={renderTaskCard}
-          keyExtractor={(task) => `${instanceId}-${task.id}`} // add instance ID to ensure unique keys
+          keyExtractor={(task) => `${instanceId}-${task.id}`}
+          itemLayoutAnimation={layoutTransitionEnabled && hideCompletedTasks ? LAYOUT_TRANSITION : undefined}
+          onContentSizeChange={hideCompletedTasks ? handleContentSizeChange : undefined}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={contentContainerStyle}
           refreshControl={refreshControl}
-          onScroll={onScroll}
-          scrollEventThrottle={scrollEventThrottle}
+          onScroll={scrollHandler}
+          scrollEventThrottle={32}
           ListHeaderComponent={renderHeader}
-          // prevent scroll position restoration between instances
-          maintainVisibleContentPosition={null}
+          scrollEnabled={scrollEnabled}
+          removeClippedSubviews={!hideCompletedTasks}
+          maxToRenderPerBatch={6}
+          windowSize={7}
+          initialNumToRender={8}
         />
       </View>
     );
   } else {
     // render grouped list using sortedGroupEntries (already computed above)
+    // when listHeight is set and content is smaller than viewport, shrink container to remove white space
+    const groupedContainerStyle = listHeight !== null
+      ? [styles.container, { flex: undefined, height: listHeight }]
+      : styles.container;
     return (
-      <View style={styles.container}>
+      <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION : undefined} style={groupedContainerStyle}>
         {/* dropdown list component - shown when dropdownItems are provided */}
         {dropdownItems && dropdownItems.length > 0 && (
           <DropdownList
@@ -516,85 +801,101 @@ export default function ListCard({
             leftOffset={dropdownLeftOffset}
           />
         )}
-        <FlatList
+        <AnimatedFlatList
           data={sortedGroupEntries}
+          itemLayoutAnimation={layoutTransitionEnabled && (hideCompletedTasks || groupBy !== 'none') ? LAYOUT_TRANSITION : undefined}
+          onContentSizeChange={handleGroupedListContentSizeChange}
+          onLayout={(e) => {
+            layoutHeightRef.current = e.nativeEvent.layout.height;
+            // re-evaluate height when layout is first measured (handles onLayout after onContentSizeChange)
+            if (scrollEnabled && layoutHeightRef.current > 0) {
+              const h = contentHeightRef.current;
+              setListHeight(h > 0 && h < layoutHeightRef.current ? h : null);
+            }
+          }}
           renderItem={({ item: [groupTitle, groupTasks] }) => {
             const isCollapsed = isGroupCollapsed(groupTitle);
-
-            // create a local render function for tasks that knows which group they belong to
-            const renderTaskCardForGroup: ListRenderItem<Task> = ({ item: task, index }) => {
-              const { opacityValue, scaleValue } = getTaskCardAnimation(
-                task.id,
-                index || 0,
-                groupTitle
-              );
-              // check if this is the last item in the group
-              const isLastItem = index === groupTasks.length - 1;
-              // check if this is the first item in the group
-              const isFirstItem = index === 0;
-
-              return (
-                <Animated.View
-                  style={{
-                    opacity: opacityValue, // apply fade animation based on animated value
-                    transform: [{ scale: scaleValue }], // apply scale animation for subtle zoom effect
-                  }}
-                >
-                  <TaskCard
-                    task={task}
-                    onPress={onTaskPress}
-                    onComplete={onTaskComplete}
-                    onEdit={onTaskEdit}
-                    onDelete={onTaskDelete}
-                    onSwipeLeft={onTaskSwipeLeft}
-                    onSwipeRight={onTaskSwipeRight}
-                    showCategory={showCategory}
-                    compact={compact}
-                    showIcon={showIcon}
-                    showIndicators={showIndicators}
-                    showMetadata={showMetadata}
-                    metadataVariant={metadataVariant}
-                    cardSpacing={cardSpacing}
-                    showDashedSeparator={showDashedSeparator}
-                    separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
-                    hideBackground={hideBackground}
-                    removeInnerPadding={removeInnerPadding}
-                    checkboxSize={checkboxSize}
-                    isLastItem={isLastItem}
-                    isFirstItem={isFirstItem}
-                  />
-                </Animated.View>
-              );
-            };
-
             return (
-              <View style={styles.group}>
+              <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION : undefined} style={styles.group}>
                 {renderGroupHeader(groupTitle, groupTasks.length, groupTasks as Task[])}
-                {/* conditionally render tasks based on collapse state */}
                 {!isCollapsed && (
-                  <FlatList
+                  <AnimatedFlatList
                     data={groupTasks}
-                    renderItem={renderTaskCardForGroup}
+                    scrollEnabled={false}
+                    removeClippedSubviews={!hideCompletedTasks}
+                    maxToRenderPerBatch={6}
+                    initialNumToRender={6}
                     keyExtractor={(task) => task.id}
+                    itemLayoutAnimation={layoutTransitionEnabled && hideCompletedTasks ? LAYOUT_TRANSITION : undefined}
                     showsVerticalScrollIndicator={false}
-                    scrollEnabled={false} // disable scrolling for nested lists
+                    renderItem={({ item: task, index }) => {
+                      const { opacityValue, scaleValue, shouldAnimate } = getTaskCardAnimation(
+                        task.id,
+                        index || 0,
+                        groupTitle
+                      );
+                      const isLastItem = index === groupTasks.length - 1;
+                      const isFirstItem = index === 0;
+                      const card = (
+                        <TaskCard
+                          task={task}
+                          onPress={onTaskPress}
+                          onComplete={handleTaskComplete}
+                          onCompleteImmediate={handleTaskCompleteImmediate}
+                          onEdit={onTaskEdit}
+                          onDelete={onTaskDelete}
+                          onSwipeLeft={onTaskSwipeLeft}
+                          onSwipeRight={onTaskSwipeRight}
+                          showCategory={showCategory}
+                          compact={compact}
+                          showIcon={showIcon}
+                          showIndicators={showIndicators}
+                          showMetadata={showMetadata}
+                          metadataVariant={metadataVariant}
+                          cardSpacing={cardSpacing}
+                          showDashedSeparator={showDashedSeparator}
+                          separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
+                          hideBackground={hideBackground}
+                          removeInnerPadding={removeInnerPadding}
+                          isLastItem={isLastItem}
+                          isFirstItem={isFirstItem}
+                        />
+                      );
+                      const wrapper = shouldAnimate && opacityValue && scaleValue ? (
+                        <Animated.View style={{ opacity: opacityValue, transform: [{ scale: scaleValue }] }}>
+                          {card}
+                        </Animated.View>
+                      ) : (
+                        <View>{card}</View>
+                      );
+                      return hideCompletedTasks ? (
+                        <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION : undefined} exiting={FadeOut.duration(200)}>
+                          {wrapper}
+                        </AnimatedReanimated.View>
+                      ) : (
+                        wrapper
+                      );
+                    }}
                   />
                 )}
-              </View>
+              </AnimatedReanimated.View>
             );
           }}
-          ref={groupedFlatListRef}
-          keyExtractor={([groupTitle]) => `${instanceId}-${groupTitle}`} // add instance ID to ensure unique keys
+          ref={groupedFlatListRef as any}
+          keyExtractor={([groupTitle]) => `${instanceId}-${groupTitle}`}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={contentContainerStyle}
           refreshControl={refreshControl}
-          onScroll={onScroll}
-          scrollEventThrottle={scrollEventThrottle}
+          onScroll={scrollHandler}
+          scrollEventThrottle={32}
           ListHeaderComponent={renderHeader}
-          // prevent scroll position restoration between instances
-          maintainVisibleContentPosition={null}
+          scrollEnabled={scrollEnabled}
+          removeClippedSubviews={!hideCompletedTasks}
+          maxToRenderPerBatch={5}
+          windowSize={6}
+          initialNumToRender={6}
         />
-      </View>
+      </AnimatedReanimated.View>
     );
   }
 }
@@ -607,25 +908,15 @@ const createStyles = (
   insets: { top: number; bottom: number; left: number; right: number },
   paddingTop?: number,
   paddingHorizontal?: number,
+  paddingBottom?: number,
   scrollPastTopInset?: boolean
 ) =>
   StyleSheet.create({
-    // main container
+    // --- LAYOUT STYLES ---
     container: {
       flex: 1, // take up available space
       // ensure container extends all the way to bottom of screen
       // this allows scroll view to stretch fully and show all tasks above navbar
-    },
-
-    // list container for proper spacing
-    // extra bottom padding to allow scrolling tasks above the FAB
-    // when scrollPastTopInset: add top inset so content starts below status bar but can scroll into it
-    listContainer: {
-      paddingTop: (paddingTop ?? 0) + (scrollPastTopInset ? insets.top : 0), // top padding for list container (optional, defaults to 0)
-      paddingBottom: 58 + 80 + 16 + insets.bottom + 40, // FAB height (58px) + navbar height (80px) + spacing (16px) + safe area bottom + extra space (40px)
-      paddingHorizontal: paddingHorizontal ?? 20, // horizontal padding for task cards (optional, defaults to 20px)
-      // ensure content can scroll all the way to bottom of screen
-      flexGrow: 1, // allow content to grow and fill available space
     },
 
     // group container for grouped lists
@@ -637,21 +928,6 @@ const createStyles = (
     listHeaderWrapper: {
       marginBottom: 8,
     },
-    // big "Today" header - large typography for today screen
-    bigTodayHeader: {
-      ...typography.getTextStyle('heading-1'),
-      color: themeColors.text.primary(),
-      marginBottom: 8,
-    },
-    // header container styling
-    headerContainer: {
-      flexDirection: 'row', // horizontal layout for title/subtitle and dropdown button
-      alignItems: 'center', // center align vertically
-      justifyContent: 'space-between', // space between text and button
-      paddingTop: 16,
-      paddingBottom: 16, // space between header and content
-    },
-
     // header text container for title and subtitle
     headerTextContainer: {
       flex: 1, // take up available space
@@ -666,23 +942,34 @@ const createStyles = (
       marginLeft: 12, // space between text and button
     },
 
-    // header title text styling
-    // using typography system for consistent text styling
-    headerTitle: {
-      // use the heading-1 text style from typography system (36px, bold, satoshi font)
-      ...typography.getTextStyle('heading-1'),
-      // use theme-aware primary text color from color system
-      color: themeColors.text.primary(),
+    // --- PADDING STYLES ---
+    listContainer: {
+      paddingTop: (paddingTop ?? 0) + (scrollPastTopInset ? insets.top : 0),
+      paddingBottom: paddingBottom ?? 58 + 80 + 16 + insets.bottom + Paddings.scrollBottomExtra,
+      paddingHorizontal: paddingHorizontal ?? Paddings.screenSmall,
+      flexGrow: 1,
+    },
+    headerContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: Paddings.card,
+      paddingBottom: Paddings.card,
     },
 
-    // header subtitle text styling
-    // using typography system for consistent text styling
+    // --- TYPOGRAPHY STYLES ---
+    bigTodayHeader: {
+      ...typography.getTextStyle('heading-1'),
+      color: themeColors.text.primary(),
+      marginBottom: 8,
+    },
+    headerTitle: {
+      ...typography.getTextStyle('heading-1'),
+      color: themeColors.text.primary(),
+    },
     headerSubtitle: {
-      // use the heading-4 text style from typography system (16px, bold, satoshi font)
       ...typography.getTextStyle('heading-4'),
-      // add top margin for spacing from title
       marginTop: 8,
-      // use theme-aware secondary text color from color system
       color: themeColors.text.secondary(),
     },
   });

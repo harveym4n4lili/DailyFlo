@@ -2,6 +2,7 @@ import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform, ScrollView }
 import { ScreenContainer } from '@/components';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { 
   checkOnboardingStatus, 
   resetOnboarding, 
@@ -210,7 +211,7 @@ export default function SettingsScreen() {
 
         {/* Account Section - Only shown when user is authenticated */}
         {isAuthenticated && (
-          <View style={styles.accountSection}>
+          <View style={[styles.accountSection, styles.accountSectionPadding]}>
             <Text style={styles.sectionTitle}>Account</Text>
             {user && (
               <View style={styles.userInfo}>
@@ -223,7 +224,7 @@ export default function SettingsScreen() {
               </View>
             )}
             <TouchableOpacity
-              style={[styles.logoutButton, styles.logoutButtonDanger]}
+              style={[styles.logoutButton, styles.logoutButtonPadding, styles.logoutButtonDanger]}
               onPress={handleLogout}
               activeOpacity={0.7}
             >
@@ -236,7 +237,7 @@ export default function SettingsScreen() {
 
         {/* Development Tools Section - Only shown in development mode */}
         {isDev && (
-          <View style={styles.devSection}>
+          <View style={[styles.devSection, styles.devSectionPadding]}>
             <Text style={styles.devSectionTitle}>🧪 Development Tools</Text>
             <Text style={styles.devSectionDescription}>
               Tools for testing onboarding flow (only visible in development)
@@ -245,7 +246,7 @@ export default function SettingsScreen() {
             <View style={styles.devButtons}>
               {/* Check Status Button */}
               <TouchableOpacity
-                style={styles.devButton}
+                style={[styles.devButton, styles.devButtonPadding]}
                 onPress={handleCheckStatus}
                 activeOpacity={0.7}
               >
@@ -254,7 +255,7 @@ export default function SettingsScreen() {
 
               {/* Toggle Status Button */}
               <TouchableOpacity
-                style={styles.devButton}
+                style={[styles.devButton, styles.devButtonPadding]}
                 onPress={handleToggle}
                 activeOpacity={0.7}
               >
@@ -263,7 +264,7 @@ export default function SettingsScreen() {
 
               {/* Reset Button */}
               <TouchableOpacity
-                style={[styles.devButton, styles.devButtonDanger]}
+                style={[styles.devButton, styles.devButtonPadding, styles.devButtonDanger]}
                 onPress={handleResetOnboarding}
                 activeOpacity={0.7}
               >
@@ -274,7 +275,7 @@ export default function SettingsScreen() {
 
               {/* Mark Complete Button */}
               <TouchableOpacity
-                style={[styles.devButton, styles.devButtonSuccess]}
+                style={[styles.devButton, styles.devButtonPadding, styles.devButtonSuccess]}
                 onPress={handleMarkComplete}
                 activeOpacity={0.7}
               >
@@ -285,7 +286,7 @@ export default function SettingsScreen() {
 
               {/* Debug Button */}
               <TouchableOpacity
-                style={[styles.devButton, styles.devButtonSecondary]}
+                style={[styles.devButton, styles.devButtonPadding, styles.devButtonSecondary]}
                 onPress={handleDebug}
                 activeOpacity={0.7}
               >
@@ -294,7 +295,7 @@ export default function SettingsScreen() {
 
               {/* Check Logged In User Button */}
               <TouchableOpacity
-                style={[styles.devButton, styles.devButtonSecondary]}
+                style={[styles.devButton, styles.devButtonPadding, styles.devButtonSecondary]}
                 onPress={handleCheckLoggedInUser}
                 activeOpacity={0.7}
               >
@@ -312,50 +313,20 @@ const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>
 ) => StyleSheet.create({
+  // --- LAYOUT STYLES ---
   scrollView: {
     flex: 1,
-  },
-  scrollViewContent: {
-    padding: 20,
-    paddingBottom: 40, // extra padding at bottom for better scrolling
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
-    color: themeColors.text.primary(),
-    marginBottom: 16,
-  },
-  description: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: themeColors.text.secondary(),
-    textAlign: 'center',
-    marginBottom: 32,
   },
   accountSection: {
     marginTop: 0,
     marginBottom: 32,
-    padding: 20,
     backgroundColor: themeColors.background.elevated(),
     borderRadius: 12,
     borderWidth: 1,
     borderColor: themeColors.withOpacity(themeColors.text.primary(), 0.1),
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: themeColors.text.primary(),
-    marginBottom: 16,
-  },
   userInfo: {
     marginBottom: 16,
-  },
-  userEmail: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: themeColors.text.primary(),
-    marginBottom: 4,
   },
   userName: {
     fontSize: 14,
@@ -364,8 +335,6 @@ const createStyles = (
   logoutButton: {
     backgroundColor: themeColors.interactive.primary(),
     borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 44,
@@ -373,28 +342,15 @@ const createStyles = (
   logoutButtonDanger: {
     backgroundColor: themeColors.withOpacity('#FF3B30', 0.1),
   },
-  logoutButtonText: {
-    color: themeColors.interactive.quaternary(),
-    fontSize: 16,
-    fontWeight: '600',
-    ...typography.getTextStyle('button-primary'),
-  },
   logoutButtonDangerText: {
     color: '#FF3B30',
   },
   devSection: {
     marginTop: 32,
-    padding: 20,
     backgroundColor: themeColors.background.elevated(),
     borderRadius: 12,
     borderWidth: 1,
     borderColor: themeColors.withOpacity(themeColors.text.primary(), 0.1),
-  },
-  devSectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: themeColors.text.primary(),
-    marginBottom: 8,
   },
   devSectionDescription: {
     fontSize: 14,
@@ -407,8 +363,6 @@ const createStyles = (
   devButton: {
     backgroundColor: themeColors.interactive.primary(),
     borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 44,
@@ -422,16 +376,66 @@ const createStyles = (
   devButtonSuccess: {
     backgroundColor: themeColors.withOpacity('#34C759', 0.1),
   },
-  devButtonText: {
-    color: themeColors.interactive.quaternary(),
-    fontSize: 16,
-    fontWeight: '600',
-    ...typography.getTextStyle('button-primary'),
-  },
   devButtonDangerText: {
     color: '#FF3B30',
   },
   devButtonSuccessText: {
     color: '#34C759',
+  },
+
+  // --- PADDING STYLES ---
+  scrollViewContent: {
+    padding: Paddings.screenSmall,
+    paddingBottom: Paddings.scrollBottomExtra,
+  },
+  accountSectionPadding: {
+    padding: Paddings.screenSmall,
+  },
+  devSectionPadding: {
+    padding: Paddings.screenSmall,
+  },
+  logoutButtonPadding: {
+    paddingVertical: Paddings.listItemVertical,
+    paddingHorizontal: Paddings.card,
+  },
+  devButtonPadding: {
+    paddingVertical: Paddings.listItemVertical,
+    paddingHorizontal: Paddings.card,
+  },
+
+  // --- TYPOGRAPHY STYLES ---
+  title: {
+    ...typography.getTextStyle('heading-2'),
+    color: themeColors.text.primary(),
+    marginBottom: 16,
+  },
+  description: {
+    ...typography.getTextStyle('body-large'),
+    color: themeColors.text.secondary(),
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    ...typography.getTextStyle('heading-3'),
+    color: themeColors.text.primary(),
+    marginBottom: 16,
+  },
+  userEmail: {
+    ...typography.getTextStyle('body-large'),
+    color: themeColors.text.primary(),
+    marginBottom: 4,
+  },
+  logoutButtonText: {
+    ...typography.getTextStyle('button-primary'),
+    color: themeColors.interactive.quaternary(),
+  },
+  devSectionTitle: {
+    ...typography.getTextStyle('heading-3'),
+    color: themeColors.text.primary(),
+    marginBottom: 8,
+  },
+  devButtonText: {
+    ...typography.getTextStyle('button-primary'),
+    color: themeColors.interactive.quaternary(),
   },
 });

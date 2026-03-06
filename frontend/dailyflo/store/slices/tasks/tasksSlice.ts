@@ -1036,9 +1036,23 @@ const tasksSlice = createSlice({
       })
       
       // Handle updateTask actions
-      .addCase(updateTask.pending, (state) => {
+      .addCase(updateTask.pending, (state, action) => {
         state.isUpdating = true;
         state.updateError = null;
+        // optimistic update: apply changes immediately so checkbox animation starts without waiting for API
+        // this removes the perceived delay on Today/Planner screens when tapping the checkbox
+        const { id, updates } = action.meta.arg;
+        const taskIndex = state.tasks.findIndex((task) => task.id === id);
+        if (taskIndex !== -1) {
+          const task = state.tasks[taskIndex];
+          state.tasks[taskIndex] = { ...task, ...updates };
+          const filteredIndex = state.filteredTasks.findIndex((t) => t.id === id);
+          if (filteredIndex !== -1) {
+            state.filteredTasks[filteredIndex] = { ...state.filteredTasks[filteredIndex], ...updates };
+          } else {
+            state.filteredTasks = applyFilters(state.tasks, state.filters);
+          }
+        }
       })
       .addCase(updateTask.fulfilled, (state, action) => {
         state.isUpdating = false;

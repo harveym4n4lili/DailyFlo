@@ -1,10 +1,12 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer } from '@/components';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { useTypography } from '@/hooks/useTypography';
 
 export default function BrowseScreen() {
   const themeColors = useThemeColors();
-  const styles = createStyles(themeColors);
+  const typography = useTypography();
+  const styles = createStyles(themeColors, typography);
 
   return (
     <ScreenContainer>
@@ -14,17 +16,20 @@ export default function BrowseScreen() {
   );
 }
 
-const createStyles = (themeColors: ReturnType<typeof useThemeColors>) => StyleSheet.create({
+const createStyles = (
+  themeColors: ReturnType<typeof useThemeColors>,
+  typography: ReturnType<typeof useTypography>
+) => StyleSheet.create({
+  // --- LAYOUT STYLES --- (none - browse only has typography styles)
+
+  // --- TYPOGRAPHY STYLES ---
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
+    ...typography.getTextStyle('heading-2'),
     color: themeColors.text.primary(),
     marginBottom: 16,
   },
   description: {
-    fontSize: 16,
-    lineHeight: 24,
+    ...typography.getTextStyle('body-large'),
     color: themeColors.text.secondary(),
     textAlign: 'center',
   },

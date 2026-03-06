@@ -1,8 +1,8 @@
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useTransition } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
 // import our custom layout components
@@ -10,8 +10,6 @@ import { ScreenContainer } from '@/components';
 import { FloatingActionButton } from '@/components/ui/button';
 import { ActionContextMenu } from '@/components/ui';
 import { ClockIcon } from '@/components/ui/icon';
-import { ModalBackdrop } from '@/components/layout/ModalLayout';
-import { CalendarNavigationModal } from '@/components/features/calendar/modals';
 import { WeekView } from '@/components/features/calendar/sections';
 import { ListCard } from '@/components/ui/card';
 import { TimelineView } from '@/components/features/timeline';
@@ -21,17 +19,20 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 // safe area context for handling devices with notches/home indicators
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // redux store hooks for task management
 import { useTasks, useUI } from '@/store/hooks';
-import { useAppDispatch, useAppSelector } from '@/store';
+import { useAppDispatch, useAppSelector, store } from '@/store';
 import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
+import { usePlannerMonthSelect } from '@/app/PlannerMonthSelectContext';
 
 // types for tasks
 import { Task, TaskColor } from '@/types';
+import { flushAllPendingCheckboxSyncs } from '@/utils/pendingCheckboxSyncRegistry';
 import {
   expandTasksForDates,
   isExpandedRecurrenceId,
@@ -40,14 +41,22 @@ import {
 } from '@/utils/recurrenceUtils';
 
 export default function PlannerScreen() {
-  // CALENDAR MODAL STATE - Controls the visibility of the calendar modal
-  const [isCalendarModalVisible, setIsCalendarModalVisible] = useState(false);
-  
-  // SELECTED DATE STATE - Currently selected date for calendar navigation
+  // the week selector ui should always feel instant.
+  // we keep its selected state fully local to this screen and
+  // trigger heavier timeline/task work separately so backend/redux
+  // never block the visual highlight.
+  // CALENDAR MODAL STATE - Replaced by stack screen (month-select); we open via router + context
+  // SELECTED DATE STATE (UI) - drives week selector highlight only
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     // default to today's date as ISO string
     return new Date().toISOString();
   });
+  // timeline date state is used for heavier task expansion so the week selector ui can update instantly first
+  const [timelineDate, setTimelineDate] = useState<string>(() => {
+    return new Date().toISOString();
+  });
+  // transition lets react schedule the timeline/task updates at lower priority so taps and header animations stay smooth
+  const [isTimelinePending, startTimelineTransition] = useTransition();
   
   // TASK DETAIL MODAL STATE - Controls the visibility of task detail modal
   
@@ -68,6 +77,7 @@ export default function PlannerScreen() {
   const { tasks, isLoading } = useTasks();
   const { enterSelectionMode } = useUI();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { openMonthSelect } = usePlannerMonthSelect();
   
   // calculate border radius based on iOS version to match modal styling
   // iOS 15+ (liquid glass UI): uses 26px border radius for liquid glass UI design
@@ -92,23 +102,75 @@ export default function PlannerScreen() {
   // create dynamic styles using the color palette system and typography system
   const styles = useMemo(() => createStyles(themeColors, typography, insets, modalBorderRadius), [themeColors, typography, insets, modalBorderRadius]);
 
+  // flush pending checkbox syncs when leaving (tab switch)
+  useFocusEffect(React.useCallback(() => () => flushAllPendingCheckboxSyncs(), []));
+
   // CALENDAR HANDLERS
-  // handle calendar modal close
-  const handleCalendarClose = () => {
-    setIsCalendarModalVisible(false);
+  // open month-select stack screen – same pattern as task: set payload in context then router.push (like handleTaskPress -> router.push('/task/[taskId]'))
+  const handleOpenMonthSelect = () => {
+    openMonthSelect(selectedDate, (date) => setSelectedDate(date));
+    router.push('/(tabs)/planner/month-select');
   };
 
-  // handle date selection from calendar modal or week view
+  // handle date selection from week view (when not using month-select modal)
   const handleDateSelect = (date: string) => {
+    // update selectedDate immediately so the header + week view highlight respond with no perceived delay
     setSelectedDate(date);
   };
+
+  // when the ui-selected date changes, schedule timeline/task updates
+  // in a low-priority transition so backend/redux work never blocks
+  // the feel of tapping on the week selector
+  useEffect(() => {
+    startTimelineTransition(() => {
+      setTimelineDate(selectedDate);
+    });
+  }, [selectedDate, startTimelineTransition]);
   
-  // expand tasks for selected date: one-off + recurring occurrences that fall on selectedDate
+  // derive the current week (monday→sunday) from the active planner date
+  // we only recompute this when the base date (timelineDate/selectedDate) changes
+  const weekDateStrings = useMemo(() => {
+    const sourceDate = timelineDate || selectedDate;
+    if (!sourceDate) return [];
+    const base = new Date(sourceDate);
+    // normalise to local midnight before shifting to avoid time-of-day drift
+    const baseMidnight = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+    // getDay(): 0 = Sunday, 1 = Monday, ...; we want Monday as week start
+    const dayOfWeek = baseMidnight.getDay(); // 0–6
+    const mondayOffset = (dayOfWeek + 6) % 7; // days to subtract to reach Monday
+    const dates: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(baseMidnight);
+      d.setDate(d.getDate() - mondayOffset + i);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+    return dates;
+  }, [timelineDate, selectedDate]);
+
+  // expand tasks once for the whole visible week (monday→sunday)
+  // this preloads all recurring occurrences for the week so tapping a day
+  // only filters the already-expanded array instead of recomputing expansions
+  const weekExpandedTasks = useMemo(() => {
+    if (weekDateStrings.length === 0 || tasks.length === 0) {
+      return [];
+    }
+    return expandTasksForDates(tasks, weekDateStrings);
+  }, [tasks, weekDateStrings]);
+
+  // expand tasks for selected date by filtering the pre-expanded week
+  // one-off + recurring occurrences that fall on the selectedDate only
   const selectedDateTasks = useMemo(() => {
-    if (!selectedDate) return [];
-    const selectedDateStr = new Date(selectedDate).toISOString().slice(0, 10);
-    return expandTasksForDates(tasks, [selectedDateStr]);
-  }, [tasks, selectedDate]);
+    const sourceDate = timelineDate || selectedDate;
+    if (!sourceDate) return [];
+    const selectedDateStr = new Date(sourceDate).toISOString().slice(0, 10);
+    return weekExpandedTasks.filter((task) => task.dueDate?.slice(0, 10) === selectedDateStr);
+  }, [weekExpandedTasks, selectedDate, timelineDate]);
+
+  // all-day tasks: selected day's tasks with no time set (not shown on timeline)
+  // these are displayed in the "All day tasks" list below the timeline
+  const allDayTasks = useMemo(() => {
+    return selectedDateTasks.filter((task) => !task.time || task.time === '');
+  }, [selectedDateTasks]);
   
   // fetch tasks when component mounts or when authentication state changes
   useEffect(() => {
@@ -126,20 +188,21 @@ export default function PlannerScreen() {
     router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
   };
   
-  // handle marking a task as complete/uncomplete
-  // for recurring occurrences (expanded id), update metadata.recurrence_completions on base task
-  const handleTaskComplete = async (task: Task) => {
+  // handle task completion - stable ref so memoized TimelineItem can skip re-renders
+  const handleTaskComplete = useCallback(async (task: Task, targetCompleted?: boolean) => {
     try {
+      const isCompleted = targetCompleted ?? !task.isCompleted;
       if (isExpandedRecurrenceId(task.id)) {
         const baseId = getBaseTaskId(task.id);
         const occurrenceDate = getOccurrenceDateFromId(task.id);
         if (!occurrenceDate) return;
-        const baseTask = tasks.find((t) => t.id === baseId);
+        const tasksFromStore = store.getState().tasks.tasks;
+        const baseTask = tasksFromStore.find((t) => t.id === baseId);
         if (!baseTask) return;
         const completions = baseTask.metadata?.recurrence_completions ?? [];
-        const newCompletions = task.isCompleted
-          ? completions.filter((d) => d !== occurrenceDate)
-          : [...completions, occurrenceDate];
+        const newCompletions = isCompleted
+          ? [...completions, occurrenceDate]
+          : completions.filter((d) => d !== occurrenceDate);
         await dispatch(updateTask({
           id: baseId,
           updates: {
@@ -148,12 +211,11 @@ export default function PlannerScreen() {
           },
         })).unwrap();
       } else {
-        const newCompletionStatus = !task.isCompleted;
-        const updates: any = { id: task.id, isCompleted: newCompletionStatus };
+        const updates: any = { id: task.id, isCompleted };
         if (task.metadata?.subtasks?.length) {
           updates.metadata = {
             ...task.metadata,
-            subtasks: task.metadata.subtasks.map((s) => ({ ...s, isCompleted: newCompletionStatus })),
+            subtasks: task.metadata.subtasks.map((s) => ({ ...s, isCompleted })),
           };
         }
         await dispatch(updateTask({ id: task.id, updates })).unwrap();
@@ -161,7 +223,7 @@ export default function PlannerScreen() {
     } catch (error) {
       console.error('Failed to update task:', error);
     }
-  };
+  }, [dispatch]);
   
   // handle editing a task - opens task screen in edit mode (same as task press)
   const handleTaskEdit = (task: Task) => {
@@ -218,9 +280,9 @@ export default function PlannerScreen() {
   // render main content
   return (
     <View style={{ flex: 1 }}>
-      {/* top section - 48px row for context ellipse button, matches Today screen */}
-      <View style={[styles.topSectionAnchor, { height: insets.top + 48 }]}>
-        <View style={styles.topSectionRow}>
+      {/* top section - 48px row for context ellipse button; pointerEvents box-none so taps pass through to WeekView header */}
+      <View style={[styles.topSectionAnchor, { height: insets.top + 48 }]} pointerEvents="box-none">
+        <View style={styles.topSectionRow} pointerEvents="box-none">
           <ActionContextMenu
             items={[
               { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
@@ -247,7 +309,7 @@ export default function PlannerScreen() {
           <WeekView
             selectedDate={selectedDate}
             onSelectDate={handleDateSelect}
-            onHeaderPress={() => setIsCalendarModalVisible(true)}
+            onOpenMonthSelect={handleOpenMonthSelect}
           />
         </View>
         
@@ -264,18 +326,56 @@ export default function PlannerScreen() {
               style={StyleSheet.absoluteFill}
             />
           </View>
-          {/* TimelineView component displays tasks in a timeline format */}
-          {/* shows tasks positioned at their scheduled times with drag functionality */}
           <TimelineView
-            tasks={selectedDateTasks}
-            onTaskTimeChange={handleTaskTimeChange}
-            onTaskPress={handleTaskPress}
-            onTaskComplete={handleTaskComplete}
-            startHour={6}
-            endHour={23}
-            timeInterval={60}
-
-          />
+              // key by timelineDate so each planner day gets a fresh timeline instance
+              // this resets layout state per day so the timeline + all-day footer
+              // appear directly in their correct positions instead of sliding from
+              // the previous day's layout
+              key={timelineDate ? new Date(timelineDate).toISOString().slice(0, 10) : 'planner-timeline'}
+              tasks={selectedDateTasks}
+              onTaskTimeChange={handleTaskTimeChange}
+              onTaskPress={handleTaskPress}
+              onTaskComplete={handleTaskComplete}
+              startHour={6}
+              endHour={23}
+              timeInterval={60}
+              scrollContentPaddingTop={16}
+              footerComponent={
+                <View style={styles.allDayFooter}>
+                  <ListCard
+                    key="planner-allday-listcard"
+                    tasks={allDayTasks}
+                    hideCompletedTasks={true}
+                    onTaskPress={handleTaskPress}
+                    onTaskComplete={handleTaskComplete}
+                    onTaskEdit={handleTaskEdit}
+                    onTaskDelete={handleTaskDelete}
+                    onTaskSwipeLeft={handleTaskSwipeLeft}
+                    onTaskSwipeRight={handleTaskSwipeRight}
+                    showCategory={false}
+                    compact={false}
+                    showIcon={false}
+                    showIndicators={false}
+                    showMetadata={false}
+                    metadataVariant="today"
+                    cardSpacing={0}
+                    showDashedSeparator={true}
+                    hideBackground={true}
+                    removeInnerPadding={true}
+                    emptyMessage="No all-day tasks for this date."
+                    loading={false}
+                    groupBy="allDay"
+                    sortBy="createdAt"
+                    sortDirection="desc"
+                    paddingHorizontal={Paddings.screen}
+                    paddingBottom={8}
+                    scrollEnabled={false}
+                    delayHeightChangeOnTaskComplete={false}
+                    disableInitialLayoutTransition={true}
+                  />
+                </View>
+              }
+            />
         </View>
 
         {/* Floating Action Button – opens task Stack screen with selected date pre-filled */}
@@ -290,26 +390,10 @@ export default function PlannerScreen() {
         />
       </ScreenContainer>
 
-      {/* separate backdrop that fades in independently behind the calendar modal */}
-      <ModalBackdrop
-        isVisible={isCalendarModalVisible}
-        onPress={handleCalendarClose}
-        zIndex={10000}
-      />
-      
-      {/* Calendar Navigation Modal */}
-      <CalendarNavigationModal
-        visible={isCalendarModalVisible}
-        selectedDate={selectedDate}
-        onClose={handleCalendarClose}
-        onSelectDate={handleDateSelect}
-        title="Select Date"
-      />
     </View>
   );
 }
 
-// create dynamic styles using the color palette system and typography system
 const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>, 
   typography: ReturnType<typeof useTypography>,
@@ -323,7 +407,7 @@ const createStyles = (
     left: 0,
     right: 0,
     zIndex: 10,
-    backgroundColor: themeColors.background.primary(),
+    backgroundColor: 'transparent',
   },
 
   // row container for context button - matches Today screen topSectionRow
@@ -336,16 +420,16 @@ const createStyles = (
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingHorizontal: 24,
+    paddingHorizontal: Paddings.screen,
   },
   // matches task screen ActionContextMenu (transparent bg, liquid glass)
   topSectionContextButton: {
     backgroundColor: 'primary',
   },
 
-  // week view container - positioned below top section (insets.top + 48 for context button row)
+  // week view container - starts at inset top; top section overlays with context button (zIndex 10)
   weekViewContainer: {
-    paddingTop: insets.top + 48,
+    paddingTop: insets.top,
     backgroundColor: themeColors.background.primary(),
   },
 
@@ -356,15 +440,17 @@ const createStyles = (
   // uses primary secondary blend background color for subtle visual distinction
   contentContainer: {
     flex: 1,
+    flexDirection: 'column',
     position: 'relative',
-    backgroundColor: themeColors.background.primarySecondaryBlend(), // primary secondary blend background color
-   
-
-    margin: 0, // 8px spacing from all screen edges
-    paddingHorizontal: 0, // remove horizontal padding since ListCard handles its own padding
-    paddingTop: 0, // top padding for content spacing
-    overflow: 'hidden', // ensure content respects border radius
+    backgroundColor: themeColors.background.primarySecondaryBlend(),
+    margin: 0,
+    paddingHorizontal: Paddings.none,
+    paddingTop: Paddings.none,
+    overflow: 'hidden',
   },
+
+  // all-day tasks footer - inside timeline ScrollView
+  allDayFooter: {},
 
   // fade overlay - 48px below date selection border, same gradient as Today screen (locations 0.4-1 = solid to transparent)
   fadeOverlay: {

@@ -1,153 +1,121 @@
 /**
- * Checkbox Component
- * 
- * A square checkbox with rounded borders that animates to filled with primary text color when tapped.
- * Used for task completion and other boolean selections.
+ * Checkbox - border + tick with opacity animation.
+ * Tick is in a separate layer so it's not affected by the border's press scale.
  */
 
 import React, { useRef, useEffect } from 'react';
-import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { Animated, Pressable, View } from 'react-native';
+import { TickIcon } from '@/components/ui/icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { CHECKBOX_SIZE_DEFAULT, CHECKBOX_TICK_SIZE_RATIO, CHECKBOX_TICK_ANIMATION_MS } from '@/constants/Checkbox';
 
-interface CheckboxProps {
-  // whether the checkbox is checked
+const MIN_TAP_AREA = 44;
+const PRESS_SCALE = 1.3;
+const BORDER_RADIUS = 8;
+
+export interface CheckboxProps {
   checked: boolean;
-  // callback function called when checkbox is tapped
-  onPress: () => void;
-  // optional size of the checkbox (default 24)
-  size?: number;
-  // optional border radius (default 6)
-  borderRadius?: number;
-  // optional disabled state
+  onPress?: () => void;
   disabled?: boolean;
+  size?: number;
+  expandTapArea?: boolean;
+  scale?: number;
+  scaleAnimated?: Animated.Value;
 }
 
-/**
- * Checkbox Component
- * 
- * Renders a square checkbox with rounded borders that animates to filled
- * with primary text color when checked. Uses smooth animations for state transitions.
- */
-export default function Checkbox({
+export function Checkbox({
   checked,
   onPress,
-  size = 24,
-  borderRadius = 6,
   disabled = false,
+  size = CHECKBOX_SIZE_DEFAULT,
+  expandTapArea = false,
+  scale = 1,
+  scaleAnimated: scaleAnimatedProp,
 }: CheckboxProps) {
-  // get theme-aware colors from the color palette system
   const themeColors = useThemeColors();
+  const borderColor = themeColors.text.tertiary();
+  const tickColor = themeColors.text.primary();
 
-  // animated value for fill animation (0 = unchecked, 1 = checked)
-  // this controls the background color and border color transitions
-  const fillAnimation = useRef(new Animated.Value(checked ? 1 : 0)).current;
+  const padding = expandTapArea && size < MIN_TAP_AREA
+    ? Math.max(0, Math.floor((MIN_TAP_AREA - size) / 2))
+    : 0;
+  const hitSlop = padding > 0 ? { top: padding, bottom: padding, left: padding, right: padding } : undefined;
 
-  // animated value for scale animation (for tap feedback)
-  // this provides visual feedback when the checkbox is tapped
-  const scaleAnimation = useRef(new Animated.Value(1)).current;
+  const builtInScale = useRef(new Animated.Value(1)).current;
+  const scaleAnimated = scaleAnimatedProp ?? (onPress && !disabled ? builtInScale : undefined);
 
-  // update animation when checked state changes
-  // smoothly animates from unchecked to checked state (or vice versa)
+  const tickOpacity = useRef(new Animated.Value(checked ? 1 : 0)).current;
   useEffect(() => {
-    Animated.timing(fillAnimation, {
-      toValue: checked ? 1 : 0, // animate to 1 when checked, 0 when unchecked
-      duration: 200, // animation duration in milliseconds
-      useNativeDriver: false, // can't use native driver for color animations
+    Animated.timing(tickOpacity, {
+      toValue: checked ? 1 : 0,
+      duration: CHECKBOX_TICK_ANIMATION_MS,
+      useNativeDriver: true,
     }).start();
-  }, [checked, fillAnimation]);
+  }, [checked, tickOpacity]);
 
-  // handle checkbox press - triggers scale animation and calls onPress callback
-  const handlePress = () => {
-    if (disabled) return;
+  const springConfig = { damping: 20, stiffness: 250, mass: 0.2, useNativeDriver: true };
 
-    // scale down animation for tap feedback
+  // tap-only animation: always play scale up then down, independent of hold duration
+  const animateTap = () => {
+    builtInScale.setValue(1);
     Animated.sequence([
-      Animated.timing(scaleAnimation, {
-        toValue: 0.9, // scale down to 90%
-        duration: 100,
-        useNativeDriver: true, // can use native driver for scale animations
-      }),
-      Animated.timing(scaleAnimation, {
-        toValue: 1, // scale back to 100%
-        duration: 100,
-        useNativeDriver: true,
-      }),
+      Animated.spring(builtInScale, { toValue: PRESS_SCALE, ...springConfig }),
+      Animated.spring(builtInScale, { toValue: 1, ...springConfig }),
     ]).start();
-
-    // call the onPress callback
-    onPress();
   };
 
-  // create dynamic styles using theme colors
-  const styles = createStyles(themeColors, size, borderRadius);
+  const borderStyle: any = {
+    width: size,
+    height: size,
+    borderRadius: BORDER_RADIUS,
+    borderWidth: 1.5,
+    borderColor,
+  };
+  if (scaleAnimated) {
+    borderStyle.transform = [{ scale: scaleAnimated }];
+  } else if (scale !== 1) {
+    borderStyle.transform = [{ scale }];
+  }
 
-  return (
-    <TouchableOpacity
-      onPress={handlePress}
-      disabled={disabled}
-      activeOpacity={1} // disable default opacity change since we're using custom scale animation
-      style={styles.container}
-    >
-      {/* animated view for scale animation (uses native driver for better performance) */}
-      <Animated.View
-        style={[
-          styles.checkboxContainer,
-          {
-            transform: [{ scale: scaleAnimation }], // apply scale animation for tap feedback
-          },
-        ]}
+  const tickSize = size * CHECKBOX_TICK_SIZE_RATIO;
+  const content = (
+    <View style={{ width: size, height: size, position: 'relative' }}>
+      <Animated.View style={[borderStyle, { position: 'absolute', left: 0, top: 0 }]} />
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+        pointerEvents="none"
       >
-        {/* animated view for fill animation (color transitions) */}
-        <Animated.View
-          style={[
-            styles.checkbox,
-            {
-              // animate border color from tertiary (grey) to primary text color
-              borderColor: fillAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [themeColors.text.tertiary(), themeColors.text.primary()],
-              }),
-              // animate background color from transparent to primary text color
-              backgroundColor: fillAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['transparent', themeColors.text.primary()],
-              }),
-            },
-          ]}
-        />
-      </Animated.View>
-    </TouchableOpacity>
+        <Animated.View style={{ opacity: tickOpacity }}>
+          <TickIcon size={tickSize} color={tickColor} />
+        </Animated.View>
+      </View>
+    </View>
   );
+
+  const useBuiltInScale = !scaleAnimatedProp && onPress && !disabled;
+  if (onPress && !disabled) {
+    return (
+      <Pressable
+        onPress={() => {
+          if (useBuiltInScale) {
+            animateTap();
+          }
+          onPress();
+        }}
+        hitSlop={hitSlop}
+        style={{ alignSelf: 'flex-start' }}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+  return content;
 }
-
-// create dynamic styles using theme colors
-const createStyles = (
-  themeColors: ReturnType<typeof useThemeColors>,
-  size: number,
-  borderRadius: number
-) =>
-  StyleSheet.create({
-    // container for the checkbox - provides touch target area
-    container: {
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-
-    // checkbox container for scale animation
-    checkboxContainer: {
-      width: size,
-      height: size,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-
-    // checkbox square with rounded borders
-    checkbox: {
-      width: size,
-      height: size,
-      borderRadius: borderRadius,
-      borderWidth: 2, // border width for the checkbox outline
-      borderColor: themeColors.text.tertiary(), // default border color (grey)
-      backgroundColor: 'transparent', // default background (transparent)
-    },
-  });

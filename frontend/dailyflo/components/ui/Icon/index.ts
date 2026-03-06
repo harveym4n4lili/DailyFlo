@@ -36,8 +36,14 @@ export type { BracketsIconProps } from './icons/BracketsIcon';
 export { TrashIcon } from './icons/TrashIcon';
 export type { TrashIconProps } from './icons/TrashIcon';
 
+export { TickIcon } from './icons/TickIcon';
+export type { TickIconProps } from './icons/TickIcon';
+
 export { SparklesIcon } from './icons/SparklesIcon';
 export type { SparklesIconProps } from './icons/SparklesIcon';
 
 export { RepeatIcon } from './icons/RepeatIcon';
 export type { RepeatIconProps } from './icons/RepeatIcon';
+
+export { SFSymbolIcon } from './SFSymbolIcon';
+export type { SFSymbolIconProps } from './SFSymbolIcon';

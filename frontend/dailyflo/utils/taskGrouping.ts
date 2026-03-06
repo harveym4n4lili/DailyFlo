@@ -29,9 +29,12 @@ export function formatDateForGroup(date: Date): string {
  */
 export function getTaskGroupKey(
   task: Task,
-  groupBy: 'priority' | 'dueDate' | 'color' | 'none'
+  groupBy: 'priority' | 'dueDate' | 'color' | 'allDay' | 'none'
 ): string {
   switch (groupBy) {
+    case 'allDay':
+      // used by planner screen - all tasks in this group are "all day" (no time set)
+      return 'All day tasks';
     case 'priority':
       return `Priority ${task.priorityLevel}`;
     case 'dueDate':
@@ -72,7 +75,7 @@ export function getTaskGroupKey(
  */
 export function groupTasks(
   tasks: Task[],
-  groupBy: 'priority' | 'dueDate' | 'color' | 'none'
+  groupBy: 'priority' | 'dueDate' | 'color' | 'allDay' | 'none'
 ): Record<string, Task[]> {
   if (groupBy === 'none') {
     return { 'All Tasks': tasks };

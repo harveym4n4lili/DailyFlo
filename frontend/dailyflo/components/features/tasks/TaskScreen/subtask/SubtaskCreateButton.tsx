@@ -7,10 +7,10 @@ import React from 'react';
 import { Text, Pressable, StyleSheet, View } from 'react-native';
 import { getTextStyle } from '@/constants/Typography';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import Checkbox from '@/components/ui/button/Checkbox/Checkbox';
+import { Paddings } from '@/constants/Paddings';
+import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 
 // match SubtaskListItem checkbox so the add row lines up visually (16px matches TaskCard)
-const CHECKBOX_SIZE = 16;
 const ICON_TEXT_GAP = 10;
 // no extra vertical padding
 const CONTENT_PADDING_TOP = 0;
@@ -37,14 +37,8 @@ export const SubtaskCreateButton: React.FC<SubtaskCreateButtonProps> = ({
       disabled={disabled}
       style={({ pressed }) => [styles.row, { opacity: disabled ? 0.5 : pressed ? 0.7 : 1 }]}
     >
-      {/* same Checkbox component as SubtaskListItem for visual consistency - always unchecked */}
       <View style={styles.checkboxContainer}>
-        <Checkbox
-          checked={false}
-          onPress={() => {}} // no-op since this is just a visual indicator
-          size={CHECKBOX_SIZE}
-          disabled={true} // disabled so it doesn't respond to taps (button handles press)
-        />
+        <Checkbox checked={false} disabled />
       </View>
       <Text style={[getTextStyle('body-large'), styles.label, { color: tertiaryColor }]}>
         Add subtask
@@ -58,16 +52,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: ICON_TEXT_GAP,
-    paddingVertical: CONTENT_PADDING_TOP,
-    paddingHorizontal: 0,
+    paddingVertical: Paddings.none,
+    paddingHorizontal: Paddings.none,
   },
   checkboxContainer: {
+    width: CHECKBOX_SIZE_DEFAULT,
+    height: CHECKBOX_SIZE_DEFAULT,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  label: {
-    fontWeight: '700',
-  },
+  label: {},
 });
 
 export default SubtaskCreateButton;
