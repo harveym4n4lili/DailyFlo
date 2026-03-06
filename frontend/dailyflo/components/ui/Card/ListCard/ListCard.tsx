@@ -170,6 +170,8 @@ export interface ListCardProps {
   disableInitialLayoutTransition?: boolean;
 
   // selection mode - when true, task cards show selection checkboxes and tap toggles selection
+  // parent (e.g. Today/Planner screen) gets these from Redux via useUI(); ListCard receives them as props
+  // and passes selectionMode, isSelected, onSelect down to each TaskCard
   selectionMode?: boolean;
   selectedTaskIds?: string[];
   onToggleTaskSelection?: (taskId: string) => void;
@@ -699,10 +701,12 @@ export default function ListCard({
 
     return (
       <View style={styles.listHeaderWrapper}>
-        {/* big "Today" header - large typography at top when bigTodayHeader is true, fades on scroll */}
+        {/* big "Today" header - large typography at top when bigTodayHeader is true, fades on scroll; in selection mode shows "X selected" */}
         {bigTodayHeader && (
           <AnimatedReanimated.View style={bigTodayHeaderAnimatedStyle}>
-            <Text style={styles.bigTodayHeader}>Today</Text>
+            <Text style={styles.bigTodayHeader}>
+              {selectionMode ? `${selectedTaskIds.length} selected` : 'Today'}
+            </Text>
           </AnimatedReanimated.View>
         )}
         {/* standard header: title, subtitle, dropdown button */}

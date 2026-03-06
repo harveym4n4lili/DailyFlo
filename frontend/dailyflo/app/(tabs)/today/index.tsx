@@ -12,7 +12,7 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 
 // import our new task components
 import { ListCard } from '@/components/ui/card';
-import { FloatingActionButton } from '@/components/ui/button';
+import { FloatingActionButton, SelectionCloseButton, SelectAllButton } from '@/components/ui/button';
 import { ActionContextMenu } from '@/components/ui';
 import { ClockIcon } from '@/components/ui/icon';
 import { ModalContainer } from '@/components/layout/ModalLayout';
@@ -84,7 +84,7 @@ export default function TodayScreen() {
   const { setDraft, registerOverdueReschedule, clearOverdueReschedule } = useCreateTaskDraft();
   
   // get UI state from Redux to check if createTask modal should be opened
-  const { modals, closeModal, enterSelectionMode, selection, toggleItemSelection, exitSelectionMode } = useUI();
+  const { modals, closeModal, enterSelectionMode, selection, toggleItemSelection, exitSelectionMode, selectAllItems } = useUI();
 
   // FAB fade: opacity 0 in selection mode, 1 otherwise
   const fabOpacity = useSharedValue(1);
@@ -159,6 +159,13 @@ export default function TodayScreen() {
     });
     return expanded;
   }, [tasks]);
+
+  // select all tasks currently visible in Today list
+  const handleSelectAllToday = useCallback(() => {
+    if (!(selection.isSelectionMode && selection.selectionType === 'tasks')) return;
+    const ids = todaysTasks.map((t) => t.id);
+    selectAllItems(ids);
+  }, [selection.isSelectionMode, selection.selectionType, todaysTasks, selectAllItems]);
 
   // calculate total task count for header display (only incomplete tasks)
   const totalTaskCount = useMemo(() => {
@@ -415,24 +422,43 @@ export default function TodayScreen() {
           pointerEvents="none"
         />
         <View style={styles.topSectionRow}>
+          {/* close button - liquid glass on iOS, appears in selection mode only */}
+          {selection.isSelectionMode && selection.selectionType === 'tasks' ? (
+            <SelectionCloseButton
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                exitSelectionMode();
+              }}
+              style={styles.topSectionCloseButton}
+            />
+          ) : (
+            <View style={styles.topSectionCloseButton} pointerEvents="none" />
+          )}
           <AnimatedReanimated.View style={[styles.miniTodayHeader, miniTodayHeaderStyle]} pointerEvents="none">
-            <Text style={[styles.miniTodayHeaderText, { color: themeColors.text.primary() }]}>Today</Text>
+            <Text style={[styles.miniTodayHeaderText, { color: themeColors.text.primary() }]}>
+              {selection.isSelectionMode && selection.selectionType === 'tasks'
+                ? `${selection.selectedItems.length} selected`
+                : 'Today'}
+            </Text>
           </AnimatedReanimated.View>
-          <ActionContextMenu
-            items={
-              selection.isSelectionMode && selection.selectionType === 'tasks'
-                ? [{ id: 'cancel-selection', label: 'Cancel selection', systemImage: 'xmark', onPress: exitSelectionMode }]
-                : [
-                    { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
-                    { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
-                  ]
-            }
-            style={styles.topSectionContextButton}
-            accessibilityLabel="Open menu"
-            dropdownAnchorTopOffset={insets.top + 48}
-            dropdownAnchorRightOffset={24}
-            tint="primary"
-          />
+          {selection.isSelectionMode && selection.selectionType === 'tasks' ? (
+            <SelectAllButton
+              onPress={handleSelectAllToday}
+              style={styles.topSectionSelectAllButton}
+            />
+          ) : (
+            <ActionContextMenu
+              items={[
+                { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
+                { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
+              ]}
+              style={styles.topSectionContextButton}
+              accessibilityLabel="Open menu"
+              dropdownAnchorTopOffset={insets.top + 48}
+              dropdownAnchorRightOffset={24}
+              tint="primary"
+            />
+          )}
         </View>
       </View>
       <ScreenContainer
@@ -530,10 +556,21 @@ const createStyles = (
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // close button on left - appears in selection mode only; placeholder keeps layout when hidden
+  topSectionCloseButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   // context menu button on right side - matches task screen ActionContextMenu (transparent bg, liquid glass)
   topSectionContextButton: {
     marginLeft: 'auto',
     backgroundColor: 'transparent',
+  },
+  topSectionSelectAllButton: {
+    marginLeft: 'auto',
+    alignSelf: 'center',
   },
 
   // TASK DETAIL MODAL STYLES

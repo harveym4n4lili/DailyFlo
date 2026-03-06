@@ -84,6 +84,7 @@ export interface TaskCardProps {
   isFirstItem?: boolean; // whether this is the first item in the list (default false)
 
   // selection mode - when true, card shows selection checkbox and tap toggles selection
+  // parent (ListCard or TimelineItem) passes these from Redux selection state; TaskCard is presentational
   selectionMode?: boolean;
   isSelected?: boolean;
   onSelect?: (task: Task, selected: boolean) => void;
