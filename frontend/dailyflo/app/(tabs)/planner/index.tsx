@@ -10,8 +10,6 @@ import { ScreenContainer } from '@/components';
 import { FloatingActionButton } from '@/components/ui/button';
 import { ActionContextMenu } from '@/components/ui';
 import { ClockIcon } from '@/components/ui/icon';
-import { ModalBackdrop } from '@/components/layout/ModalLayout';
-import { CalendarNavigationModal } from '@/components/features/calendar/modals';
 import { WeekView } from '@/components/features/calendar/sections';
 import { ListCard } from '@/components/ui/card';
 import { TimelineView } from '@/components/features/timeline';
@@ -30,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTasks, useUI } from '@/store/hooks';
 import { useAppDispatch, useAppSelector, store } from '@/store';
 import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
+import { usePlannerMonthSelect } from '@/app/PlannerMonthSelectContext';
 
 // types for tasks
 import { Task, TaskColor } from '@/types';
@@ -46,9 +45,7 @@ export default function PlannerScreen() {
   // we keep its selected state fully local to this screen and
   // trigger heavier timeline/task work separately so backend/redux
   // never block the visual highlight.
-  // CALENDAR MODAL STATE - Controls the visibility of the calendar modal
-  const [isCalendarModalVisible, setIsCalendarModalVisible] = useState(false);
-  
+  // CALENDAR MODAL STATE - Replaced by stack screen (month-select); we open via router + context
   // SELECTED DATE STATE (UI) - drives week selector highlight only
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     // default to today's date as ISO string
@@ -80,6 +77,7 @@ export default function PlannerScreen() {
   const { tasks, isLoading } = useTasks();
   const { enterSelectionMode } = useUI();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { openMonthSelect } = usePlannerMonthSelect();
   
   // calculate border radius based on iOS version to match modal styling
   // iOS 15+ (liquid glass UI): uses 26px border radius for liquid glass UI design
@@ -108,12 +106,13 @@ export default function PlannerScreen() {
   useFocusEffect(React.useCallback(() => () => flushAllPendingCheckboxSyncs(), []));
 
   // CALENDAR HANDLERS
-  // handle calendar modal close
-  const handleCalendarClose = () => {
-    setIsCalendarModalVisible(false);
+  // open month-select stack screen – same pattern as task: set payload in context then router.push (like handleTaskPress -> router.push('/task/[taskId]'))
+  const handleOpenMonthSelect = () => {
+    openMonthSelect(selectedDate, (date) => setSelectedDate(date));
+    router.push('/(tabs)/planner/month-select');
   };
 
-  // handle date selection from calendar modal or week view
+  // handle date selection from week view (when not using month-select modal)
   const handleDateSelect = (date: string) => {
     // update selectedDate immediately so the header + week view highlight respond with no perceived delay
     setSelectedDate(date);
@@ -310,7 +309,7 @@ export default function PlannerScreen() {
           <WeekView
             selectedDate={selectedDate}
             onSelectDate={handleDateSelect}
-            onHeaderPress={() => setIsCalendarModalVisible(true)}
+            onOpenMonthSelect={handleOpenMonthSelect}
           />
         </View>
         
@@ -391,26 +390,10 @@ export default function PlannerScreen() {
         />
       </ScreenContainer>
 
-      {/* separate backdrop that fades in independently behind the calendar modal */}
-      <ModalBackdrop
-        isVisible={isCalendarModalVisible}
-        onPress={handleCalendarClose}
-        zIndex={10000}
-      />
-      
-      {/* Calendar Navigation Modal */}
-      <CalendarNavigationModal
-        visible={isCalendarModalVisible}
-        selectedDate={selectedDate}
-        onClose={handleCalendarClose}
-        onSelectDate={handleDateSelect}
-        title="Select Date"
-      />
     </View>
   );
 }
 
-// create dynamic styles using the color palette system and typography system
 const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>, 
   typography: ReturnType<typeof useTypography>,
