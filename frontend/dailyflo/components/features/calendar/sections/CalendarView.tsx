@@ -27,6 +27,8 @@ import { getTextStyle } from '@/constants/Typography';
 
 // hooks for theme-aware colors that adapt to light/dark mode
 import { useThemeColors } from '@/hooks/useColorPalette';
+// padding constants for consistent spacing
+import { Paddings } from '@/constants/Paddings';
 
 /**
  * Props for CalendarView component
@@ -376,8 +378,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         : isCurrentMonthDay
                         ? themeColors.text.primary()
                         : themeColors.text.tertiary?.() || themeColors.text.secondary(),
-                      // today's date gets bold font weight
-                      fontWeight: isTodayDate ? '600' : '600',
                     }
                   ]}>
                     {dayNumber}
@@ -402,12 +402,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
  * 4. Visual hierarchy with typography and colors
  */
 const styles = StyleSheet.create({
-  // main container - provides padding around entire calendar
-  container: {
-    paddingHorizontal: 16, // side padding for content
-    paddingVertical: 8,    // top/bottom padding for breathing room
-  },
-  
+  // --- LAYOUT STYLES ---
   // calendar header - contains month/year text and navigation arrows
   header: {
     
@@ -416,11 +411,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',      // vertically center all elements
     marginBottom: 8,           // space below header
     marginLeft: 12,
-  },
-  
-  // month/year text styling
-  monthYearText: {
-    fontWeight: '700',         // bold for emphasis
   },
   
   // navigation buttons container - holds both arrow buttons
@@ -444,24 +434,22 @@ const styles = StyleSheet.create({
     marginBottom: 0,           // no bottom margin (touches calendar)
   },
   
-  // individual day header - each day abbreviation
-  dayHeader: {
-    flex: 1,                   // equal width for all 7 days
-    alignItems: 'center',      // center text horizontally
-    paddingVertical: 8,        // top/bottom padding for touch target
-  },
-  
-  // day header text styling
-  dayHeaderText: {
-    fontWeight: '600',         // normal weight
-    // no textTransform - displays as-is: Sun, Mon, Tue format
-  },
-  
   // calendar grid container - holds all the date cells
   calendarGrid: {
     // no additional styles needed, flexbox handles layout
   },
   
+  // --- PADDING STYLES ---
+  container: {
+    paddingHorizontal: Paddings.card,
+    paddingVertical: Paddings.touchTarget,
+  },
+  dayHeader: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Paddings.touchTarget,
+  },
+
   // individual week row - contains 7 day cells
   week: {
     flexDirection: 'row',      // horizontal layout for days
@@ -478,10 +466,10 @@ const styles = StyleSheet.create({
     // margin is applied conditionally based on column position (first/last/middle)
   },
   
-  // day number text styling
-  dayText: {
-         // normal weight (bold applied conditionally)
-  },
+  // --- TYPOGRAPHY STYLES ---
+  monthYearText: {},
+  dayHeaderText: {},
+  dayText: {},
 });
 
 export default CalendarView;

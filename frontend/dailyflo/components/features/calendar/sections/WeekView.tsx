@@ -16,7 +16,7 @@
 import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 
 // react native components for building the calendar UI
-import { View, Text, Pressable, TouchableOpacity, StyleSheet, Animated, FlatList, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, TouchableOpacity, StyleSheet, FlatList, useWindowDimensions, Animated } from 'react-native';
 
 // expo vector icons for chevron symbol
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +26,7 @@ import { getTextStyle } from '@/constants/Typography';
 
 // hooks for theme-aware colors that adapt to light/dark mode
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { Paddings } from '@/constants/Paddings';
 import { useTypography } from '@/hooks/useTypography';
 
 /**
@@ -48,10 +49,11 @@ export interface WeekViewProps {
   onSelectDate: (date: string) => void;
   
   /**
-   * Callback when header is pressed
-   * This function is called when user taps on the date header to open calendar modal
+   * Callback when the date header is tapped – opens the monthly selector stack screen.
+   * When provided, the header (e.g. "6 March 2026") is tappable and pushes the planner's
+   * month-select stack screen so the user can pick a date from the full month view.
    */
-  onHeaderPress?: () => void;
+  onOpenMonthSelect?: () => void;
 }
 
 /**
@@ -63,6 +65,7 @@ interface DayCellProps {
   dayNumber: number;
   isSelected: boolean;
   isTodayDate: boolean;
+  // when user taps the circle, this lets weekview update the selected date
   onSelectDate: (date: Date) => void;
   themeColors: ReturnType<typeof useThemeColors>;
   styles: ReturnType<typeof createStyles>;
@@ -77,81 +80,86 @@ const DayCell: React.FC<DayCellProps> = ({
   themeColors,
   styles,
 }) => {
-  // animated values for zoom fade animation - start at 0 (hidden) or 1 (visible) based on initial selection state
-  const scaleAnim = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
-  const opacityAnim = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
-  
-  // trigger animation when selection state changes
+  // quick fade for the selected day fill so the highlight feels softer on tap
+  const selectionOpacity = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+  const selectionAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+
   useEffect(() => {
-    if (isSelected) {
-      // animate in: scale from 0.8 to 1, fade from 0 to 1
-      scaleAnim.setValue(0.8);
-      opacityAnim.setValue(0);
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // animate out: scale to 0, fade to 0
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start();
+    // cancel any in‑flight animation before starting a new one
+    if (selectionAnimationRef.current) {
+      selectionAnimationRef.current.stop();
+      selectionAnimationRef.current = null;
     }
-  }, [isSelected, scaleAnim, opacityAnim]);
-  
+
+    if (isSelected) {
+      // simple, cancellable fade-in when this day becomes selected
+      const animation = Animated.timing(selectionOpacity, {
+        toValue: 1,
+        duration: 140,
+        useNativeDriver: true,
+      });
+      selectionAnimationRef.current = animation;
+      animation.start(({ finished }) => {
+        if (finished) {
+          selectionAnimationRef.current = null;
+        }
+      });
+    } else {
+      // when unselected, hide the fill immediately (no fade-out)
+      selectionOpacity.setValue(0);
+    }
+  }, [isSelected, selectionOpacity]);
+
   return (
-    <View style={styles.dateCellContainer}>
-      {/* animated background highlight */}
-      <Animated.View
-        style={[
-          styles.dateCellBackground,
-          {
-            backgroundColor: themeColors.text.primary(),
-            opacity: opacityAnim,
-            transform: [{ scale: scaleAnim }],
-          }
-        ]}
-      />
+    <View style={[
+      styles.dateCellContainer,
+      // dashed circular outline for non-selected days
+      !isSelected && {
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderRadius: 19,
+        borderColor: themeColors.text.tertiary(),
+
+      },
+    ]}>
+      {/* background highlight for selected day with quick fade-in */}
+      {isSelected && (
+        <Animated.View
+          style={[
+            styles.dateCellBackground,
+            {
+              backgroundColor: themeColors.text.primary(),
+              opacity: selectionOpacity,
+            }
+          ]}
+        />
+      )}
       
-      {/* date number */}
+      {/* date number - pressable circle so tapping the number selects the day */}
       <Pressable
         onPress={() => onSelectDate(date)}
         style={styles.dateCellPressable}
+        // larger invisible hit area so light / off-center taps still register
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityRole="button"
-        accessibilityLabel={`${dayNumber}, ${date.toLocaleDateString('en-US', { 
-          month: 'long', 
+        accessibilityLabel={`${dayNumber}, ${date.toLocaleDateString('en-US', {
+          month: 'long',
           day: 'numeric',
-          year: 'numeric' 
+          year: 'numeric',
         })}`}
         accessibilityState={{ selected: isSelected }}
       >
-        <Text style={[
-          getTextStyle('heading-4'),
-          styles.dateText,
-          {
-            color: isSelected
-              ? themeColors.background.primary()
-              : themeColors.text.primary(),
-            fontWeight: isTodayDate ? '700' : '400',
-          }
-        ]}>
+        <Text
+          style={[
+            getTextStyle('heading-4'),
+            styles.dateText,
+            {
+              color: isSelected
+                ? themeColors.background.primary()
+                : themeColors.text.primary(),
+            },
+          ]}
+        >
           {dayNumber}
         </Text>
       </Pressable>
@@ -172,7 +180,7 @@ const DayCell: React.FC<DayCellProps> = ({
 export const WeekView: React.FC<WeekViewProps> = ({
   selectedDate,
   onSelectDate,
-  onHeaderPress,
+  onOpenMonthSelect,
 }) => {
   // get theme-aware colors for styling (adapts to light/dark mode)
   const themeColors = useThemeColors();
@@ -182,12 +190,6 @@ export const WeekView: React.FC<WeekViewProps> = ({
   
   // create dynamic styles
   const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
-  
-  // animated value for header title fade animation
-  const headerOpacity = useRef(new Animated.Value(1)).current;
-  
-  // track previous date to detect changes
-  const prevDateRef = useRef<string>(selectedDate);
   
   // flat list ref for horizontal pagination
   const flatListRef = useRef<FlatList>(null);
@@ -372,25 +374,6 @@ export const WeekView: React.FC<WeekViewProps> = ({
   }, [selectedDate]);
   
   /**
-   * Animate header title fade when date changes
-   * Fades in smoothly when date changes
-   */
-  useEffect(() => {
-    // check if date actually changed (not just initial render)
-    if (prevDateRef.current !== selectedDate && prevDateRef.current !== '') {
-      // start from opacity 0, then fade in smoothly
-      headerOpacity.setValue(0);
-      Animated.timing(headerOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    }
-    // update previous date ref after checking
-    prevDateRef.current = selectedDate;
-  }, [selectedDate, headerOpacity]);
-  
-  /**
    * Check if a date is the selected date
    * Compares date strings (YYYY-MM-DD format) to avoid time zone issues
    */
@@ -424,25 +407,28 @@ export const WeekView: React.FC<WeekViewProps> = ({
   const dayHeaders = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   
   return (
-    <View style={styles.container}>
+    <View>
       {/* 
-        WEEK VIEW HEADER SECTION
-        Contains: formatted date text (day month year)
-        Styled to match today screen header title
+        HEADER: tap to open monthly selector stack screen.
+        Shows formatted date (e.g. "6 March 2026") and chevron; when tapped, pushes
+        the planner's month-select screen so the user can pick a date from the full month view.
       */}
-      <TouchableOpacity 
-        style={styles.header}
-        onPress={onHeaderPress}
+      <TouchableOpacity
+        style={[styles.header, styles.headerContainer]}
+        onPress={onOpenMonthSelect}
         activeOpacity={0.7}
-        disabled={!onHeaderPress}
+        disabled={!onOpenMonthSelect}
+        accessibilityRole="button"
+        accessibilityLabel={`${formattedDateText}. Opens monthly calendar`}
+        accessibilityHint="Double tap to open the monthly date picker"
       >
-        <Animated.Text key={selectedDate} style={[styles.headerTitle, { opacity: headerOpacity }]}>
+        <Text key={selectedDate} style={styles.headerTitle}>
           {formattedDateText}
-        </Animated.Text>
-        <Ionicons 
-          name="chevron-forward" 
-          size={24} 
-          color={themeColors.text.primary()} 
+        </Text>
+        <Ionicons
+          name="chevron-forward"
+          size={24}
+          color={themeColors.text.primary()}
           style={styles.chevronIcon}
         />
       </TouchableOpacity>
@@ -453,6 +439,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
         Layout: Swipeable pages - one week per page
         listWrapper uses negative margin to break out of container padding so full pages are visible during swipe
       */}
+      <View style={styles.weekSectionContainer}>
       <View style={styles.listWrapper}>
       <FlatList
         ref={flatListRef}
@@ -471,30 +458,35 @@ export const WeekView: React.FC<WeekViewProps> = ({
                 
                 return (
                   <View key={index} style={styles.dayColumn}>
+                    {/* day title pressable - tapping the title also selects the day */}
                     <Pressable
                       onPress={() => handleDateSelect(date)}
                       style={styles.dayHeaderPressable}
+                      // extra hitSlop so fast/light taps on the label still select the day
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       accessibilityRole="button"
-                      accessibilityLabel={`Select ${dayHeaders[index]}, ${date.toLocaleDateString('en-US', { 
-                        month: 'long', 
+                      accessibilityLabel={`Select ${dayHeaders[index]}, ${date.toLocaleDateString('en-US', {
+                        month: 'long',
                         day: 'numeric',
-                        year: 'numeric' 
+                        year: 'numeric',
                       })}`}
                     >
-                      <Text 
+                      <Text
                         numberOfLines={1}
                         style={[
                           getTextStyle('body-medium'),
                           styles.dayHeaderText,
-                          { 
-                            color: themeColors.text.tertiary?.() || themeColors.text.secondary(),
-                            fontWeight: '900',
-                          }
-                        ]}>
+                          {
+                            color:
+                              themeColors.text.tertiary?.() ||
+                              themeColors.text.secondary(),
+                          },
+                        ]}
+                      >
                         {dayHeaders[index]}
                       </Text>
                     </Pressable>
-                    
+
                     <DayCell
                       date={date}
                       dayNumber={dayNumber}
@@ -522,6 +514,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
         scrollEventThrottle={16}
       />
       </View>
+      </View>
     </View>
   );
 };
@@ -539,25 +532,17 @@ const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>
 ) => StyleSheet.create({
-  // main container
-  container: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+  // --- LAYOUT STYLES ---
+  // header container - separate from week grid, left spacing from Paddings.screen
+  headerContainer: {
+    paddingLeft: Paddings.screen,
   },
   
   // week view header - contains formatted date text and chevron icon
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  
-  // header title styling - matches today screen header title style
-  headerTitle: {
-    ...typography.getTextStyle('heading-2'),
-    color: themeColors.text.primary(),
-    fontWeight: '600',
-    marginLeft: 8,
+    marginTop: 16,
   },
   
   // chevron icon styling - positioned to the right of the date header
@@ -565,7 +550,15 @@ const createStyles = (
     marginLeft: 8,
   },
   
+  // week grid section - padding for the swipeable list (listWrapper breaks out with negative margin)
+  weekSectionContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: Paddings.card,
+    paddingBottom: Paddings.card - 12,
+  },
+  
   // breaks out of container padding so FlatList scrolls full-width (no cut-off during swipe)
+  // margin matches weekSectionContainer padding (16) so list extends to screen edges for pagination
   listWrapper: {
     marginHorizontal: -16,
   },
@@ -587,25 +580,23 @@ const createStyles = (
     flex: 1,
     alignItems: 'center',
   },
-  
+
   // day header pressable - clickable area for day header
   dayHeaderPressable: {
-    marginBottom: 4,
-    paddingVertical: 0,
-    paddingHorizontal: 8,
+    marginBottom: 8,
+    paddingVertical: Paddings.none,
+    paddingHorizontal: Paddings.touchTarget,
   },
   
   // day header text styling
   dayHeaderText: {
-    fontWeight: '600',
     textAlign: 'center',
-    letterSpacing: 0.8,
   },
   
   // date cell container - holds background and pressable
   dateCellContainer: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -614,9 +605,9 @@ const createStyles = (
   // animated background highlight
   dateCellBackground: {
     position: 'absolute',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 19,
   },
   
   // date cell pressable - clickable area
@@ -629,8 +620,13 @@ const createStyles = (
   },
   
   // date number text styling
-  dateText: {
-    fontWeight: '400',
+  dateText: {},
+
+  // --- TYPOGRAPHY STYLES ---
+  headerTitle: {
+    ...typography.getTextStyle('heading-2'),
+    color: themeColors.text.primary(),
+    marginLeft: 0,
   },
 });
 

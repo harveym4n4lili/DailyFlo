@@ -83,9 +83,14 @@ export interface GroupedListProps {
   /**
    * Width of the icon column (icon size + gap) used for calculating separator inset.
    * Only used when separatorConsiderIconColumn is true.
-   * Default: 32 (18px icon + 12px gap for FormDetailButton, or 18px icon + 8px gap + some padding for Description)
+   * Default: 32 (icon size + Paddings.groupedListIconTextSpacing for FormDetailButton)
    */
   iconColumnWidth?: number;
+
+  /**
+   * Separator style: 'dashed' (default) or 'solid' full line.
+   */
+  separatorVariant?: 'dashed' | 'solid';
 }
 
 /**

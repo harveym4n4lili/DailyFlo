@@ -40,8 +40,16 @@ export { FormDetailButton, CustomFormDetailButton } from './TaskButton';
 export type { FormDetailButtonProps, CustomFormDetailButtonProps } from './TaskButton';
 export { CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS } from './TaskButton';
 
-// Export Checkbox component
+// Export Checkbox and checkbox constants
 export { Checkbox } from './Checkbox';
+export type { CheckboxProps } from './Checkbox';
+export {
+  CHECKBOX_SIZE_DEFAULT,
+  CHECKBOX_SIZE_TASK_VIEW,
+  CHECKBOX_SIZE_SMALL,
+  CHECKBOX_TICK_SIZE_RATIO,
+  CHECKBOX_SIZE_DEFAULT as SIMPLE_CHECKBOX_SIZE,
+} from '@/constants/Checkbox';
 
 // Export ScreenContextButton (3-dot ellipse button for screen headers)
 export { ScreenContextButton } from './ScreenContextButton';

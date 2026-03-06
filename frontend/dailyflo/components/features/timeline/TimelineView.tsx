@@ -10,9 +10,11 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text, Platform } from 'react-native';
-import { useSharedValue, withTiming, makeMutable, withSpring } from 'react-native-reanimated';
+import AnimatedReanimated, { useSharedValue, withTiming, makeMutable, withSpring, LinearTransition, createAnimatedComponent } from 'react-native-reanimated';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
+import { CHECKBOX_HIDE_DELAY_MS } from '@/constants/Checkbox';
 import { Task } from '@/types';
 import TimelineItem from './TimelineItem/TimelineItem';
 import TimeLabel from './TimeLabel';
@@ -21,6 +23,13 @@ import DragOverlay from './DragOverlay';
 import { DashedVerticalLine } from '@/components/ui/borders';
 import { SparklesIcon } from '@/components/ui/icon';
 import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag, getTaskCardHeight } from './timelineUtils';
+
+// layout transition for planner: footer + timeline slide up together when task is checked
+// duration-based linear transition so both animate in sync (no delay)
+const LAYOUT_TRANSITION = LinearTransition.duration(300);
+
+// Animated.ScrollView so layout animations work on scroll content (footer shrink, timeline move)
+const AnimatedScrollView = createAnimatedComponent(ScrollView);
 
 // type for combined overlapping tasks
 // represents multiple tasks that overlap and are combined into a single card
@@ -41,12 +50,18 @@ interface TimelineViewProps {
   onTaskPress?: (task: Task) => void;
   // callback when a task's completion status is toggled
   onTaskComplete?: (task: Task) => void;
+  // when true, completed tasks are hidden (same local-update optimization as TaskCard/ListCard)
+  hideCompletedTasks?: boolean;
   // start hour for the timeline (default: 6 AM)
   startHour?: number;
   // end hour for the timeline (default: 23 = 11 PM)
   endHour?: number;
   // interval between time labels in minutes (default: 60)
   timeInterval?: number;
+  // optional footer rendered at bottom of scroll content (e.g. "All day tasks" list)
+  footerComponent?: React.ReactNode;
+  // optional override for top padding when footer is first (e.g. reduced spacing above list)
+  scrollContentPaddingTop?: number;
 }
 
 /**
@@ -60,7 +75,10 @@ export default function TimelineView({
   onTaskTimeChange,
   onTaskPress,
   onTaskComplete,
+  hideCompletedTasks = false,
   startHour = 6,
+  footerComponent,
+  scrollContentPaddingTop,
   endHour = 23,
   timeInterval = 60,
 }: TimelineViewProps) {
@@ -91,8 +109,88 @@ export default function TimelineView({
   // these are created when tasks overlap and represent the combined card
   const [combinedOverlappingTasks, setCombinedOverlappingTasks] = useState<Map<string, CombinedOverlappingTask>>(new Map());
 
+  // when hideCompletedTasks: same local-update optimization as ListCard - hide completed without waiting for redux
+  const [locallyCompletedIds, setLocallyCompletedIds] = useState<Set<string>>(() => new Set());
+  const hideTimeoutRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => () => {
+    Object.values(hideTimeoutRef.current).forEach(clearTimeout);
+    hideTimeoutRef.current = {};
+  }, []);
+
+  useEffect(() => {
+    if (!hideCompletedTasks || locallyCompletedIds.size === 0) return;
+    const stillCompleted = new Set<string>();
+    locallyCompletedIds.forEach((id) => {
+      const task = tasks.find((t) => t.id === id);
+      if (task?.isCompleted) stillCompleted.add(id);
+    });
+    if (stillCompleted.size !== locallyCompletedIds.size) {
+      setLocallyCompletedIds(stillCompleted);
+    }
+  }, [tasks, hideCompletedTasks, locallyCompletedIds]);
+
+  const visibleTasks = useMemo(() => {
+    if (!hideCompletedTasks) return tasks;
+    return tasks.filter((t) => !t.isCompleted && !locallyCompletedIds.has(t.id));
+  }, [tasks, hideCompletedTasks, locallyCompletedIds]);
+
+  const handleTaskCompleteImmediate = useCallback(
+    (task: Task, targetCompleted?: boolean) => {
+      if (!hideCompletedTasks) return;
+      if (targetCompleted === false) {
+        if (hideTimeoutRef.current[task.id]) {
+          clearTimeout(hideTimeoutRef.current[task.id]);
+          delete hideTimeoutRef.current[task.id];
+        }
+        setLocallyCompletedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(task.id);
+          return next;
+        });
+      } else {
+        hideTimeoutRef.current[task.id] = setTimeout(() => {
+          delete hideTimeoutRef.current[task.id];
+          setLocallyCompletedIds((prev) => new Set(prev).add(task.id));
+        }, CHECKBOX_HIDE_DELAY_MS);
+      }
+    },
+    [hideCompletedTasks]
+  );
+
+  const handleTaskComplete = useCallback(
+    (task: Task, targetCompleted?: boolean) => {
+      if (hideCompletedTasks) {
+        if (hideTimeoutRef.current[task.id]) {
+          clearTimeout(hideTimeoutRef.current[task.id]);
+          delete hideTimeoutRef.current[task.id];
+        }
+        setLocallyCompletedIds((prev) => {
+          const next = new Set(prev);
+          if (targetCompleted !== false) next.add(task.id);
+          else next.delete(task.id);
+          return next;
+        });
+      }
+      onTaskComplete?.(task);
+    },
+    [onTaskComplete, hideCompletedTasks]
+  );
+
   // create dynamic styles using theme colors and typography
   const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
+
+  // enable layout transition only after initial mount so timeline appears in final position (no slide up)
+  // use 2s delay so all initial layout and position updates are applied without animation first
+  const [layoutTransitionEnabled, setLayoutTransitionEnabled] = useState(false);
+  const layoutTransitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const t = setTimeout(() => setLayoutTransitionEnabled(true), 2000);
+    return () => {
+      clearTimeout(t);
+      if (layoutTransitionTimeoutRef.current) clearTimeout(layoutTransitionTimeoutRef.current);
+    };
+  }, []);
 
   // helper function to check if two tasks overlap in time
   // returns true if the time ranges of two tasks overlap
@@ -123,7 +221,7 @@ export default function TimelineView({
   // also exclude tasks that are hidden due to overlaps
   // and include combined overlapping tasks as pseudo-tasks for rendering
   const tasksWithTime = useMemo(() => {
-    const regularTasks = tasks.filter(task => 
+    const regularTasks = visibleTasks.filter(task => 
       task.time && 
       task.dueDate && 
       !hiddenTaskIds.has(task.id)
@@ -159,7 +257,7 @@ export default function TimelineView({
     
     // combine regular tasks and combined tasks
     return [...regularTasks, ...combinedTasksAsPseudoTasks];
-  }, [tasks, hiddenTaskIds, combinedOverlappingTasks]);
+  }, [visibleTasks, hiddenTaskIds, combinedOverlappingTasks]);
 
   // calculate dynamic start time - use earliest task time or fallback to startHour
   // round down to the hour and subtract 1 hour for buffer to allow scrolling up
@@ -218,9 +316,9 @@ export default function TimelineView({
   }, [dynamicStartHour, startHour, endHour, timeInterval, tasksWithTime]);
 
   // spacing constants - adjust these to change spacing between tasks
-  const SPACING_LESS_THAN_30_MIN = 16;
-  const SPACING_30_MIN_TO_2_HOURS = 64;
-  const SPACING_MORE_THAN_2_HOURS = 120;
+  const SPACING_LESS_THAN_30_MIN = 20;
+  const SPACING_30_MIN_TO_2_HOURS = 84;
+  const SPACING_MORE_THAN_2_HOURS = 140;
   
   // calculate spacing between tasks based on time difference
   const getTaskSpacing = (timeDifferenceMinutes: number): number => {
@@ -742,9 +840,40 @@ export default function TimelineView({
   // note: we can't call useSharedValue conditionally, so we create them lazily using a helper
   const labelPositionAnimationsRef = useRef<Map<string, ReturnType<typeof useSharedValue<number>>>>(new Map());
   
-  // skip label animation during initial layout (~250ms) - prevents jank when positions update
+  // skip label animation during initial layout (~400ms) - prevents jank when positions update
   // after task height measurements cascade
   const timelineMountTimeRef = useRef(Date.now());
+  // when task set changes (e.g. load different day), reset so we use immediate updates and avoid label stutter
+  const prevTaskSetKeyRef = useRef<string>('');
+  // first few effect runs after task set change use immediate updates (positions may still be settling)
+  const initialRunsLeftRef = useRef(30);
+  // show time at initial position first, then switch to final position after distance calculated (prevents flash)
+  const [labelsPositionSettled, setLabelsPositionSettled] = useState(false);
+  const haveSetLabelsSettledRef = useRef(false);
+  const initialLabelPositionsRef = useRef<Map<string, number>>(new Map());
+
+  // when the visible task set changes a lot at once (for example, when the user switches day on planner),
+  // we want the timeline + all-day footer stack to jump to the new layout instantly instead of sliding
+  // this mirrors the "instant y position" behaviour of individual timeline items
+  const [suppressLayoutForTaskSetChange, setSuppressLayoutForTaskSetChange] = useState(false);
+  const layoutSuppressionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // cleanup any pending suppression timer when timeline unmounts
+    return () => {
+      if (layoutSuppressionTimeoutRef.current) {
+        clearTimeout(layoutSuppressionTimeoutRef.current);
+        layoutSuppressionTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  // when the underlying task set changes (for example, user switches planner day which passes a new tasks array),
+  // use this stable key so we can reset label animations + outer layout transition in a single place
+  const dayTaskSetKey = useMemo(
+    () => [...new Set(tasks.map((t) => t.id))].sort().join(','),
+    [tasks],
+  );
 
   // helper function to get or create shared value for a label
   // using makeMutable allows us to create shared values conditionally (inside useEffect)
@@ -762,7 +891,39 @@ export default function TimelineView({
   // create and update animated positions for time labels
   // this makes labels smoothly move when tasks expand/collapse
   useEffect(() => {
-    const isInitialLayout = Date.now() - timelineMountTimeRef.current < 250;
+    // when task set changes (e.g. user loads a different day), reset "initial layout" so we set positions
+    // immediately and avoid stutter from animating from stale/wrong positions
+    // use sorted unique task ids so order changes (from position updates) don't trigger hide again
+    // reset behaviour when the overall task set changes (day switch etc.), not just when label list changes
+    if (dayTaskSetKey !== prevTaskSetKeyRef.current) {
+      prevTaskSetKeyRef.current = dayTaskSetKey;
+      timelineMountTimeRef.current = Date.now();
+      initialRunsLeftRef.current = 30;
+      initialLabelPositionsRef.current.clear();
+      haveSetLabelsSettledRef.current = false;
+      setLabelsPositionSettled(false);
+
+      // when task set changes (for example, loading a different day in planner),
+      // temporarily turn off the outer layout transition so the whole timeline + footer
+      // jumps to its new vertical position instantly instead of sliding from the previous day
+      if (footerComponent) {
+        if (layoutSuppressionTimeoutRef.current) {
+          clearTimeout(layoutSuppressionTimeoutRef.current);
+          layoutSuppressionTimeoutRef.current = null;
+        }
+        setSuppressLayoutForTaskSetChange(true);
+        layoutSuppressionTimeoutRef.current = setTimeout(() => {
+          setSuppressLayoutForTaskSetChange(false);
+          layoutSuppressionTimeoutRef.current = null;
+        }, 250);
+      }
+    }
+
+    const isInitialLayout =
+      Date.now() - timelineMountTimeRef.current < 2000 || initialRunsLeftRef.current > 0;
+    if (initialRunsLeftRef.current > 0) {
+      initialRunsLeftRef.current -= 1;
+    }
     
     allTimeLabels.forEach((label) => {
       const startLabelKey = `${label.taskId}-${label.time}-start`;
@@ -809,7 +970,13 @@ export default function TimelineView({
         labelPositionAnimations.delete(key);
       }
     });
-  }, [allTimeLabels, getOrCreateLabelAnimation]);
+
+    // after initial layout, switch to animated position so labels show final position (prevents flash)
+    if (!isInitialLayout && !haveSetLabelsSettledRef.current) {
+      haveSetLabelsSettledRef.current = true;
+      setLabelsPositionSettled(true);
+    }
+  }, [allTimeLabels, getOrCreateLabelAnimation, footerComponent, dayTaskSetKey]);
 
   // convert Y position (TOP edge of the card) to time for drag operations
   // finds closest time by testing every 5 minutes between 00:05 and 23:55
@@ -884,36 +1051,29 @@ export default function TimelineView({
       throw new Error('All tasks must have time to calculate combined properties');
     }
     
-    // sort tasks by start time (earliest first)
+    // sort tasks by start time (earliest first) - used for start time and display order
     const sortedTasks = [...tasksWithTime].sort((a, b) => {
       if (!a.time || !b.time) return 0;
       return timeToMinutes(a.time) - timeToMinutes(b.time);
     });
     
     const firstTask = sortedTasks[0];
-    const lastTask = sortedTasks[sortedTasks.length - 1];
-    
     const firstTaskMinutes = timeToMinutes(firstTask.time!);
-    const firstTaskDuration = firstTask.duration || 0;
     
-    const lastTaskMinutes = timeToMinutes(lastTask.time!);
-    const lastTaskDuration = lastTask.duration || 0;
-    const lastTaskEndMinutes = lastTaskMinutes + lastTaskDuration;
-    
-    // start time is the start time of the first task
+    // start time = earliest start of any task
     const startTime = firstTask.time!;
     
-    // end time is the end time of the last task (if duration), or start time of last task (if no duration)
-    let endTimeMinutes: number;
-    if (lastTaskDuration > 0) {
-      // last task has duration, use its end time
-      endTimeMinutes = lastTaskEndMinutes;
-    } else {
-      // last task has no duration, use its start time
-      endTimeMinutes = lastTaskMinutes;
-    }
+    // end time = latest end of any task (not the task that starts last)
+    // e.g. task 1: 14:00-15:00, task 2: 14:30-14:50 → combined: 14:00-15:00
+    const endTimeMinutes = Math.max(
+      ...tasksWithTime.map(t => {
+        const startMinutes = timeToMinutes(t.time!);
+        const dur = t.duration || 0;
+        return dur > 0 ? startMinutes + dur : startMinutes;
+      })
+    );
     
-    // duration is from start of first task to end of last task
+    // duration = from start of first task to end of last-ending task
     const duration = endTimeMinutes - firstTaskMinutes;
     
     return {
@@ -1525,9 +1685,9 @@ export default function TimelineView({
     // drag operations handle overlap detection themselves via handleTaskTimeChangeWithOverlap
     // this ensures overlap detection runs on initial load and when tasks are updated (but not during/after drag)
     if (dragState === null && !isProcessingDragRef.current) {
-      detectAndCreateOverlappingTasks(tasks);
+      detectAndCreateOverlappingTasks(visibleTasks);
     }
-  }, [tasks, detectAndCreateOverlappingTasks, dragState]);
+  }, [visibleTasks, detectAndCreateOverlappingTasks, dragState]);
 
   // clear hidden tasks that no longer exist in the tasks list
   // this prevents stale hidden state when tasks are removed or updated
@@ -1574,51 +1734,84 @@ export default function TimelineView({
 
   return (
     <View style={styles.container}>
-      {/* scrollable timeline content */}
-      <ScrollView
+      {/* scrollable timeline content - AnimatedScrollView for layout animations on footer/timeline */}
+      <AnimatedScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent, 
-          { minHeight: timelineHeight + 220 } // timelineHeight + paddingTop (20) + paddingBottom (200)
+          // when footer: content = list + timeline only (no minHeight) so timeline moves up when list collapses
+          // when no footer: minHeight ensures timeline is scrollable
+          ...(footerComponent ? [] : [{ minHeight: timelineHeight + 220 }]),
+          ...(scrollContentPaddingTop !== undefined ? [{ paddingTop: scrollContentPaddingTop }] : []),
         ]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={true}
       >
-        {/* time labels column on the left */}
+        {/* ListCard + timeline as one stack - layout enabled after mount so they appear in final position */}
+        <AnimatedReanimated.View
+          layout={layoutTransitionEnabled && footerComponent && !suppressLayoutForTaskSetChange ? LAYOUT_TRANSITION : undefined}
+          style={styles.listTimelineStack}
+        >
+          {footerComponent ? (
+            <AnimatedReanimated.View
+              layout={layoutTransitionEnabled && !suppressLayoutForTaskSetChange ? LAYOUT_TRANSITION : undefined}
+              style={styles.footerWrapper}
+            >
+              {footerComponent}
+            </AnimatedReanimated.View>
+          ) : null}
+          {/* timeline row - layout enabled after mount so no initial slide up */}
+          <AnimatedReanimated.View
+            layout={layoutTransitionEnabled && footerComponent && !suppressLayoutForTaskSetChange ? LAYOUT_TRANSITION : undefined}
+            style={[
+              styles.timelineRow,
+              footerComponent ? styles.timelineRowWithFooterAbove : null,
+              ...(footerComponent ? [{ minHeight: timelineHeight }] : []),
+            ]}
+          >
+        {/* time labels column on the left - static labels use opacity to hide briefly after day change (no layout change) */}
         <View style={styles.timeLabelsContainer}>
           {allTimeLabels.map((label) => {
-            // get animated position for this label from ref
             const labelPositionAnimations = labelPositionAnimationsRef.current;
             const startLabelKey = `${label.taskId}-${label.time}-start`;
             const positionAnimation = labelPositionAnimations.get(startLabelKey);
             const endLabelKey = label.endTime ? `${label.taskId}-${label.endTime}-end` : null;
             const endPositionAnimation = endLabelKey ? labelPositionAnimations.get(endLabelKey) : null;
+            // freeze initial position until distance is calculated, then use final (animated) position to prevent flash
+            if (!labelsPositionSettled) {
+              initialLabelPositionsRef.current.set(startLabelKey, initialLabelPositionsRef.current.get(startLabelKey) ?? label.position);
+              if (label.endTime && label.endPosition !== undefined) initialLabelPositionsRef.current.set(endLabelKey!, initialLabelPositionsRef.current.get(endLabelKey!) ?? label.endPosition);
+            }
+            const startPosition = labelsPositionSettled ? label.position : (initialLabelPositionsRef.current.get(startLabelKey) ?? label.position);
+            const endPosition = label.endPosition !== undefined ? (labelsPositionSettled ? label.endPosition : (initialLabelPositionsRef.current.get(endLabelKey!) ?? label.endPosition)) : undefined;
             
             return (
               <React.Fragment key={`${label.taskId}-${label.time}`}>
-                {/* start time label - always rendered */}
+                {/* start time label - show at initial position first, then final after distance calculated */}
                 <TimeLabel
                   time={label.time}
-                  position={label.position}
-                  animatedPosition={positionAnimation} // pass animated position for smooth animation
+                  position={startPosition}
+                  animatedPosition={labelsPositionSettled ? positionAnimation : undefined}
                   isEndTime={false}
+                  opacity={1}
                 />
                 
                 {/* end time label - only rendered if task has duration */}
-                {label.endTime && label.endPosition !== undefined && endPositionAnimation && (
+                {label.endTime && endPosition !== undefined && endPositionAnimation && (
                   <TimeLabel
                     key={`${label.taskId}-${label.endTime}-end`}
                     time={label.endTime}
-                    position={label.endPosition}
-                    animatedPosition={endPositionAnimation} // pass animated position for smooth animation
+                    position={endPosition}
+                    animatedPosition={labelsPositionSettled ? endPositionAnimation : undefined}
                     isEndTime={true}
+                    opacity={1}
                   />
                 )}
               </React.Fragment>
             );
           })}
           
-          {/* drag time label - shows current drag position */}
+          {/* drag time label - shows current drag position (always visible when dragging) */}
           {/* anchored to drag overlay position for smooth, synchronized movement */}
           {dragState && (
             <TimeLabel
@@ -1765,7 +1958,8 @@ export default function TimelineView({
                     startHour={dynamicStartHour}
                     combinedTaskId={task.id}
                     onPress={(pressedTask) => onTaskPress?.(pressedTask)}
-                    onTaskComplete={onTaskComplete}
+                    onTaskComplete={handleTaskComplete}
+                    onTaskCompleteImmediate={handleTaskCompleteImmediate}
                     onDrag={(taskId, newY) => {
                       // handle drag from overlapping task - use modular drag handler
                       // this converts top position to center and updates task
@@ -1853,21 +2047,16 @@ export default function TimelineView({
                 <TimelineItem
                   key={task.id}
                   task={task}
-                  position={renderProps.position}
+                  centerPosition={equalSpacing.equalSpacingPosition}
                   duration={duration}
                   pixelsPerMinute={renderProps.pixelsPerMinute}
                   startHour={dynamicStartHour}
                   onHeightMeasured={(height: number) => handleHeightMeasured(task.id, height)}
                   onDrag={(newY: number) => {
-                    // newY is the top position from TimelineItem when drag ends
-                    // use modular drag handler which converts top to center and updates task
-                    // this handles the "after drag and drop" state
                     handleDragEnd(task.id, newY, renderProps.measuredHeight);
                   }}
                   onDragStart={() => {
-                    // drag started - use modular drag handler with initial position and task info
-                    // this initializes drag state for visual feedback and overlay rendering
-                    // get initial position from basePosition (current top position)
+                    // initial top = center - height/2 (same as renderProps.position)
                     const initialTopY = renderProps.position;
                     handleDragStart(task.id, initialTopY, renderProps.measuredHeight, task);
                   }}
@@ -1882,7 +2071,8 @@ export default function TimelineView({
                     // this is called after onDrag, so state is already cleared
                   }}
                   onPress={() => onTaskPress?.(task)}
-                  onTaskComplete={onTaskComplete}
+                  onTaskComplete={handleTaskComplete}
+                  onTaskCompleteImmediate={handleTaskCompleteImmediate}
                   // pass isDraggedTask prop so this task can apply higher z-index when being dragged
                   // this ensures the dragged task appears above all other tasks on the timeline
                   isDraggedTask={dragState?.taskId === task.id}
@@ -1891,7 +2081,9 @@ export default function TimelineView({
             })
           )}
         </View>
-      </ScrollView>
+        </AnimatedReanimated.View>
+        </AnimatedReanimated.View>
+      </AnimatedScrollView>
     </View>
   );
 }
@@ -1901,7 +2093,7 @@ const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>
 ) => StyleSheet.create({
-  // main container for the timeline view
+  // --- LAYOUT STYLES ---
   container: {
     flex: 1,
     backgroundColor: themeColors.background.primary(),
@@ -1912,17 +2104,39 @@ const createStyles = (
     flex: 1,
   },
 
-  // scroll content container with calculated height
+  // scroll content container - column so timeline row + footer stack vertically
   scrollContent: {
+    flexDirection: 'column',
+    paddingTop: Paddings.timelineScrollTop,
+    paddingBottom: Paddings.timelineScrollBottom,
+  },
+
+  // list + timeline stack - flexGrow: 0 so height = footer + timeline only; timeline moves up when list collapses
+  listTimelineStack: {
+    flexDirection: 'column',
+    flexGrow: 0,
+  },
+
+  // footer wrapper - flexGrow: 0 so it shrinks with list content; no white space when collapsed
+  footerWrapper: {
+    flexDirection: 'column',
+    flexGrow: 0,
+  },
+
+  // timeline row - time labels + tasks side by side
+  timelineRow: {
     flexDirection: 'row',
-    paddingTop: 52, // increased top padding to see just the top
-    paddingBottom: 200, // bottom padding
+  },
+
+  // when footer (e.g. list) is above timeline - add top spacing
+  timelineRowWithFooterAbove: {
+    marginTop: 32,
   },
 
   // time labels container on the left side - more compact
   timeLabelsContainer: {
     marginLeft: 28,
-    paddingRight: 20,
+    paddingRight: Paddings.timelineLabelsRight,
     alignItems: 'flex-end',
   },
 
@@ -1930,8 +2144,8 @@ const createStyles = (
   tasksContainer: {
     flex: 1,
     position: 'relative',
-    paddingLeft: 20,
-    paddingRight: 14,
+    paddingLeft: Paddings.timelineTasksLeft,
+    paddingRight: Paddings.timelineTasksRight,
   },
 
   // vertical dashed line connecting all time slots - aligns with icon container line (left: 21)
@@ -1949,7 +2163,7 @@ const createStyles = (
     right: 0,
     justifyContent: 'center',
     alignItems: 'flex-start',
-    paddingLeft: 36,
+    paddingLeft: Paddings.timelineFreeTimeLeft,
   },
 
   // row containing sparkles icon (14px) + message text
@@ -1959,38 +2173,30 @@ const createStyles = (
     gap: 8,
   },
 
-  // free time text - base color background tertiary, used for all segment messages
-  freeTimeTextSegments: {
-    ...typography.getTextStyle('body-medium'),
-    color: themeColors.background.tertiary(),
-    fontWeight: '900',
-  },
-
-  // bold white/accent duration (e.g. "4h 32m") inside the long break message
-  // uses primary text for contrast (white in dark mode, dark in light mode)
-  freeTimeDurationBold: {
-    fontWeight: '700',
-    color: themeColors.text.primary(),
-  },
-
   // empty state container
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
-    paddingTop: 100,
+    paddingHorizontal: Paddings.timelineEmptyHorizontal,
+    paddingTop: Paddings.timelineEmptyTop,
   },
 
-  // empty state text
+  // --- TYPOGRAPHY STYLES ---
+  freeTimeTextSegments: {
+    ...typography.getTextStyle('body-small'),
+    color: themeColors.background.tertiary(),
+  },
+  freeTimeDurationBold: {
+    ...typography.getTextStyle('body-small'),
+    color: themeColors.text.primary(),
+  },
   emptyStateText: {
     ...typography.getTextStyle('body-large'),
     color: themeColors.text.secondary(),
     textAlign: 'center',
     marginBottom: 8,
   },
-
-  // empty state subtext
   emptyStateSubtext: {
     ...typography.getTextStyle('body-medium'),
     color: themeColors.text.tertiary(),

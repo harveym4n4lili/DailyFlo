@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { StyleSheet, RefreshControl, View, Text, Alert, Animated } from 'react-native';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, useAnimatedReaction, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +23,7 @@ import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 // STORE FOLDER IMPORTS - Redux state management
 // The store folder contains all Redux-related code for managing app state
@@ -30,7 +31,7 @@ import { useTasks, useUI } from '@/store/hooks';
 // useTasks: Custom hook that provides easy access to task-related state and actions
 // This hook wraps the Redux useSelector and useDispatch to give us typed access to tasks
 // useUI: Custom hook that provides easy access to UI-related state and actions (like modal visibility)
-import { useAppDispatch, useAppSelector } from '@/store';
+import { useAppDispatch, useAppSelector, store } from '@/store';
 // useAppDispatch: Typed version of Redux's useDispatch hook
 // This gives us the dispatch function to send actions to the Redux store
 // It's typed to ensure we can only dispatch valid actions
@@ -44,6 +45,7 @@ import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSl
 // The types folder contains all TypeScript interfaces and type definitions
 import { Task, TaskColor } from '@/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { flushAllPendingCheckboxSyncs } from '@/utils/pendingCheckboxSyncRegistry';
 import {
   expandTasksForDates,
   getTargetDatesForTodayScreen,
@@ -101,7 +103,7 @@ export default function TodayScreen() {
   
   // TYPOGRAPHY USAGE - Getting typography system for consistent text styling
   // useTypography: Hook that provides typography styles, font families, and text utilities
-  // This gives us access to predefined text styles and satoshi font family
+  // This gives us access to predefined text styles and Inter font family
   const typography = useTypography();
   
   // SAFE AREA INSETS - Get safe area insets for proper positioning
@@ -243,28 +245,27 @@ export default function TodayScreen() {
   // TASK INTERACTION HANDLERS - Functions that handle user interactions with tasks
   // These functions demonstrate the flow: User interaction → Redux action → State update → UI re-render
   
-  // handle task press - opens task screen in edit mode
-  // for recurring occurrences, pass occurrenceDate so save can offer "this instance" vs "all"
-  const handleTaskPress = (task: Task) => {
+  const handleTaskPress = useCallback((task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
     router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
-  };
+  }, [router]);
   
-  // handle task completion toggle
-  // for recurring occurrences (id format: baseId__dateStr), update metadata.recurrence_completions instead of isCompleted
-  const handleTaskComplete = (task: Task) => {
+  // handle task completion - stable ref (dispatch only) so TaskCard/React.memo can skip re-renders
+  // uses store.getState() for recurring logic instead of tasks in deps
+  const handleTaskComplete = useCallback((task: Task, targetCompleted?: boolean) => {
+    const isCompleted = targetCompleted ?? !task.isCompleted;
     if (isExpandedRecurrenceId(task.id)) {
-      // recurring occurrence: add/remove date from recurrence_completions on the base task
       const baseId = getBaseTaskId(task.id);
       const occurrenceDate = getOccurrenceDateFromId(task.id);
       if (!occurrenceDate) return;
-      const baseTask = tasks.find((t) => t.id === baseId);
+      const tasksFromStore = store.getState().tasks.tasks;
+      const baseTask = tasksFromStore.find((t) => t.id === baseId);
       if (!baseTask) return;
       const completions = baseTask.metadata?.recurrence_completions ?? [];
-      const newCompletions = task.isCompleted
-        ? completions.filter((d) => d !== occurrenceDate)
-        : [...completions, occurrenceDate];
+      const newCompletions = isCompleted
+        ? [...completions, occurrenceDate]
+        : completions.filter((d) => d !== occurrenceDate);
       dispatch(updateTask({
         id: baseId,
         updates: {
@@ -273,40 +274,41 @@ export default function TodayScreen() {
         },
       }));
     } else {
-      // one-off task: toggle isCompleted as usual
       dispatch(updateTask({
         id: task.id,
-        updates: { id: task.id, isCompleted: !task.isCompleted },
+        updates: { id: task.id, isCompleted },
       }));
     }
-  };
+  }, [dispatch]);
   
-  // handle task edit - opens task screen in edit mode (same as task press)
-  const handleTaskEdit = (task: Task) => {
+  const handleTaskEdit = useCallback((task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
     router.push({ pathname: '/task/[taskId]', params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) } });
-  };
-  
-  // handle task delete (for future confirmation modal)
-  const handleTaskDelete = (task: Task) => {
+  }, [router]);
+
+  const handleTaskDelete = useCallback((task: Task) => {
     const taskId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     dispatch(deleteTask(taskId));
-  };
+  }, [dispatch]);
 
 
   // SWIPE GESTURE HANDLERS - Functions that handle swipe gestures on task cards
   // these demonstrate how to use the new swipe functionality in TaskCard
   
-  // handle swipe left gesture - completes task directly (no confirmation)
-  const handleTaskSwipeLeft = (task: Task) => {
-    console.log('Swiped left on task to complete:', task.title);
-    // complete the task directly without confirmation
+  const handleTaskSwipeLeft = useCallback((task: Task) => {
     handleTaskComplete(task);
-  };
-  
-  // handle swipe right gesture - shows confirmation dialog before deleting task
-  const handleTaskSwipeRight = (task: Task) => {
+  }, [handleTaskComplete]);
+
+  const handleListScroll = useCallback((event: { nativeEvent: { contentOffset: { y: number } } }) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    scrollY.value = offsetY;
+    if ((global as any).trackScrollToTodayLayout) {
+      (global as any).trackScrollToTodayLayout(offsetY);
+    }
+  }, [scrollY]);
+
+  const handleTaskSwipeRight = useCallback((task: Task) => {
     console.log('Swiped right on task:', task.title);
     
     // show confirmation dialog before deleting task
@@ -328,14 +330,15 @@ export default function TodayScreen() {
           },
         },
       ],
-      { cancelable: true } // allow dismissing dialog by tapping outside
+      { cancelable: true }
     );
-  };
+  }, [handleTaskDelete]);
 
-  // clear overdue reschedule callback when screen gains focus (e.g. user backed out without selecting)
+  // clear overdue reschedule callback when screen gains focus; flush pending checkbox syncs when leaving (tab switch)
   useFocusEffect(
     React.useCallback(() => {
       clearOverdueReschedule();
+      return () => flushAllPendingCheckboxSyncs();
     }, [clearOverdueReschedule]),
   );
 
@@ -435,6 +438,7 @@ export default function TodayScreen() {
       <ListCard
         key="today-screen-listcard"
         tasks={todaysTasks}
+        hideCompletedTasks={true}
         onTaskPress={handleTaskPress}
         onTaskComplete={handleTaskComplete}
         onTaskEdit={handleTaskEdit}
@@ -463,17 +467,11 @@ export default function TodayScreen() {
         bigTodayHeader={true} // show big "Today" title at top of list
         onRefresh={handleRefresh}
         refreshing={isLoading}
-        onScroll={(event) => {
-          const offsetY = event.nativeEvent.contentOffset.y;
-          scrollY.value = offsetY;
-          if ((global as any).trackScrollToTodayLayout) {
-            (global as any).trackScrollToTodayLayout(offsetY);
-          }
-        }}
+        onScroll={handleListScroll}
         scrollEventThrottle={16}
         scrollYSharedValue={scrollY}
-        paddingTop={48}
-        paddingHorizontal={24} // remove horizontal padding for full-width cards
+        paddingTop={64}
+        paddingHorizontal={Paddings.screen}
         scrollPastTopInset={true} // let content scroll up into status bar area without cutoff
       />
       </ScreenContainer>
@@ -496,13 +494,7 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
-  // title header styling (used by task detail modal)
-  titleHeader: {
-    ...typography.getTextStyle('heading-2'),
-    color: themeColors.text.primary(),
-    fontWeight: '600',
-  },
-
+  // --- LAYOUT STYLES ---
   // top section anchor - fixed blur + gradient at top, list content scrolls under it
   topSectionAnchor: {
     position: 'absolute',
@@ -513,17 +505,6 @@ const createStyles = (
     overflow: 'hidden',
   },
 
-  // row container for mini header + context button, vertically centered between insets.top and insets.top + 48
-  topSectionRow: {
-    position: 'absolute',
-    top: insets.top,
-    left: 0,
-    right: 0,
-    height: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
   // mini Today header in top section - h and v centered in full width, fades in on scroll
   miniTodayHeader: {
     position: 'absolute',
@@ -534,107 +515,87 @@ const createStyles = (
     alignItems: 'center',
     justifyContent: 'center',
   },
-  miniTodayHeaderText: {
-    ...typography.getTextStyle('heading-3'),
-    fontWeight: '600',
-  },
   // context menu button on right side - matches task screen ActionContextMenu (transparent bg, liquid glass)
   topSectionContextButton: {
     marginLeft: 'auto',
     backgroundColor: 'transparent',
   },
 
-  // loading text styling for initial load state
-  // using typography system for consistent text styling
-  loadingText: {
-    // use the body-large text style from typography system (14px, regular, satoshi font)
-    ...typography.getTextStyle('body-large'),
-    // add top margin for spacing
-    marginTop: 20,
-    // center the text
-    textAlign: 'center',
-    // use theme-aware tertiary text color from color system
-    color: themeColors.text.tertiary(),
-  },
-  
-  // error text styling with semantic error color
-  // using typography system for consistent text styling
-  errorText: {
-    // use the body-large text style from typography system (14px, regular, satoshi font)
-    ...typography.getTextStyle('body-large'),
-    // use semantic error color from color palette
-    color: semanticColors.error(),
-    // center the text
-    textAlign: 'center',
-    // add margins for spacing
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  
-  // hint text styling for helpful user instructions
-  // using typography system for consistent text styling
-  hint: {
-    // use the body-large text style from typography system (14px, regular, satoshi font)
-    ...typography.getTextStyle('body-large'),
-    // add top margin for spacing
-    marginTop: 8,
-    // center the text
-    textAlign: 'center',
-    // use theme-aware tertiary text color from color system
-    color: themeColors.text.tertiary(),
-  },
-  
-  // empty state text styling when no tasks exist
-  // using typography system for consistent text styling
-  emptyText: {
-    // use the heading-3 text style from typography system (18px, bold, satoshi font)
-    ...typography.getTextStyle('heading-3'),
-    // center the text
-    textAlign: 'center',
-    // add extra top margin for visual separation
-    marginTop: 40,
-    // add bottom margin for spacing
-    marginBottom: 8,
-    // use theme-aware primary text color from color system
-    color: themeColors.text.primary(),
-  },
-  
   // TASK DETAIL MODAL STYLES
+  taskDetailSection: {
+    marginBottom: 20,
+  },
+
+  // --- PADDING STYLES ---
+  topSectionRow: {
+    position: 'absolute',
+    top: insets.top,
+    left: 0,
+    right: 0,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Paddings.screen,
+  },
   taskDetailContent: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: Paddings.touchTarget,
   },
-  
+
+  // --- TYPOGRAPHY STYLES ---
+  titleHeader: {
+    ...typography.getTextStyle('heading-2'),
+    color: themeColors.text.primary(),
+  },
+  miniTodayHeaderText: {
+    ...typography.getTextStyle('heading-3'),
+  },
+  loadingText: {
+    ...typography.getTextStyle('body-large'),
+    marginTop: 20,
+    textAlign: 'center',
+    color: themeColors.text.tertiary(),
+  },
+  errorText: {
+    ...typography.getTextStyle('body-large'),
+    color: semanticColors.error(),
+    textAlign: 'center',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  hint: {
+    ...typography.getTextStyle('body-large'),
+    marginTop: 8,
+    textAlign: 'center',
+    color: themeColors.text.tertiary(),
+  },
+  emptyText: {
+    ...typography.getTextStyle('heading-3'),
+    textAlign: 'center',
+    marginTop: 40,
+    marginBottom: 8,
+    color: themeColors.text.primary(),
+  },
   taskDetailTitle: {
     ...typography.getTextStyle('heading-2'),
     color: themeColors.text.primary(),
     marginBottom: 24,
     textAlign: 'center',
   },
-  
-  taskDetailSection: {
-    marginBottom: 20,
-  },
-  
   taskDetailSectionTitle: {
     ...typography.getTextStyle('body-large'),
     color: themeColors.text.secondary(),
-    fontWeight: '600',
     marginBottom: 8,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
-  
   taskDetailValue: {
     ...typography.getTextStyle('body-large'),
     color: themeColors.text.primary(),
     lineHeight: 20,
   },
-  
   taskDetailDescription: {
     ...typography.getTextStyle('body-large'),
     color: themeColors.text.primary(),
     lineHeight: 22,
   },
-  
 });

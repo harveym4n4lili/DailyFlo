@@ -13,6 +13,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 interface TaskIndicatorsProps {
   // routine type - determines if repeating indicator is shown
@@ -93,7 +94,7 @@ const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>
 ) => StyleSheet.create({
-  // bottom indicators container - positioned absolutely at bottom right
+  // --- LAYOUT STYLES ---
   container: {
     position: 'absolute',
     bottom: 14, // same padding as card
@@ -103,28 +104,24 @@ const createStyles = (
     gap: 8, // spacing between indicators
   },
 
-  // individual indicator styling
-  indicator: {
-    flexDirection: 'row', // horizontal layout for icon and text
-    alignItems: 'center',
-    backgroundColor: 'transparent', // transparent background for all indicators
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-
   // indicator icon styling
   indicatorIcon: {
     marginRight: 4,
   },
 
-  // indicator text styling
+  // --- PADDING STYLES ---
+  indicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    paddingHorizontal: Paddings.indicatorHorizontal,
+    paddingVertical: Paddings.indicatorVertical,
+  },
+
+  // --- TYPOGRAPHY STYLES ---
   indicatorText: {
-    // use the body-medium text style from typography system (12px, regular, satoshi font)
-    // match metadataValue styling exactly: same typography, font weight, and size
     ...typography.getTextStyle('body-medium'),
-    // use tertiary text color for bottom right tags (Inbox, Weekly, etc.) - matches icon color
     color: themeColors.text.tertiary(),
-    fontWeight: '900', // match metadataValue font weight
   },
 });
 

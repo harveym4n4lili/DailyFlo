@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { useUI } from '@/store/hooks';
 import { SocialAuthActions } from '@/components/features/authentication/sections/SocialAuthActions';
 
@@ -376,7 +377,7 @@ export function OnboardingActions() {
           <View style={styles.actions}>
             {/* Get Started Button */}
             <TouchableOpacity
-              style={styles.primaryButton}
+              style={[styles.primaryButton, styles.primaryButtonPadding]}
               onPress={handleGetStarted}
               activeOpacity={0.8}
               disabled={isButtonPressed}
@@ -393,7 +394,7 @@ export function OnboardingActions() {
               }}
             >
               <TouchableOpacity
-                style={styles.secondaryLink}
+                style={[styles.secondaryLink, styles.secondaryLinkPadding]}
                 onPress={handleSignIn}
                 activeOpacity={0.7}
               >
@@ -410,7 +411,7 @@ export function OnboardingActions() {
           <View style={styles.actions}>
             {/* Allow Button */}
             <TouchableOpacity
-              style={styles.primaryButton}
+              style={[styles.primaryButton, styles.primaryButtonPadding]}
               onPress={handleAllow}
               activeOpacity={0.8}
               disabled={permissionRequested}
@@ -429,7 +430,7 @@ export function OnboardingActions() {
               }}
             >
               <TouchableOpacity
-                style={styles.secondaryLink}
+                style={[styles.secondaryLink, styles.secondaryLinkPadding]}
                 onPress={handleSkip}
                 activeOpacity={0.7}
               >
@@ -462,7 +463,7 @@ export function OnboardingActions() {
               }}
             >
               <TouchableOpacity
-                style={styles.secondaryLink}
+                style={[styles.secondaryLink, styles.secondaryLinkPadding]}
                 onPress={handleOpenEmailAuth}
                 activeOpacity={0.7}
                 disabled={!!socialAuthInProgress}
@@ -480,7 +481,7 @@ export function OnboardingActions() {
           <View style={styles.actions}>
             {/* Create Task Button */}
             <TouchableOpacity
-              style={styles.primaryButton}
+              style={[styles.primaryButton, styles.primaryButtonPadding]}
               onPress={handleCreateTask}
               activeOpacity={0.8}
               disabled={isButtonPressed}
@@ -502,6 +503,7 @@ export function OnboardingActions() {
     <Animated.View
       style={[
         styles.container,
+        styles.containerPadding,
         {
           transform: [{ translateY: containerTranslateY }],
         },
@@ -517,40 +519,26 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) => StyleSheet.create({
+  // --- LAYOUT STYLES ---
   container: {
-    // absolute positioning at the bottom to stay fixed while screens slide
     position: 'absolute',
-    bottom: 0, // start from bottom edge
+    bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 24, // horizontal padding
-    paddingTop: 24, // top padding for spacing
-    paddingBottom: insets.bottom, // safe area bottom padding plus extra spacing
-    backgroundColor: themeColors.background.elevated(), // elevated background for depth
-    zIndex: 10, // ensure it's above other content
+    backgroundColor: themeColors.background.elevated(),
+    zIndex: 10,
   },
   actions: {
     gap: 16, // spacing between primary button and secondary link
   },
   primaryButton: {
-    // use interactive primary color for button background
     backgroundColor: themeColors.interactive.primary(),
-    borderRadius: 28, // rounded rectangular button
-    paddingVertical: 16, // vertical padding for button height
-    paddingHorizontal: 32, // horizontal padding
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 58, // minimum touch target size for accessibility
-  },
-  primaryButtonText: {
-    // use getThemeColor to access text.inverse for contrasting text on button
-    color: themeColors.interactive.quaternary(),
-    // use typography system for fontFamily and fontWeight
-    ...typography.getTextStyle('button-primary'),
- 
+    minHeight: 58,
   },
   secondaryLink: {
-    paddingVertical: 12, // padding for touch target
     alignItems: 'center',
   },
   secondaryLinkSpacer: {
@@ -558,15 +546,32 @@ const createStyles = (
     // matches secondaryLink paddingVertical (12 * 2 = 24px total height)
     height: 24,
   },
-  secondaryLinkText: {
-    color: themeColors.text.secondary(), // text color using theme color hook
-    textAlign: 'center',
-    // use typography system for fontFamily and fontWeight
-    ...typography.getTextStyle('body-large'),
-    
-  },
   secondaryLinkHighlight: {
-    fontWeight: '800', // make highlighted part slightly bolder
-    color: themeColors.text.primary(), // text color using theme color hook
+    color: themeColors.text.primary(),
+  },
+
+  // --- PADDING STYLES ---
+  containerPadding: {
+    paddingHorizontal: Paddings.screen,
+    paddingTop: Paddings.screen,
+    paddingBottom: insets.bottom,
+  },
+  primaryButtonPadding: {
+    paddingVertical: Paddings.buttonVertical,
+    paddingHorizontal: Paddings.buttonHorizontal,
+  },
+  secondaryLinkPadding: {
+    paddingVertical: Paddings.listItemVertical,
+  },
+
+  // --- TYPOGRAPHY STYLES ---
+  primaryButtonText: {
+    ...typography.getTextStyle('button-primary'),
+    color: themeColors.interactive.quaternary(),
+  },
+  secondaryLinkText: {
+    ...typography.getTextStyle('body-large'),
+    color: themeColors.text.secondary(),
+    textAlign: 'center',
   },
 });

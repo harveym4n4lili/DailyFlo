@@ -12,6 +12,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 interface TimeLabelProps {
   // time string in HH:MM format
@@ -26,6 +27,8 @@ interface TimeLabelProps {
   isDragLabel?: boolean;
   // height for containerized labels (spans task card height)
   height?: number;
+  // optional opacity (e.g. hide static labels briefly after day change without changing layout)
+  opacity?: number;
 }
 
 /**
@@ -33,7 +36,7 @@ interface TimeLabelProps {
  * 
  * Renders a time label at the specified position on the timeline.
  */
-export default function TimeLabel({ time, position, animatedPosition, isEndTime = false, isDragLabel = false, height }: TimeLabelProps) {
+export default function TimeLabel({ time, position, animatedPosition, isEndTime = false, isDragLabel = false, height, opacity }: TimeLabelProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
 
@@ -71,15 +74,16 @@ export default function TimeLabel({ time, position, animatedPosition, isEndTime 
   // use static position if no animation, otherwise use animated style
   const containerStyle = animatedPosition
     ? (height 
-        ? [styles.container, styles.containerized, animatedStyle, { height }]
+        ? [styles.container, styles.containerized, animatedStyle, { height }, opacity !== undefined && { opacity }]
         : isEndTime
-        ? [styles.container, styles.endTimeContainer, animatedStyle]
-        : [styles.container, styles.topAlignedContainer, animatedStyle])
+        ? [styles.container, styles.endTimeContainer, animatedStyle, opacity !== undefined && { opacity }]
+        : [styles.container, styles.topAlignedContainer, animatedStyle, opacity !== undefined && { opacity }])
     : (height 
-        ? [styles.container, styles.containerized, { top: position + verticalOffset, height }]
+        ? [styles.container, styles.containerized, { top: position + verticalOffset, height }, opacity !== undefined && { opacity }]
         : isEndTime
-        ? [styles.container, styles.endTimeContainer, { top: position + verticalOffset }]
-        : [styles.container, styles.topAlignedContainer, { top: position }]);
+        ? [styles.container, styles.endTimeContainer, { top: position + verticalOffset }, opacity !== undefined && { opacity }]
+        : [styles.container, styles.topAlignedContainer, { top: position }, opacity !== undefined && { opacity }]);
+  const containerStyleFiltered = Array.isArray(containerStyle) ? containerStyle.filter(Boolean) : containerStyle;
 
   const textStyle = [
     styles.timeText,
@@ -91,7 +95,7 @@ export default function TimeLabel({ time, position, animatedPosition, isEndTime 
   const ContainerComponent = animatedPosition ? Animated.View : View;
 
   return (
-    <ContainerComponent style={containerStyle}>
+    <ContainerComponent style={containerStyleFiltered}>
       <Text style={textStyle}>
         {formattedTime}
       </Text>
@@ -109,54 +113,48 @@ const createStyles = (
     position: 'absolute',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    paddingRight: 4,
+    paddingRight: Paddings.timeLabelRight,
   },
 
   // top-aligned container - positions label at top edge of card
   topAlignedContainer: {
     alignItems: 'flex-end',
     justifyContent: 'flex-start', // align text to top
-    paddingRight: 4,
+    paddingRight: Paddings.timeLabelRight,
   },
 
   // containerized label that spans task card height
   containerized: {
     justifyContent: 'center',
-    paddingRight: 4,
+    paddingRight: Paddings.timeLabelRight,
   },
 
   // end time container - aligns bottom edge of label with bottom edge of task card
   // position is the bottom edge of the card, container aligns text to its bottom
-  // use fixed height matching text lineHeight and justifyContent: 'flex-end'
+  // use fixed height matching body-small lineHeight (14) and justifyContent: 'flex-end'
   endTimeContainer: {
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
-    paddingRight: 4,
-    height: 12, // match lineHeight of end time text for precise alignment
+    paddingRight: Paddings.timeLabelRight,
+    height: 14,
   },
 
-  // time text styling - more compact
+  // time text styling - uses body-small from typography system
   timeText: {
-    // use smaller font size for compact display
-    fontSize: 11,
+    ...typography.getTextStyle('body-small'),
     color: themeColors.text.tertiary(),
-    fontWeight: '600',
-    lineHeight: 14,
   },
 
-  // end time text styling (lighter/smaller for end times)
+  // end time text styling (lighter for end times)
   endTimeText: {
-    fontSize: 9,
+    ...typography.getTextStyle('body-small'),
     opacity: 0.7,
-    lineHeight: 12,
   },
 
   // drag time text styling (highlighted during drag)
   dragTimeText: {
+    ...typography.getTextStyle('body-small'),
     color: themeColors.interactive.primary(),
-    fontWeight: '700',
-    fontSize: 11,
-    lineHeight: 14,
   },
 });
 

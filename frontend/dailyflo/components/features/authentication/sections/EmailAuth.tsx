@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { useUI } from '@/store/hooks';
 
 /**
@@ -235,8 +236,8 @@ const createStyles = (
     // matches button styling: no borders, same border radius, same vertical padding
     backgroundColor: themeColors.background.elevated(),
     borderRadius: 28, // matches button border radius for consistent design
-    paddingVertical: 16, // matches primary button vertical padding for consistency
-    paddingHorizontal: 24, // horizontal padding for comfortable text spacing
+    paddingVertical: Paddings.buttonVertical,
+    paddingHorizontal: Paddings.screen,
     // use typography system for fontFamily and fontSize
     ...typography.getTextStyle('body-large'),
     color: themeColors.text.primary(),

@@ -50,6 +50,7 @@ import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 // import types for this component
 import type { DropdownListProps, DropdownListItem, DropdownListAnchorPosition } from './DropdownList.types';
@@ -240,6 +241,7 @@ const createStyles = (
   insets: { top: number; bottom: number; left: number; right: number }
 ) =>
   StyleSheet.create({
+    // --- LAYOUT STYLES ---
     // dropdown list container styling
     // this is the rounded box that contains all menu items
     listContainer: {
@@ -258,24 +260,23 @@ const createStyles = (
       elevation: 5,
     },
 
-    // individual menu item styling
-    // each item is a horizontal row with optional icon and label
-    menuItem: {
-      flexDirection: 'row', // horizontal layout for icon and label
-      alignItems: 'center', // center align vertically
-      paddingHorizontal: 16, // horizontal padding inside each item
-      paddingVertical: 12, // vertical padding inside each item
-    },
-
-    // menu item text styling - body-large (16px, regular, satoshi)
-    menuItemText: {
-      ...typography.getTextStyle('body-large'),
-    },
-
     // menu item icon styling
     // icon appears on the left side of each menu item
     menuItemIcon: {
-      marginRight: 8, // space between icon and label
+      marginRight: 8,
+    },
+
+    // --- PADDING STYLES ---
+    menuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: Paddings.listItemHorizontal,
+      paddingVertical: Paddings.listItemVertical,
+    },
+
+    // --- TYPOGRAPHY STYLES ---
+    menuItemText: {
+      ...typography.getTextStyle('context-menu'),
     },
   });
 

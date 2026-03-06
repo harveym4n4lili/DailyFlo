@@ -26,6 +26,7 @@
 import React from 'react';
 import { View, ViewStyle } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { Paddings } from '@/constants/Paddings';
 import { GroupedListItemWrapper } from './GroupedListItemWrapper';
 import type { GroupedListProps } from './GroupedList.types';
 
@@ -39,8 +40,8 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   backgroundColor,
   borderWidth,
   borderColor,
-  contentPaddingHorizontal = 20,
-  contentPaddingVertical = 14,
+  contentPaddingHorizontal = Paddings.groupedListContentHorizontal,
+  contentPaddingVertical = Paddings.groupedListContentVertical,
   contentMinHeight = 44,
   listStyle = 'roundedStyle',
   minimalStyle = false,
@@ -48,6 +49,7 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   itemWrapperPaddingVertical,
   separatorConsiderIconColumn = false,
   iconColumnWidth = 32,
+  separatorVariant = 'dashed',
 }) => {
   // get theme-aware colors for default separator color
   const themeColors = useThemeColors();
@@ -64,9 +66,9 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   let finalSeparatorInsetLeft = fullWidthSeparators ? 0 : separatorInsetLeft;
   const finalSeparatorInsetRight = fullWidthSeparators ? 0 : separatorInsetRight;
   
-  // if separator should consider icon column, override left inset with icon column width
+  // if separator should consider icon column, align with main label (content padding + icon + gap)
   if (separatorConsiderIconColumn && !fullWidthSeparators) {
-    finalSeparatorInsetLeft = iconColumnWidth;
+    finalSeparatorInsetLeft = finalContentPaddingHorizontal + iconColumnWidth;
   }
 
   // use provided separator color or default to theme border color
@@ -123,6 +125,7 @@ export const GroupedList: React.FC<GroupedListProps> = ({
             separatorColor={finalSeparatorColor}
             separatorInsetLeft={finalSeparatorInsetLeft}
             separatorInsetRight={finalSeparatorInsetRight}
+            separatorVariant={separatorVariant}
             backgroundColor={finalBackgroundColor}
             borderWidth={borderWidth}
             borderColor={borderColor}

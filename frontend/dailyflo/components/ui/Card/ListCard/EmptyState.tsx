@@ -11,6 +11,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 
 interface EmptyStateProps {
   // message to display
@@ -42,24 +43,21 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>
 ) =>
   StyleSheet.create({
-    // empty state container
+    // --- PADDING STYLES ---
     container: {
-      flex: 1, // take up available space
-      justifyContent: 'center', // center vertically
-      alignItems: 'center', // center horizontally
-      paddingHorizontal: 32, // horizontal padding
-      paddingVertical: 64, // vertical padding
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: Paddings.contentHorizontal,
+      paddingVertical: Paddings.contentVertical,
     },
 
-    // empty message text styling
-    // using typography system for consistent text styling
+    // --- TYPOGRAPHY STYLES ---
     message: {
-      // use the heading-3 text style from typography system (18px, bold, satoshi font)
       ...typography.getTextStyle('heading-3'),
-      // use theme-aware secondary text color from color system
       color: themeColors.text.secondary(),
-      textAlign: 'center', // center the text
-      lineHeight: 24, // better readability
+      textAlign: 'center',
+      lineHeight: 24,
     },
   });
 

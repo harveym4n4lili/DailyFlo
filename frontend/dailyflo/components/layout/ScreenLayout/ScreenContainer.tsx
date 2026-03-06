@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // import theme colors for consistent styling
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { Paddings } from '@/constants/Paddings';
 
 /**
  * Props for the ScreenContainer component
@@ -184,8 +185,8 @@ const styles = StyleSheet.create({
 
   // heading section - wraps optional heading content at top
   headingSection: {
-    paddingTop: 24,
-    paddingBottom: 8,
+    paddingTop: Paddings.screen,
+    paddingBottom: Paddings.touchTarget,
   },
 
   // main content area (children) when heading is present

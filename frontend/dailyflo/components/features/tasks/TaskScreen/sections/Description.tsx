@@ -12,15 +12,16 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 
 import { CustomTextInput } from '@/components/ui/textinput';
-import { ParagraphIcon } from '@/components/ui/icon';
+import { ParagraphIcon, SFSymbolIcon } from '@/components/ui/icon';
 import { CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS } from '@/components/ui/button/TaskButton';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { Paddings } from '@/constants/Paddings';
 import type { TaskColor } from '@/types';
 
-// constants for icon + content layout
-const ICON_SIZE = CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS.ICON_SIZE;
+// constants for icon + content layout - SF Symbol size 20
+const ICON_SIZE = 20;
 const ICON_CONTAINER_HEIGHT = 22;
-const ICON_TOP_OFFSET = 0;
+const ICON_TOP_OFFSET = -2;
 const ICON_CONTENT_GAP = 8;
 
 export interface DescriptionProps {
@@ -48,11 +49,13 @@ export const Description: React.FC<DescriptionProps> = ({
     onDescriptionChange?.(text);
   };
 
-  // icon component for description
+  // icon component for description - SF Symbol on iOS, ParagraphIcon fallback on Android
   const icon = (
-    <ParagraphIcon 
-      size={ICON_SIZE} 
-      color={themeColors.text.primary()} 
+    <SFSymbolIcon
+      name="doc.text.fill"
+      size={ICON_SIZE}
+      color={themeColors.text.primary()}
+      fallback={<ParagraphIcon size={ICON_SIZE} color={themeColors.text.primary()} />}
     />
   );
 
@@ -90,9 +93,9 @@ const styles = StyleSheet.create({
     minHeight: 120,
   },
   container: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 0,
+    paddingHorizontal: Paddings.none,
+    paddingTop: Paddings.none,
+    paddingBottom: Paddings.none,
   },
   // icon + content row layout: icon on left, content on right
   iconContentRow: {
@@ -119,9 +122,9 @@ const styles = StyleSheet.create({
   },
   // override CustomTextInput's default paddingVertical (12) to remove extra top/bottom space
   descriptionInputPadding: {
-    paddingTop: 0,
-    paddingBottom: 0,
-    paddingLeft: 0,
+    paddingTop: Paddings.none,
+    paddingBottom: Paddings.none,
+    paddingLeft: Paddings.none,
   },
 });
 

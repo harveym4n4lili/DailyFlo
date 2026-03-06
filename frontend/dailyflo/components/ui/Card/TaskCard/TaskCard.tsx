@@ -16,7 +16,7 @@
  * This component demonstrates the flow from Redux store → Component → User interaction.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
@@ -25,6 +25,7 @@ import { Task } from '@/types';
 
 // import color palette system for consistent theming
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { Paddings } from '@/constants/Paddings';
 
 // import utility functions for task formatting and colors
 import { getTaskColorValue } from '@/utils/taskColors';
@@ -38,12 +39,13 @@ import TaskCardContent from './TaskCardContent';
 import TaskMetadata from './TaskMetadata';
 import TaskIndicators from './TaskIndicators';
 import TaskIcon from './TaskIcon';
+import TaskCardCheckbox from './TaskCardCheckbox';
 
-// import checkbox component
-import { Checkbox } from '@/components/ui/button';
+import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 
 // import border components
 import { DashedSeparator } from '@/components/ui/borders';
+import { taskDisplayEquals } from '@/utils/taskDisplayEquals';
 
 /**
  * Props interface for TaskCard component
@@ -57,7 +59,8 @@ export interface TaskCardProps {
 
   // callback functions for user interactions
   onPress?: (task: Task) => void; // called when user taps the card
-  onComplete?: (task: Task) => void; // called when user marks task as complete
+  onComplete?: (task: Task, targetCompleted?: boolean) => void; // targetCompleted = explicit target when provided (for debounced rapid taps)
+  onCompleteImmediate?: (task: Task, targetCompleted?: boolean) => void; // called immediately on tap (e.g. for local UI); backend sync still delayed
   onEdit?: (task: Task) => void; // called when user wants to edit task
   onDelete?: (task: Task) => void; // called when user wants to delete task
 
@@ -77,7 +80,6 @@ export interface TaskCardProps {
   separatorPaddingHorizontal?: number; // horizontal padding for separator to match list padding (default 0)
   hideBackground?: boolean; // whether to hide the card background (default false)
   removeInnerPadding?: boolean; // whether to remove horizontal padding inside the card (default false)
-  checkboxSize?: number; // size of the checkbox (default 24)
   isLastItem?: boolean; // whether this is the last item in the list (default false)
   isFirstItem?: boolean; // whether this is the first item in the list (default false)
 }
@@ -95,12 +97,40 @@ export interface TaskCardProps {
  * - TaskCardContent: Displays icon and title
  * - TaskMetadata: Displays date/time/duration
  * - TaskIndicators: Displays routine type and list/inbox status
- * - Checkbox: Displays completion checkbox on the left
+ * - Checkbox: Displays completion status checkbox on the left
  */
-export default function TaskCard({
+function taskCardPropsAreEqual(prev: TaskCardProps, next: TaskCardProps) {
+  // compare task by value - when task 1's backend completes, task 2 gets new ref but same content; skip re-render
+  if (!taskDisplayEquals(prev.task, next.task)) return false;
+  return (
+    prev.onPress === next.onPress &&
+    prev.onComplete === next.onComplete &&
+    prev.onCompleteImmediate === next.onCompleteImmediate &&
+    prev.onEdit === next.onEdit &&
+    prev.onDelete === next.onDelete &&
+    prev.onSwipeLeft === next.onSwipeLeft &&
+    prev.onSwipeRight === next.onSwipeRight &&
+    prev.showCategory === next.showCategory &&
+    prev.compact === next.compact &&
+    prev.showIcon === next.showIcon &&
+    prev.showIndicators === next.showIndicators &&
+    prev.showMetadata === next.showMetadata &&
+    prev.metadataVariant === next.metadataVariant &&
+    prev.cardSpacing === next.cardSpacing &&
+    prev.showDashedSeparator === next.showDashedSeparator &&
+    prev.separatorPaddingHorizontal === next.separatorPaddingHorizontal &&
+    prev.hideBackground === next.hideBackground &&
+    prev.removeInnerPadding === next.removeInnerPadding &&
+    prev.isLastItem === next.isLastItem &&
+    prev.isFirstItem === next.isFirstItem
+  );
+}
+
+const TaskCard = React.memo(function TaskCard({
   task,
   onPress,
   onComplete,
+  onCompleteImmediate,
   onEdit,
   onDelete,
   onSwipeLeft,
@@ -116,7 +146,6 @@ export default function TaskCard({
   separatorPaddingHorizontal = 0,
   hideBackground = false,
   removeInnerPadding = false,
-  checkboxSize = 16,
   isLastItem = false,
   isFirstItem = false,
 }: TaskCardProps) {
@@ -129,8 +158,13 @@ export default function TaskCard({
   // create dynamic styles using the color palette system
   const styles = useMemo(() => createStyles(themeColors, cardSpacing), [themeColors, cardSpacing]);
 
-  // get translateX animation value from SwipeableCard context to animate border radius
   const translateX = useSwipeAnimation();
+
+  // displayCompleted from TaskCardCheckbox for card styling (optimistic ui)
+  const [displayCompleted, setDisplayCompleted] = useState(task.isCompleted);
+  useEffect(() => {
+    setDisplayCompleted(task.isCompleted);
+  }, [task.id]);
 
   // configure swipe actions for SwipeableCard
   // left swipe (negative translation) = complete action (green)
@@ -167,7 +201,6 @@ export default function TaskCard({
     }
   };
 
-  // handle card press - same haptic as TimelineItem for consistent feel
   const handlePress = () => {
     if (onPress) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
@@ -186,53 +219,50 @@ export default function TaskCard({
         rightAction={rightSwipeAction}
         borderRadius={0}
       >
-        {/* main card touchable area - applies conditional styles based on compact and completion state */}
-        <TouchableOpacity
+        {/* card: row with checkbox (separate touch) + touchable content (opens task) */}
+        <View
           style={[
             styles.card,
-            compact && styles.compactCard, // conditionally applies compact padding when compact prop is true
-            task.isCompleted && styles.completedCard, // conditionally applies transparent background when task is completed
-            hideBackground && styles.transparentBackground, // conditionally applies transparent background when hideBackground is true
-            removeInnerPadding && styles.noInnerPadding, // conditionally removes horizontal padding when removeInnerPadding is true
-            // animate border radius based on swipe distance - increases as card is swiped
+            compact && styles.compactCard,
+            displayCompleted && styles.completedCard,
+            hideBackground && styles.transparentBackground,
+            removeInnerPadding && styles.noInnerPadding,
             translateX && {
               borderRadius: translateX.interpolate({
-                inputRange: [-200, 0, 200], // swipe range from -200px to +200px
-                outputRange: [28, 12, 28], // border radius animates from 12px (initial) to 28px when swiped
-                extrapolate: 'clamp', // clamp values outside the range
+                inputRange: [-200, 0, 200],
+                outputRange: [28, 12, 28],
+                extrapolate: 'clamp',
               }),
             },
           ]}
-          onPress={handlePress}
-          activeOpacity={0.7}
         >
-          {/* row container for checkbox, icon and content - ensures proper alignment */}
           <View style={styles.contentRow}>
-            {/* checkbox on the left - for task completion */}
-            <View style={styles.checkboxWrapper}>
-              <Checkbox
-                checked={task.isCompleted}
-                onPress={() => onComplete?.(task)}
-                size={checkboxSize}
-                borderRadius={6}
-              />
-            </View>
+            <TaskCardCheckbox
+              task={task}
+              onComplete={onComplete}
+              onCompleteImmediate={onCompleteImmediate}
+              onDisplayChange={setDisplayCompleted}
+            />
 
-            {/* task icon on the left - conditionally rendered when showIcon prop is true */}
-            {showIcon && task.icon && (
-              <View style={styles.iconWrapper}>
-                <TaskIcon icon={task.icon} color={taskColor} />
-              </View>
-            )}
+            {/* rest of card - touchable, opens task */}
+            <TouchableOpacity
+              style={styles.cardContentTouchable}
+              onPress={handlePress}
+              activeOpacity={0.7}
+            >
+              {showIcon && task.icon && (
+                <View style={styles.iconWrapper}>
+                  <TaskIcon icon={task.icon} color={taskColor} />
+                </View>
+              )}
 
-            {/* content column - title and metadata */}
-            <View style={styles.contentColumn}>
-              {/* main content area - title */}
-              <TaskCardContent
-                task={task}
-                taskColor={taskColor}
-                compact={compact}
-              />
+              <View style={styles.contentColumn}>
+                {/* main content area - title */}
+                <TaskCardContent
+                  task={{ ...task, isCompleted: displayCompleted }}
+                  taskColor={taskColor}
+                  compact={compact}
+                />
 
               {/* task metadata - date, time, duration (hidden when showMetadata is false) */}
               {showMetadata && (
@@ -240,31 +270,35 @@ export default function TaskCard({
                   dueDate={task.dueDate}
                   time={task.time}
                   duration={task.duration}
-                  isCompleted={task.isCompleted}
+                  isCompleted={displayCompleted}
                   showCategory={showCategory}
                   listId={task.listId}
                   metadataVariant={metadataVariant}
                 />
               )}
-            </View>
+              </View>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
+
+        {/* dashed separator below card - starts where task title starts (checkbox + gap + optional icon) */}
+        {showDashedSeparator && !isLastItem && (
+          <DashedSeparator
+            paddingLeft={
+              CHECKBOX_SIZE_DEFAULT + 12 + (showIcon && task.icon ? 24 + 16 : 0)
+            }
+            paddingRight={separatorPaddingHorizontal}
+          />
+        )}
 
         {/* bottom indicators - routine type and list/inbox status (hidden when showIndicators is false) */}
         {showIndicators && (
           <TaskIndicators routineType={task.routineType} listId={task.listId} />
         )}
       </SwipeableCard>
-      
-      {/* dashed separator below card - shown when showDashedSeparator is true and not the last item */}
-      {showDashedSeparator && !isLastItem && (
-        <DashedSeparator 
-          paddingHorizontal={separatorPaddingHorizontal} // separator padding matches list padding
-        />
-      )}
     </View>
   );
-}
+}, taskCardPropsAreEqual);
 
 // create dynamic styles using the color palette system
 const createStyles = (
@@ -285,8 +319,8 @@ const createStyles = (
       width: '100%', // ensure full width
       backgroundColor: themeColors.background.elevated(), // use theme-aware elevated background
       borderRadius: 0, // no border radius for flat card appearance
-      padding: 16,
-      paddingRight: 56, // add right padding to avoid overlap with completion indicator (24px indicator + 16px margin + 16px spacing)
+      padding: Paddings.card,
+      paddingRight: Paddings.taskCardRightPadding,
       position: 'relative', // needed for absolute positioning of completion indicator and bottom indicators
       overflow: 'visible', // ensure content is visible
     },
@@ -297,13 +331,13 @@ const createStyles = (
       alignItems: 'center', // vertically center all items (checkbox, icon, content)
     },
 
-    // checkbox wrapper - provides spacing for checkbox and ensures vertical centering
-    checkboxWrapper: {
-      marginRight: 12, // spacing between checkbox and icon/content
-      justifyContent: 'center', // vertically center checkbox within wrapper
-      alignItems: 'center', // horizontally center checkbox within wrapper
-      alignSelf: 'center', // ensure wrapper itself is centered vertically in the row
+    // touchable area for icon + content - opens task (checkbox has separate touch)
+    cardContentTouchable: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
     },
+
 
     // icon wrapper - provides spacing for icon
     iconWrapper: {
@@ -319,8 +353,8 @@ const createStyles = (
 
     // compact version for smaller displays
     compactCard: {
-      padding: 12,
-      paddingRight: 52, // add right padding for compact version too (24px indicator + 16px margin + 12px spacing)
+      padding: Paddings.cardCompact,
+      paddingRight: Paddings.taskCardRightPaddingCompact,
       marginBottom: 8,
     },
 
@@ -336,14 +370,15 @@ const createStyles = (
 
     // no inner padding styling (when removeInnerPadding is true)
     noInnerPadding: {
-      paddingHorizontal: 0, // remove horizontal padding inside the card
-      paddingLeft: 0,
-      paddingRight: 0,
-      paddingTop: 16, // maintain vertical padding of 16px
-      paddingBottom: 16, // maintain vertical padding of 16px
+      paddingHorizontal: Paddings.none,
+      paddingLeft: Paddings.none,
+      paddingRight: Paddings.none,
+      paddingTop: Paddings.card,
+      paddingBottom: Paddings.card,
     },
   });
 
   return styles;
 };
 
+export default TaskCard;

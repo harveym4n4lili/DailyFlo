@@ -107,7 +107,7 @@ const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>
 ) => StyleSheet.create({
-  // metadata container
+  // --- LAYOUT STYLES ---
   metadata: {
     flexDirection: 'column', // vertical layout for category and bottom metadata
     marginTop: 4, // spacing from title (reduced for closer spacing)
@@ -119,27 +119,20 @@ const createStyles = (
     alignItems: 'center', // center align
   },
 
-  // metadata label styling
-  metadataLabel: {
-    // use the body-large text style from typography system (14px, regular, satoshi font)
-    ...typography.getTextStyle('body-large'),
-    // use theme-aware tertiary text color from color system
-    color: themeColors.text.tertiary(),
-    marginRight: 4,
-    fontWeight: '900',
-  },
-
-  // metadata value styling
-  metadataValue: {
-    // use the body-medium text style from typography system (12px, regular, satoshi font)
-    ...typography.getTextStyle('body-medium'),
-    fontWeight: '900', // bold weight for heavier tags
-  },
-
   // bottom metadata container (due date only)
   bottomMetadata: {
     flexDirection: 'row', // horizontal layout
     alignItems: 'center',
+  },
+
+  // --- TYPOGRAPHY STYLES ---
+  metadataLabel: {
+    ...typography.getTextStyle('body-large'),
+    color: themeColors.text.tertiary(),
+    marginRight: 4,
+  },
+  metadataValue: {
+    ...typography.getTextStyle('body-medium'),
   },
 });
 

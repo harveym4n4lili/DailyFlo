@@ -16,6 +16,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ViewStyle, TextStyle, Platfor
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
 // import directly from CloseButton to avoid require cycle with Button barrel
@@ -155,8 +156,8 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   titleStyle: customTitleStyle,
   containerStyle: customContainerStyle,
   backgroundColor,
-  paddingHorizontal = 16,
-  paddingVertical = 8,
+  paddingHorizontal = Paddings.card,
+  paddingVertical = Paddings.contextMenuVertical,
   showActionButtons = false,
   hasChanges = false,
   onCancel,
@@ -223,9 +224,9 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
     paddingHorizontal,
     // iOS 15+ (newer): add bottom padding to match top spacing (16px from top = 16px from bottom)
     // iOS < 15 (older): no vertical padding (title is mathematically centered)
-    paddingVertical: 0,
-    paddingBottom: isNewerIOS ? paddingHorizontal : 0, // iOS 15+: 16px bottom padding, iOS < 15: 0
-    paddingTop: 0,
+    paddingVertical: Paddings.none,
+    paddingBottom: isNewerIOS ? paddingHorizontal : Paddings.none,
+    paddingTop: Paddings.none,
     // conditionally show bottom border based on showBorder prop
     ...(showBorder && {
       borderBottomWidth: 1,
@@ -248,7 +249,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
     justifyContent: 'center',
     // iOS 15+: no top padding for proper vertical centering
     // iOS < 15: add top padding to lower the text slightly (current style)
-    paddingTop: isNewerIOS ? 16 : 4,
+    paddingTop: isNewerIOS ? Paddings.card : Paddings.touchTargetSmall,
   };
   
   // title text style
@@ -278,7 +279,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     // no background color - transparent
-    padding: 4, // add padding for better tap target
+    padding: Paddings.touchTargetSmall,
   };
 
   return (
@@ -345,7 +346,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
                     top: 0,
                     bottom: 0,
                     justifyContent: 'center',
-                    paddingVertical: 8,
+                    paddingVertical: Paddings.contextMenuVertical,
                   }),
                 }}
                 onPress={handleCancelPress}
@@ -398,7 +399,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
                     top: 0,
                     bottom: 0,
                     justifyContent: 'center',
-                    paddingVertical: 8,
+                    paddingVertical: Paddings.contextMenuVertical,
                   }),
                 }}
                 onPress={onDone}
@@ -420,7 +421,6 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
                       ...typography.getTextStyle('body-large'),
                       color: getButtonTextColor(), // task category color, or FAB icon color when white
                       fontSize: 17,
-                      fontWeight: '900', // done button is bold
                     }}
                   >
                     {doneText}

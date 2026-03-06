@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
+import { Paddings } from '@/constants/Paddings';
 import { QuickDateOptions, CalendarView } from '@/components/features/calendar/sections';
 
 export function DateSelectScreen() {
@@ -37,7 +38,7 @@ export function DateSelectScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: 16, paddingBottom: insets.bottom + 24 },
+          { paddingTop: Paddings.card, paddingBottom: insets.bottom + Paddings.modalBottomExtra },
         ]}
         showsVerticalScrollIndicator={false}
       >

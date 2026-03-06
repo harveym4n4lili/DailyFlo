@@ -1250,8 +1250,120 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - no notes
+## [28/01/2026] - [Saturday]
+### Today's Goals
+- [X] Attempted liquid glass refactor on FAB
+---
+## [29/01/2026] - [Sunday]
+### Today's Goals
+- [X] Refactored clsoe buttons and form picker buttons to liquid glass
+- [X] Implemented custom icons using SVG
+---
+## [02/02/2026] - [Monday]
+### Today's Goals
+- [X] Implemented test modals in liquid glass
+- [X] Attempted scree nstack implementation
+---
+## [04/02/2026] - [Wednesday]
+### Today's Goals
+- [X] Downgraded to expo SDK 54
+- [X] Re-implemented task full screen modal
+---
+## [05/02/2026] - [Thursday]
+### Today's Goals
+- [X] Made components for task screen
+---
+## [07/02/2026] - [Saturday]
+### Today's Goals
+- [X] Refined subtask section in task screen
+- [X] Added save button to new task modal component
+---
+## [08/02/2026] - [Sunday]
+### Today's Goals
+- [X] Brought form picker mdoals to stack screen implementation
+- [X] Overhauled task card and started today screen UI overhaul
+---
+## [09/02/2026] - [Monday]
+### Today's Goals
+- [X] Further refinement and refactor on timeline screen UI
+- [X] Fixed loading jank, swipe flash and removed subtask expansion
+---
+## [11/02/2026] - [Wednesday]
+### Today's Goals
+- [X] Further refinement and refactor on timeline screen UI
+- [X] Fixed loading jank, swipe flash and removed subtask expansion
+- [X] Added freetime segment messsages feature
+---
+## [12/02/2026] - [Thursday]
+### Today's Goals
+- [X] Implemented recurring tasks with CRUD
+---
+## [14/02/2026] - [Saturday]
+### Today's Goals
+- [X] Wired task screen to be opened for "create" and "view".
+- [X] Started Designed task screen for "view" mode
+---
+## [15/02/2026] - [Sunday]
+### Today's Goals
+- [X] Implement task sceren "view" save button
+- [X] Added reccurence display
+---
+## [17/02/2026] - [Tuesday]
+### Today's Goals
+- [X] Implement task sceren "view" save button
+- [X] Added reccurence display
+---
+## [18/02/2026] - [Wednesday]
+### Today's Goals
+- [X] Refactored font UI to apple's SF font
+- [X] Styled overlapping tasks in timeline
 
+### Plans For Future
+- Add non-timed task display in planner screen
+- Add animated checkboxes
+---
+## [20/02/2026] - [Friday]
+### Today's Goals
+- [X] Researched lottie implementation 
+- [X] Began lottie implenetation
 
-- ### TASK CREATION/VIEW MODAL PLAN
-- CHANGE TOP SECTION TO BE A TASKCARD LOOING SECTION AT TOP WITH TITLE AND DESCRIPTION.
-- DESCRIPTION EXPANDS THE TASKCARD CONTAINER SECITON AND THEREFORE FOLLOWS DESIGN PATTERN.
+### Plans For Future
+- plan how to implement particles to checkbox toggle
+---
+## [21/02/2026] - [Saturday]
+### Today's Goals
+- [X] Implemented lottie file particles overlay
+- [X] Also added opacity fill animation to checkbox
+
+### Plans For Future
+- plan how to improve performance
+---
+## [24/02/2026] - [Tuesday]
+### Today's Goals
+- [X] Implemented lottie file particles overlay
+- [X] Also added opacity fill animation to checkbox
+
+### Plans For Future
+- plan how to improve performance of checkbox
+---
+## [04/02/2026] - [Wednesday]
+### Today's Goals
+- [X] Refactored checkbox to be simple scale animation, removed lottie.
+- [X] Added animated strikethrough to task cards
+- [X] Improved UI performance using optimistic UI, linear transitions and checkbox sync registry
+
+### Plans For Future
+- improve performance of timeline load
+- improve weekly nav performance
+---
+## [05/02/2026] - [Thursday]
+### Today's Goals
+- [X] Implemented instant timeline + listcard laout load registry for faster loading performane
+- [X] Improved weekly nav performance
+- [X] added animated strikethrough for itmeline items
+- [X] Change checkbox to have tap animation instead of reactive press and hold animation
+- [X] Added liquid glass modal screen for monthly nav
+
+### Plans For Future
+- plan to implement context button functionality, such as acitvity log, and task select.
+- plan to implement browse page.

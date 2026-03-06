@@ -28,6 +28,7 @@ import { Ionicons } from '@expo/vector-icons';
 // design system constants for styling
 import { getTextStyle } from '@/constants/Typography';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
+import { Paddings } from '@/constants/Paddings';
 
 // CUSTOM HOOKS IMPORTS
 // hooks for accessing design system and theme
@@ -132,8 +133,8 @@ export const MainBackButton: React.FC<MainBackButtonProps> = ({
           backgroundColor: themeColors.background.lightOverlay(), // tertiary background for newer iOS
         } : {
           // iOS < 15 (older): text button with colored background
-          paddingHorizontal: 12, // horizontal padding for text
-          paddingVertical: 8, // vertical padding for text
+          paddingHorizontal: Paddings.contextMenuHorizontal,
+          paddingVertical: Paddings.contextMenuVertical,
           borderRadius: 20, // rounded corners
           backgroundColor: TaskCategoryColors[color][500], // task category color background
         }),

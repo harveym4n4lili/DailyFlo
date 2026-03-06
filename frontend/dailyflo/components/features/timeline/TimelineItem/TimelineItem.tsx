@@ -11,23 +11,71 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming, useAnimatedReaction, runOnJS, cancelAnimation } from 'react-native-reanimated';
+import AnimatedReanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  useAnimatedReaction,
+  runOnJS,
+  cancelAnimation,
+  Easing,
+  interpolateColor,
+  type SharedValue,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { Paddings } from '@/constants/Paddings';
 import { Task } from '@/types';
 import { getTaskColorValue } from '@/utils/taskColors';
 import TaskIcon from '@/components/ui/card/TaskCard/TaskIcon';
 import { RepeatIcon } from '@/components/ui/icon';
-import { Checkbox } from '@/components/ui/button';
-import { formatTimeRange, getTaskCardHeight } from '../timelineUtils';
+import { Checkbox, CHECKBOX_SIZE_DEFAULT, CHECKBOX_SIZE_SMALL } from '@/components/ui/button';
+import { getTaskCardHeight, formatTimeRange } from '../timelineUtils';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
+import { TimelineCheckbox } from './sections';
+import { taskDisplayEquals } from '@/utils/taskDisplayEquals';
+import { CHECKBOX_STRIKETHROUGH_ANIMATION_MS } from '@/constants/Checkbox';
+
+// line data from Text onTextLayout - x, y, width, height per line (normally 1 line for timeline title)
+type TextLineLayout = { x: number; y: number; width: number; height: number };
+
+// Animated.Text created from reanimated so we can animate color + draw overlay lines without changing layout
+const AnimatedText = AnimatedReanimated.createAnimatedComponent(Text);
+
+/** single strikethrough line for one text line - animates width left-to-right, positioned at line's vertical center */
+function StrikethroughLine({
+  line,
+  strikeProgress,
+  lineStyle,
+  yOffset = 0,
+}: {
+  line: TextLineLayout;
+  strikeProgress: SharedValue<number>;
+  lineStyle: object;
+  yOffset?: number;
+}) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    width: line.width * strikeProgress.value,
+  }));
+
+  return (
+    <AnimatedReanimated.View
+      style={[
+        lineStyle,
+        { left: line.x, top: line.y + line.height / 2 - 1 + yOffset },
+        animatedStyle,
+      ]}
+      pointerEvents="none"
+    />
+  );
+}
 
 interface TimelineItemProps {
   // task to display
   task: Task;
-  // Y position on the timeline in pixels (start position)
-  position: number;
+  // center Y position on the timeline in pixels (used to derive top = center - height/2 so height changes don't cause slide)
+  centerPosition: number;
   // duration in minutes
   duration: number;
   // pixels per minute for reference
@@ -47,11 +95,29 @@ interface TimelineItemProps {
   onDragEnd?: () => void;
   // callback when task is pressed
   onPress?: () => void;
-  // callback when task completion checkbox is pressed
-  onTaskComplete?: (task: Task) => void;
+  // callback when task completion checkbox is pressed (targetCompleted = explicit target for debounced rapid taps)
+  onTaskComplete?: (task: Task, targetCompleted?: boolean) => void;
+  // called immediately on tap (e.g. for local UI); backend sync still delayed
+  onTaskCompleteImmediate?: (task: Task, targetCompleted?: boolean) => void;
   // whether this task is currently being dragged (for z-index management)
   // this prop comes from parent to track which task should be on top layer
   isDraggedTask?: boolean;
+  // when part of overlapping group: 'first' = top task, 'middle' = between, 'last' = bottom task
+  // used to flatten border radius where cards connect (first: bottom 0, last: top 0, middle: all 0)
+  overlapPosition?: 'first' | 'middle' | 'last';
+}
+
+// compare by value so sibling Redux updates don't interrupt checkbox/animations
+// skip callback comparison - parent often passes inline fns; we only need to avoid re-renders when task/centerPosition unchanged
+function timelineItemPropsAreEqual(prev: TimelineItemProps, next: TimelineItemProps) {
+  if (!taskDisplayEquals(prev.task, next.task)) return false;
+  if (prev.centerPosition !== next.centerPosition) return false;
+  if (prev.duration !== next.duration) return false;
+  if (prev.pixelsPerMinute !== next.pixelsPerMinute) return false;
+  if (prev.startHour !== next.startHour) return false;
+  if (prev.isDraggedTask !== next.isDraggedTask) return false;
+  if (prev.overlapPosition !== next.overlapPosition) return false;
+  return true;
 }
 
 /**
@@ -60,9 +126,9 @@ interface TimelineItemProps {
  * Renders a task item on the timeline with drag functionality.
  * Shows icon in circular container, time range, and title.
  */
-export default function TimelineItem({
+const TimelineItem = React.memo(function TimelineItem({
   task,
-  position,
+  centerPosition,
   duration,
   pixelsPerMinute,
   startHour = 6,
@@ -73,7 +139,9 @@ export default function TimelineItem({
   onDragEnd,
   onPress,
   onTaskComplete,
+  onTaskCompleteImmediate,
   isDraggedTask = false,
+  overlapPosition,
 }: TimelineItemProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -84,13 +152,24 @@ export default function TimelineItem({
   // create dynamic styles using theme colors and typography
   const styles = useMemo(() => createStyles(themeColors, typography, taskColor), [themeColors, typography, taskColor]);
 
+  // border radius for overlapping cards - flatten corners where cards connect
+  // first: bottom corners 0; last: top corners 0; middle: all corners 0
+  const overlapBorderRadius = useMemo(() => {
+    if (!overlapPosition) return null;
+    switch (overlapPosition) {
+      case 'first': return { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 };
+      case 'last': return { borderTopLeftRadius: 0, borderTopRightRadius: 0 };
+      case 'middle': return { borderRadius: 0 };
+      default: return null;
+    }
+  }, [overlapPosition]);
+
   // animated value for drag position using reanimated - runs on native thread for better performance
   // starts at 0, tracks drag offset during gesture
   const translateY = useSharedValue(0);
   
-  // track the base position (initial position before drag) - used for calculating absolute position
-  // using shared value so it can be accessed in worklets
-  const basePosition = useSharedValue(position);
+  // track the base position (current top = center - height/2) for drag - synced from center + height in reaction below
+  const basePosition = useSharedValue(centerPosition - (getTaskCardHeight(duration) / 2));
   
   // track drag start position - used to calculate drag offset relative to start
   const startY = useSharedValue(0);
@@ -108,9 +187,9 @@ export default function TimelineItem({
   // state to store measured content height (includes padding)
   const [measuredContentHeight, setMeasuredContentHeight] = React.useState<number | null>(null);
   
-  // animated value for position using reanimated - runs on native thread for better performance
-  // this makes tasks smoothly move when other tasks expand/collapse
-  const positionAnimation = useSharedValue(position);
+  // center position as shared value - only changes when CENTER changes (e.g. task above resized), not when our height changes
+  // so when we only measure height, top = center - height/2 updates in worklet without any prop change = no slide
+  const centerPositionAnimation = useSharedValue(centerPosition);
   
   // animated value for fade-in animation using reanimated - runs on native thread for better performance
   // starts at 1 (fully visible), fades to 0 on drag end, then fades back to 1 when position updates
@@ -121,12 +200,12 @@ export default function TimelineItem({
   // can be interrupted if drag ends before animation completes
   const dragIndicatorOpacity = useSharedValue(1);
   
-  // track previous position to detect when position updates after drag
-  const previousPositionRef = useRef(position);
+  // track previous center to detect when center position updates (e.g. task above expanded)
+  const previousCenterRef = useRef(centerPosition);
   
-  // skip position animation during initial layout (first ~250ms) - prevents jank when tasks measure height
-  // and equalSpacingPositions recalculates with new positions
+  // skip center-position animation during initial load so timeline appears in final position (no slide)
   const mountTimeRef = useRef(Date.now());
+  const centerUpdateCountRef = useRef(0);
   
   // track if we're waiting for position update after drag to trigger fade-in
   const waitingForRepositionRef = useRef(false);
@@ -159,10 +238,59 @@ export default function TimelineItem({
   
   // calculate minimum card height based on duration
   const minCardHeight = useMemo(() => getTaskCardHeight(duration), [duration]);
+
+  // time range for display - shown above title when in overlapping tasks
+  const timeRangeText = task.time && overlapPosition ? formatTimeRange(task.time, duration) : '';
   
+  // displayCompleted from TimelineCheckbox for title styling (optimistic ui)
+  const [displayCompleted, setDisplayCompleted] = useState(task.isCompleted);
+  useEffect(() => {
+    setDisplayCompleted(task.isCompleted);
+  }, [task.id]);
+
+  // store per-line layout info from title onTextLayout so we can render animated strikethrough lines
+  const [titleLines, setTitleLines] = useState<TextLineLayout[]>([]);
+
+  // reanimated shared value: 0 = no strikethrough, 1 = full strikethrough (drives left-to-right animation per line)
+  const strikeProgress = useSharedValue(displayCompleted ? 1 : 0);
+
+  // when completion display changes (including optimistic), animate the strikethrough progress
+  useEffect(() => {
+    if (displayCompleted) {
+      strikeProgress.value = withTiming(1, {
+        duration: CHECKBOX_STRIKETHROUGH_ANIMATION_MS,
+        easing: Easing.out(Easing.cubic),
+      });
+    } else {
+      strikeProgress.value = withTiming(0, {
+        duration: 250,
+        easing: Easing.in(Easing.cubic),
+      });
+    }
+  }, [displayCompleted, strikeProgress]);
+
+  // onTextLayout provides x, y, width, height for each rendered line - used to position strikethrough per line
+  const handleTitleLayout = (e: { nativeEvent: { lines: TextLineLayout[] } }) => {
+    setTitleLines(e.nativeEvent.lines ?? []);
+  };
+
+  // animate title color from primary to secondary (dimmed) as strikeProgress goes 0→1 - syncs with strikethrough
+  const primaryTitleColor = themeColors.text.primary();
+  const secondaryTitleColor = themeColors.text.secondary();
+  const titleAnimatedStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(
+      strikeProgress.value,
+      [0, 1],
+      [primaryTitleColor, secondaryTitleColor]
+    ),
+  }));
+
   // subtask count for display (0/X format)
+  // when task is displayed as complete (optimistic or from backend), treat all subtasks as complete
   const subtasksCount = task.metadata?.subtasks?.length ?? 0;
-  const completedSubtasksCount = task.metadata?.subtasks?.filter(st => st.isCompleted).length ?? 0;
+  const completedSubtasksCount = displayCompleted
+    ? subtasksCount
+    : (task.metadata?.subtasks?.filter(st => st.isCompleted).length ?? 0);
   const allSubtasksComplete = subtasksCount > 0 && completedSubtasksCount === subtasksCount;
 
   // recurrence display text - same labels as TaskIndicators
@@ -194,7 +322,7 @@ export default function TimelineItem({
   useEffect(() => {
     if (typeof minCardHeight !== 'number' || minCardHeight <= 0) return;
     
-    if (Date.now() - mountTimeRef.current < 250) {
+    if (Date.now() - mountTimeRef.current < 2000) {
       cardHeightAnimation.value = minCardHeight;
     } else {
       cardHeightAnimation.value = withTiming(minCardHeight, { duration: 75 });
@@ -250,19 +378,25 @@ export default function TimelineItem({
   });
 
   // create animated style for position and fade using reanimated
-  // combines position animation (when other tasks expand) with fade
-  // note: we no longer apply translateY transform - the card stays in place during drag
-  // instead, a drag overlay follows the thumb position (handled in TimelineView)
-  // this runs on native thread for smooth 60fps performance
+  // top is derived from center - height/2 so when only our height changes (fallback→measured) there's no prop change = no slide
+  // when another task's height changes, parent passes new center and we animate that
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
-      top: positionAnimation.value,
-      // removed translateY transform - card stays in place during drag
+      top: centerPositionAnimation.value - (cardHeightAnimation.value / 2),
       opacity: fadeAnimation.value, // fade animation for drag feedback
     };
   });
+
+  // keep basePosition (current top) in sync for drag callbacks - derived from center and height
+  useAnimatedReaction(
+    () => ({ center: centerPositionAnimation.value, height: cardHeightAnimation.value }),
+    ({ center, height }) => {
+      basePosition.value = center - (height / 2);
+    },
+    []
+  );
   
-  // create animated style for drag indicator (reduced opacity when dragging)
+  // create animated style for drag indicator
   // this provides visual feedback that the task is selected for dragging
   // uses smooth iOS-style animation that can be interrupted if drag ends early
   const animatedDragIndicatorStyle = useAnimatedStyle(() => {
@@ -279,7 +413,7 @@ export default function TimelineItem({
     if (measuredContentHeight !== height) {
       setMeasuredContentHeight(height);
       // during initial layout, sync displayed height to measured immediately to prevent short-then-grow flash
-      if (Date.now() - mountTimeRef.current < 250) {
+      if (Date.now() - mountTimeRef.current < 2000) {
         cardHeightAnimation.value = height;
       }
       // report the measured height to parent so timeline spacing adjusts
@@ -296,45 +430,34 @@ export default function TimelineItem({
     lastReportedHeight.value = null;
   }, [task.title, duration, task.id]);
 
-  // update base position when prop changes
-  // also trigger fade-in animation if we're waiting for reposition after drag
-  // animate position smoothly when it changes (e.g., when other tasks expand)
+  // update center position when prop changes (e.g. when task above expands) - animates smooth move
+  // when only THIS task's height changes, centerPosition prop is unchanged so this effect doesn't run = no slide
   useEffect(() => {
-    const positionChanged = previousPositionRef.current !== position;
-    previousPositionRef.current = position;
-    
-    basePosition.value = position; // update shared value for worklet access
+    previousCenterRef.current = centerPosition;
+    centerPositionAnimation.value = centerPosition; // always set so worklet has latest
     translateY.value = 0; // reset translation when position changes
     
-    // if we're waiting for reposition after drag, set position and fade immediately (no animation)
-    // this prevents the slide glitch when dragging out of overlapping tasks
+    // if we're waiting for reposition after drag, set center and fade immediately (no animation)
     if (waitingForRepositionRef.current) {
-      waitingForRepositionRef.current = false; // clear the flag
-      
-      // clear fallback timeout since position update happened
+      waitingForRepositionRef.current = false;
       if (fadeInTimeoutRef.current) {
         clearTimeout(fadeInTimeoutRef.current);
         fadeInTimeoutRef.current = null;
       }
-      
-      // set position and fade immediately without animation to prevent slide glitch
-      cancelAnimation(positionAnimation);
+      cancelAnimation(centerPositionAnimation);
       cancelAnimation(fadeAnimation);
-      positionAnimation.value = position; // set immediately, no animation
-      fadeAnimation.value = 1; // set immediately, no fade animation
-    } else if (Date.now() - mountTimeRef.current < 250) {
-      // initial layout phase - skip animation to prevent jank when tasks measure height
-      // and position updates cascade (fallback heights → measured heights)
-      cancelAnimation(positionAnimation);
-      positionAnimation.value = position;
+      centerPositionAnimation.value = centerPosition;
+      fadeAnimation.value = 1;
+    } else if (Date.now() - mountTimeRef.current < 2000 || centerUpdateCountRef.current < 30) {
+      // initial load - set immediately so timeline appears in final position (no animation)
+      if (centerUpdateCountRef.current < 30) centerUpdateCountRef.current += 1;
+      cancelAnimation(centerPositionAnimation);
+      centerPositionAnimation.value = centerPosition;
     } else {
-      // animate position smoothly when it changes using reanimated
-      // this makes tasks smoothly move when other tasks expand/collapse
-      positionAnimation.value = withTiming(position, {
-        duration: 75,
-      });
+      // animate center when it changes (e.g. task above expanded)
+      centerPositionAnimation.value = withTiming(centerPosition, { duration: 75 });
     }
-  }, [position]);
+  }, [centerPosition]);
   
   // cleanup timeout on unmount
   useEffect(() => {
@@ -431,12 +554,6 @@ export default function TimelineItem({
     // reset translation (position will be updated via prop)
     translateY.value = 0;
   };
-
-  // format time range for display (e.g., "9:00 AM - 10:30 AM")
-  const timeRangeText = useMemo(() => {
-    if (!task.time) return '';
-    return formatTimeRange(task.time, duration);
-  }, [task.time, duration]);
 
   // track if long press has activated - pan gesture only works after long press
   // this allows drag to start only after holding for iOS standard duration
@@ -568,6 +685,7 @@ export default function TimelineItem({
       <AnimatedReanimated.View
         style={[
           styles.container,
+          styles.containerPadding,
           animatedContainerStyle, // animated position, drag transform, and fade - runs on native thread
           {
             // apply higher z-index when this task is being dragged so it appears above all others
@@ -582,7 +700,7 @@ export default function TimelineItem({
         {/* height is fixed at base height */}
         {/* background color is task color, icon color is primary */}
         {task.icon && (
-          <AnimatedReanimated.View style={[styles.iconContainer, { height: minCardHeight }, animatedDragIndicatorStyle]}>
+          <AnimatedReanimated.View style={[styles.iconContainer, styles.iconContainerPadding, { height: minCardHeight }, overlapBorderRadius, animatedDragIndicatorStyle]}>
             <TaskIcon icon={task.icon} color={themeColors.background.invertedPrimary()} size={20} />
           </AnimatedReanimated.View>
         )}
@@ -591,30 +709,48 @@ export default function TimelineItem({
         <AnimatedReanimated.View
           style={[
             styles.content,
+            overlapBorderRadius,
             animatedContentStyle,
             animatedDragIndicatorStyle,
           ]}
           onLayout={handleContentLayout}
         >
-          <Animated.View style={[styles.combinedContainer, { height: minCardHeight }]}>
+          <Animated.View style={[styles.combinedContainer, styles.combinedContainerPadding, { height: minCardHeight }, overlapBorderRadius]}>
             <TouchableOpacity
               style={styles.touchableContent}
               onPress={handleTaskPress}
               activeOpacity={0.7}
             >
+              <View style={styles.checkboxWrapper}>
+                <TimelineCheckbox
+                  task={task}
+                  onTaskComplete={onTaskComplete}
+                  onTaskCompleteImmediate={onTaskCompleteImmediate}
+                  onDisplayChange={setDisplayCompleted}
+                />
+              </View>
               <View style={styles.taskContent}>
-                <View style={styles.textContainer}>
+                {/* time display above title - only when in overlapping tasks */}
+                {timeRangeText ? (
                   <View style={styles.timeRangeRow}>
-                    {timeRangeText && (
-                      <Text style={styles.timeRange}>{timeRangeText}</Text>
-                    )}
+                    <Text style={styles.timeRange}>{timeRangeText}</Text>
+                  </View>
+                ) : null}
+                <View style={styles.titleRow}>
+                  <AnimatedText
+                    style={[styles.title, titleAnimatedStyle]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    onTextLayout={handleTitleLayout}
+                  >
+                    {task.title}
+                  </AnimatedText>
+                  <View style={styles.indicatorsRow}>
                     {subtasksCount > 0 && (
                       <View style={styles.subtaskCountRow}>
                         <Checkbox
+                          size={CHECKBOX_SIZE_SMALL}
                           checked={allSubtasksComplete}
-                          onPress={() => {}}
-                          size={12}
-                          borderRadius={4}
                           disabled
                         />
                         <Text style={styles.subtaskCount}>
@@ -622,36 +758,29 @@ export default function TimelineItem({
                         </Text>
                       </View>
                     )}
-                    {/* recurrence display - same icon/text as subtask, hidden when routineType is 'once' */}
                     {recurrenceLabel && (
                       <View style={styles.recurrenceRow}>
                         <RepeatIcon
-                          size={12}
+                          size={CHECKBOX_SIZE_SMALL}
                           color={themeColors.text.tertiary()}
                         />
                         <Text style={styles.recurrenceText}>{recurrenceLabel}</Text>
                       </View>
                     )}
                   </View>
-                  <Text
-                    style={[
-                      styles.title,
-                      task.isCompleted && styles.completedTitle,
-                    ]}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {task.title}
-                  </Text>
+                  {/* strikethrough overlay - absolute so it doesn't affect layout of title + metadata */}
+                  <View pointerEvents="none" style={styles.strikeOverlay}>
+                    {titleLines.map((line, index) => (
+                      <StrikethroughLine
+                        key={index}
+                        line={line}
+                        strikeProgress={strikeProgress}
+                        lineStyle={styles.strikethroughLine}
+                        yOffset={timeRangeText ? 1 : 9}
+                      />
+                    ))}
+                  </View>
                 </View>
-              </View>
-              <View style={styles.checkboxWrapper}>
-                <Checkbox
-                  checked={task.isCompleted}
-                  onPress={() => onTaskComplete?.(task)}
-                  size={18}
-                  borderRadius={6}
-                />
               </View>
             </TouchableOpacity>
           </Animated.View>
@@ -659,7 +788,7 @@ export default function TimelineItem({
       </AnimatedReanimated.View>
     </GestureDetector>
   );
-}
+}, timelineItemPropsAreEqual);
 
 // create dynamic styles using theme colors and typography
 const createStyles = (
@@ -667,6 +796,7 @@ const createStyles = (
   typography: ReturnType<typeof useTypography>,
   taskColor: string
 ) => StyleSheet.create({
+  // --- LAYOUT STYLES ---
   // main container for the task item
   // row layout: icon container on left, content column on right
   container: {
@@ -674,22 +804,19 @@ const createStyles = (
     left: 0,
     right: 0,
     flexDirection: 'row',
-    alignItems: 'flex-start', // align to top, let content determine height
-    paddingLeft: 0,
-    paddingRight: 16,
+    alignItems: 'flex-start',
   },
 
   // icon container - separate background for the icon
   // positioned on the left in the row layout
   // background color is task color, icon color is primary
   iconContainer: {
-    width: 44, // fixed width: 20px icon + 24px padding (12px each side)
+    width: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: taskColor, // task color background for icon container
-    borderRadius: 24, // matches task card border radius
-    paddingHorizontal: 12, // horizontal padding for icon spacing
-    marginRight: 12, // spacing between icon container and content
+    backgroundColor: taskColor,
+    borderRadius: 24,
+    marginRight: 12,
   },
 
   // content column - contains task content
@@ -697,105 +824,134 @@ const createStyles = (
     flex: 1, // take up remaining available width within container
     flexDirection: 'column', // stack combinedContainer and expandedArea vertically
     position: 'relative',
-    overflow: 'hidden', // ensure content doesn't overflow during animation
+    overflow: 'visible',
     borderRadius: 24, // outer border radius for the entire card
   },
   
   // combined container for task content - fixed height, stays at top
+  // borderRadius here so corners render
   combinedContainer: {
     flexDirection: 'row',
     width: '100%',
     alignItems: 'stretch',
     position: 'relative',
     backgroundColor: themeColors.background.primarySecondaryBlend(),
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderRadius: 24,
   },
   
-  // touchable content area - row: checkbox on left, task content on right
+  // touchable content area - row: checkbox on left, task content on right (matches TaskCard layout)
   touchableContent: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 12, // checkbox-to-title spacing - matches TaskCard checkboxWrapper marginRight: 12
   },
 
-  // checkbox wrapper - left of task content, centers the Checkbox
+  // checkbox wrapper - left of task content
   checkboxWrapper: {
+    width: CHECKBOX_SIZE_DEFAULT,
+    height: CHECKBOX_SIZE_DEFAULT,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  // task content container (text only) - right of checkbox
+  // task content container - title and indicators, right of checkbox
   taskContent: {
     flex: 1,
     position: 'relative',
     justifyContent: 'center',
   },
 
-  // time range row - time on left, subtask count and recurrence to the right
-  // flexWrap allows recurrence to wrap to next line if row is too narrow (avoids clipping)
+  // time range row - above title when in overlapping tasks (matches DragOverlay)
   timeRangeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
     marginBottom: 2,
   },
 
-  // text content container (time range + title)
-  // minWidth: 0 allows flex child to shrink below content size, preventing overflow
-  textContainer: {
+  // title row - title on left, subtask and recurrence indicators on the right (same line)
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
     flex: 1,
     minWidth: 0,
-    justifyContent: 'center',
-    alignSelf: 'stretch',
   },
 
-  // time range text styling - matches TaskCard metadata styling
-  timeRange: {
-    // use body-medium text style from typography system (matches TaskMetadata)
-    ...typography.getTextStyle('body-medium'),
-    color: themeColors.text.tertiary(),
-    fontWeight: '900',
+  // indicators on the right - subtask count and recurrence label
+  indicatorsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
   },
 
-  // task title text styling - matches TaskCard title styling
-  title: {
-    // use heading-4 text style from typography system (matches TaskCardContent)
-    ...typography.getTextStyle('heading-4'),
-    color: themeColors.text.primary(),
+  // absolute overlay that sits on top of the title row so we can draw animated strikethrough lines
+  // without changing the layout of the title + metadata
+  strikeOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
   },
 
-  // completed title styling - matches TaskCard completed styling
-  completedTitle: {
-    textDecorationLine: 'line-through', // strikethrough for completed tasks
-    color: themeColors.text.secondary(), // dimmed color for completed
+  // base style for strikethrough - left/top set per-line by StrikethroughLine using onTextLayout data
+  strikethroughLine: {
+    position: 'absolute',
+    height: 2,
+    marginTop: 1, // slight offset so line visually matches text baseline
+    backgroundColor: themeColors.text.secondary(),
+    borderRadius: 1,
   },
 
-  // subtask count row - checkbox icon + 0/X text, 12px right of time
+  // subtask count - checkbox icon + 0/X text
   subtaskCountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 12,
     gap: 6,
+  },
+  // recurrence - repeat icon + label
+  recurrenceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+
+  // --- PADDING STYLES ---
+  containerPadding: {
+    paddingLeft: Paddings.none,
+    paddingRight: Paddings.card,
+  },
+  iconContainerPadding: {
+    paddingHorizontal: Paddings.cardCompact,
+  },
+  combinedContainerPadding: {
+    paddingHorizontal: Paddings.card,
+    paddingVertical: Paddings.listItemVertical,
+  },
+
+  // --- TYPOGRAPHY STYLES ---
+  timeRange: {
+    ...typography.getTextStyle('body-medium'),
+    color: themeColors.text.tertiary(),
+  },
+  title: {
+    ...typography.getTextStyle('heading-4'),
+    color: themeColors.text.primary(),
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
   subtaskCount: {
     ...typography.getTextStyle('body-medium'),
     color: themeColors.text.tertiary(),
-    fontWeight: '900',
-  },
-
-  // recurrence row - refresh icon + label, same styling as subtask display
-  recurrenceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 12,
-    gap: 4,
   },
   recurrenceText: {
     ...typography.getTextStyle('body-medium'),
     color: themeColors.text.tertiary(),
-    fontWeight: '900',
   },
 });
 
+export default TimelineItem;

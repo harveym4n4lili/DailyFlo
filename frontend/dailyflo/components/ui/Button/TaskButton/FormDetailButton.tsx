@@ -16,6 +16,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
+import { Paddings } from '@/constants/Paddings';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -63,7 +64,6 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
             getTextStyle('body-large'),
             {
               color: themeColors.text.tertiary?.() || labelColor,
-              fontWeight: '900',
             },
             customStyles?.value,
           ]}
@@ -100,7 +100,7 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
     >
       {/* left icon: custom iconComponent or Ionicons when icon name provided */}
       {showLeftIcon && (
-        <View style={{ marginRight: 12 }}>
+        <View style={{ marginRight: Paddings.groupedListIconTextSpacing }}>
           {iconComponent != null ? (
             iconComponent
           ) : (
@@ -128,7 +128,6 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
             getTextStyle('body-large'),
             {
               color: themeColors.text.primary(),
-              fontWeight: '900',
             },
             customStyles?.label,
           ]}
@@ -145,7 +144,6 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
                 getTextStyle('body-large'),
                 {
                   color: themeColors.text.tertiary?.() || labelColor,
-                  fontWeight: '900',
                 },
                 customStyles?.secondaryValue,
               ]}

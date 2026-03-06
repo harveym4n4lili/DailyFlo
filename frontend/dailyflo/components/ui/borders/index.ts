@@ -6,3 +6,4 @@
 
 export { default as DashedSeparator } from './DashedSeparator';
 export { default as DashedVerticalLine } from './DashedVerticalLine';
+export { default as SolidSeparator } from './SolidSeparator';

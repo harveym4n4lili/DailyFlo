@@ -7,12 +7,21 @@
  * This component is used by TaskCard to display the core task information.
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, interpolateColor, type SharedValue } from 'react-native-reanimated';
 import { Task } from '@/types';
+
+// line data from Text onTextLayout - x, y, width, height per line (max 2 lines for task title)
+type TextLineLayout = { x: number; y: number; width: number; height: number };
+
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { formatTimeRange } from '@/utils/taskFormatters';
+import { CHECKBOX_STRIKETHROUGH_ANIMATION_MS } from '@/constants/Checkbox';
+
+// Animated.Text supports useAnimatedStyle for animating color (driven by strikeProgress)
+const AnimatedText = Animated.createAnimatedComponent(Text);
 
 interface TaskCardContentProps {
   // task data to display
@@ -21,6 +30,31 @@ interface TaskCardContentProps {
   taskColor: string;
   // whether to use compact layout - not used but kept for consistency
   compact?: boolean;
+}
+
+/** single strikethrough line for one text line - animates width left-to-right, positioned at line's vertical center */
+function StrikethroughLine({
+  line,
+  strikeProgress,
+  lineStyle,
+}: {
+  line: TextLineLayout;
+  strikeProgress: SharedValue<number>;
+  lineStyle: object;
+}) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    width: line.width * strikeProgress.value,
+  }));
+  return (
+    <Animated.View
+      style={[
+        lineStyle,
+        { left: line.x, top: line.y + line.height / 2 - 1 },
+        animatedStyle,
+      ]}
+      pointerEvents="none"
+    />
+  );
 }
 
 /**
@@ -40,6 +74,33 @@ export default function TaskCardContent({
   const themeColors = useThemeColors();
   const typography = useTypography();
 
+  // stores layout of each line from onTextLayout - each line gets its own strikethrough (max 2 lines)
+  const [lines, setLines] = useState<TextLineLayout[]>([]);
+
+  // reanimated shared value: 0 = no strikethrough, 1 = full strikethrough (drives left-to-right animation per line)
+  const strikeProgress = useSharedValue(task.isCompleted ? 1 : 0);
+
+  // when task completion changes, animate the strikethrough progress (reanimated runs on native thread for smooth 60fps)
+  useEffect(() => {
+    if (task.isCompleted) {
+      strikeProgress.value = withTiming(1, { duration: CHECKBOX_STRIKETHROUGH_ANIMATION_MS, easing: Easing.out(Easing.cubic) });
+    } else {
+      strikeProgress.value = withTiming(0, { duration: 250, easing: Easing.in(Easing.cubic) });
+    }
+  }, [task.isCompleted]);
+
+  // onTextLayout provides x, y, width, height for each rendered line - used to position strikethrough per line
+  const handleTextLayout = (e: { nativeEvent: { lines: TextLineLayout[] } }) => {
+    setLines(e.nativeEvent.lines ?? []);
+  };
+
+  // animate title color from primary to secondary (dimmed) as strikeProgress goes 0→1 - syncs with strikethrough
+  const primaryColor = themeColors.text.primary();
+  const secondaryColor = themeColors.text.secondary();
+  const titleAnimatedStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(strikeProgress.value, [0, 1], [primaryColor, secondaryColor]),
+  }));
+
   // create dynamic styles using theme colors and typography
   const styles = createStyles(themeColors, typography);
 
@@ -50,18 +111,32 @@ export default function TaskCardContent({
     <View style={styles.content}>
       {/* row container for title and time label */}
       <View style={styles.titleRow}>
-        {/* task title - conditionally applies strikethrough styling when completed */}
-        {/* can display up to 2 lines with ellipsis if it reaches third line */}
-        <Text
-          style={[
-            styles.title,
-            task.isCompleted && styles.completedTitle, // strikethrough and dimmed color when completed
-          ]}
-          numberOfLines={2} // limits title to 2 lines
-          ellipsizeMode="tail" // adds ellipsis at end if text overflows
-        >
-          {task.title}
-        </Text>
+        {/* outer wrapper - flex: 1 for row layout so time label stays right-aligned */}
+        <View style={styles.titleWrapper}>
+          {/* inner wrapper - alignSelf: flex-start sizes to text content; strikethrough per line via onTextLayout */}
+          {/* marginTop on this wrapper so onTextLayout (0,0) aligns with strikethrough coordinate system */}
+          <View style={[styles.titleTextWrapper, styles.titleTextWrapperWithMargin]}>
+            {/* task title - color animates primary→secondary with strikeProgress; onTextLayout for per-line strikethrough */}
+            {/* can display up to 2 lines with ellipsis if it reaches third line */}
+            <AnimatedText
+              style={[styles.title, titleAnimatedStyle]}
+              numberOfLines={2} // limits title to 2 lines
+              ellipsizeMode="tail" // adds ellipsis at end if text overflows
+              onTextLayout={handleTextLayout}
+            >
+              {task.title}
+            </AnimatedText>
+            {/* one strikethrough per line - each animates left-to-right over its own line's character width */}
+            {lines.map((line, index) => (
+              <StrikethroughLine
+                key={index}
+                line={line}
+                strikeProgress={strikeProgress}
+                lineStyle={styles.strikethroughLine}
+              />
+            ))}
+          </View>
+        </View>
 
         {/* time label on the right - shows time range if available */}
         {timeLabel ? (
@@ -87,7 +162,7 @@ const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>
 ) => StyleSheet.create({
-  // content area (title and time label)
+  // --- LAYOUT STYLES ---
   content: {
     flex: 1, // take available space
   },
@@ -100,34 +175,30 @@ const createStyles = (
     gap: 12, // spacing between title and time label
   },
 
-  // task title text styling
-  // using typography system for consistent text styling
-  title: {
-    // use the heading-4 text style from typography system (16px, bold, satoshi font)
-    ...typography.getTextStyle('heading-4'),
-    // use theme-aware primary text color from color system
-    color: themeColors.text.primary(),
-    marginBottom: 2, // spacing between title and metadata (reduced for closer spacing)
-    flex: 1, // take remaining space, allowing title to shrink if needed
-    flexShrink: 1, // allow title to shrink when time label is present
+  // outer wrapper - flex: 1 so title area takes remaining space in row (time label stays right)
+  titleWrapper: {
+    flex: 1,
+    flexShrink: 1,
   },
 
-  // completed title styling
-  completedTitle: {
-    textDecorationLine: 'line-through', // strikethrough for completed tasks
-    color: themeColors.text.secondary(), // dimmed color for completed
+  // inner wrapper - alignSelf: flex-start shrinks to text content when short; maxWidth: 100% allows wrapping when long
+  // this ensures strikethrough length = actual character width (short titles = short line, long titles = full block)
+  titleTextWrapper: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    position: 'relative',
+  },
+  titleTextWrapperWithMargin: {
+    marginTop: 1, // matches original title spacing; keeps onTextLayout coords aligned with strikethrough positioning
   },
 
-  // time label styling - fixed width to fit "XX:XX - XX:XX" format
-  timeLabel: {
-    // use the body-medium text style from typography system (12px, regular, satoshi font)
-    ...typography.getTextStyle('body-large'),
-    // use theme-aware tertiary text color from color system
-    color: themeColors.text.tertiary(),
-    width: 90, // fixed width to fit "23:59 - 23:59" format (max width needed)
-    textAlign: 'right', // right-align time label text
-    flexShrink: 0, // prevent time label from shrinking
-    fontWeight: '900',
+  // base style for strikethrough - left/top set per-line by StrikethroughLine using onTextLayout data
+  strikethroughLine: {
+    position: 'absolute',
+    height: 2,
+    marginTop: 1, // offset strikethrough down for better alignment with text baseline
+    backgroundColor: themeColors.text.secondary(),
+    borderRadius: 1,
   },
 
   // completed time label styling
@@ -140,6 +211,20 @@ const createStyles = (
   timeLabelPlaceholder: {
     width: 90, // same width as time label to maintain consistent layout
     flexShrink: 0, // prevent placeholder from shrinking
+  },
+
+  // --- TYPOGRAPHY STYLES ---
+  // no flex: 1 so Text sizes to content - enables titleTextWrapper to measure actual character width
+  title: {
+    ...typography.getTextStyle('heading-4'),
+    color: themeColors.text.primary(),
+  },
+  timeLabel: {
+    ...typography.getTextStyle('body-medium'),
+    color: themeColors.text.tertiary(),
+    width: 90,
+    textAlign: 'right',
+    flexShrink: 0,
   },
 });
 
