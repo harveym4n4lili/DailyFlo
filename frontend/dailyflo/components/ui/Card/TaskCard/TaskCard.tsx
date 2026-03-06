@@ -41,7 +41,7 @@ import TaskIndicators from './TaskIndicators';
 import TaskIcon from './TaskIcon';
 import TaskCardCheckbox from './TaskCardCheckbox';
 
-import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
+import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 
 // import border components
 import { DashedSeparator } from '@/components/ui/borders';
@@ -253,23 +253,16 @@ const TaskCard = React.memo(function TaskCard({
           ]}
         >
           <View style={styles.contentRow}>
-            {/* in selection mode: show selection checkbox; otherwise show completion checkbox */}
-            {selectionMode ? (
-              <View style={styles.selectionCheckboxWrapper}>
-                <Checkbox
-                  checked={isSelected}
-                  onPress={() => onSelect?.(task, !isSelected)}
-                  expandTapArea
-                />
-              </View>
-            ) : (
-              <TaskCardCheckbox
-                task={task}
-                onComplete={onComplete}
-                onCompleteImmediate={onCompleteImmediate}
-                onDisplayChange={setDisplayCompleted}
-              />
-            )}
+            {/* single TaskCardCheckbox: completion when !selectionMode, selection when selectionMode; animates shape on enter/exit */}
+            <TaskCardCheckbox
+              task={task}
+              onComplete={onComplete}
+              onCompleteImmediate={onCompleteImmediate}
+              onDisplayChange={setDisplayCompleted}
+              selectionMode={selectionMode}
+              isSelected={isSelected}
+              onSelect={selectionMode && onSelect ? () => onSelect(task, !isSelected) : undefined}
+            />
 
             {/* rest of card - touchable, opens task or toggles selection */}
             <TouchableOpacity

@@ -17,6 +17,10 @@ export interface TaskCardCheckboxProps {
   onCompleteImmediate?: (task: Task, targetCompleted?: boolean) => void;
   onComplete?: (task: Task, targetCompleted?: boolean) => void;
   onDisplayChange?: (displayCompleted: boolean) => void;
+  /** when true: checkbox toggles selection; same instance animates shape on enter/exit */
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
 export default function TaskCardCheckbox({
@@ -24,6 +28,9 @@ export default function TaskCardCheckbox({
   onCompleteImmediate,
   onComplete,
   onDisplayChange,
+  selectionMode = false,
+  isSelected = false,
+  onSelect,
 }: TaskCardCheckboxProps) {
   const [optimisticCompleted, setOptimisticCompleted] = useState<boolean | null>(null);
   const displayCompleted = optimisticCompleted ?? task.isCompleted;
@@ -90,12 +97,18 @@ export default function TaskCardCheckbox({
     registerPendingCheckboxSync(executeSync);
   }, [onComplete, onCompleteImmediate, task, displayCompleted]);
 
+  // single Checkbox: selection mode toggles selection; completion mode marks complete
+  // selectionMode prop drives shape animation (circle <-> square) on enter/exit
+  const checked = selectionMode ? isSelected : displayCompleted;
+  const handlePress = selectionMode ? onSelect : (onComplete ? handleCheckboxComplete : undefined);
+
   return (
     <View style={{ width: CHECKBOX_SIZE_DEFAULT, height: CHECKBOX_SIZE_DEFAULT, marginRight: 12, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', zIndex: 1 }}>
       <Checkbox
-        checked={displayCompleted}
-        onPress={onComplete ? handleCheckboxComplete : undefined}
+        checked={checked}
+        onPress={handlePress}
         expandTapArea
+        selectionMode={selectionMode}
       />
     </View>
   );

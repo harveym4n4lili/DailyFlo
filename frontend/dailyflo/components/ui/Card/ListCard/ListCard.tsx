@@ -855,16 +855,17 @@ export default function ListCard({
                       );
                       const isLastItem = index === groupTasks.length - 1;
                       const isFirstItem = index === 0;
+                      const isSelected = selectionMode && selectedTaskIds.includes(task.id);
                       const card = (
                         <TaskCard
                           task={task}
-                          onPress={onTaskPress}
-                          onComplete={handleTaskComplete}
-                          onCompleteImmediate={handleTaskCompleteImmediate}
+                          onPress={selectionMode && onToggleTaskSelection ? undefined : onTaskPress}
+                          onComplete={selectionMode ? undefined : handleTaskComplete}
+                          onCompleteImmediate={selectionMode ? undefined : handleTaskCompleteImmediate}
                           onEdit={onTaskEdit}
                           onDelete={onTaskDelete}
-                          onSwipeLeft={onTaskSwipeLeft}
-                          onSwipeRight={onTaskSwipeRight}
+                          onSwipeLeft={selectionMode ? undefined : onTaskSwipeLeft}
+                          onSwipeRight={selectionMode ? undefined : onTaskSwipeRight}
                           showCategory={showCategory}
                           compact={compact}
                           showIcon={showIcon}
@@ -878,6 +879,9 @@ export default function ListCard({
                           removeInnerPadding={removeInnerPadding}
                           isLastItem={isLastItem}
                           isFirstItem={isFirstItem}
+                          selectionMode={selectionMode}
+                          isSelected={isSelected}
+                          onSelect={selectionMode && onToggleTaskSelection ? (t: Task, _selected?: boolean) => onToggleTaskSelection(t.id) : undefined}
                         />
                       );
                       const wrapper = shouldAnimate && opacityValue && scaleValue ? (
