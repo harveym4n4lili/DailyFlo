@@ -13,6 +13,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { ReduxProvider } from '@/store/Provider';
 import { CreateTaskDraftProvider } from './task/CreateTaskDraftContext';
 import { DuplicateTaskProvider } from './task/DuplicateTaskContext';
+import { PlannerMonthSelectProvider } from './PlannerMonthSelectContext';
 import { store } from '@/store';
 import { logout, checkAuthStatus } from '@/store/slices/auth/authSlice';
 
@@ -191,6 +192,7 @@ export default function RootLayout() {
           {/* Task stack and sub-screens share draft via context; DuplicateTaskProvider for pre-filling create from Duplicate */}
           <CreateTaskDraftProvider>
           <DuplicateTaskProvider>
+          <PlannerMonthSelectProvider>
           <Stack>
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -261,6 +263,7 @@ export default function RootLayout() {
             />
             <Stack.Screen name="+not-found" />
           </Stack>
+          </PlannerMonthSelectProvider>
           </DuplicateTaskProvider>
           </CreateTaskDraftProvider>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />

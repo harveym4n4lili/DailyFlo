@@ -49,10 +49,11 @@ export interface WeekViewProps {
   onSelectDate: (date: string) => void;
   
   /**
-   * Callback when header is pressed
-   * This function is called when user taps on the date header to open calendar modal
+   * Callback when the date header is tapped – opens the monthly selector stack screen.
+   * When provided, the header (e.g. "6 March 2026") is tappable and pushes the planner's
+   * month-select stack screen so the user can pick a date from the full month view.
    */
-  onHeaderPress?: () => void;
+  onOpenMonthSelect?: () => void;
 }
 
 /**
@@ -179,7 +180,7 @@ const DayCell: React.FC<DayCellProps> = ({
 export const WeekView: React.FC<WeekViewProps> = ({
   selectedDate,
   onSelectDate,
-  onHeaderPress,
+  onOpenMonthSelect,
 }) => {
   // get theme-aware colors for styling (adapts to light/dark mode)
   const themeColors = useThemeColors();
@@ -408,23 +409,26 @@ export const WeekView: React.FC<WeekViewProps> = ({
   return (
     <View>
       {/* 
-        WEEK VIEW HEADER SECTION - separate from week grid, uses Paddings.screen for left spacing
-        Contains: formatted date text (day month year)
-        Styled to match today screen header title
+        HEADER: tap to open monthly selector stack screen.
+        Shows formatted date (e.g. "6 March 2026") and chevron; when tapped, pushes
+        the planner's month-select screen so the user can pick a date from the full month view.
       */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.header, styles.headerContainer]}
-        onPress={onHeaderPress}
+        onPress={onOpenMonthSelect}
         activeOpacity={0.7}
-        disabled={!onHeaderPress}
+        disabled={!onOpenMonthSelect}
+        accessibilityRole="button"
+        accessibilityLabel={`${formattedDateText}. Opens monthly calendar`}
+        accessibilityHint="Double tap to open the monthly date picker"
       >
         <Text key={selectedDate} style={styles.headerTitle}>
           {formattedDateText}
         </Text>
-        <Ionicons 
-          name="chevron-forward" 
-          size={24} 
-          color={themeColors.text.primary()} 
+        <Ionicons
+          name="chevron-forward"
+          size={24}
+          color={themeColors.text.primary()}
           style={styles.chevronIcon}
         />
       </TouchableOpacity>
