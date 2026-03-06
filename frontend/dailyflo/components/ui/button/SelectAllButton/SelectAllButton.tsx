@@ -14,15 +14,19 @@ import { Paddings } from '@/constants/Paddings';
 
 export interface SelectAllButtonProps {
   onPress: () => void;
+  /** "Select all" or "Deselect all" - parent computes based on selection state */
+  label?: 'Select all' | 'Deselect all';
   style?: ViewStyle;
   accessibilityLabel?: string;
 }
 
 export function SelectAllButton({
   onPress,
+  label = 'Select all',
   style,
-  accessibilityLabel = 'Select all tasks',
+  accessibilityLabel,
 }: SelectAllButtonProps) {
+  const a11yLabel = accessibilityLabel ?? (label === 'Deselect all' ? 'Deselect all tasks' : 'Select all tasks');
   const themeColors = useThemeColors();
   const typography = useTypography();
 
@@ -44,10 +48,10 @@ export function SelectAllButton({
           onPress={onPress}
           style={styles.pressable}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityLabel={accessibilityLabel}
+          accessibilityLabel={a11yLabel}
           accessibilityRole="button"
         >
-          <Text style={textStyle}>Select all</Text>
+          <Text style={textStyle}>{label}</Text>
         </Pressable>
       </GlassView>
     );
@@ -59,10 +63,10 @@ export function SelectAllButton({
       onPress={onPress}
       style={[styles.touchable, { backgroundColor: themeColors.background.secondary() }, style]}
       activeOpacity={0.7}
-      accessibilityLabel={accessibilityLabel}
+      accessibilityLabel={a11yLabel}
       accessibilityRole="button"
     >
-      <Text style={textStyle}>Select all</Text>
+      <Text style={textStyle}>{label}</Text>
     </TouchableOpacity>
   );
 }

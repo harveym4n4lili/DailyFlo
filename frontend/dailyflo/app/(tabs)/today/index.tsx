@@ -84,7 +84,7 @@ export default function TodayScreen() {
   const { setDraft, registerOverdueReschedule, clearOverdueReschedule } = useCreateTaskDraft();
   
   // get UI state from Redux to check if createTask modal should be opened
-  const { modals, closeModal, enterSelectionMode, selection, toggleItemSelection, exitSelectionMode, selectAllItems } = useUI();
+  const { modals, closeModal, enterSelectionMode, selection, toggleItemSelection, exitSelectionMode, selectAllItems, clearSelection } = useUI();
 
   // FAB fade: opacity 0 in selection mode, 1 otherwise
   const fabOpacity = useSharedValue(1);
@@ -160,12 +160,26 @@ export default function TodayScreen() {
     return expanded;
   }, [tasks]);
 
-  // select all tasks currently visible in Today list
+  // eligible for select all: non-completed, non-deleted, due TODAY only
+  const todayDateStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const eligibleTodayTaskIds = useMemo(() => {
+    return todaysTasks
+      .filter((t) => !t.isCompleted && !t.softDeleted && t.dueDate?.slice(0, 10) === todayDateStr)
+      .map((t) => t.id);
+  }, [todaysTasks, todayDateStr]);
+
+  // if every eligible task is already selected, show "Deselect all" and pressing will clear selection
+  const allEligibleSelected = eligibleTodayTaskIds.length > 0 && eligibleTodayTaskIds.every((id) => selection.selectedItems.includes(id));
+  const selectAllLabel = allEligibleSelected ? 'Deselect all' : 'Select all';
+
   const handleSelectAllToday = useCallback(() => {
     if (!(selection.isSelectionMode && selection.selectionType === 'tasks')) return;
-    const ids = todaysTasks.map((t) => t.id);
-    selectAllItems(ids);
-  }, [selection.isSelectionMode, selection.selectionType, todaysTasks, selectAllItems]);
+    if (allEligibleSelected) {
+      clearSelection();
+    } else {
+      selectAllItems(eligibleTodayTaskIds);
+    }
+  }, [selection.isSelectionMode, selection.selectionType, allEligibleSelected, eligibleTodayTaskIds, selectAllItems, clearSelection]);
 
   // calculate total task count for header display (only incomplete tasks)
   const totalTaskCount = useMemo(() => {
@@ -444,6 +458,7 @@ export default function TodayScreen() {
           {selection.isSelectionMode && selection.selectionType === 'tasks' ? (
             <SelectAllButton
               onPress={handleSelectAllToday}
+              label={selectAllLabel}
               style={styles.topSectionSelectAllButton}
             />
           ) : (
