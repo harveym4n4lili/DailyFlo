@@ -168,6 +168,11 @@ export interface ListCardProps {
   // when true, disables layout transition on initial mount so parent (e.g. timeline) doesn't slide up on load
   // used when ListCard is inside a scroll container (e.g. planner footer) to avoid Reanimated animating first layout
   disableInitialLayoutTransition?: boolean;
+
+  // selection mode - when true, task cards show selection checkboxes and tap toggles selection
+  selectionMode?: boolean;
+  selectedTaskIds?: string[];
+  onToggleTaskSelection?: (taskId: string) => void;
 }
 
 /**
@@ -225,6 +230,9 @@ export default function ListCard({
   hideCompletedTasks = false,
   delayHeightChangeOnTaskComplete = true,
   disableInitialLayoutTransition = false,
+  selectionMode = false,
+  selectedTaskIds = [],
+  onToggleTaskSelection,
 }: ListCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -426,16 +434,17 @@ export default function ListCard({
       const { opacityValue, scaleValue, shouldAnimate } = getTaskCardAnimation(task.id, index || 0);
       const isLastItem = index === processedTasks.length - 1;
       const isFirstItem = index === 0;
+      const isSelected = selectionMode && selectedTaskIds.includes(task.id);
       const card = (
           <TaskCard
             task={task}
-            onPress={onTaskPress}
-            onComplete={handleTaskComplete}
-            onCompleteImmediate={handleTaskCompleteImmediate}
+            onPress={selectionMode && onToggleTaskSelection ? undefined : onTaskPress}
+            onComplete={selectionMode ? undefined : handleTaskComplete}
+            onCompleteImmediate={selectionMode ? undefined : handleTaskCompleteImmediate}
             onEdit={onTaskEdit}
             onDelete={onTaskDelete}
-            onSwipeLeft={onTaskSwipeLeft}
-            onSwipeRight={onTaskSwipeRight}
+            onSwipeLeft={selectionMode ? undefined : onTaskSwipeLeft}
+            onSwipeRight={selectionMode ? undefined : onTaskSwipeRight}
             showCategory={showCategory}
             compact={compact}
             showIcon={showIcon}
@@ -449,6 +458,9 @@ export default function ListCard({
             removeInnerPadding={removeInnerPadding}
             isLastItem={isLastItem}
             isFirstItem={isFirstItem}
+            selectionMode={selectionMode}
+            isSelected={isSelected}
+            onSelect={selectionMode && onToggleTaskSelection ? (t: Task, _selected?: boolean) => onToggleTaskSelection(t.id) : undefined}
           />
       );
       const wrapper = shouldAnimate && opacityValue && scaleValue ? (
@@ -489,6 +501,9 @@ export default function ListCard({
       hideBackground,
       removeInnerPadding,
       layoutTransitionEnabled,
+      selectionMode,
+      selectedTaskIds,
+      onToggleTaskSelection,
     ]
   );
 

@@ -84,7 +84,15 @@ export default function TodayScreen() {
   const { setDraft, registerOverdueReschedule, clearOverdueReschedule } = useCreateTaskDraft();
   
   // get UI state from Redux to check if createTask modal should be opened
-  const { modals, closeModal, enterSelectionMode } = useUI();
+  const { modals, closeModal, enterSelectionMode, selection, toggleItemSelection, exitSelectionMode } = useUI();
+
+  // FAB fade: opacity 0 in selection mode, 1 otherwise
+  const fabOpacity = useSharedValue(1);
+  useEffect(() => {
+    const isSelectionMode = selection.isSelectionMode && selection.selectionType === 'tasks';
+    fabOpacity.value = withTiming(isSelectionMode ? 0 : 1, { duration: 200 });
+  }, [selection.isSelectionMode, selection.selectionType, fabOpacity]);
+  const fabAnimatedStyle = useAnimatedStyle(() => ({ opacity: fabOpacity.value }));
   
   // TITLE STATE - Controls the visibility of the title header
   const [showTitle, setShowTitle] = useState(false);
@@ -108,7 +116,6 @@ export default function TodayScreen() {
   
   // SAFE AREA INSETS - Get safe area insets for proper positioning
   const insets = useSafeAreaInsets();
-  // router: used to open test modal (liquid glass) from main FAB for testing
   const router = useRouter();
   
   // create dynamic styles using the color palette system and typography system
@@ -412,11 +419,14 @@ export default function TodayScreen() {
             <Text style={[styles.miniTodayHeaderText, { color: themeColors.text.primary() }]}>Today</Text>
           </AnimatedReanimated.View>
           <ActionContextMenu
-            items={[
-              { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
-              { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
-            
-            ]}
+            items={
+              selection.isSelectionMode && selection.selectionType === 'tasks'
+                ? [{ id: 'cancel-selection', label: 'Cancel selection', systemImage: 'xmark', onPress: exitSelectionMode }]
+                : [
+                    { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
+                    { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
+                  ]
+            }
             style={styles.topSectionContextButton}
             accessibilityLabel="Open menu"
             dropdownAnchorTopOffset={insets.top + 48}
@@ -432,12 +442,12 @@ export default function TodayScreen() {
         safeAreaTop={false}
         safeAreaBottom={false}
       >
-      {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
-      {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
-      {/* key prop ensures this ListCard instance is completely independent from planner screen */}
       <ListCard
         key="today-screen-listcard"
         tasks={todaysTasks}
+        selectionMode={selection.isSelectionMode && selection.selectionType === 'tasks'}
+        selectedTaskIds={selection.selectedItems}
+        onToggleTaskSelection={selection.isSelectionMode ? toggleItemSelection : undefined}
         hideCompletedTasks={true}
         onTaskPress={handleTaskPress}
         onTaskComplete={handleTaskComplete}
@@ -475,13 +485,18 @@ export default function TodayScreen() {
         scrollPastTopInset={true} // let content scroll up into status bar area without cutoff
       />
       </ScreenContainer>
-      <FloatingActionButton
-        onPress={() => router.push('/task-create' as any)}
-        backgroundColor={themeColors.background.invertedPrimary()}
-        iconColor={themeColors.text.invertedPrimary()}
-        accessibilityLabel="Add new task"
-        accessibilityHint="Double tap to create a new task"
-      />
+      <AnimatedReanimated.View
+        style={[fabAnimatedStyle, { position: 'absolute', bottom: 0, right: 0, left: 0, height: 120 }]}
+        pointerEvents={selection.isSelectionMode && selection.selectionType === 'tasks' ? 'none' : 'box-none'}
+      >
+        <FloatingActionButton
+          onPress={() => router.push('/task-create' as any)}
+          backgroundColor={themeColors.background.invertedPrimary()}
+          iconColor={themeColors.text.invertedPrimary()}
+          accessibilityLabel="Add new task"
+          accessibilityHint="Double tap to create a new task"
+        />
+      </AnimatedReanimated.View>
     </View>
   );
 }

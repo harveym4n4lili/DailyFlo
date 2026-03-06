@@ -41,7 +41,7 @@ import TaskIndicators from './TaskIndicators';
 import TaskIcon from './TaskIcon';
 import TaskCardCheckbox from './TaskCardCheckbox';
 
-import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
+import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 
 // import border components
 import { DashedSeparator } from '@/components/ui/borders';
@@ -82,6 +82,11 @@ export interface TaskCardProps {
   removeInnerPadding?: boolean; // whether to remove horizontal padding inside the card (default false)
   isLastItem?: boolean; // whether this is the last item in the list (default false)
   isFirstItem?: boolean; // whether this is the first item in the list (default false)
+
+  // selection mode - when true, card shows selection checkbox and tap toggles selection
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onSelect?: (task: Task, selected: boolean) => void;
 }
 
 /**
@@ -122,7 +127,10 @@ function taskCardPropsAreEqual(prev: TaskCardProps, next: TaskCardProps) {
     prev.hideBackground === next.hideBackground &&
     prev.removeInnerPadding === next.removeInnerPadding &&
     prev.isLastItem === next.isLastItem &&
-    prev.isFirstItem === next.isFirstItem
+    prev.isFirstItem === next.isFirstItem &&
+    prev.selectionMode === next.selectionMode &&
+    prev.isSelected === next.isSelected &&
+    prev.onSelect === next.onSelect
   );
 }
 
@@ -148,6 +156,9 @@ const TaskCard = React.memo(function TaskCard({
   removeInnerPadding = false,
   isLastItem = false,
   isFirstItem = false,
+  selectionMode = false,
+  isSelected = false,
+  onSelect,
 }: TaskCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -201,8 +212,12 @@ const TaskCard = React.memo(function TaskCard({
     }
   };
 
+  // in selection mode: tap toggles selection; otherwise tap opens task
   const handlePress = () => {
-    if (onPress) {
+    if (selectionMode && onSelect) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onSelect(task, !isSelected);
+    } else if (onPress) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
       onPress(task);
     }
@@ -237,14 +252,25 @@ const TaskCard = React.memo(function TaskCard({
           ]}
         >
           <View style={styles.contentRow}>
-            <TaskCardCheckbox
-              task={task}
-              onComplete={onComplete}
-              onCompleteImmediate={onCompleteImmediate}
-              onDisplayChange={setDisplayCompleted}
-            />
+            {/* in selection mode: show selection checkbox; otherwise show completion checkbox */}
+            {selectionMode ? (
+              <View style={styles.selectionCheckboxWrapper}>
+                <Checkbox
+                  checked={isSelected}
+                  onPress={() => onSelect?.(task, !isSelected)}
+                  expandTapArea
+                />
+              </View>
+            ) : (
+              <TaskCardCheckbox
+                task={task}
+                onComplete={onComplete}
+                onCompleteImmediate={onCompleteImmediate}
+                onDisplayChange={setDisplayCompleted}
+              />
+            )}
 
-            {/* rest of card - touchable, opens task */}
+            {/* rest of card - touchable, opens task or toggles selection */}
             <TouchableOpacity
               style={styles.cardContentTouchable}
               onPress={handlePress}
@@ -375,6 +401,17 @@ const createStyles = (
       paddingRight: Paddings.none,
       paddingTop: Paddings.card,
       paddingBottom: Paddings.card,
+    },
+
+    // selection checkbox wrapper - matches TaskCardCheckbox layout for alignment
+    selectionCheckboxWrapper: {
+      width: CHECKBOX_SIZE_DEFAULT,
+      height: CHECKBOX_SIZE_DEFAULT,
+      marginRight: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      alignSelf: 'center',
+      zIndex: 1,
     },
   });
 
