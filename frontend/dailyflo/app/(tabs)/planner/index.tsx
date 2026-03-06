@@ -4,11 +4,9 @@ import { StyleSheet, View, Platform } from 'react-native';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-
 // import our custom layout components
 import { ScreenContainer } from '@/components';
-import { FloatingActionButton } from '@/components/ui/button';
+import { FloatingActionButton, SelectAllButton } from '@/components/ui/button';
 import { ActionContextMenu } from '@/components/ui';
 import { ClockIcon } from '@/components/ui/icon';
 import { WeekView } from '@/components/features/calendar/sections';
@@ -76,7 +74,7 @@ export default function PlannerScreen() {
   // REDUX STORE - Accessing task state from Redux store
   const dispatch = useAppDispatch();
   const { tasks, isLoading } = useTasks();
-  const { enterSelectionMode, selection, toggleItemSelection, exitSelectionMode } = useUI();
+  const { enterSelectionMode, selection, toggleItemSelection, exitSelectionMode, selectAllItems } = useUI();
 
   // FAB fade: opacity 0 in selection mode, 1 otherwise
   const fabOpacity = useSharedValue(1);
@@ -270,6 +268,14 @@ export default function PlannerScreen() {
     }
   };
 
+  // select all tasks currently visible on this planner day (timeline + all-day)
+  const handleSelectAllPlanner = useCallback(() => {
+    if (!(selection.isSelectionMode && selection.selectionType === 'tasks')) return;
+    const ids = [...selectedDateTasks, ...allDayTasks].map((t) => t.id);
+    const uniqueIds = Array.from(new Set(ids));
+    selectAllItems(uniqueIds);
+  }, [selection.isSelectionMode, selection.selectionType, selectedDateTasks, allDayTasks, selectAllItems]);
+
   // handle when a task's time is changed via dragging on the timeline
   // for expanded recurring tasks, update the base task
   const handleTaskTimeChange = async (taskId: string, newTime: string, newDuration?: number) => {
@@ -292,21 +298,26 @@ export default function PlannerScreen() {
       {/* top section - 48px row for context ellipse button; pointerEvents box-none so taps pass through to WeekView header */}
       <View style={[styles.topSectionAnchor, { height: insets.top + 48 }]} pointerEvents="box-none">
         <View style={styles.topSectionRow} pointerEvents="box-none">
-          <ActionContextMenu
-            items={
-              selection.isSelectionMode && selection.selectionType === 'tasks'
-                ? [{ id: 'cancel-selection', label: 'Cancel selection', systemImage: 'xmark', onPress: exitSelectionMode }]
-                : [
-                    { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
-                    { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
-                  ]
-            }
-            style={styles.topSectionContextButton}
-            accessibilityLabel="Open menu"
-            dropdownAnchorTopOffset={insets.top + 48}
-            dropdownAnchorRightOffset={24}
-            tint="primary"
-          />
+          {/* planner: no main close button in selection mode; use placeholder for layout */}
+          <View style={styles.topSectionCloseButton} pointerEvents="none" />
+          {selection.isSelectionMode && selection.selectionType === 'tasks' ? (
+            <SelectAllButton
+              onPress={handleSelectAllPlanner}
+              style={styles.topSectionSelectAllButton}
+            />
+          ) : (
+            <ActionContextMenu
+              items={[
+                { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
+                { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
+              ]}
+              style={styles.topSectionContextButton}
+              accessibilityLabel="Open menu"
+              dropdownAnchorTopOffset={insets.top + 48}
+              dropdownAnchorRightOffset={24}
+              tint="primary"
+            />
+          )}
         </View>
       </View>
       <ScreenContainer 
@@ -447,9 +458,20 @@ const createStyles = (
     justifyContent: 'flex-end',
     paddingHorizontal: Paddings.screen,
   },
+  // close button on left - appears in selection mode only; placeholder keeps layout when hidden
+  topSectionCloseButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 'auto', // push to left so context menu stays on right
+  },
   // matches task screen ActionContextMenu (transparent bg, liquid glass)
   topSectionContextButton: {
     backgroundColor: 'primary',
+  },
+  topSectionSelectAllButton: {
+    alignSelf: 'center',
   },
 
   // week view container - starts at inset top; top section overlays with context button (zIndex 10)

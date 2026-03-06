@@ -106,9 +106,9 @@ export const Paddings = {
 
   // context menu / small button padding
   // used by: ModalContainer, ActionContextMenu, ScreenContextButton, MainBackButton, MainCloseButton, SaveButton, TimeDurationSelectScreen
-  contextMenuHorizontal:12,
+  contextMenuHorizontal:16,
   // used by: ModalContainer, ModalHeader, MainBackButton, MainCloseButton, SaveButton, FormPickerButton
-  contextMenuVertical: 8,
+  contextMenuVertical: 10,
 
   // TaskCard - right padding to avoid overlap with completion indicator
   // used by: TaskCard
