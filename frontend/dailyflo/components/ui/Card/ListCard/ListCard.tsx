@@ -79,10 +79,6 @@ export interface ListCardProps {
   onTaskEdit?: (task: Task) => void; // called when user wants to edit a task
   onTaskDelete?: (task: Task) => void; // called when user wants to delete a task
 
-  // swipe gesture callback functions (passed down to TaskCard components)
-  onTaskSwipeLeft?: (task: Task) => void; // called when user swipes left on a task card
-  onTaskSwipeRight?: (task: Task) => void; // called when user swipes right on a task card
-
   // optional display options
   showCategory?: boolean; // whether to show category names in task cards
   compact?: boolean; // whether to use compact layout for task cards
@@ -191,8 +187,6 @@ export default function ListCard({
   onTaskComplete,
   onTaskEdit,
   onTaskDelete,
-  onTaskSwipeLeft,
-  onTaskSwipeRight,
   showCategory = false,
   compact = false,
   showIcon = true,
@@ -445,8 +439,6 @@ export default function ListCard({
             onCompleteImmediate={selectionMode ? undefined : handleTaskCompleteImmediate}
             onEdit={onTaskEdit}
             onDelete={onTaskDelete}
-            onSwipeLeft={selectionMode ? undefined : onTaskSwipeLeft}
-            onSwipeRight={selectionMode ? undefined : onTaskSwipeRight}
             showCategory={showCategory}
             compact={compact}
             showIcon={showIcon}
@@ -489,8 +481,6 @@ export default function ListCard({
       handleTaskCompleteImmediate,
       onTaskEdit,
       onTaskDelete,
-      onTaskSwipeLeft,
-      onTaskSwipeRight,
       showCategory,
       compact,
       showIcon,
@@ -566,15 +556,26 @@ export default function ListCard({
     scrollOffsetRef.current = y;
   }, []);
 
+  // throttle runOnJS to every 4th scroll event - reduces bridge traffic for smoother scroll
+  const scrollEventCounter = useSharedValue(0);
+
   // when scrollYSharedValue provided: use animated scroll handler (runs on UI thread) to avoid JS thread work during scroll
-  // scrollY is updated on UI thread; onScroll is bridged via runOnJS for parent callbacks (e.g. trackScrollToTodayLayout)
-  // reanimated event has contentOffset at top level; parent expects { nativeEvent: { contentOffset } } - wrap to match
+  // scrollY is updated on UI thread; updateScrollOffsetRef throttled to every 4th event
   const animatedScrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
       const y = e.contentOffset.y;
       scrollY.value = y;
-      runOnJS(updateScrollOffsetRef)(y);
+      scrollEventCounter.value = scrollEventCounter.value + 1;
+      if (scrollEventCounter.value % 4 === 0) {
+        runOnJS(updateScrollOffsetRef)(y);
+      }
       if (onScroll) runOnJS(onScroll)({ nativeEvent: e });
+    },
+    onEndDrag: (e) => {
+      runOnJS(updateScrollOffsetRef)(e.contentOffset.y);
+    },
+    onMomentumEnd: (e) => {
+      runOnJS(updateScrollOffsetRef)(e.contentOffset.y);
     },
   });
   // when no animated handler: wrap onScroll to also track scroll offset for scroll-up-after-hide
@@ -790,7 +791,7 @@ export default function ListCard({
           contentContainerStyle={contentContainerStyle}
           refreshControl={refreshControl}
           onScroll={scrollHandler}
-          scrollEventThrottle={32}
+          scrollEventThrottle={scrollEventThrottle}
           ListHeaderComponent={renderHeader}
           scrollEnabled={scrollEnabled}
           removeClippedSubviews={!hideCompletedTasks}
@@ -864,8 +865,6 @@ export default function ListCard({
                           onCompleteImmediate={selectionMode ? undefined : handleTaskCompleteImmediate}
                           onEdit={onTaskEdit}
                           onDelete={onTaskDelete}
-                          onSwipeLeft={selectionMode ? undefined : onTaskSwipeLeft}
-                          onSwipeRight={selectionMode ? undefined : onTaskSwipeRight}
                           showCategory={showCategory}
                           compact={compact}
                           showIcon={showIcon}
@@ -910,7 +909,7 @@ export default function ListCard({
           contentContainerStyle={contentContainerStyle}
           refreshControl={refreshControl}
           onScroll={scrollHandler}
-          scrollEventThrottle={32}
+          scrollEventThrottle={scrollEventThrottle}
           ListHeaderComponent={renderHeader}
           scrollEnabled={scrollEnabled}
           removeClippedSubviews={!hideCompletedTasks}

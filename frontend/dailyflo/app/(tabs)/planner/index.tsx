@@ -249,18 +249,6 @@ export default function PlannerScreen() {
     }
   };
   
-  // handle swipe left gesture (complete task)
-  const handleTaskSwipeLeft = async (task: Task) => {
-    if (!task.isCompleted) {
-      await handleTaskComplete(task);
-    }
-  };
-  
-  // handle swipe right gesture (delete task)
-  const handleTaskSwipeRight = async (task: Task) => {
-    await handleTaskDelete(task);
-  };
-  
   // handle refresh - reload tasks from server
   const handleRefresh = async () => {
     if (isAuthenticated) {
@@ -395,8 +383,6 @@ export default function PlannerScreen() {
                     onTaskComplete={handleTaskComplete}
                     onTaskEdit={handleTaskEdit}
                     onTaskDelete={handleTaskDelete}
-                    onTaskSwipeLeft={handleTaskSwipeLeft}
-                    onTaskSwipeRight={handleTaskSwipeRight}
                     showCategory={false}
                     compact={false}
                     showIcon={false}

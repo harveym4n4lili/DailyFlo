@@ -1,7 +1,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { StyleSheet, RefreshControl, View, Text, Alert, Animated } from 'react-native';
-import AnimatedReanimated, { useSharedValue, useAnimatedStyle, useAnimatedReaction, withTiming, withSpring } from 'react-native-reanimated';
+import { StyleSheet, RefreshControl, View, Text, Animated } from 'react-native';
+import AnimatedReanimated, { useSharedValue, useAnimatedStyle, useAnimatedReaction, withTiming, withSpring, runOnJS } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
@@ -214,44 +214,39 @@ export default function TodayScreen() {
   // completed tasks remain in their date groups and are not filtered out
   // the grouping logic is handled internally by the listcard component
 
-  // STORE USAGE - Dispatching actions to fetch data
-  // SCROLL DETECTION EFFECT
-  // Monitor scroll position and show title when screen title is covered
-  useEffect(() => {
-    const handleScrollChange = (scrollY: number) => {
-      // lower threshold (more negative) makes the title appear earlier when scrolling up
-      // changed from -30 to -50 to activate the top section sooner
-      const titleThreshold = insets.top + 12;
-      
-      if (scrollY >= titleThreshold && !showTitle && !isAnimatingRef.current) {
-        setShowTitle(true);
-        isAnimatingRef.current = true;
-        Animated.timing(titleOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => {
-          isAnimatingRef.current = false;
-        });
-      } else if (scrollY < titleThreshold && showTitle && !isAnimatingRef.current) {
-        isAnimatingRef.current = true;
-        Animated.timing(titleOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => {
-          setShowTitle(false);
-          isAnimatingRef.current = false;
-        });
+  // title threshold: show title when scrolled past this (runs on UI thread, only bridges to JS when crossing)
+  const titleThreshold = insets.top + 12;
+  const onTitleThresholdCrossed = useCallback((pastThreshold: boolean) => {
+    if (pastThreshold && !showTitle && !isAnimatingRef.current) {
+      setShowTitle(true);
+      isAnimatingRef.current = true;
+      Animated.timing(titleOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        isAnimatingRef.current = false;
+      });
+    } else if (!pastThreshold && showTitle && !isAnimatingRef.current) {
+      isAnimatingRef.current = true;
+      Animated.timing(titleOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setShowTitle(false);
+        isAnimatingRef.current = false;
+      });
+    }
+  }, [showTitle, titleOpacity]);
+  useAnimatedReaction(
+    () => scrollY.value >= titleThreshold,
+    (pastThreshold, previousPastThreshold) => {
+      if (previousPastThreshold !== null && pastThreshold !== previousPastThreshold) {
+        runOnJS(onTitleThresholdCrossed)(pastThreshold);
       }
-    };
-
-    (global as any).trackScrollToTodayLayout = handleScrollChange;
-
-    return () => {
-      delete (global as any).trackScrollToTodayLayout;
-    };
-  }, [insets.top, showTitle, titleOpacity]);
+    }
+  );
 
   // Fetch tasks when component mounts
   // useEffect runs after the component renders for the first time
@@ -340,47 +335,6 @@ export default function TodayScreen() {
   }, [dispatch]);
 
 
-  // SWIPE GESTURE HANDLERS - Functions that handle swipe gestures on task cards
-  // these demonstrate how to use the new swipe functionality in TaskCard
-  
-  const handleTaskSwipeLeft = useCallback((task: Task) => {
-    handleTaskComplete(task);
-  }, [handleTaskComplete]);
-
-  const handleListScroll = useCallback((event: { nativeEvent: { contentOffset: { y: number } } }) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    scrollY.value = offsetY;
-    if ((global as any).trackScrollToTodayLayout) {
-      (global as any).trackScrollToTodayLayout(offsetY);
-    }
-  }, [scrollY]);
-
-  const handleTaskSwipeRight = useCallback((task: Task) => {
-    console.log('Swiped right on task:', task.title);
-    
-    // show confirmation dialog before deleting task
-    Alert.alert(
-      'Delete Task', // dialog title
-      `Are you sure you want to delete "${task.title}"? This action cannot be undone.`, // dialog message with task title
-      [
-        {
-          text: 'Cancel', // cancel button
-          style: 'cancel', // styled as cancel button (appears on left on iOS)
-        },
-        {
-          text: 'Delete', // confirm button
-          style: 'destructive', // styled as destructive action (red color on iOS)
-          onPress: () => {
-            // actually delete the task when user confirms
-            console.log('🗑️ User confirmed deletion of task:', task.title);
-            handleTaskDelete(task);
-          },
-        },
-      ],
-      { cancelable: true }
-    );
-  }, [handleTaskDelete]);
-
   // clear overdue reschedule callback when screen gains focus; flush pending checkbox syncs when leaving (tab switch)
   useFocusEffect(
     React.useCallback(() => {
@@ -442,7 +396,7 @@ export default function TodayScreen() {
       <View style={[styles.topSectionAnchor, { height: insets.top + 64 }]}>
         <BlurView
           tint={themeColors.isDark ? 'dark' : 'light'}
-          intensity={2}
+          intensity={1}
           style={StyleSheet.absoluteFill}
         />
         <LinearGradient
@@ -505,8 +459,6 @@ export default function TodayScreen() {
         onTaskComplete={handleTaskComplete}
         onTaskEdit={handleTaskEdit}
         onTaskDelete={handleTaskDelete}
-        onTaskSwipeLeft={handleTaskSwipeLeft}
-        onTaskSwipeRight={handleTaskSwipeRight}
         showCategory={false}
         compact={false}
         showIcon={false}
@@ -529,9 +481,8 @@ export default function TodayScreen() {
         bigTodayHeader={true} // show big "Today" title at top of list
         onRefresh={handleRefresh}
         refreshing={isLoading}
-        onScroll={handleListScroll}
-        scrollEventThrottle={16}
         scrollYSharedValue={scrollY}
+        scrollEventThrottle={128}
         paddingTop={64}
         paddingHorizontal={Paddings.screen}
         scrollPastTopInset={true} // let content scroll up into status bar area without cutoff
