@@ -7,12 +7,6 @@
  * This component demonstrates the composition pattern - it composes smaller components
  * (TaskCardContent, TaskMetadata, TaskIndicators, etc.) into a complete task card.
  * 
- * Swipe Gestures:
- * - Swipe left: triggers onSwipeLeft callback (e.g., for complete action)
- * - Swipe right: triggers onSwipeRight callback (e.g., for delete action)
- * - Swipe threshold: 60 pixels minimum distance to trigger action
- * - Smooth animations: card moves with finger and springs back to center
- * 
  * This component demonstrates the flow from Redux store → Component → User interaction.
  */
 
@@ -29,10 +23,6 @@ import { Paddings } from '@/constants/Paddings';
 
 // import utility functions for task formatting and colors
 import { getTaskColorValue } from '@/utils/taskColors';
-
-// import reusable swipeable card component
-import { SwipeableCard, SwipeAction } from '../SwipeableCard';
-import { useSwipeAnimation } from '../SwipeableCard/SwipeableCard';
 
 // import task card sub-components
 import TaskCardContent from './TaskCardContent';
@@ -63,10 +53,6 @@ export interface TaskCardProps {
   onCompleteImmediate?: (task: Task, targetCompleted?: boolean) => void; // called immediately on tap (e.g. for local UI); backend sync still delayed
   onEdit?: (task: Task) => void; // called when user wants to edit task
   onDelete?: (task: Task) => void; // called when user wants to delete task
-
-  // swipe gesture callback functions
-  onSwipeLeft?: (task: Task) => void; // called when user swipes left on the card
-  onSwipeRight?: (task: Task) => void; // called when user swipes right on the card
 
   // optional display options
   showCategory?: boolean; // whether to show the list/category name
@@ -114,8 +100,6 @@ function taskCardPropsAreEqual(prev: TaskCardProps, next: TaskCardProps) {
     prev.onCompleteImmediate === next.onCompleteImmediate &&
     prev.onEdit === next.onEdit &&
     prev.onDelete === next.onDelete &&
-    prev.onSwipeLeft === next.onSwipeLeft &&
-    prev.onSwipeRight === next.onSwipeRight &&
     prev.showCategory === next.showCategory &&
     prev.compact === next.compact &&
     prev.showIcon === next.showIcon &&
@@ -142,8 +126,6 @@ const TaskCard = React.memo(function TaskCard({
   onCompleteImmediate,
   onEdit,
   onDelete,
-  onSwipeLeft,
-  onSwipeRight,
   showCategory = false,
   compact = false,
   showIcon = true,
@@ -170,48 +152,11 @@ const TaskCard = React.memo(function TaskCard({
   // create dynamic styles using the color palette system
   const styles = useMemo(() => createStyles(themeColors, cardSpacing), [themeColors, cardSpacing]);
 
-  const translateX = useSwipeAnimation();
-
   // displayCompleted from TaskCardCheckbox for card styling (optimistic ui)
   const [displayCompleted, setDisplayCompleted] = useState(task.isCompleted);
   useEffect(() => {
     setDisplayCompleted(task.isCompleted);
   }, [task.id]);
-
-  // configure swipe actions for SwipeableCard
-  // left swipe (negative translation) = complete action (green)
-  const leftSwipeAction: SwipeAction | undefined = onSwipeLeft
-    ? {
-        backgroundColor: '#34C759', // iOS green color for completion
-        icon: 'checkmark',
-        iconColor: 'white',
-        iconSize: 24,
-      }
-    : undefined;
-
-  // right swipe (positive translation) = delete action (red)
-  const rightSwipeAction: SwipeAction | undefined = onSwipeRight
-    ? {
-        backgroundColor: '#FF3B30', // iOS red color
-        icon: 'trash-outline',
-        iconColor: 'white',
-        iconSize: 24,
-      }
-    : undefined;
-
-  // handle swipe left callback - complete task directly (no confirmation)
-  const handleSwipeLeft = () => {
-    if (onSwipeLeft) {
-      onSwipeLeft(task);
-    }
-  };
-
-  // handle swipe right callback
-  const handleSwipeRight = () => {
-    if (onSwipeRight) {
-      onSwipeRight(task);
-    }
-  };
 
   // in selection mode: tap toggles selection; otherwise tap opens task
   const handlePress = () => {
@@ -226,32 +171,16 @@ const TaskCard = React.memo(function TaskCard({
 
   return (
     <View style={styles.cardContainer}>
-      {/* swipeable card wrapper - adds swipe gesture functionality */}
-      <SwipeableCard
-        onSwipeLeft={handleSwipeLeft}
-        onSwipeRight={handleSwipeRight}
-        swipeThreshold={60}
-        leftAction={leftSwipeAction}
-        rightAction={rightSwipeAction}
-        borderRadius={0}
+      {/* card: row with checkbox (separate touch) + touchable content (opens task) */}
+      <View
+        style={[
+          styles.card,
+          compact && styles.compactCard,
+          displayCompleted && styles.completedCard,
+          hideBackground && styles.transparentBackground,
+          removeInnerPadding && styles.noInnerPadding,
+        ]}
       >
-        {/* card: row with checkbox (separate touch) + touchable content (opens task) */}
-        <View
-          style={[
-            styles.card,
-            compact && styles.compactCard,
-            displayCompleted && styles.completedCard,
-            hideBackground && styles.transparentBackground,
-            removeInnerPadding && styles.noInnerPadding,
-            translateX && {
-              borderRadius: translateX.interpolate({
-                inputRange: [-200, 0, 200],
-                outputRange: [28, 12, 28],
-                extrapolate: 'clamp',
-              }),
-            },
-          ]}
-        >
           <View style={styles.contentRow}>
             {/* single TaskCardCheckbox: completion when !selectionMode, selection when selectionMode; animates shape on enter/exit */}
             <TaskCardCheckbox
@@ -315,7 +244,6 @@ const TaskCard = React.memo(function TaskCard({
         {showIndicators && (
           <TaskIndicators routineType={task.routineType} listId={task.listId} />
         )}
-      </SwipeableCard>
     </View>
   );
 }, taskCardPropsAreEqual);
