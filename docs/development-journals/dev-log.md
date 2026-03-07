@@ -1367,3 +1367,18 @@ Updated User app, models, serializers, views and urls
 ### Plans For Future
 - plan to implement context button functionality, such as acitvity log, and task select.
 - plan to implement browse page.
+---
+## [06/03/2025] - [Friday]
+### Today's Goals
+- [X] Implemneted select task UI
+- [X] Implemneted task sleection mode UI transitions
+- [X] Implemented selection mode action button functionality and conditional UI
+- [X] Attempted performance optimizations for today screen
+
+### Plans For Future
+- plan to implement activity log.
+- plan to implement browse page.
+- Optimize Today screen scroll performance
+
+### Notes
+- no notes
