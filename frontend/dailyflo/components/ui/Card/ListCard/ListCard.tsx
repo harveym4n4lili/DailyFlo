@@ -154,6 +154,9 @@ export interface ListCardProps {
   // when false, disables internal scrolling - use when ListCard is inside another ScrollView (e.g. planner footer)
   scrollEnabled?: boolean;
 
+  // when true, shows vertical scroll indicator on the right (default false)
+  showsVerticalScrollIndicator?: boolean;
+
   // when true, completed tasks are hidden from the list - they disappear when checked (iOS-style)
   hideCompletedTasks?: boolean;
 
@@ -223,6 +226,7 @@ export default function ListCard({
   scrollPastTopInset = false,
   scrollYSharedValue,
   scrollEnabled = true,
+  showsVerticalScrollIndicator = false,
   hideCompletedTasks = false,
   delayHeightChangeOnTaskComplete = true,
   disableInitialLayoutTransition = false,
@@ -792,6 +796,7 @@ export default function ListCard({
           refreshControl={refreshControl}
           onScroll={scrollHandler}
           scrollEventThrottle={scrollEventThrottle}
+          showsVerticalScrollIndicator={showsVerticalScrollIndicator}
           ListHeaderComponent={renderHeader}
           scrollEnabled={scrollEnabled}
           removeClippedSubviews={!hideCompletedTasks}
@@ -910,6 +915,7 @@ export default function ListCard({
           refreshControl={refreshControl}
           onScroll={scrollHandler}
           scrollEventThrottle={scrollEventThrottle}
+          showsVerticalScrollIndicator={showsVerticalScrollIndicator}
           ListHeaderComponent={renderHeader}
           scrollEnabled={scrollEnabled}
           removeClippedSubviews={!hideCompletedTasks}

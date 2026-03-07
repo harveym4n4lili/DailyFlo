@@ -214,6 +214,18 @@ export default function RootLayout() {
                 },
               }}
             />
+            {/* activity-log: liquid glass stack screen – full screen, draggable, same as task-create structure */}
+            <Stack.Screen
+              name="activity-log"
+              options={{
+                headerShown: false,
+                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+                gestureEnabled: true,
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.primary(),
+                },
+              }}
+            />
             {/* task: view/edit form sheet with indent (detents) */}
             <Stack.Screen
               name="task"
