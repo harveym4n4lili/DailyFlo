@@ -1,7 +1,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { StyleSheet, RefreshControl, View, Text, Alert, Animated } from 'react-native';
-import AnimatedReanimated, { useSharedValue, useAnimatedStyle, useAnimatedReaction, withTiming } from 'react-native-reanimated';
+import AnimatedReanimated, { useSharedValue, useAnimatedStyle, useAnimatedReaction, withTiming, withSpring } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
@@ -90,10 +90,29 @@ export default function TodayScreen() {
   const fabOpacity = useSharedValue(1);
   useEffect(() => {
     const isSelectionMode = selection.isSelectionMode && selection.selectionType === 'tasks';
-    fabOpacity.value = withTiming(isSelectionMode ? 0 : 1, { duration: 200 });
+    fabOpacity.value = withTiming(isSelectionMode ? 0 : 1, { duration: 400 });
   }, [selection.isSelectionMode, selection.selectionType, fabOpacity]);
   const fabAnimatedStyle = useAnimatedStyle(() => ({ opacity: fabOpacity.value }));
-  
+
+  // close button: scale animation with Reanimated spring (works with glass; opacity can break it)
+  const closeButtonScale = useSharedValue(0);
+  useEffect(() => {
+    const isSel = selection.isSelectionMode && selection.selectionType === 'tasks';
+    closeButtonScale.value = withSpring(isSel ? 1 : 0, {
+      damping: 45,
+      stiffness: 600,
+    });
+  }, [selection.isSelectionMode, selection.selectionType, closeButtonScale]);
+  const handleCloseButtonPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    closeButtonScale.value = withTiming(0, { duration: 150 });
+    setTimeout(exitSelectionMode, 90);
+  }, [closeButtonScale, exitSelectionMode]);
+  const closeButtonAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: closeButtonScale.value }],
+  }));
+  const isSelectionMode = selection.isSelectionMode && selection.selectionType === 'tasks';
+
   // TITLE STATE - Controls the visibility of the title header
   const [showTitle, setShowTitle] = useState(false);
   
@@ -436,18 +455,10 @@ export default function TodayScreen() {
           pointerEvents="none"
         />
         <View style={styles.topSectionRow}>
-          {/* close button - liquid glass on iOS, appears in selection mode only */}
-          {selection.isSelectionMode && selection.selectionType === 'tasks' ? (
-            <SelectionCloseButton
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                exitSelectionMode();
-              }}
-              style={styles.topSectionCloseButton}
-            />
-          ) : (
-            <View style={styles.topSectionCloseButton} pointerEvents="none" />
-          )}
+          {/* close button - scale spring (works with glass) */}
+          <AnimatedReanimated.View style={[styles.topSectionCloseButton, closeButtonAnimatedStyle]} pointerEvents={isSelectionMode ? 'auto' : 'none'}>
+            <SelectionCloseButton onPress={handleCloseButtonPress} />
+          </AnimatedReanimated.View>
           <AnimatedReanimated.View style={[styles.miniTodayHeader, miniTodayHeaderStyle]} pointerEvents="none">
             <Text style={[styles.miniTodayHeaderText, { color: themeColors.text.primary() }]}>
               {selection.isSelectionMode && selection.selectionType === 'tasks'
@@ -581,6 +592,7 @@ const createStyles = (
   // context menu button on right side - matches task screen ActionContextMenu (transparent bg, liquid glass)
   topSectionContextButton: {
     marginLeft: 'auto',
+    alignSelf: 'center',
     backgroundColor: 'transparent',
   },
   topSectionSelectAllButton: {

@@ -71,10 +71,12 @@ export function SelectAllButton({
   );
 }
 
-// inner padding: match ActionContextMenu iosWrapper exactly (indicatorVertical + contextMenuHorizontal)
+// vertical padding: match close button (44px height, 24px icon = 10px each side)
+const CLOSE_BUTTON_V_PADDING = (44 - 24) / 2; // 10
 const styles = StyleSheet.create({
   glassContainer: {
-    paddingVertical: Paddings.contextMenuVertical,
+    minHeight: 44,
+    paddingVertical: CLOSE_BUTTON_V_PADDING,
     paddingHorizontal: Paddings.contextMenuHorizontal,
     borderRadius: 20,
     backgroundColor: 'transparent',
@@ -88,7 +90,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   touchable: {
-    paddingVertical: Paddings.contextMenuVertical,
+    paddingVertical: CLOSE_BUTTON_V_PADDING,
     paddingHorizontal: Paddings.contextMenuHorizontal,
     borderRadius: 20,
     alignSelf: 'flex-start',
