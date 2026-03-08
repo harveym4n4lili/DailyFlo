@@ -8,6 +8,8 @@
 
 import { useCallback } from 'react';
 import { useAppSelector, useAppDispatch, RootState } from './index';
+// import the thunk so the hook can expose a fetchLogs action
+import { fetchActivityLogs, clearActivityLogs, clearError } from './slices/activityLogs/activityLogsSlice';
 
 /**
  * Custom hook for accessing tasks state
@@ -143,6 +145,35 @@ export const useUI = () => {
     setEmailAuthFirstName: useCallback((firstName: string) => dispatch({ type: 'ui/setEmailAuthFirstName', payload: firstName }), [dispatch]),
     setEmailAuthLastName: useCallback((lastName: string) => dispatch({ type: 'ui/setEmailAuthLastName', payload: lastName }), [dispatch]),
     resetUIState: useCallback(() => dispatch({ type: 'ui/resetUIState' }), [dispatch]),
+  };
+};
+
+/**
+ * Custom hook for accessing activity logs state
+ *
+ * Returns the logs array, loading/error state, and helper actions.
+ * Usage in a screen:
+ *   const { logs, isLoading, error, fetchLogs } = useActivityLogs();
+ *   useEffect(() => { fetchLogs(); }, []);
+ */
+export const useActivityLogs = () => {
+  const dispatch = useAppDispatch();
+
+  // read the activityLogs slice out of the Redux store
+  const activityLogsState = useAppSelector((state: RootState) => state.activityLogs);
+
+  return {
+    // state values
+    ...activityLogsState,
+
+    // dispatch the fetch thunk - triggers GET /tasks/activity-logs/
+    fetchLogs: useCallback(() => dispatch(fetchActivityLogs()), [dispatch]),
+
+    // clear all log entries from state (e.g. on logout)
+    clearLogs: useCallback(() => dispatch(clearActivityLogs()), [dispatch]),
+
+    // dismiss any error message without re-fetching
+    clearError: useCallback(() => dispatch(clearError()), [dispatch]),
   };
 };
 

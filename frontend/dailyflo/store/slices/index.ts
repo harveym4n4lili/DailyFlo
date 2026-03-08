@@ -10,9 +10,11 @@ export { authReducer } from './auth';
 export { tasksReducer } from './tasks';
 export { listsReducer } from './lists';
 export { uiReducer, themeReducer } from './ui';
+export { activityLogsReducer } from './activityLogs';
 
 // Export all slice actions with namespace to avoid conflicts
 export * as authActions from './auth';
 export * as taskActions from './tasks';
 export * as listActions from './lists';
 export * as uiActions from './ui';
+export * as activityLogActions from './activityLogs';

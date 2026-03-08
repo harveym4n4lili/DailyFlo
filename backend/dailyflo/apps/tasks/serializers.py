@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Task
+from .models import Task, ActivityLog
 from apps.lists.models import List
 
 
@@ -199,3 +199,24 @@ class ListCreateSerializer(serializers.ModelSerializer):
         """create new list with current user"""
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
+
+
+class ActivityLogSerializer(serializers.ModelSerializer):
+    """
+    read-only serializer for activity log entries.
+    converts snake_case model fields to camelCase for the frontend.
+    task_id is exposed as taskId so the frontend can navigate to the task view.
+    """
+
+    # expose the task FK's UUID directly as taskId for frontend navigation
+    # source='task_id' reads the raw FK column (no extra DB join needed)
+    taskId = serializers.UUIDField(source='task_id', read_only=True)
+    actionType = serializers.CharField(source='action_type', read_only=True)
+    taskTitle = serializers.CharField(source='task_title', read_only=True)
+    occurrenceDate = serializers.DateField(source='occurrence_date', read_only=True)
+    createdAt = serializers.DateTimeField(source='created_at', read_only=True)
+
+    class Meta:
+        model = ActivityLog
+        fields = ['id', 'taskId', 'actionType', 'taskTitle', 'occurrenceDate', 'createdAt']
+        read_only_fields = fields
