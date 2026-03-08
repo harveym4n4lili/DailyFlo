@@ -1382,3 +1382,27 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - no notes
+---
+## [07/03/2025] - [Saturday]
+### Today's Goals
+- [X] Prepared Activity Log stack screen
+
+### Plans For Future
+- plan to implement activity log filter context menu
+- plan ui for activity log
+
+### Notes
+- no notes
+---
+## [08/03/2025] - [Saturday]
+### Today's Goals
+- [X] Implemented acitvity log model, serializer, apis
+- [X] Implemented types and redux store states for acitivty logs
+- [X] Implemented activity log UI
+
+### Plans For Future
+- plan to implement browse page.
+- Optimize Today screen scroll performance
+
+### Notes
+- no notes
