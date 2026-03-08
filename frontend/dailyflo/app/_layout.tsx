@@ -214,15 +214,15 @@ export default function RootLayout() {
                 },
               }}
             />
-            {/* activity-log: liquid glass stack screen – full screen, draggable, same as task-create structure */}
+            {/* activity-log: use modal (not formSheet) so ScrollView scrolls properly – formSheet has known scroll conflicts */}
             <Stack.Screen
               name="activity-log"
               options={{
                 headerShown: false,
-                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
-                gestureEnabled: true,
+                presentation: 'modal',
+                gestureEnabled: false,
                 contentStyle: {
-                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.primary(),
+                  backgroundColor: themeColors.background.primary(),
                 },
               }}
             />

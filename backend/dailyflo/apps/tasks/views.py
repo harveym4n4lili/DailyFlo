@@ -5,10 +5,11 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView, CreateAPIView,
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.db.models import Q
-from .models import Task
+from .models import Task, ActivityLog
 from .serializers import (
     TaskListSerializer, TaskDetailSerializer, TaskCreateSerializer,
-    TaskUpdateSerializer, TaskCompleteSerializer, ListSerializer, ListCreateSerializer
+    TaskUpdateSerializer, TaskCompleteSerializer, ListSerializer, ListCreateSerializer,
+    ActivityLogSerializer,
 )
 from apps.lists.models import List
 
@@ -50,23 +51,85 @@ class TaskViewSet(viewsets.ModelViewSet):
             return TaskDetailSerializer
     
     def perform_create(self, serializer):
-        """create task with current user"""
-        serializer.save(user=self.request.user)
-    
+        """create task with current user and log the creation."""
+        task = serializer.save(user=self.request.user)
+        ActivityLog.objects.create(
+            user=self.request.user,
+            task=task,
+            action_type='created',
+            task_title=task.title,
+        )
+
+    def perform_update(self, serializer):
+        """save task update and write an activity log entry.
+        checks whether completion changed vs other fields changed so the correct action_type is recorded.
+        """
+        # snapshot is_completed before saving so we can detect a change
+        old_is_completed = serializer.instance.is_completed
+
+        serializer.save()
+
+        updated = serializer.instance
+
+        # if the task just became completed, log 'completed' instead of 'updated'
+        if not old_is_completed and updated.is_completed:
+            ActivityLog.objects.create(
+                user=self.request.user,
+                task=updated,
+                action_type='completed',
+                task_title=updated.title,
+            )
+        else:
+            # any other field changed -> log 'updated'
+            ActivityLog.objects.create(
+                user=self.request.user,
+                task=updated,
+                action_type='updated',
+                task_title=updated.title,
+            )
+
     def perform_destroy(self, instance):
-        """soft delete task instead of hard delete"""
-        # Instead of actually deleting, mark as soft deleted
-        # This allows for recovery and maintains data integrity
+        """soft delete task instead of hard delete and write a 'deleted' activity log entry.
+        task_title is snapshotted now because after soft-delete the task title is still accessible
+        but we store it explicitly so the log survives even a future hard-delete.
+        """
+        task_title = instance.title
+
+        # soft delete: keeps the row in the DB so the activity log FK stays valid
         instance.soft_deleted = True
         instance.save()
-    
+
+        ActivityLog.objects.create(
+            user=self.request.user,
+            task=instance,
+            action_type='deleted',
+            task_title=task_title,
+        )
+
     @action(detail=True, methods=['patch'])
     def complete(self, request, pk=None):
-        """mark task as completed"""
+        """mark task as completed via the dedicated /complete/ endpoint and log the action."""
         task = self.get_object()
+        # snapshot before save to know if completion actually changed
+        old_is_completed = task.is_completed
+
         serializer = TaskCompleteSerializer(task, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+
+            # only log 'completed' when the task transitions from incomplete → complete
+            # (not when marking incomplete again, which would be a toggle-back)
+            if not old_is_completed and task.is_completed:
+                ActivityLog.objects.create(
+                    user=request.user,
+                    task=task,
+                    action_type='completed',
+                    task_title=task.title,
+                    # occurrence_date can be passed as a query param for recurring tasks
+                    # e.g. PATCH /tasks/{id}/complete/?occurrence_date=2026-03-08
+                    occurrence_date=request.query_params.get('occurrence_date'),
+                )
+
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -163,3 +226,20 @@ class ListViewSet(viewsets.ModelViewSet):
                 {'error': 'Inbox list not found'}, 
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    read-only viewset that returns activity log entries for the authenticated user.
+    ordered by newest first (-created_at) so the frontend receives them in display order.
+    only list() and retrieve() are exposed - users cannot create/edit/delete logs directly.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ActivityLogSerializer
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        """return only the current user's activity logs, newest first."""
+        return ActivityLog.objects.filter(
+            user=self.request.user
+        ).order_by('-created_at')

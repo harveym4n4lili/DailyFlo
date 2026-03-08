@@ -3,6 +3,66 @@ from django.conf import settings
 import uuid
 
 
+class ActivityLog(models.Model):
+    """
+    records every user action on tasks (completed, updated, deleted).
+    stored as a flat list - the api groups them by date for the activity log screen.
+    task_title is snapshotted at the time of action so deleted tasks still show their name.
+    task FK uses SET_NULL so the row survives a hard delete (only soft-delete is used now, but defensive).
+    """
+
+    ACTION_CHOICES = [
+        ('created', 'Created'),
+        ('completed', 'Completed'),
+        ('updated', 'Updated'),
+        ('deleted', 'Deleted'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # which user did the action
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='activity_logs',
+    )
+
+    # which task the action was on - SET_NULL keeps the log row even if task is later hard-deleted
+    task = models.ForeignKey(
+        'Task',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='activity_logs',
+    )
+
+    # what type of action was performed
+    action_type = models.CharField(max_length=20, choices=ACTION_CHOICES)
+
+    # snapshot of the task title at the time of the action
+    # needed so deleted tasks still display a readable title in the log
+    task_title = models.CharField(max_length=255)
+
+    # for recurring tasks: the specific occurrence date that was completed (YYYY-MM-DD)
+    # null for non-recurring tasks or update/delete actions
+    occurrence_date = models.DateField(null=True, blank=True)
+
+    # when the log entry was created - used for grouping by date in the UI
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'activity_logs'
+        verbose_name = 'Activity Log'
+        verbose_name_plural = 'Activity Logs'
+        ordering = ['-created_at']
+        # compound index for fast "get all logs for this user, newest first" query
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} {self.action_type} '{self.task_title}' at {self.created_at}"
+
+
 class Task(models.Model):
     """
     task model for individual tasks

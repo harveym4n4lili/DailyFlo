@@ -13,3 +13,6 @@ export * from './List';
 
 // Export all User-related types
 export * from './User';
+
+// Export all ActivityLog-related types
+export * from './ActivityLog';
