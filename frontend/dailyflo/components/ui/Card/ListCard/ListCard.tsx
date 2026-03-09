@@ -79,10 +79,6 @@ export interface ListCardProps {
   onTaskEdit?: (task: Task) => void; // called when user wants to edit a task
   onTaskDelete?: (task: Task) => void; // called when user wants to delete a task
 
-  // swipe gesture callback functions (passed down to TaskCard components)
-  onTaskSwipeLeft?: (task: Task) => void; // called when user swipes left on a task card
-  onTaskSwipeRight?: (task: Task) => void; // called when user swipes right on a task card
-
   // optional display options
   showCategory?: boolean; // whether to show category names in task cards
   compact?: boolean; // whether to use compact layout for task cards
@@ -158,6 +154,9 @@ export interface ListCardProps {
   // when false, disables internal scrolling - use when ListCard is inside another ScrollView (e.g. planner footer)
   scrollEnabled?: boolean;
 
+  // when true, shows vertical scroll indicator on the right (default false)
+  showsVerticalScrollIndicator?: boolean;
+
   // when true, completed tasks are hidden from the list - they disappear when checked (iOS-style)
   hideCompletedTasks?: boolean;
 
@@ -168,6 +167,13 @@ export interface ListCardProps {
   // when true, disables layout transition on initial mount so parent (e.g. timeline) doesn't slide up on load
   // used when ListCard is inside a scroll container (e.g. planner footer) to avoid Reanimated animating first layout
   disableInitialLayoutTransition?: boolean;
+
+  // selection mode - when true, task cards show selection checkboxes and tap toggles selection
+  // parent (e.g. Today/Planner screen) gets these from Redux via useUI(); ListCard receives them as props
+  // and passes selectionMode, isSelected, onSelect down to each TaskCard
+  selectionMode?: boolean;
+  selectedTaskIds?: string[];
+  onToggleTaskSelection?: (taskId: string) => void;
 }
 
 /**
@@ -184,8 +190,6 @@ export default function ListCard({
   onTaskComplete,
   onTaskEdit,
   onTaskDelete,
-  onTaskSwipeLeft,
-  onTaskSwipeRight,
   showCategory = false,
   compact = false,
   showIcon = true,
@@ -222,9 +226,13 @@ export default function ListCard({
   scrollPastTopInset = false,
   scrollYSharedValue,
   scrollEnabled = true,
+  showsVerticalScrollIndicator = false,
   hideCompletedTasks = false,
   delayHeightChangeOnTaskComplete = true,
   disableInitialLayoutTransition = false,
+  selectionMode = false,
+  selectedTaskIds = [],
+  onToggleTaskSelection,
 }: ListCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -426,16 +434,15 @@ export default function ListCard({
       const { opacityValue, scaleValue, shouldAnimate } = getTaskCardAnimation(task.id, index || 0);
       const isLastItem = index === processedTasks.length - 1;
       const isFirstItem = index === 0;
+      const isSelected = selectionMode && selectedTaskIds.includes(task.id);
       const card = (
           <TaskCard
             task={task}
-            onPress={onTaskPress}
-            onComplete={handleTaskComplete}
-            onCompleteImmediate={handleTaskCompleteImmediate}
+            onPress={selectionMode && onToggleTaskSelection ? undefined : onTaskPress}
+            onComplete={selectionMode ? undefined : handleTaskComplete}
+            onCompleteImmediate={selectionMode ? undefined : handleTaskCompleteImmediate}
             onEdit={onTaskEdit}
             onDelete={onTaskDelete}
-            onSwipeLeft={onTaskSwipeLeft}
-            onSwipeRight={onTaskSwipeRight}
             showCategory={showCategory}
             compact={compact}
             showIcon={showIcon}
@@ -449,6 +456,9 @@ export default function ListCard({
             removeInnerPadding={removeInnerPadding}
             isLastItem={isLastItem}
             isFirstItem={isFirstItem}
+            selectionMode={selectionMode}
+            isSelected={isSelected}
+            onSelect={selectionMode && onToggleTaskSelection ? (t: Task, _selected?: boolean) => onToggleTaskSelection(t.id) : undefined}
           />
       );
       const wrapper = shouldAnimate && opacityValue && scaleValue ? (
@@ -475,8 +485,6 @@ export default function ListCard({
       handleTaskCompleteImmediate,
       onTaskEdit,
       onTaskDelete,
-      onTaskSwipeLeft,
-      onTaskSwipeRight,
       showCategory,
       compact,
       showIcon,
@@ -489,6 +497,9 @@ export default function ListCard({
       hideBackground,
       removeInnerPadding,
       layoutTransitionEnabled,
+      selectionMode,
+      selectedTaskIds,
+      onToggleTaskSelection,
     ]
   );
 
@@ -549,15 +560,26 @@ export default function ListCard({
     scrollOffsetRef.current = y;
   }, []);
 
+  // throttle runOnJS to every 4th scroll event - reduces bridge traffic for smoother scroll
+  const scrollEventCounter = useSharedValue(0);
+
   // when scrollYSharedValue provided: use animated scroll handler (runs on UI thread) to avoid JS thread work during scroll
-  // scrollY is updated on UI thread; onScroll is bridged via runOnJS for parent callbacks (e.g. trackScrollToTodayLayout)
-  // reanimated event has contentOffset at top level; parent expects { nativeEvent: { contentOffset } } - wrap to match
+  // scrollY is updated on UI thread; updateScrollOffsetRef throttled to every 4th event
   const animatedScrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
       const y = e.contentOffset.y;
       scrollY.value = y;
-      runOnJS(updateScrollOffsetRef)(y);
+      scrollEventCounter.value = scrollEventCounter.value + 1;
+      if (scrollEventCounter.value % 4 === 0) {
+        runOnJS(updateScrollOffsetRef)(y);
+      }
       if (onScroll) runOnJS(onScroll)({ nativeEvent: e });
+    },
+    onEndDrag: (e) => {
+      runOnJS(updateScrollOffsetRef)(e.contentOffset.y);
+    },
+    onMomentumEnd: (e) => {
+      runOnJS(updateScrollOffsetRef)(e.contentOffset.y);
     },
   });
   // when no animated handler: wrap onScroll to also track scroll offset for scroll-up-after-hide
@@ -684,10 +706,12 @@ export default function ListCard({
 
     return (
       <View style={styles.listHeaderWrapper}>
-        {/* big "Today" header - large typography at top when bigTodayHeader is true, fades on scroll */}
+        {/* big "Today" header - large typography at top when bigTodayHeader is true, fades on scroll; in selection mode shows "X selected" */}
         {bigTodayHeader && (
           <AnimatedReanimated.View style={bigTodayHeaderAnimatedStyle}>
-            <Text style={styles.bigTodayHeader}>Today</Text>
+            <Text style={styles.bigTodayHeader}>
+              {selectionMode ? `${selectedTaskIds.length} selected` : 'Today'}
+            </Text>
           </AnimatedReanimated.View>
         )}
         {/* standard header: title, subtitle, dropdown button */}
@@ -771,7 +795,8 @@ export default function ListCard({
           contentContainerStyle={contentContainerStyle}
           refreshControl={refreshControl}
           onScroll={scrollHandler}
-          scrollEventThrottle={32}
+          scrollEventThrottle={scrollEventThrottle}
+          showsVerticalScrollIndicator={showsVerticalScrollIndicator}
           ListHeaderComponent={renderHeader}
           scrollEnabled={scrollEnabled}
           removeClippedSubviews={!hideCompletedTasks}
@@ -836,16 +861,15 @@ export default function ListCard({
                       );
                       const isLastItem = index === groupTasks.length - 1;
                       const isFirstItem = index === 0;
+                      const isSelected = selectionMode && selectedTaskIds.includes(task.id);
                       const card = (
                         <TaskCard
                           task={task}
-                          onPress={onTaskPress}
-                          onComplete={handleTaskComplete}
-                          onCompleteImmediate={handleTaskCompleteImmediate}
+                          onPress={selectionMode && onToggleTaskSelection ? undefined : onTaskPress}
+                          onComplete={selectionMode ? undefined : handleTaskComplete}
+                          onCompleteImmediate={selectionMode ? undefined : handleTaskCompleteImmediate}
                           onEdit={onTaskEdit}
                           onDelete={onTaskDelete}
-                          onSwipeLeft={onTaskSwipeLeft}
-                          onSwipeRight={onTaskSwipeRight}
                           showCategory={showCategory}
                           compact={compact}
                           showIcon={showIcon}
@@ -859,6 +883,9 @@ export default function ListCard({
                           removeInnerPadding={removeInnerPadding}
                           isLastItem={isLastItem}
                           isFirstItem={isFirstItem}
+                          selectionMode={selectionMode}
+                          isSelected={isSelected}
+                          onSelect={selectionMode && onToggleTaskSelection ? (t: Task, _selected?: boolean) => onToggleTaskSelection(t.id) : undefined}
                         />
                       );
                       const wrapper = shouldAnimate && opacityValue && scaleValue ? (
@@ -887,7 +914,8 @@ export default function ListCard({
           contentContainerStyle={contentContainerStyle}
           refreshControl={refreshControl}
           onScroll={scrollHandler}
-          scrollEventThrottle={32}
+          scrollEventThrottle={scrollEventThrottle}
+          showsVerticalScrollIndicator={showsVerticalScrollIndicator}
           ListHeaderComponent={renderHeader}
           scrollEnabled={scrollEnabled}
           removeClippedSubviews={!hideCompletedTasks}

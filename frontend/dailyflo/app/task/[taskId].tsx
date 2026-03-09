@@ -458,7 +458,7 @@ export default function TaskEditScreen() {
         isEditMode={true}
         saveButtonBottomInsetWhenKeyboardHidden={44}
         pickerHandlers={pickerHandlers}
-        onActivityLog={() => {}}
+        onActivityLog={() => router.push('/activity-log' as any)}
         onDuplicateTask={handleDuplicateTask}
         onDeleteTask={handleDeleteTask}
       />

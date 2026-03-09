@@ -17,6 +17,8 @@ import tasksReducer from './slices/tasks/tasksSlice';
 import listsReducer from './slices/lists/listsSlice';
 import uiReducer from './slices/ui/uiSlice';
 import themeReducer from './slices/ui/themeSlice';
+// activityLogs slice manages the flat array of log entries fetched from /tasks/activity-logs/
+import activityLogsReducer from './slices/activityLogs/activityLogsSlice';
 
 /**
  * Configure the Redux store
@@ -28,11 +30,12 @@ export const store = configureStore({
   // Reducers are functions that specify how the state changes
   // Each slice has its own reducer that handles state updates
   reducer: {
-    auth: authReducer,        // Handles user authentication state
-    tasks: tasksReducer,      // Handles task management state
-    lists: listsReducer,      // Handles list/category state
-    ui: uiReducer,           // Handles UI state (modals, loading, etc.)
-    theme: themeReducer,     // Handles theme and preferences
+    auth: authReducer,              // Handles user authentication state
+    tasks: tasksReducer,            // Handles task management state
+    lists: listsReducer,            // Handles list/category state
+    ui: uiReducer,                  // Handles UI state (modals, loading, etc.)
+    theme: themeReducer,            // Handles theme and preferences
+    activityLogs: activityLogsReducer, // Handles activity log entries
   },
   
   // Middleware provides a way to extend Redux with custom functionality

@@ -1,7 +1,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { StyleSheet, RefreshControl, View, Text, Alert, Animated } from 'react-native';
-import AnimatedReanimated, { useSharedValue, useAnimatedStyle, useAnimatedReaction, withTiming } from 'react-native-reanimated';
+import { StyleSheet, RefreshControl, View, Text, Animated } from 'react-native';
+import AnimatedReanimated, { useSharedValue, useAnimatedStyle, useAnimatedReaction, withTiming, withSpring, runOnJS } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
@@ -12,7 +12,7 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 
 // import our new task components
 import { ListCard } from '@/components/ui/card';
-import { FloatingActionButton } from '@/components/ui/button';
+import { FloatingActionButton, SelectionCloseButton, SelectAllButton } from '@/components/ui/button';
 import { ActionContextMenu } from '@/components/ui';
 import { ClockIcon } from '@/components/ui/icon';
 import { ModalContainer } from '@/components/layout/ModalLayout';
@@ -84,8 +84,35 @@ export default function TodayScreen() {
   const { setDraft, registerOverdueReschedule, clearOverdueReschedule } = useCreateTaskDraft();
   
   // get UI state from Redux to check if createTask modal should be opened
-  const { modals, closeModal, enterSelectionMode } = useUI();
-  
+  const { modals, closeModal, enterSelectionMode, selection, toggleItemSelection, exitSelectionMode, selectAllItems, clearSelection } = useUI();
+
+  // FAB fade: opacity 0 in selection mode, 1 otherwise
+  const fabOpacity = useSharedValue(1);
+  useEffect(() => {
+    const isSelectionMode = selection.isSelectionMode && selection.selectionType === 'tasks';
+    fabOpacity.value = withTiming(isSelectionMode ? 0 : 1, { duration: 400 });
+  }, [selection.isSelectionMode, selection.selectionType, fabOpacity]);
+  const fabAnimatedStyle = useAnimatedStyle(() => ({ opacity: fabOpacity.value }));
+
+  // close button: scale animation with Reanimated spring (works with glass; opacity can break it)
+  const closeButtonScale = useSharedValue(0);
+  useEffect(() => {
+    const isSel = selection.isSelectionMode && selection.selectionType === 'tasks';
+    closeButtonScale.value = withSpring(isSel ? 1 : 0, {
+      damping: 45,
+      stiffness: 600,
+    });
+  }, [selection.isSelectionMode, selection.selectionType, closeButtonScale]);
+  const handleCloseButtonPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    closeButtonScale.value = withTiming(0, { duration: 150 });
+    setTimeout(exitSelectionMode, 90);
+  }, [closeButtonScale, exitSelectionMode]);
+  const closeButtonAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: closeButtonScale.value }],
+  }));
+  const isSelectionMode = selection.isSelectionMode && selection.selectionType === 'tasks';
+
   // TITLE STATE - Controls the visibility of the title header
   const [showTitle, setShowTitle] = useState(false);
   
@@ -108,7 +135,6 @@ export default function TodayScreen() {
   
   // SAFE AREA INSETS - Get safe area insets for proper positioning
   const insets = useSafeAreaInsets();
-  // router: used to open test modal (liquid glass) from main FAB for testing
   const router = useRouter();
   
   // create dynamic styles using the color palette system and typography system
@@ -153,6 +179,27 @@ export default function TodayScreen() {
     return expanded;
   }, [tasks]);
 
+  // eligible for select all: non-completed, non-deleted, due TODAY only
+  const todayDateStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const eligibleTodayTaskIds = useMemo(() => {
+    return todaysTasks
+      .filter((t) => !t.isCompleted && !t.softDeleted && t.dueDate?.slice(0, 10) === todayDateStr)
+      .map((t) => t.id);
+  }, [todaysTasks, todayDateStr]);
+
+  // if every eligible task is already selected, show "Deselect all" and pressing will clear selection
+  const allEligibleSelected = eligibleTodayTaskIds.length > 0 && eligibleTodayTaskIds.every((id) => selection.selectedItems.includes(id));
+  const selectAllLabel = allEligibleSelected ? 'Deselect all' : 'Select all';
+
+  const handleSelectAllToday = useCallback(() => {
+    if (!(selection.isSelectionMode && selection.selectionType === 'tasks')) return;
+    if (allEligibleSelected) {
+      clearSelection();
+    } else {
+      selectAllItems(eligibleTodayTaskIds);
+    }
+  }, [selection.isSelectionMode, selection.selectionType, allEligibleSelected, eligibleTodayTaskIds, selectAllItems, clearSelection]);
+
   // calculate total task count for header display (only incomplete tasks)
   const totalTaskCount = useMemo(() => {
     return todaysTasks.filter(task => !task.isCompleted).length;
@@ -167,44 +214,39 @@ export default function TodayScreen() {
   // completed tasks remain in their date groups and are not filtered out
   // the grouping logic is handled internally by the listcard component
 
-  // STORE USAGE - Dispatching actions to fetch data
-  // SCROLL DETECTION EFFECT
-  // Monitor scroll position and show title when screen title is covered
-  useEffect(() => {
-    const handleScrollChange = (scrollY: number) => {
-      // lower threshold (more negative) makes the title appear earlier when scrolling up
-      // changed from -30 to -50 to activate the top section sooner
-      const titleThreshold = insets.top + 12;
-      
-      if (scrollY >= titleThreshold && !showTitle && !isAnimatingRef.current) {
-        setShowTitle(true);
-        isAnimatingRef.current = true;
-        Animated.timing(titleOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => {
-          isAnimatingRef.current = false;
-        });
-      } else if (scrollY < titleThreshold && showTitle && !isAnimatingRef.current) {
-        isAnimatingRef.current = true;
-        Animated.timing(titleOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => {
-          setShowTitle(false);
-          isAnimatingRef.current = false;
-        });
+  // title threshold: show title when scrolled past this (runs on UI thread, only bridges to JS when crossing)
+  const titleThreshold = insets.top + 12;
+  const onTitleThresholdCrossed = useCallback((pastThreshold: boolean) => {
+    if (pastThreshold && !showTitle && !isAnimatingRef.current) {
+      setShowTitle(true);
+      isAnimatingRef.current = true;
+      Animated.timing(titleOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        isAnimatingRef.current = false;
+      });
+    } else if (!pastThreshold && showTitle && !isAnimatingRef.current) {
+      isAnimatingRef.current = true;
+      Animated.timing(titleOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setShowTitle(false);
+        isAnimatingRef.current = false;
+      });
+    }
+  }, [showTitle, titleOpacity]);
+  useAnimatedReaction(
+    () => scrollY.value >= titleThreshold,
+    (pastThreshold, previousPastThreshold) => {
+      if (previousPastThreshold !== null && pastThreshold !== previousPastThreshold) {
+        runOnJS(onTitleThresholdCrossed)(pastThreshold);
       }
-    };
-
-    (global as any).trackScrollToTodayLayout = handleScrollChange;
-
-    return () => {
-      delete (global as any).trackScrollToTodayLayout;
-    };
-  }, [insets.top, showTitle, titleOpacity]);
+    }
+  );
 
   // Fetch tasks when component mounts
   // useEffect runs after the component renders for the first time
@@ -293,47 +335,6 @@ export default function TodayScreen() {
   }, [dispatch]);
 
 
-  // SWIPE GESTURE HANDLERS - Functions that handle swipe gestures on task cards
-  // these demonstrate how to use the new swipe functionality in TaskCard
-  
-  const handleTaskSwipeLeft = useCallback((task: Task) => {
-    handleTaskComplete(task);
-  }, [handleTaskComplete]);
-
-  const handleListScroll = useCallback((event: { nativeEvent: { contentOffset: { y: number } } }) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    scrollY.value = offsetY;
-    if ((global as any).trackScrollToTodayLayout) {
-      (global as any).trackScrollToTodayLayout(offsetY);
-    }
-  }, [scrollY]);
-
-  const handleTaskSwipeRight = useCallback((task: Task) => {
-    console.log('Swiped right on task:', task.title);
-    
-    // show confirmation dialog before deleting task
-    Alert.alert(
-      'Delete Task', // dialog title
-      `Are you sure you want to delete "${task.title}"? This action cannot be undone.`, // dialog message with task title
-      [
-        {
-          text: 'Cancel', // cancel button
-          style: 'cancel', // styled as cancel button (appears on left on iOS)
-        },
-        {
-          text: 'Delete', // confirm button
-          style: 'destructive', // styled as destructive action (red color on iOS)
-          onPress: () => {
-            // actually delete the task when user confirms
-            console.log('🗑️ User confirmed deletion of task:', task.title);
-            handleTaskDelete(task);
-          },
-        },
-      ],
-      { cancelable: true }
-    );
-  }, [handleTaskDelete]);
-
   // clear overdue reschedule callback when screen gains focus; flush pending checkbox syncs when leaving (tab switch)
   useFocusEffect(
     React.useCallback(() => {
@@ -395,7 +396,7 @@ export default function TodayScreen() {
       <View style={[styles.topSectionAnchor, { height: insets.top + 64 }]}>
         <BlurView
           tint={themeColors.isDark ? 'dark' : 'light'}
-          intensity={2}
+          intensity={1}
           style={StyleSheet.absoluteFill}
         />
         <LinearGradient
@@ -408,21 +409,36 @@ export default function TodayScreen() {
           pointerEvents="none"
         />
         <View style={styles.topSectionRow}>
-          <AnimatedReanimated.View style={[styles.miniTodayHeader, miniTodayHeaderStyle]} pointerEvents="none">
-            <Text style={[styles.miniTodayHeaderText, { color: themeColors.text.primary() }]}>Today</Text>
+          {/* close button - scale spring (works with glass) */}
+          <AnimatedReanimated.View style={[styles.topSectionCloseButton, closeButtonAnimatedStyle]} pointerEvents={isSelectionMode ? 'auto' : 'none'}>
+            <SelectionCloseButton onPress={handleCloseButtonPress} />
           </AnimatedReanimated.View>
-          <ActionContextMenu
-            items={[
-              { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => { /* TODO: open activity log */ } },
-              { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
-            
-            ]}
-            style={styles.topSectionContextButton}
-            accessibilityLabel="Open menu"
-            dropdownAnchorTopOffset={insets.top + 48}
-            dropdownAnchorRightOffset={24}
-            tint="primary"
-          />
+          <AnimatedReanimated.View style={[styles.miniTodayHeader, miniTodayHeaderStyle]} pointerEvents="none">
+            <Text style={[styles.miniTodayHeaderText, { color: themeColors.text.primary() }]}>
+              {selection.isSelectionMode && selection.selectionType === 'tasks'
+                ? `${selection.selectedItems.length} selected`
+                : 'Today'}
+            </Text>
+          </AnimatedReanimated.View>
+          {selection.isSelectionMode && selection.selectionType === 'tasks' ? (
+            <SelectAllButton
+              onPress={handleSelectAllToday}
+              label={selectAllLabel}
+              style={styles.topSectionSelectAllButton}
+            />
+          ) : (
+            <ActionContextMenu
+              items={[
+                { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => router.push('/activity-log' as any) },
+                { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
+              ]}
+              style={styles.topSectionContextButton}
+              accessibilityLabel="Open menu"
+              dropdownAnchorTopOffset={insets.top + 48}
+              dropdownAnchorRightOffset={24}
+              tint="primary"
+            />
+          )}
         </View>
       </View>
       <ScreenContainer
@@ -432,19 +448,17 @@ export default function TodayScreen() {
         safeAreaTop={false}
         safeAreaBottom={false}
       >
-      {/* component usage - using listcard with grouping to separate overdue and today's tasks */}
-      {/* this demonstrates the flow: redux store → today screen → listcard → taskcard → user interaction */}
-      {/* key prop ensures this ListCard instance is completely independent from planner screen */}
       <ListCard
         key="today-screen-listcard"
         tasks={todaysTasks}
+        selectionMode={selection.isSelectionMode && selection.selectionType === 'tasks'}
+        selectedTaskIds={selection.selectedItems}
+        onToggleTaskSelection={selection.isSelectionMode ? toggleItemSelection : undefined}
         hideCompletedTasks={true}
         onTaskPress={handleTaskPress}
         onTaskComplete={handleTaskComplete}
         onTaskEdit={handleTaskEdit}
         onTaskDelete={handleTaskDelete}
-        onTaskSwipeLeft={handleTaskSwipeLeft}
-        onTaskSwipeRight={handleTaskSwipeRight}
         showCategory={false}
         compact={false}
         showIcon={false}
@@ -467,21 +481,26 @@ export default function TodayScreen() {
         bigTodayHeader={true} // show big "Today" title at top of list
         onRefresh={handleRefresh}
         refreshing={isLoading}
-        onScroll={handleListScroll}
-        scrollEventThrottle={16}
         scrollYSharedValue={scrollY}
+        scrollEventThrottle={128}
+        showsVerticalScrollIndicator={true}
         paddingTop={64}
         paddingHorizontal={Paddings.screen}
         scrollPastTopInset={true} // let content scroll up into status bar area without cutoff
       />
       </ScreenContainer>
-      <FloatingActionButton
-        onPress={() => router.push('/task-create' as any)}
-        backgroundColor={themeColors.background.invertedPrimary()}
-        iconColor={themeColors.text.invertedPrimary()}
-        accessibilityLabel="Add new task"
-        accessibilityHint="Double tap to create a new task"
-      />
+      <AnimatedReanimated.View
+        style={[fabAnimatedStyle, { position: 'absolute', bottom: 0, right: 0, left: 0, height: 120 }]}
+        pointerEvents={selection.isSelectionMode && selection.selectionType === 'tasks' ? 'none' : 'box-none'}
+      >
+        <FloatingActionButton
+          onPress={() => router.push('/task-create' as any)}
+          backgroundColor={themeColors.background.invertedPrimary()}
+          iconColor={themeColors.text.invertedPrimary()}
+          accessibilityLabel="Add new task"
+          accessibilityHint="Double tap to create a new task"
+        />
+      </AnimatedReanimated.View>
     </View>
   );
 }
@@ -515,10 +534,22 @@ const createStyles = (
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // close button on left - appears in selection mode only; placeholder keeps layout when hidden
+  topSectionCloseButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   // context menu button on right side - matches task screen ActionContextMenu (transparent bg, liquid glass)
   topSectionContextButton: {
     marginLeft: 'auto',
+    alignSelf: 'center',
     backgroundColor: 'transparent',
+  },
+  topSectionSelectAllButton: {
+    marginLeft: 'auto',
+    alignSelf: 'center',
   },
 
   // TASK DETAIL MODAL STYLES

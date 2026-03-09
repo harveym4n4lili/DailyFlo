@@ -62,6 +62,10 @@ interface TimelineViewProps {
   footerComponent?: React.ReactNode;
   // optional override for top padding when footer is first (e.g. reduced spacing above list)
   scrollContentPaddingTop?: number;
+  // selection mode - when true, tap toggles selection instead of opening task
+  selectionMode?: boolean;
+  selectedTaskIds?: string[];
+  onToggleTaskSelection?: (taskId: string) => void;
 }
 
 /**
@@ -81,6 +85,9 @@ export default function TimelineView({
   scrollContentPaddingTop,
   endHour = 23,
   timeInterval = 60,
+  selectionMode = false,
+  selectedTaskIds = [],
+  onToggleTaskSelection,
 }: TimelineViewProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -1957,9 +1964,13 @@ export default function TimelineView({
                     pixelsPerMinute={taskPpm}
                     startHour={dynamicStartHour}
                     combinedTaskId={task.id}
-                    onPress={(pressedTask) => onTaskPress?.(pressedTask)}
-                    onTaskComplete={handleTaskComplete}
-                    onTaskCompleteImmediate={handleTaskCompleteImmediate}
+                    onPress={(pressedTask) =>
+                      selectionMode && onToggleTaskSelection
+                        ? onToggleTaskSelection(pressedTask.id)
+                        : onTaskPress?.(pressedTask)
+                    }
+                    onTaskComplete={selectionMode ? undefined : handleTaskComplete}
+                    onTaskCompleteImmediate={selectionMode ? undefined : handleTaskCompleteImmediate}
                     onDrag={(taskId, newY) => {
                       // handle drag from overlapping task - use modular drag handler
                       // this converts top position to center and updates task
@@ -2015,6 +2026,9 @@ export default function TimelineView({
                       handleHeightMeasured(taskId, height);
                     }}
                     draggedTaskId={dragState?.taskId || null}
+                    selectionMode={selectionMode}
+                    selectedTaskIds={selectedTaskIds}
+                    onToggleTaskSelection={onToggleTaskSelection}
                   />
                 );
               }
@@ -2070,12 +2084,18 @@ export default function TimelineView({
                     // drag ended - cleanup handled by handleDragEnd in onDrag callback
                     // this is called after onDrag, so state is already cleared
                   }}
-                  onPress={() => onTaskPress?.(task)}
-                  onTaskComplete={handleTaskComplete}
-                  onTaskCompleteImmediate={handleTaskCompleteImmediate}
+                  onPress={() =>
+                    selectionMode && onToggleTaskSelection
+                      ? onToggleTaskSelection(task.id)
+                      : onTaskPress?.(task)
+                  }
+                  onTaskComplete={selectionMode ? undefined : handleTaskComplete}
+                  onTaskCompleteImmediate={selectionMode ? undefined : handleTaskCompleteImmediate}
                   // pass isDraggedTask prop so this task can apply higher z-index when being dragged
                   // this ensures the dragged task appears above all other tasks on the timeline
                   isDraggedTask={dragState?.taskId === task.id}
+                  selectionMode={selectionMode}
+                  isSelected={selectionMode && selectedTaskIds.includes(task.id)}
                 />
               );
             })

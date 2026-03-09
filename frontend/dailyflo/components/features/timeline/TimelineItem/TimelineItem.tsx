@@ -105,6 +105,9 @@ interface TimelineItemProps {
   // when part of overlapping group: 'first' = top task, 'middle' = between, 'last' = bottom task
   // used to flatten border radius where cards connect (first: bottom 0, last: top 0, middle: all 0)
   overlapPosition?: 'first' | 'middle' | 'last';
+  // selection mode - when true, show selection checkbox and tap toggles selection
+  selectionMode?: boolean;
+  isSelected?: boolean;
 }
 
 // compare by value so sibling Redux updates don't interrupt checkbox/animations
@@ -117,6 +120,8 @@ function timelineItemPropsAreEqual(prev: TimelineItemProps, next: TimelineItemPr
   if (prev.startHour !== next.startHour) return false;
   if (prev.isDraggedTask !== next.isDraggedTask) return false;
   if (prev.overlapPosition !== next.overlapPosition) return false;
+  if (prev.selectionMode !== next.selectionMode) return false;
+  if (prev.isSelected !== next.isSelected) return false;
   return true;
 }
 
@@ -142,6 +147,8 @@ const TimelineItem = React.memo(function TimelineItem({
   onTaskCompleteImmediate,
   isDraggedTask = false,
   overlapPosition,
+  selectionMode = false,
+  isSelected = false,
 }: TimelineItemProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -678,7 +685,8 @@ const TimelineItem = React.memo(function TimelineItem({
   // combine long press and pan gestures using Simultaneous
   // long press activates first, then pan takes over for dragging
   // both gestures can be active at the same time
-  const combinedGesture = Gesture.Simultaneous(longPressGesture, panGesture);
+  // when selectionMode: disable drag - use empty gesture so tap still works via TouchableOpacity
+  const combinedGesture = selectionMode ? Gesture.Tap() : Gesture.Simultaneous(longPressGesture, panGesture);
 
   return (
     <GestureDetector gesture={combinedGesture}>
@@ -722,11 +730,15 @@ const TimelineItem = React.memo(function TimelineItem({
               activeOpacity={0.7}
             >
               <View style={styles.checkboxWrapper}>
+                {/* single TimelineCheckbox: completion when !selectionMode, selection when selectionMode; animates shape on enter/exit */}
                 <TimelineCheckbox
                   task={task}
                   onTaskComplete={onTaskComplete}
                   onTaskCompleteImmediate={onTaskCompleteImmediate}
                   onDisplayChange={setDisplayCompleted}
+                  selectionMode={selectionMode}
+                  isSelected={isSelected}
+                  onSelect={selectionMode ? onPress : undefined}
                 />
               </View>
               <View style={styles.taskContent}>

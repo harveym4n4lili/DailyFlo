@@ -24,7 +24,6 @@ import GlassView from 'expo-glass-effect/build/GlassView';
 import { Host, ContextMenu, Button } from '@expo/ui/swift-ui';
 import { DropdownList } from '@/components/ui/list';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { Paddings } from '@/constants/Paddings';
 
 export interface ActionContextMenuItem {
   id: string;
@@ -154,19 +153,22 @@ export function ActionContextMenu({
   );
 }
 
+// fixed 64x44 for even vertical spacing (icon 32px centered = 6px top/bottom)
+const ICON_BUTTON_WIDTH = 60;
+const ICON_BUTTON_HEIGHT = 44;
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: Paddings.indicatorVertical,
-    paddingHorizontal: Paddings.contextMenuHorizontal,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
+    width: ICON_BUTTON_WIDTH,
+    height: ICON_BUTTON_HEIGHT,
+    borderRadius: ICON_BUTTON_HEIGHT / 2,
+    alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iosWrapper: {
-    paddingVertical: Paddings.indicatorVertical,
-    paddingHorizontal: Paddings.contextMenuHorizontal,
-    borderRadius: 20,
+    width: ICON_BUTTON_WIDTH,
+    height: ICON_BUTTON_HEIGHT,
+    borderRadius: ICON_BUTTON_HEIGHT / 2,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -175,12 +177,14 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   pressable: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   touchable: {
-    width: 44,
-    height: 44,
+    width: ICON_BUTTON_WIDTH,
+    height: ICON_BUTTON_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',

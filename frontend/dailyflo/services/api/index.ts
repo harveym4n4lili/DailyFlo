@@ -17,3 +17,6 @@ export { default as authApiService } from './auth';
 
 // Tasks API - Task CRUD operations and management
 export { default as tasksApiService } from './tasks';
+
+// Activity Logs API - read-only log of task actions
+export { default as activityLogsApiService } from './activityLogs';
