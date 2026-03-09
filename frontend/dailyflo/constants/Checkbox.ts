@@ -29,3 +29,7 @@ export const CHECKBOX_SIZE_SMALL = 12;
 
 // tick icon size as ratio of checkbox size (0.65 = 65% of checkbox)
 export const CHECKBOX_TICK_SIZE_RATIO = 0.9;
+
+// when selectionMode: animate from default size to size-1, and border radius to circle
+export const CHECKBOX_SELECTION_MODE_SIZE_OFFSET = 4;
+export const CHECKBOX_SELECTION_SHAPE_ANIMATION_MS =360;

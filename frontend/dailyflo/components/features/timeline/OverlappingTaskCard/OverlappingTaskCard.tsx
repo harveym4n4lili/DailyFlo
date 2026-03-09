@@ -43,6 +43,10 @@ interface OverlappingTaskCardProps {
   draggedTaskId?: string | null;
   // combined task ID (used for reporting total height to timeline)
   combinedTaskId: string;
+  // selection mode - when true, tap toggles selection
+  selectionMode?: boolean;
+  selectedTaskIds?: string[];
+  onToggleTaskSelection?: (taskId: string) => void;
 }
 
 /**
@@ -67,6 +71,9 @@ export default function OverlappingTaskCard({
   onHeightMeasured,
   draggedTaskId = null,
   combinedTaskId,
+  selectionMode = false,
+  selectedTaskIds = [],
+  onToggleTaskSelection,
 }: OverlappingTaskCardProps) {
   // ensure tasks is always an array
   const safeTasks = Array.isArray(tasks) ? tasks : [];
@@ -199,11 +206,17 @@ export default function OverlappingTaskCard({
               // forward drag end to parent with task id
               onDragEnd?.(task.id);
             }}
-            onPress={() => onPress?.(task)}
-            onTaskComplete={onTaskComplete}
-            onTaskCompleteImmediate={onTaskCompleteImmediate}
+            onPress={() =>
+              selectionMode && onToggleTaskSelection
+                ? onToggleTaskSelection(task.id)
+                : onPress?.(task)
+            }
+            onTaskComplete={selectionMode ? undefined : onTaskComplete}
+            onTaskCompleteImmediate={selectionMode ? undefined : onTaskCompleteImmediate}
             isDraggedTask={isDragged}
             overlapPosition={overlapPosition}
+            selectionMode={selectionMode}
+            isSelected={selectionMode && selectedTaskIds.includes(task.id)}
           />
           {/* separator between tasks - positioned at bottom of this task */}
           {index < taskPositions.length - 1 && (
