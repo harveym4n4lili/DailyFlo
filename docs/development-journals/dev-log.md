@@ -1368,7 +1368,7 @@ Updated User app, models, serializers, views and urls
 - plan to implement context button functionality, such as acitvity log, and task select.
 - plan to implement browse page.
 ---
-## [06/03/2025] - [Friday]
+## [06/03/2026] - [Friday]
 ### Today's Goals
 - [X] Implemneted select task UI
 - [X] Implemneted task sleection mode UI transitions
@@ -1383,7 +1383,7 @@ Updated User app, models, serializers, views and urls
 ### Notes
 - no notes
 ---
-## [07/03/2025] - [Saturday]
+## [07/03/2026] - [Saturday]
 ### Today's Goals
 - [X] Prepared Activity Log stack screen
 
@@ -1394,7 +1394,7 @@ Updated User app, models, serializers, views and urls
 ### Notes
 - no notes
 ---
-## [08/03/2025] - [Saturday]
+## [08/03/2026] - [Sunday]
 ### Today's Goals
 - [X] Implemented acitvity log model, serializer, apis
 - [X] Implemented types and redux store states for acitivty logs
@@ -1406,3 +1406,15 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - no notes
+---
+## [09/03/2026] - [Monday]
+### Today's Goals
+- [X] Built and tested a standalone preview build
+
+### Plans For Future
+- plan to implement browse page.
+
+### Notes
+- today screen taskcard completion needs to be slower: slower linear transition.
+- strikethrough needs to be at a constant speed rather than same time animation for all text sizes
+- style close button with SF close, and add close button and remove checkbox UI in task screen create.
