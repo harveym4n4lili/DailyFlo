@@ -10,6 +10,7 @@ import { Pressable, TouchableOpacity, Platform, StyleSheet, ViewStyle } from 're
 import { Ionicons } from '@expo/vector-icons';
 import GlassView from 'expo-glass-effect/build/GlassView';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { SFSymbolIcon } from '@/components/ui/icon';
 
 export interface SelectionCloseButtonProps {
   onPress: () => void;
@@ -23,6 +24,16 @@ export function SelectionCloseButton({
   accessibilityLabel = 'Cancel selection',
 }: SelectionCloseButtonProps) {
   const themeColors = useThemeColors();
+  const iconColor = themeColors.text.primary();
+  // SF Symbol on iOS, Ionicons fallback on Android/Web (matches MainCloseButton)
+  const closeIcon = (
+    <SFSymbolIcon
+      name="xmark"
+      size={24}
+      color={iconColor}
+      fallback={<Ionicons name="close" size={24} color={iconColor} />}
+    />
+  );
 
   // on iOS: wrap in GlassView for native liquid glass effect (matches ActionContextMenu)
   if (Platform.OS === 'ios') {
@@ -40,7 +51,7 @@ export function SelectionCloseButton({
           accessibilityLabel={accessibilityLabel}
           accessibilityRole="button"
         >
-          <Ionicons name="close" size={24} color={themeColors.text.primary()} />
+          {closeIcon}
         </Pressable>
       </GlassView>
     );
@@ -55,7 +66,7 @@ export function SelectionCloseButton({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
     >
-      <Ionicons name="close" size={24} color={themeColors.text.primary()} />
+      {closeIcon}
     </TouchableOpacity>
   );
 }

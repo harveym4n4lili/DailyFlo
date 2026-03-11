@@ -202,13 +202,14 @@ export default function RootLayout() {
           <Stack>
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            {/* task-create: full screen, no indent, drag to close only */}
+            {/* task-create: full screen, no indent, not draggable, close via MainCloseButton */}
             <Stack.Screen
               name="task-create"
               options={{
                 headerShown: false,
                 presentation: 'formSheet',
-                gestureEnabled: true,
+                gestureEnabled: false,
+                sheetGrabberVisible: false,
                 contentStyle: {
                   backgroundColor: themeColors.background.primary(),
                 },

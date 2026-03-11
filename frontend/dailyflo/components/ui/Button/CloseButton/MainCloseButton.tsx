@@ -21,8 +21,12 @@ import { Pressable, Text, Platform, useWindowDimensions, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // EXPO VECTOR ICONS IMPORT
-// ionicons: provides icons for the UI
+// ionicons: fallback icons on Android/Web (SF Symbols not available there)
 import { Ionicons } from '@expo/vector-icons';
+
+// CUSTOM ICON IMPORTS
+// SFSymbolIcon: SF Symbols on iOS, falls back to Ionicons on Android/Web
+import { SFSymbolIcon } from '@/components/ui/icon';
 
 // CONSTANTS IMPORTS
 // design system constants for styling
@@ -179,7 +183,7 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
           }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="close" size={28} color={getIconColor()} />
+          <SFSymbolIcon name="xmark" size={20} color={getIconColor()} fallback={<Ionicons name="close" size={28} color={getIconColor()} />} />
         </Pressable>
       </GlassView>
     </View>
@@ -216,7 +220,7 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
     >
       {isNewerIOS ? (
         // newer iOS fallback: X icon with primary text color, background is transparent
-        <Ionicons name="close" size={28} color={getIconColor()} />
+        <SFSymbolIcon name="xmark" size={28} color={getIconColor()} fallback={<Ionicons name="close" size={28} color={getIconColor()} />} />
       ) : (
         // iOS < 15 (older): text button (current style)
         <Text
