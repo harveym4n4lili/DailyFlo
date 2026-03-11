@@ -13,6 +13,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { SelectionActionsBar } from '@/components/ui/SelectionActionsBar';
 import { useUI } from '@/store/hooks';
+import { getTodayTabIcon } from '@/utils/todayIcon';
 
 export default function TabLayout() {
   const { getThemeColorValue } = useThemeColor();
@@ -60,7 +61,7 @@ export default function TabLayout() {
     >
       <NativeTabs.Trigger name="today">
         <NativeTabLabel>Today</NativeTabLabel>
-        <NativeTabIcon src={require('@/assets/icons/Today.png')} />
+        <NativeTabIcon src={getTodayTabIcon()} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="planner">
