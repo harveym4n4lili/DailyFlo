@@ -40,24 +40,37 @@ export default function TabLayout() {
       : activeColor;
 
   // labelStyle: navbar text style from our typography system so labels match design
-  const labelStyle = { ...typography.getTextStyle('navbar') };
+  // on iOS use SF Pro Rounded (ui-rounded) for tab labels; Android keeps default
+  const labelStyle = {
+    ...typography.getTextStyle('navbar'),
+    ...(Platform.OS === 'ios' && { fontFamily: 'ui-rounded' }),
+  };
+
+  // solid opaque tab bar instead of clear/liquid glass: use theme background + no blur
+  const tabBarBackgroundColor = themeColors.background.primary();
 
   return (
     <View style={{ flex: 1 }}>
-    <NativeTabs labelStyle={labelStyle} tintColor={tintColor}>
+    <NativeTabs
+      labelStyle={labelStyle}
+      tintColor={tintColor}
+      backgroundColor={tabBarBackgroundColor}
+      blurEffect="none"
+      disableTransparentOnScrollEdge
+    >
       <NativeTabs.Trigger name="today">
         <NativeTabLabel>Today</NativeTabLabel>
-        <NativeTabIcon sf="calendar" drawable="calendar_today" />
+        <NativeTabIcon src={require('@/assets/icons/Today.png')} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="planner">
         <NativeTabLabel>Planner</NativeTabLabel>
-        <NativeTabIcon sf="square.grid.2x2" drawable="grid_view" />
+        <NativeTabIcon src={require('@/assets/icons/Timeline.png')} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="browse">
         <NativeTabLabel>Browse</NativeTabLabel>
-        <NativeTabIcon sf="list.bullet" drawable="list" />
+        <NativeTabIcon src={require('@/assets/icons/Browse.png')} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="settings">

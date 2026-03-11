@@ -16,8 +16,8 @@ import {
   StyleSheet,
   ViewStyle,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import GlassView from 'expo-glass-effect/build/GlassView';
+import { EllipsisIcon } from '@/components/ui/icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 
@@ -53,7 +53,7 @@ export function ScreenContextButton({
           accessibilityLabel={accessibilityLabel}
           accessibilityRole="button"
         >
-          <Ionicons name="ellipsis-horizontal" size={32} color="white" />
+          <EllipsisIcon size={24} color={themeColors.text.primary()} />
         </Pressable>
       </GlassView>
     );
@@ -68,7 +68,7 @@ export function ScreenContextButton({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
     >
-      <Ionicons name="ellipsis-horizontal" size={32} color="white" />
+      <EllipsisIcon size={24} color={themeColors.text.primary()} />
     </TouchableOpacity>
   );
 }

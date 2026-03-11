@@ -16,6 +16,7 @@ import { View, Text, StyleSheet, FlatList, ListRenderItem, RefreshControl, Anima
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UIManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { EllipsisIcon } from '@/components/ui/icon';
 
 // enable layout animations on android for smooth group expansion animations
 // this ensures android can use layout animations like ios does
@@ -787,8 +788,7 @@ export default function ListCard({
                 onPress={handleDropdownButtonPress}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name="ellipsis-horizontal"
+                <EllipsisIcon
                   size={24}
                   color={themeColors.text.primary()}
                 />

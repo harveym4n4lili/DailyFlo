@@ -7,7 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 // import our custom layout components
 import { ScreenContainer } from '@/components';
 import { FloatingActionButton, SelectAllButton } from '@/components/ui/button';
-import { ActionContextMenu } from '@/components/ui';
+import { ScreenHeaderActions } from '@/components/ui';
 import { ClockIcon } from '@/components/ui/icon';
 import { WeekView } from '@/components/features/calendar/sections';
 import { ListCard } from '@/components/ui/card';
@@ -309,15 +309,15 @@ export default function PlannerScreen() {
               style={styles.topSectionSelectAllButton}
             />
           ) : (
-            <ActionContextMenu
-              items={[
+            <ScreenHeaderActions
+              variant="dashboard"
+              contextMenuItems={[
                 { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => router.push('/activity-log' as any) },
                 { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
               ]}
-              style={styles.topSectionContextButton}
-              accessibilityLabel="Open menu"
               dropdownAnchorTopOffset={insets.top + 48}
               dropdownAnchorRightOffset={24}
+              style={styles.topSectionContextButton}
               tint="primary"
             />
           )}

@@ -19,8 +19,8 @@ import {
   ViewStyle,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import GlassView from 'expo-glass-effect/build/GlassView';
+import { EllipsisIcon } from '@/components/ui/icon';
 import { Host, ContextMenu, Button } from '@expo/ui/swift-ui';
 import { DropdownList } from '@/components/ui/list';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -54,6 +54,8 @@ export interface ActionContextMenuProps {
   iconColor?: string;
   /** tint for liquid glass / Android background: "primary" (top section) or "elevated" (task screen) */
   tint?: 'primary' | 'elevated';
+  /** when true, don't wrap trigger in GlassView – parent provides single glass for multiple icons */
+  noGlass?: boolean;
 }
 
 export function ActionContextMenu({
@@ -64,6 +66,7 @@ export function ActionContextMenu({
   dropdownAnchorRightOffset = 20,
   iconColor: iconColorProp,
   tint = 'primary',
+  noGlass = false,
 }: ActionContextMenuProps) {
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const themeColors = useThemeColors();
@@ -83,26 +86,33 @@ export function ActionContextMenu({
   ];
 
   if (Platform.OS === 'ios') {
+    const triggerContent = (
+      <Pressable
+        style={[styles.pressable, noGlass && styles.triggerOnly]}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="button"
+      >
+        <EllipsisIcon size={24} color={iconColor} />
+      </Pressable>
+    );
     return (
       <View style={style}>
         <Host matchContents={false} style={styles.host}>
           <ContextMenu activationMethod="singlePress">
             <ContextMenu.Trigger>
-              <GlassView
-                style={styles.iosWrapper}
-                glassEffectStyle="clear"
-                tintColor={tintColor as any}
-                isInteractive
-              >
-                <Pressable
-                  style={styles.pressable}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityLabel={accessibilityLabel}
-                  accessibilityRole="button"
+              {noGlass ? (
+                triggerContent
+              ) : (
+                <GlassView
+                  style={styles.iosWrapper}
+                  glassEffectStyle="clear"
+                  tintColor={tintColor as any}
+                  isInteractive
                 >
-                  <Ionicons name="ellipsis-horizontal" size={32} color={iconColor} />
-                </Pressable>
-              </GlassView>
+                  {triggerContent}
+                </GlassView>
+              )}
             </ContextMenu.Trigger>
             <ContextMenu.Items>
               {items.map((item) => (
@@ -123,17 +133,20 @@ export function ActionContextMenu({
   }
 
   // Android: TouchableOpacity + DropdownList
+  const androidTrigger = (
+    <TouchableOpacity
+      onPress={() => setIsDropdownVisible(true)}
+      style={[styles.touchable, noGlass && styles.triggerOnly]}
+      activeOpacity={0.7}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+    >
+      <EllipsisIcon size={24} color={iconColor} />
+    </TouchableOpacity>
+  );
   return (
-    <View style={containerStyle}>
-      <TouchableOpacity
-        onPress={() => setIsDropdownVisible(true)}
-        style={styles.touchable}
-        activeOpacity={0.7}
-        accessibilityLabel={accessibilityLabel}
-        accessibilityRole="button"
-      >
-        <Ionicons name="ellipsis-horizontal" size={32} color={iconColor} />
-      </TouchableOpacity>
+    <View style={noGlass ? undefined : containerStyle}>
+      {androidTrigger}
       <DropdownList
         visible={isDropdownVisible}
         onClose={() => setIsDropdownVisible(false)}
@@ -188,5 +201,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
+  },
+  triggerOnly: {
+    minWidth: 28,
+    minHeight: 28,
   },
 });

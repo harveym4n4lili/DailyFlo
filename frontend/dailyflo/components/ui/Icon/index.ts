@@ -45,5 +45,14 @@ export type { SparklesIconProps } from './icons/SparklesIcon';
 export { RepeatIcon } from './icons/RepeatIcon';
 export type { RepeatIconProps } from './icons/RepeatIcon';
 
+export { EllipsisIcon } from './icons/EllipsisIcon';
+export type { EllipsisIconProps } from './icons/EllipsisIcon';
+
+export { GearIcon } from './icons/GearIcon';
+export type { GearIconProps } from './icons/GearIcon';
+
+export { DashboardIcon } from './icons/DashboardIcon';
+export type { DashboardIconProps } from './icons/DashboardIcon';
+
 export { SFSymbolIcon } from './SFSymbolIcon';
 export type { SFSymbolIconProps } from './SFSymbolIcon';
