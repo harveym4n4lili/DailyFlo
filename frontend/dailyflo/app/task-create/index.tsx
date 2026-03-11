@@ -219,6 +219,9 @@ export default function TaskCreateScreen() {
         onClearPendingFocus={() => setPendingFocusSubtaskId(null)}
         embedHeaderButtons={true}
         isEditMode={false}
+        showTitleCheckbox={false}
+        showMainCloseButton={true}
+        showDragIndicator={false}
         saveButtonBottomInsetWhenKeyboardHidden={44}
         pickerHandlers={pickerHandlers}
         onActivityLog={() => {}}

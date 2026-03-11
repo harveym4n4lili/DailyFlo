@@ -111,6 +111,7 @@ export default function ActivityLogScreen() {
                 />
               ))}
               <View style={{ height: 40 }} />
+              <View style={{ height: 40 }} />
             </ScrollView>
           </View>
         )}
