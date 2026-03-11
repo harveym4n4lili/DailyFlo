@@ -35,7 +35,7 @@ import { getTaskCardHeight, formatTimeRange } from '../timelineUtils';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
 import { TimelineCheckbox } from './sections';
 import { taskDisplayEquals } from '@/utils/taskDisplayEquals';
-import { CHECKBOX_STRIKETHROUGH_ANIMATION_MS } from '@/constants/Checkbox';
+import { getStrikethroughDuration, STRIKETHROUGH_MIN_MS } from '@/constants/Checkbox';
 
 // line data from Text onTextLayout - x, y, width, height per line (normally 1 line for timeline title)
 type TextLineLayout = { x: number; y: number; width: number; height: number };
@@ -262,11 +262,13 @@ const TimelineItem = React.memo(function TimelineItem({
   const strikeProgress = useSharedValue(displayCompleted ? 1 : 0);
 
   // when completion display changes (including optimistic), animate the strikethrough progress
+  // duration scales with text width so visual speed feels consistent; ease-in-out = accelerate then decelerate
   useEffect(() => {
     if (displayCompleted) {
+      const duration = titleLines.length ? getStrikethroughDuration(titleLines) : STRIKETHROUGH_MIN_MS;
       strikeProgress.value = withTiming(1, {
-        duration: CHECKBOX_STRIKETHROUGH_ANIMATION_MS,
-        easing: Easing.out(Easing.cubic),
+        duration,
+        easing: Easing.inOut(Easing.cubic),
       });
     } else {
       strikeProgress.value = withTiming(0, {

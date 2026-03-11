@@ -18,7 +18,7 @@ type TextLineLayout = { x: number; y: number; width: number; height: number };
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { formatTimeRange } from '@/utils/taskFormatters';
-import { CHECKBOX_STRIKETHROUGH_ANIMATION_MS } from '@/constants/Checkbox';
+import { getStrikethroughDuration, STRIKETHROUGH_MIN_MS } from '@/constants/Checkbox';
 
 // Animated.Text supports useAnimatedStyle for animating color (driven by strikeProgress)
 const AnimatedText = Animated.createAnimatedComponent(Text);
@@ -81,9 +81,11 @@ export default function TaskCardContent({
   const strikeProgress = useSharedValue(task.isCompleted ? 1 : 0);
 
   // when task completion changes, animate the strikethrough progress (reanimated runs on native thread for smooth 60fps)
+  // duration scales with text width so visual speed feels consistent; ease-in-out = accelerate then decelerate
   useEffect(() => {
     if (task.isCompleted) {
-      strikeProgress.value = withTiming(1, { duration: CHECKBOX_STRIKETHROUGH_ANIMATION_MS, easing: Easing.out(Easing.cubic) });
+      const duration = lines.length ? getStrikethroughDuration(lines) : STRIKETHROUGH_MIN_MS;
+      strikeProgress.value = withTiming(1, { duration, easing: Easing.inOut(Easing.cubic) });
     } else {
       strikeProgress.value = withTiming(0, { duration: 250, easing: Easing.in(Easing.cubic) });
     }

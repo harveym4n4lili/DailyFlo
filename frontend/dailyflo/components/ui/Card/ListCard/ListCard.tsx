@@ -333,6 +333,13 @@ export default function ListCard({
 
   // when hideCompletedTasks: hide completed tasks (local + redux). optimistically hide on tap so we don't wait for redux
   const [locallyCompletedIds, setLocallyCompletedIds] = useState<Set<string>>(() => new Set());
+  // tracks tasks that user just checked and are waiting for timeout before we hide them
+  // this prevents redux completion updates from hiding the row too early.
+  const [pendingHideIds, setPendingHideIds] = useState<Set<string>>(() => new Set());
+  // ref updated synchronously on check - avoids race where parent re-renders (from Redux) before our setState commits
+  const pendingHideIdsRef = useRef<Set<string>>(new Set());
+  // cache pending task snapshots so row can stay visible during delay even if upstream task list updates immediately
+  const [pendingHideTaskById, setPendingHideTaskById] = useState<Record<string, Task>>({});
   const hideTimeoutRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   useEffect(() => () => {
@@ -342,21 +349,54 @@ export default function ListCard({
 
   // sync with redux: if a task was unchecked elsewhere (e.g. Planner), remove from locallyCompletedIds so it reappears
   useEffect(() => {
-    if (!hideCompletedTasks || locallyCompletedIds.size === 0) return;
+    if (!hideCompletedTasks || (locallyCompletedIds.size === 0 && pendingHideIds.size === 0)) return;
     const stillCompleted = new Set<string>();
+    const stillPending = new Set<string>();
     locallyCompletedIds.forEach((id) => {
       const task = tasks.find((t) => t.id === id);
       if (task?.isCompleted) stillCompleted.add(id);
     });
+    pendingHideIds.forEach((id) => {
+      const task = tasks.find((t) => t.id === id);
+      // keep pending id when task is missing from current source list; timeout still controls final hide.
+      if (!task || task.isCompleted) stillPending.add(id);
+    });
     if (stillCompleted.size !== locallyCompletedIds.size) {
       setLocallyCompletedIds(stillCompleted);
     }
-  }, [tasks, hideCompletedTasks, locallyCompletedIds]);
+    if (stillPending.size !== pendingHideIds.size) {
+      setPendingHideIds(stillPending);
+    }
+  }, [tasks, hideCompletedTasks, locallyCompletedIds, pendingHideIds]);
+
+  // prune cached pending task snapshots when ids are no longer pending.
+  useEffect(() => {
+    setPendingHideTaskById((prev) => {
+      const next: Record<string, Task> = {};
+      pendingHideIds.forEach((id) => {
+        if (prev[id]) next[id] = prev[id];
+      });
+      return next;
+    });
+  }, [pendingHideIds]);
 
   const visibleTasks = useMemo(() => {
     if (!hideCompletedTasks) return tasks;
-    return tasks.filter((t) => !t.isCompleted && !locallyCompletedIds.has(t.id));
-  }, [tasks, hideCompletedTasks, locallyCompletedIds]);
+    // use ref for pending ids so we see updates synchronously even if parent re-renders before our setState commits
+    const pendingIds = pendingHideIdsRef.current;
+    const baseVisibleTasks = tasks.filter((t) => {
+      // keep rows visible while pending hide timeout, even if redux already set isCompleted=true.
+      const completionAllowsVisible = !t.isCompleted || pendingHideIds.has(t.id) || pendingIds.has(t.id);
+      return completionAllowsVisible && !locallyCompletedIds.has(t.id);
+    });
+    // if upstream data no longer includes a pending task yet, keep rendering cached copy until timeout ends.
+    const allPendingIds = new Set([...pendingHideIds, ...pendingIds]);
+    const missingPendingTasks = Array.from(allPendingIds)
+      .filter((id) => !baseVisibleTasks.some((t) => t.id === id))
+      .map((id) => pendingHideTaskById[id])
+      .filter((t): t is Task => !!t);
+    return [...baseVisibleTasks, ...missingPendingTasks];
+  }, [tasks, hideCompletedTasks, locallyCompletedIds, pendingHideIds, pendingHideTaskById]);
 
   const handleTaskCompleteImmediate = useCallback(
     (task: Task, targetCompleted?: boolean) => {
@@ -366,15 +406,41 @@ export default function ListCard({
           clearTimeout(hideTimeoutRef.current[task.id]);
           delete hideTimeoutRef.current[task.id];
         }
+        pendingHideIdsRef.current.delete(task.id);
+        setPendingHideIds((prev) => {
+          const next = new Set(prev);
+          next.delete(task.id);
+          return next;
+        });
         setLocallyCompletedIds((prev) => {
           const next = new Set(prev);
           next.delete(task.id);
           return next;
         });
+        setPendingHideTaskById((prev) => {
+          const next = { ...prev };
+          delete next[task.id];
+          return next;
+        });
       } else {
+        // add to ref synchronously so visibleTasks sees it even if parent re-renders before setState commits
+        pendingHideIdsRef.current.add(task.id);
+        setPendingHideIds((prev) => new Set(prev).add(task.id));
+        setPendingHideTaskById((prev) => ({ ...prev, [task.id]: task }));
         hideTimeoutRef.current[task.id] = setTimeout(() => {
           delete hideTimeoutRef.current[task.id];
+          pendingHideIdsRef.current.delete(task.id);
+          setPendingHideIds((prev) => {
+            const next = new Set(prev);
+            next.delete(task.id);
+            return next;
+          });
           setLocallyCompletedIds((prev) => new Set(prev).add(task.id));
+          setPendingHideTaskById((prev) => {
+            const next = { ...prev };
+            delete next[task.id];
+            return next;
+          });
         }, CHECKBOX_HIDE_DELAY_MS);
       }
     },
@@ -383,19 +449,13 @@ export default function ListCard({
 
   const handleTaskComplete = useCallback(
     (task: Task, targetCompleted?: boolean) => {
+      // when hideCompletedTasks: delay Redux sync so our setState (pendingHideIds) commits before parent re-renders
+      // otherwise parent can pass new tasks before we've marked the task pending, and it disappears immediately
       if (hideCompletedTasks) {
-        if (hideTimeoutRef.current[task.id]) {
-          clearTimeout(hideTimeoutRef.current[task.id]);
-          delete hideTimeoutRef.current[task.id];
-        }
-        setLocallyCompletedIds((prev) => {
-          const next = new Set(prev);
-          if (targetCompleted !== false) next.add(task.id);
-          else next.delete(task.id);
-          return next;
-        });
+        setTimeout(() => onTaskComplete?.(task, targetCompleted), 50);
+      } else {
+        onTaskComplete?.(task, targetCompleted);
       }
-      onTaskComplete?.(task, targetCompleted);
     },
     [onTaskComplete, hideCompletedTasks]
   );

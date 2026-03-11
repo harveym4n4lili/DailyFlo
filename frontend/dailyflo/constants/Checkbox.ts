@@ -10,10 +10,22 @@ export const CHECKBOX_SYNC_DELAY_MS = 0;
 
 // animation durations - used so hide delay waits for these to finish before linear transition
 export const CHECKBOX_TICK_ANIMATION_MS = 100;
-export const CHECKBOX_STRIKETHROUGH_ANIMATION_MS = 100;
+
+// strikethrough duration scales with text width so visual speed feels consistent (long text no longer strikes too fast)
+export const STRIKETHROUGH_MIN_MS = 400;
+export const STRIKETHROUGH_MS_PER_PX = 1;
+export const STRIKETHROUGH_MAX_MS = 1500;
+
+/** returns duration in ms - scales with total line width so strikethrough speed feels consistent across text lengths */
+export function getStrikethroughDuration(lines: { width: number }[]): number {
+  const totalWidth = lines.reduce((sum, l) => sum + l.width, 0);
+  const duration = STRIKETHROUGH_MIN_MS + totalWidth * STRIKETHROUGH_MS_PER_PX;
+  return Math.min(STRIKETHROUGH_MAX_MS, Math.max(STRIKETHROUGH_MIN_MS, duration));
+}
 
 // delay before hiding completed task - must exceed tick + strikethrough so linear transition starts after both
-export const CHECKBOX_HIDE_DELAY_MS = CHECKBOX_STRIKETHROUGH_ANIMATION_MS + 200;
+// keeping this noticeably longer so user can clearly see the strikethrough animate before the card slides away
+export const CHECKBOX_HIDE_DELAY_MS = STRIKETHROUGH_MAX_MS;
 
 // approximate height per task card (card + spacing) - used when scrolling up after hiding completed tasks
 // so the list scrolls by the height of removed content instead of leaving a gap
