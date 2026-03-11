@@ -1418,3 +1418,18 @@ Updated User app, models, serializers, views and urls
 - today screen taskcard completion needs to be slower: slower linear transition.
 - strikethrough needs to be at a constant speed rather than same time animation for all text sizes
 - style close button with SF close, and add close button and remove checkbox UI in task screen create.
+---
+## [11/03/2026] - [Tuesday]
+### Today's Goals
+- [X] Upgraded strikethrough animation, and lienar transition control
+- [X] Begun to implement browse page
+- [X] Designed some custom icons for navbar and other buttons
+- [X] Update task screen create UI.
+ 
+### Plans For Future
+- plan to implement browse page.
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
+- let AI tab replace the settings tab
+- plan to improve activity log performance by fetching up to 2 weeks worth of tasks.
