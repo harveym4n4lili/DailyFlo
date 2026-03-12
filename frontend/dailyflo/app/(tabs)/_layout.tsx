@@ -69,14 +69,14 @@ export default function TabLayout() {
         <NativeTabIcon src={require('@/assets/icons/Timeline.png')} />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="settings">
+        <NativeTabLabel>AI</NativeTabLabel>
+        <NativeTabIcon src={require('@/assets/icons/Sparkles.png')} />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="browse">
         <NativeTabLabel>Browse</NativeTabLabel>
         <NativeTabIcon src={require('@/assets/icons/Browse.png')} />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="settings">
-        <NativeTabLabel>Settings</NativeTabLabel>
-        <NativeTabIcon sf="gearshape" drawable="settings" />
       </NativeTabs.Trigger>
     </NativeTabs>
     {/* selection actions bar overlays tab bar when user taps "Select Tasks" - liquid glass on iOS */}
