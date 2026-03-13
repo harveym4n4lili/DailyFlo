@@ -2,7 +2,7 @@
  * ActionContextMenu Component
  *
  * A 3-dot ellipsis button that opens a context menu with action items.
- * Same icon size (32) as ScreenContextButton. Uses GlassView on iOS for liquid glass.
+ * Same icon size (24) as ScreenContextButton. Uses GlassView on iOS for liquid glass.
  *
  * On iOS: uses @expo/ui/swift-ui ContextMenu with GlassView for native liquid glass.
  * On Android: uses DropdownList for menu overlay.

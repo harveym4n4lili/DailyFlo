@@ -54,5 +54,8 @@ export type { GearIconProps } from './icons/GearIcon';
 export { DashboardIcon } from './icons/DashboardIcon';
 export type { DashboardIconProps } from './icons/DashboardIcon';
 
+export { TagIcon } from './icons/TagIcon';
+export type { TagIconProps } from './icons/TagIcon';
+
 export { SFSymbolIcon } from './SFSymbolIcon';
 export type { SFSymbolIconProps } from './SFSymbolIcon';
