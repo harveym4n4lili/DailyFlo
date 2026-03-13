@@ -5,7 +5,7 @@
  * Structure matches Today and Planner screens:
  * - Top section with context menu in top right
  * - Primary background color
- * - Grouped list at top with Search, Completed, and Lists buttons
+ * - Grouped list at top with Search, Completed, and Tags buttons
  * - Grouped list styling matches Task screen FormDetailSection (date, alert, time)
  *
  * layout: topSectionAnchor fixed at top (zIndex 10) with context menu; content scrolls below
@@ -22,9 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components';
 import { ScreenHeaderActions } from '@/components/ui';
 import { GroupedList, FormDetailButton } from '@/components/ui/list/GroupedList';
-import { SFSymbolIcon } from '@/components/ui/icon';
-import { TickIcon } from '@/components/ui/icon';
-import { BrowseIcon } from '@/components/ui/icon';
+import { SFSymbolIcon, TickIcon, BrowseIcon } from '@/components/ui/icon';
 
 // theme and typography
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -119,18 +117,18 @@ export default function BrowseScreen() {
                 showChevron={false}
               />
               <FormDetailButton
-                key="lists"
+                key="tags"
                 iconComponent={
                   <SFSymbolIcon
-                    name="list.bullet"
+                    name="tag"
                     size={20}
                     color={themeColors.text.primary()}
                     fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
                   />
                 }
-                label="Lists"
+                label="Tags"
                 onPress={() => {
-                  // placeholder - lists view to be implemented
+                  // placeholder - tags view to be implemented
                 }}
                 showChevron={false}
               />
@@ -192,9 +190,10 @@ const createStyles = (
       backgroundColor: themeColors.background.primary(),
     },
 
-    // grouped list section - padding around the list (matches FormDetailSection spacing)
+    // grouped list section - top padding so grouped list top edge aligns with Today header (64 + insets.top)
+    // Today ListCard uses paddingTop 64 + insets.top; contentWrapper has insets.top + 48, so we need +16 here
     groupedListSection: {
-      paddingTop: Paddings.touchTarget,
+      paddingTop: 16,
     },
 
     // list container - no extra margin (FormDetailSection uses marginVertical: 0)
