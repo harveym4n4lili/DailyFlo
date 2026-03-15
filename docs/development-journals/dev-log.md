@@ -1434,7 +1434,7 @@ Updated User app, models, serializers, views and urls
 - let AI tab replace the settings tab
 - plan to improve activity log performance by fetching up to 2 weeks worth of tasks.
 ---
-## [13/03/2026] - [Thursday]
+## [13/03/2026] - [Friday]
 ### Today's Goals
 - [X] Styling Changes
  
@@ -1444,4 +1444,15 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - let AI tab replace the settings tab
+- plan to improve activity log performance by fetching up to 2 weeks worth of tasks.
+---
+## [14/03/2026] - [Saturday]
+### Today's Goals
+- [X] UI Research for planning
+ 
+### Plans For Future
+- plan to implement browse page.
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
 - plan to improve activity log performance by fetching up to 2 weeks worth of tasks.
