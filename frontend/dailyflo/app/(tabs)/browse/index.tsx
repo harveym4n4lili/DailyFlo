@@ -13,10 +13,11 @@
  */
 
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 // layout and ui components
 import { ScreenContainer } from '@/components';
@@ -26,12 +27,14 @@ import { SFSymbolIcon, TickIcon, BrowseIcon } from '@/components/ui/icon';
 
 // theme and typography
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 
 export default function BrowseScreen() {
   const themeColors = useThemeColors();
+  const typography = useTypography();
   const insets = useSafeAreaInsets();
-  const styles = createStyles(themeColors, insets);
+  const styles = createStyles(themeColors, typography, insets);
 
   return (
     <View style={{ flex: 1 }}>
@@ -134,6 +137,35 @@ export default function BrowseScreen() {
               />
             </GroupedList>
           </View>
+
+          {/* Folders section header: heading-4 typography, Add Folder button on right with padding and border radius */}
+          <View style={styles.foldersHeaderRow}>
+            <Text style={styles.foldersHeaderText}>Folders</Text>
+            <TouchableOpacity
+              onPress={() => {
+                // placeholder - add folder functionality to be implemented
+              }}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.addFolderButton}
+            >
+              <SFSymbolIcon
+                name="folder.badge.plus"
+                size={24}
+                color={themeColors.text.primary()}
+                fallback={
+                  <Ionicons
+                    name="add-circle-outline"
+                    size={24}
+                    color={themeColors.text.primary()}
+                  />
+                }
+              />
+              <Text style={[styles.addFolderButtonText, { color: themeColors.text.primary() }]}>
+                Add Folder
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScreenContainer>
     </View>
@@ -142,6 +174,7 @@ export default function BrowseScreen() {
 
 const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
+  typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) =>
   StyleSheet.create({
@@ -190,8 +223,30 @@ const createStyles = (
       backgroundColor: themeColors.background.primary(),
     },
 
+    // Folders section header - row with heading-4 text on left, folder add icon on right
+    foldersHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: 24,
+      paddingBottom: 12,
+      paddingHorizontal: 0,
+    },
+    foldersHeaderText: {
+      ...typography.getTextStyle('heading-3'),
+      color: themeColors.text.primary(),
+    },
+    // Add Folder button - icon + text, no background or padding
+    addFolderButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    addFolderButtonText: {
+      ...typography.getTextStyle('body-medium'),
+    },
+
     // grouped list section - top padding so grouped list top edge aligns with Today header (64 + insets.top)
-    // Today ListCard uses paddingTop 64 + insets.top; contentWrapper has insets.top + 48, so we need +16 here
     groupedListSection: {
       paddingTop: 16,
     },
