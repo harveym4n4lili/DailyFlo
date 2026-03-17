@@ -1456,3 +1456,14 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - plan to improve activity log performance by fetching up to 2 weeks worth of tasks.
+---
+## [17/03/2026] - [Tuesday]
+### Today's Goals
+- [X] Designed lists grouped list in browse
+ 
+### Plans For Future
+- plan to implement browse page.
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
+- plan to move search bar at top as its own tab
