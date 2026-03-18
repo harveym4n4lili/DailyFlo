@@ -28,8 +28,8 @@ export {
 export type { PickerButtonDisplay } from './FormPickerButton';
 
 // Export CloseButton components
-export { MainCloseButton } from './CloseButton';
-export type { MainCloseButtonProps } from './CloseButton';
+export { MainCloseButton, MainBackButton } from './CloseButton';
+export type { MainCloseButtonProps, MainBackButtonProps } from './CloseButton';
 
 // Export SaveButton component
 export { SaveButton } from './SaveButton';

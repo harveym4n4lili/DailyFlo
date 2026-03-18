@@ -194,15 +194,31 @@ export default function RootLayout() {
     return null;
   }
 
+  // custom theme matching app background – prevents white flash in corners during screen transitions
+  const navTheme = {
+    ...(colorScheme === 'dark' ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(colorScheme === 'dark' ? DarkTheme.colors : DefaultTheme.colors),
+      background: themeColors.background.primary(),
+      card: themeColors.background.primary(),
+    },
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ReduxProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <ThemeProvider value={navTheme}>
           {/* Task stack and sub-screens share draft via context; DuplicateTaskProvider for pre-filling create from Duplicate */}
           <CreateTaskDraftProvider>
           <DuplicateTaskProvider>
           <PlannerMonthSelectProvider>
-          <Stack>
+          <Stack
+            screenOptions={{
+              animation: 'default', // native iOS slide-from-right for all stack transitions
+              gestureEnabled: true,
+              contentStyle: { backgroundColor: themeColors.background.primary() },
+            }}
+          >
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             {/* task-create: full screen, no indent, not draggable, close via MainCloseButton */}

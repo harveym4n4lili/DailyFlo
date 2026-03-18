@@ -25,6 +25,10 @@ export interface ScreenHeaderActionsProps {
   /** for dashboard variant: dropdown anchor offsets */
   dropdownAnchorTopOffset?: number;
   dropdownAnchorRightOffset?: number;
+  /** for browse variant: called when settings (cog) icon is tapped */
+  onSettingsPress?: () => void;
+  /** for browse variant: called when alerts (bell) icon is tapped */
+  onAlertsPress?: () => void;
   /** optional container style */
   style?: ViewStyle;
   /** tint for icons: "primary" or "elevated" */
@@ -41,6 +45,8 @@ export function ScreenHeaderActions({
   contextMenuItems = [],
   dropdownAnchorTopOffset = 60,
   dropdownAnchorRightOffset = 24,
+  onSettingsPress,
+  onAlertsPress,
   style,
   tint = 'primary',
 }: ScreenHeaderActionsProps) {
@@ -52,7 +58,7 @@ export function ScreenHeaderActions({
       <>
         <HeaderIconButton
           icon="notifications-outline"
-          onPress={() => console.log('icon tapped')}
+          onPress={onAlertsPress ?? (() => console.log('alerts tapped'))}
           accessibilityLabel="Alerts"
           tint={tint}
           noWrapper
@@ -60,7 +66,7 @@ export function ScreenHeaderActions({
         <View style={{ width: ICON_GAP }} />
         <HeaderIconButton
           iconComponent={<GearIcon size={24} color={themeColors.text.primary()} />}
-          onPress={() => console.log('icon tapped')}
+          onPress={onSettingsPress ?? (() => console.log('settings tapped'))}
           accessibilityLabel="Settings"
           tint={tint}
           noWrapper

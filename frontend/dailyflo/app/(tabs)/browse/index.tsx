@@ -14,6 +14,7 @@
 
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Pressable, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import GlassView from 'expo-glass-effect/build/GlassView';
@@ -83,6 +84,7 @@ const EXAMPLE_LISTS: List[] = [
 ];
 
 export default function BrowseScreen() {
+  const router = useRouter();
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
@@ -114,6 +116,7 @@ export default function BrowseScreen() {
           <View style={styles.topSectionPlaceholder} pointerEvents="none" />
           <ScreenHeaderActions
             variant="browse"
+            onSettingsPress={() => router.push('/(tabs)/browse/settings')}
             style={styles.topSectionContextButton}
             tint="primary"
           />
@@ -134,7 +137,7 @@ export default function BrowseScreen() {
             <GlassView
               style={styles.searchTab}
               glassEffectStyle="clear"
-              tintColor={themeColors.background.primarySecondaryBlend() as any}
+              tintColor={themeColors.background.primary() as any}
               isInteractive
             >
               <Pressable
@@ -156,7 +159,7 @@ export default function BrowseScreen() {
             </GlassView>
           ) : (
             <TouchableOpacity
-              style={[styles.searchTab, styles.searchTabAndroid, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
+              style={[styles.searchTab, styles.searchTabAndroid, { backgroundColor: themeColors.background.primary() }]}
               onPress={() => {
                 // placeholder - search functionality to be implemented
               }}
@@ -174,8 +177,8 @@ export default function BrowseScreen() {
             </TouchableOpacity>
           )}
 
-          {/* grouped list section - moved down below search tab */}
-          <View style={styles.groupedListSection}>
+          {/* grouped list section - first list has manual 24px top spacing */}
+          <View style={[styles.groupedListSection, styles.firstGroupedListSection]}>
             <GroupedList
               containerStyle={styles.listContainer}
               backgroundColor={themeColors.background.primarySecondaryBlend()}
@@ -386,8 +389,12 @@ const createStyles = (
       minHeight: 44,
     },
 
-    // grouped list section - top padding only (no bottom padding)
+    // grouped list section - no top padding (first list adds it manually)
     groupedListSection: {
+      paddingTop: 0,
+    },
+    // first grouped list only - 24px spacing above (search tab → list)
+    firstGroupedListSection: {
       paddingTop: 24,
     },
 

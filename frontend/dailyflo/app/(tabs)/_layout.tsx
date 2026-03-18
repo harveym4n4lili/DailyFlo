@@ -69,7 +69,7 @@ export default function TabLayout() {
         <NativeTabIcon src={require('@/assets/icons/Timeline.png')} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="settings">
+      <NativeTabs.Trigger name="ai">
         <NativeTabLabel>AI</NativeTabLabel>
         <NativeTabIcon src={require('@/assets/icons/Sparkles.png')} />
       </NativeTabs.Trigger>
