@@ -12,8 +12,8 @@
  * grouped list: same as FormDetailSection - primarySecondaryBlend bg, solid separator, separator starts at text (iconColumnWidth 30)
  */
 
-import React, { useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Pressable, Platform, TextInput } from 'react-native';
+import React from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Pressable, Platform } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import GlassView from 'expo-glass-effect/build/GlassView';
@@ -91,9 +91,6 @@ export default function BrowseScreen() {
   // My Lists section expand/collapse - true = expanded (pills visible)
   const [isMyListsExpanded, setIsMyListsExpanded] = React.useState(true);
 
-  // search input ref - focus when tapped to open keyboard
-  const searchInputRef = useRef<TextInput>(null);
-
   return (
     <View style={{ flex: 1 }}>
       {/* top section - blur + gradient, fixed row for context menu (same as Today/Planner) */}
@@ -132,60 +129,48 @@ export default function BrowseScreen() {
         safeAreaBottom={false}
       >
         <View style={styles.contentWrapper}>
-          {/* liquid glass search tab - TextInput opens keyboard when tapped */}
+          {/* liquid glass search tab - icon + text (no input) */}
           {Platform.OS === 'ios' ? (
             <GlassView
               style={styles.searchTab}
               glassEffectStyle="clear"
-              tintColor={themeColors.background.primary() as any}
+              tintColor={themeColors.background.primarySecondaryBlend() as any}
               isInteractive
             >
               <Pressable
-                onPress={() => searchInputRef.current?.focus()}
+                onPress={() => {
+                  // placeholder - search functionality to be implemented
+                }}
                 style={styles.searchTabInner}
               >
                 <SFSymbolIcon
                   name="magnifyingglass"
                   size={20}
-                  color={themeColors.text.tertiary?.() ?? themeColors.text.secondary()}
-                  fallback={<BrowseIcon size={18} color={themeColors.text.tertiary?.() ?? themeColors.text.secondary()} />}
+                  color={themeColors.text.primary()}
+                  fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
                 />
-                <TextInput
-                  ref={searchInputRef}
-                  style={[styles.searchTabInput, { color: themeColors.text.primary() }]}
-                  placeholder="Search"
-                  placeholderTextColor={themeColors.text.tertiary?.() ?? themeColors.text.secondary()}
-                  selectionColor="white"
-                  cursorColor="white"
-                  returnKeyType="search"
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                />
+                <Text style={[styles.searchTabLabel, { color: themeColors.text.primary() }]}>
+                  Tasks/Lists
+                </Text>
               </Pressable>
             </GlassView>
           ) : (
             <TouchableOpacity
               style={[styles.searchTab, styles.searchTabAndroid, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
-              onPress={() => searchInputRef.current?.focus()}
+              onPress={() => {
+                // placeholder - search functionality to be implemented
+              }}
               activeOpacity={0.7}
             >
               <SFSymbolIcon
                 name="magnifyingglass"
                 size={20}
-                color={themeColors.text.tertiary?.() ?? themeColors.text.secondary()}
-                fallback={<BrowseIcon size={18} color={themeColors.text.tertiary?.() ?? themeColors.text.secondary()} />}
+                color={themeColors.text.primary()}
+                fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
               />
-              <TextInput
-                ref={searchInputRef}
-                style={[styles.searchTabInput, { color: themeColors.text.primary() }]}
-                placeholder="Search"
-                placeholderTextColor={themeColors.text.tertiary?.() ?? themeColors.text.secondary()}
-                selectionColor="white"
-                cursorColor="white"
-                returnKeyType="search"
-                autoCorrect={false}
-                autoCapitalize="none"
-              />
+              <Text style={[styles.searchTabLabel, { color: themeColors.text.primary() }]}>
+                Tasks/Lists
+              </Text>
             </TouchableOpacity>
           )}
 
@@ -392,13 +377,6 @@ const createStyles = (
     searchTabLabel: {
       ...typography.getTextStyle('body-large'),
       marginLeft: Paddings.groupedListIconTextSpacing,
-    },
-    // TextInput inside search tab - flex to fill space, matches body-large typography
-    searchTabInput: {
-      flex: 1,
-      ...typography.getTextStyle('body-large'),
-      marginLeft: Paddings.groupedListIconTextSpacing,
-      paddingVertical: 0, // remove default padding so it aligns with icon
     },
     searchTabAndroid: {
       flexDirection: 'row',
