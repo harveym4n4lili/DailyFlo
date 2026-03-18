@@ -10,11 +10,11 @@
  * Animation pattern:
  * - 0 = collapsed/closed (arrow points right at 90deg)
  * - 1 = expanded/open (arrow points down at 0deg)
- * - 200ms duration with native driver for smooth performance
+ * - 200ms duration, linear easing, native driver
  */
 
 import { useRef, useEffect } from 'react';
-import { Animated } from 'react-native';
+import { Animated, Easing } from 'react-native';
 
 /**
  * Return type for useDropdownArrowAnimation hook
@@ -56,7 +56,7 @@ export interface UseDropdownArrowAnimationReturn {
  * };
  * 
  * <Animated.View style={{ transform: [{ rotate: arrowRotation }] }}>
- *   <Ionicons name="chevron-down" size={16} />
+ *   <Ionicons name="chevron-down" size={20} color={themeColors.text.secondary()} />
  * </Animated.View>
  * ```
  */
@@ -83,7 +83,8 @@ export function useDropdownArrowAnimation(
   const toggle = (isExpanded: boolean) => {
     Animated.timing(arrowRotationValue, {
       toValue: isExpanded ? 1 : 0, // 1 = expanded/down, 0 = collapsed/right
-      duration: 200, // 200ms animation duration for smooth rotation (matches GroupHeader)
+      duration: 200, // 200ms - linear easing for consistent dropdown arrow feel
+      easing: Easing.linear,
       useNativeDriver: true, // use native driver for better performance
     }).start();
   };

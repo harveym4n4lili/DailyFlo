@@ -74,7 +74,7 @@ export const Paddings = {
   groupedListIconTextSpacing: 12,
   // gap between GroupedListHeader and content below (grouped list or pills)
   // used by: browse screen (groupedListSection, listsPillsContainer)
-  groupedListHeaderContentGap: 4,
+  groupedListHeaderContentGap: 10,
 
   // modal/sheet padding (not yet used - modalBottomExtra used instead)
   modalHorizontal: 24,

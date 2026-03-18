@@ -8,7 +8,7 @@
  */
 
 import { useState, useRef } from 'react';
-import { Animated, LayoutAnimation } from 'react-native';
+import { Animated, Easing } from 'react-native';
 
 /**
  * Return type for useGroupAnimations hook
@@ -65,10 +65,7 @@ export function useGroupAnimations(): UseGroupAnimationsReturn {
   const toggleGroupCollapse = (groupTitle: string) => {
     const animatedValuesForGroup = getAnimatedValuesForGroup(groupTitle);
 
-    // configure smooth layout animation for height transitions
-    // this creates the smooth expand/collapse animation for the content area
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-
+    // content uses Reanimated FadeInUp/FadeOutUp (same as Browse GroupedListHeader)
     setCollapsedGroups(prev => {
       const newSet = new Set(prev);
       const isCurrentlyCollapsed = newSet.has(groupTitle);
@@ -80,7 +77,8 @@ export function useGroupAnimations(): UseGroupAnimationsReturn {
         // animate arrow rotation from pointing right (collapsed) to pointing down (expanded)
         Animated.timing(animatedValuesForGroup.rotateValue, {
           toValue: 1, // 1 = expanded state (down), 0 = collapsed state (right)
-          duration: 200, // 200ms animation duration for smooth rotation
+          duration: 200, // 200ms - linear easing for consistent dropdown arrow feel
+          easing: Easing.linear,
           useNativeDriver: true, // use native driver for better performance
         }).start();
       } else {
@@ -90,7 +88,8 @@ export function useGroupAnimations(): UseGroupAnimationsReturn {
         // animate arrow rotation from pointing down (expanded) to pointing right (collapsed)
         Animated.timing(animatedValuesForGroup.rotateValue, {
           toValue: 0, // 0 = collapsed state (right), 1 = expanded state (down)
-          duration: 200, // 200ms animation duration for smooth rotation
+          duration: 200, // 200ms - linear easing for consistent dropdown arrow feel
+          easing: Easing.linear,
           useNativeDriver: true, // use native driver for better performance
         }).start();
       }

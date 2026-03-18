@@ -79,10 +79,11 @@ export default function GroupHeader({
         </TouchableOpacity>
       )}
 
-      {/* dropdown arrow - tappable to toggle */}
+      {/* dropdown arrow - tappable to toggle (matches GroupedListHeader styling) */}
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.7}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         style={styles.animatedArrowContainer}
       >
         <Animated.View
@@ -93,7 +94,7 @@ export default function GroupHeader({
           <Ionicons
             name="chevron-down"
             size={20}
-            color={themeColors.text.tertiary()}
+            color={themeColors.text.secondary()}
           />
         </Animated.View>
       </TouchableOpacity>
@@ -129,9 +130,9 @@ const createStyles = (
       marginRight: 4,
     },
 
-    // animated arrow container - touchable for toggle, centers the chevron icon
+    // animated arrow container - touchable for toggle, centers the chevron (matches GroupedListHeader)
     animatedArrowContainer: {
-      marginLeft: 4,
+      marginLeft: 16,
       justifyContent: 'center',
       alignItems: 'center',
     },
