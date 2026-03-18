@@ -14,6 +14,7 @@
 // main component exports
 export { GroupedList } from './GroupedList';
 export { GroupedListItemWrapper } from './GroupedListItemWrapper';
+export { default as GroupedListHeader } from './GroupedListHeader';
 
 // re-export FormDetailButton from TaskButton folder for backward compatibility
 export { FormDetailButton } from '@/components/ui/button/TaskButton';

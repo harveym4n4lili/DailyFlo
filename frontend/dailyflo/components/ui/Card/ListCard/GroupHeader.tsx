@@ -92,7 +92,7 @@ export default function GroupHeader({
         >
           <Ionicons
             name="chevron-down"
-            size={16}
+            size={20}
             color={themeColors.text.tertiary()}
           />
         </Animated.View>
@@ -143,7 +143,7 @@ const createStyles = (
       justifyContent: 'space-between',
       marginBottom: 0,
       paddingHorizontal: Paddings.touchTargetSmall,
-      paddingVertical: Paddings.touchTarget,
+      paddingVertical: 12, // matches Browse Folders header
     },
     secondaryActionButton: {
       marginLeft: 8,
