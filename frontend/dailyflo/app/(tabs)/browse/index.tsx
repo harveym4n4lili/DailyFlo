@@ -12,29 +12,103 @@
  * grouped list: same as FormDetailSection - primarySecondaryBlend bg, solid separator, separator starts at text (iconColumnWidth 30)
  */
 
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Animated, Easing } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-
 // layout and ui components
 import { ScreenContainer } from '@/components';
 import { ScreenHeaderActions } from '@/components/ui';
-import { GroupedList, FormDetailButton } from '@/components/ui/list/GroupedList';
-import { SFSymbolIcon, TickIcon, BrowseIcon } from '@/components/ui/icon';
+import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/list/GroupedList';
+import { SFSymbolIcon, TickIcon, BrowseIcon, LeafIcon, PencilIcon } from '@/components/ui/icon';
 
 // theme and typography
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 
+// types - List matches backend Django List model
+import type { List } from '@/types';
+
+/**
+ * Example list data for UI testing - structure matches backend List model
+ * (id, name, description, color, icon, isDefault, sortOrder, metadata, etc.)
+ */
+const EXAMPLE_LISTS: List[] = [
+  {
+    id: 'example-list-1',
+    userId: 'example-user',
+    name: 'Work',
+    description: '',
+    color: 'blue',
+    icon: 'briefcase',
+    isDefault: false,
+    sortOrder: 0,
+    metadata: { taskCount: 12 },
+    softDeleted: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: 'example-list-2',
+    userId: 'example-user',
+    name: 'Personal',
+    description: '',
+    color: 'green',
+    icon: 'person',
+    isDefault: false,
+    sortOrder: 1,
+    metadata: { taskCount: 5 },
+    softDeleted: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: 'example-list-3',
+    userId: 'example-user',
+    name: 'Shopping',
+    description: '',
+    color: 'orange',
+    icon: 'cart',
+    isDefault: false,
+    sortOrder: 2,
+    metadata: { taskCount: 3 },
+    softDeleted: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
+
+// duration for My Lists section collapse/expand (linear transition)
+const MY_LISTS_ANIMATION_DURATION = 200;
+
 export default function BrowseScreen() {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
   const styles = createStyles(themeColors, typography, insets);
+
+  // My Lists section expand/collapse - true = expanded (pills visible)
+  const [isMyListsExpanded, setIsMyListsExpanded] = React.useState(true);
+  const sectionAnimValue = useRef(new Animated.Value(1)).current;
+
+  // animate section when isMyListsExpanded changes - linear transition
+  useEffect(() => {
+    Animated.timing(sectionAnimValue, {
+      toValue: isMyListsExpanded ? 1 : 0,
+      duration: MY_LISTS_ANIMATION_DURATION,
+      easing: Easing.linear,
+      useNativeDriver: false, // maxHeight requires false
+    }).start();
+  }, [isMyListsExpanded, sectionAnimValue]);
+
+  // interpolate: 0 = collapsed (maxHeight 0, opacity 0), 1 = expanded (maxHeight 500, opacity 1)
+  const sectionAnimatedStyle = {
+    maxHeight: sectionAnimValue.interpolate({ inputRange: [0, 1], outputRange: [0, 500] }),
+    opacity: sectionAnimValue.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+    overflow: 'hidden' as const,
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -80,13 +154,13 @@ export default function BrowseScreen() {
               containerStyle={styles.listContainer}
               backgroundColor={themeColors.background.primarySecondaryBlend()}
               separatorColor={themeColors.border.primary()}
-              separatorInsetRight={Paddings.groupedListContentHorizontal}
-              separatorVariant="solid"
-              borderRadius={24}
-              minimalStyle={false}
-              separatorConsiderIconColumn={true}
-              iconColumnWidth={30}
-            >
+            separatorInsetRight={Paddings.groupedListContentHorizontal}
+            separatorVariant="solid"
+            borderRadius={24}
+            minimalStyle={false}
+            separatorConsiderIconColumn={true}
+            iconColumnWidth={30}
+          >
               <FormDetailButton
                 key="search"
                 iconComponent={
@@ -98,8 +172,26 @@ export default function BrowseScreen() {
                   />
                 }
                 label="Search"
+                value=""
                 onPress={() => {
                   // placeholder - search functionality to be implemented
+                }}
+                showChevron={false}
+              />
+              <FormDetailButton
+                key="inbox"
+                iconComponent={
+                  <SFSymbolIcon
+                    name="tray.full"
+                    size={20}
+                    color={themeColors.text.primary()}
+                    fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
+                  />
+                }
+                label="Inbox"
+                value=""
+                onPress={() => {
+                  // placeholder - inbox view to be implemented
                 }}
                 showChevron={false}
               />
@@ -114,6 +206,7 @@ export default function BrowseScreen() {
                   />
                 }
                 label="Completed"
+                value=""
                 onPress={() => {
                   // placeholder - completed tasks view to be implemented
                 }}
@@ -130,6 +223,7 @@ export default function BrowseScreen() {
                   />
                 }
                 label="Tags"
+                value=""
                 onPress={() => {
                   // placeholder - tags view to be implemented
                 }}
@@ -138,34 +232,55 @@ export default function BrowseScreen() {
             </GroupedList>
           </View>
 
-          {/* Folders section header: heading-4 typography, Add Folder button on right with padding and border radius */}
-          <View style={styles.foldersHeaderRow}>
-            <Text style={styles.foldersHeaderText}>Folders</Text>
+          {/* My Lists section header - dropdown arrow toggles section with linear transition */}
+          <GroupedListHeader
+            title="My Lists"
+            showDropdownArrow
+            isExpanded={isMyListsExpanded}
+            onPress={() => setIsMyListsExpanded((prev) => !prev)}
+            style={styles.myListsHeader}
+          />
+
+          {/* Lists as separated pills - animates height/opacity with linear transition when collapsed */}
+          <Animated.View style={[styles.listsPillsContainer, sectionAnimatedStyle]}>
             <TouchableOpacity
+              style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
               onPress={() => {
-                // placeholder - add folder functionality to be implemented
+                // placeholder - manage lists to be implemented
               }}
               activeOpacity={0.7}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.addFolderButton}
             >
-              <SFSymbolIcon
-                name="folder.badge.plus"
-                size={24}
-                color={themeColors.text.primary()}
-                fallback={
-                  <Ionicons
-                    name="add-circle-outline"
-                    size={24}
-                    color={themeColors.text.primary()}
-                  />
-                }
-              />
-              <Text style={[styles.addFolderButtonText, { color: themeColors.text.primary() }]}>
-                Add Folder
+              <PencilIcon size={20} color={themeColors.text.primary()} />
+              <Text
+                style={[styles.listPillName, styles.listPillNameBold, { color: themeColors.text.primary() }]}
+                numberOfLines={1}
+              >
+                Manage Lists
               </Text>
             </TouchableOpacity>
-          </View>
+            {EXAMPLE_LISTS.map((list) => (
+              <TouchableOpacity
+                key={list.id}
+                style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
+                onPress={() => {
+                  // placeholder - navigate to list detail
+                }}
+                activeOpacity={0.7}
+              >
+                <LeafIcon size={20} color={themeColors.text.tertiary()} />
+                <Text
+                  style={[styles.listPillName, { color: themeColors.text.primary() }]}
+                  numberOfLines={1}
+                >
+                  {list.name}
+                </Text>
+                <View style={styles.listPillCountGap} />
+                <Text style={[styles.listPillCount, { color: themeColors.text.secondary() }]}>
+                  {list.metadata?.taskCount ?? 0}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </Animated.View>
         </View>
       </ScreenContainer>
     </View>
@@ -223,30 +338,12 @@ const createStyles = (
       backgroundColor: themeColors.background.primary(),
     },
 
-    // Folders section header - row with heading-4 text on left, folder add icon on right
-    foldersHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingTop: 24,
-      paddingBottom: 12,
-      paddingHorizontal: 0,
-    },
-    foldersHeaderText: {
-      ...typography.getTextStyle('heading-3'),
-      color: themeColors.text.primary(),
-    },
-    // Add Folder button - icon + text, no background or padding
-    addFolderButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    addFolderButtonText: {
-      ...typography.getTextStyle('body-medium'),
+    // My Lists section header - 24px top padding to separate from grouped list above
+    myListsHeader: {
+      marginTop: 24,
     },
 
-    // grouped list section - top padding so grouped list top edge aligns with Today header (64 + insets.top)
+    // grouped list section - top padding so grouped list aligns with content (first section)
     groupedListSection: {
       paddingTop: 16,
     },
@@ -254,5 +351,35 @@ const createStyles = (
     // list container - no extra margin (FormDetailSection uses marginVertical: 0)
     listContainer: {
       marginVertical: 0,
+    },
+
+    // lists as separated pills - gap between My Lists header and pills (matches header-to-list spacing)
+    listsPillsContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+      paddingTop: Paddings.groupedListHeaderContentGap,
+    },
+    listPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      paddingHorizontal: Paddings.groupedListContentHorizontal,
+      paddingVertical: Paddings.pillVertical,
+      borderRadius: 24,
+      minHeight: 44,
+    },
+    listPillName: {
+      ...typography.getTextStyle('body-large'),
+      marginLeft: Paddings.groupedListIconTextSpacing,
+    },
+    listPillNameBold: {
+      fontWeight: '700',
+    },
+    listPillCountGap: {
+      width: 12,
+    },
+    listPillCount: {
+      ...typography.getTextStyle('body-large'),
     },
   });

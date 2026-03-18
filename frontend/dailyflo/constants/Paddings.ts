@@ -49,9 +49,9 @@ export const Paddings = {
   // used by: GroupHeader, ModalHeader, TaskForm, +not-found
   touchTargetSmall: 4,
 
-  // pill/chip padding
+  // pill/chip padding - matches FormDetailSection routine pill, used by browse list pills
   pillHorizontal: 14, // not yet used (recurrence pill uses groupedListContentHorizontal)
-  pillVertical: 12, // not yet used
+  pillVertical: 12, // used by: FormDetailSection (repeating pill), browse list pills
 
   // indicator/tag padding
   // used by: TaskIndicators
@@ -72,6 +72,9 @@ export const Paddings = {
   // icon-to-text spacing in GroupedList rows (FormDetailButton, recurrence pill)
   // used by: FormDetailButton, CustomFormDetailButton, FormDetailSection (recurrence)
   groupedListIconTextSpacing: 12,
+  // gap between GroupedListHeader and content below (grouped list or pills)
+  // used by: browse screen (groupedListSection, listsPillsContainer)
+  groupedListHeaderContentGap: 4,
 
   // modal/sheet padding (not yet used - modalBottomExtra used instead)
   modalHorizontal: 24,

@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     alignSelf: 'flex-start' as const,
-    paddingVertical: Paddings.listItemVertical,
+    paddingVertical: Paddings.pillVertical,
     paddingHorizontal: Paddings.groupedListContentHorizontal,
     borderRadius: 24,
     overflow: 'hidden',
