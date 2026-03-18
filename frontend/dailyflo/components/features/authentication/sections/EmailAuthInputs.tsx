@@ -169,6 +169,8 @@ export function EmailAuthInputs({ visible, onVisible, containerStyle }: EmailAut
             style={styles.textInput}
             placeholder="First Name"
             placeholderTextColor={themeColors.text.secondary()}
+            selectionColor="white"
+            cursorColor="white"
             value={emailAuthFirstName}
             onChangeText={setEmailAuthFirstName}
             autoCapitalize="words"
@@ -189,6 +191,8 @@ export function EmailAuthInputs({ visible, onVisible, containerStyle }: EmailAut
             style={styles.textInput}
             placeholder="Last Name"
             placeholderTextColor={themeColors.text.secondary()}
+            selectionColor="white"
+            cursorColor="white"
             value={emailAuthLastName}
             onChangeText={setEmailAuthLastName}
             autoCapitalize="words"
@@ -209,6 +213,8 @@ export function EmailAuthInputs({ visible, onVisible, containerStyle }: EmailAut
             style={styles.textInput}
             placeholder="Email"
             placeholderTextColor={themeColors.text.secondary()}
+            selectionColor="white"
+            cursorColor="white"
             value={emailAuthEmail}
             onChangeText={setEmailAuthEmail}
             keyboardType="email-address"
@@ -230,6 +236,8 @@ export function EmailAuthInputs({ visible, onVisible, containerStyle }: EmailAut
             style={styles.textInput}
             placeholder="Password"
             placeholderTextColor={themeColors.text.secondary()}
+            selectionColor="white"
+            cursorColor="white"
             value={emailAuthPassword}
             onChangeText={setEmailAuthPassword}
             secureTextEntry={true}
