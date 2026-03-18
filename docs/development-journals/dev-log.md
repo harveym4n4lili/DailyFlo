@@ -1467,3 +1467,15 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - plan to move search bar at top as its own tab
+---
+## [18/03/2026] - [Wednesday]
+### Today's Goals
+- [X] Re-designed settings page
+- [X] Implemented stack screen structuring for browse page.
+ 
+### Plans For Future
+- plan to implement browse page buttons.
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
+- make settings page a formsheet instead
