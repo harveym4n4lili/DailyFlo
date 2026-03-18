@@ -370,8 +370,8 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
               onChangeText={(t) => onChange('title', t)}
               placeholder="e.g., Answering emails"
               placeholderTextColor={themeColors.text.tertiary()}
-              selectionColor="white"
-              cursorColor="white"
+              selectionColor="#FFFFFF"
+              cursorColor="#FFFFFF"
               style={[
                 getTextStyle('heading-2'),
                 {
@@ -379,6 +379,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
                   paddingBottom: Paddings.none,
                   paddingHorizontal: Paddings.none,
                   maxHeight: 68, // 2 lines max (fontSize 26 * ~1.3 line height)
+                  caretColor: '#FFFFFF', // iOS: style-based cursor color fallback
                 },
               ]}
               multiline

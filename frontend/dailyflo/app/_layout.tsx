@@ -10,7 +10,10 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, useRef } from 'react';
-import { Platform } from 'react-native';
+import { Platform, TextInput } from 'react-native';
+
+// set default cursor/selection color to white app-wide (overrides iOS blue tint on TextInputs)
+TextInput.defaultProps = { ...(TextInput.defaultProps || {}), selectionColor: '#FFFFFF', cursorColor: '#FFFFFF' };
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';

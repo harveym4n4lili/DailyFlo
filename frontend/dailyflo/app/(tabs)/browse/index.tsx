@@ -5,17 +5,18 @@
  * Structure matches Today and Planner screens:
  * - Top section with context menu in top right
  * - Primary background color
- * - Grouped list at top with Search, Completed, and Tags buttons
+ * - Liquid glass search tab above grouped list (Inbox, Completed, Tags)
  * - Grouped list styling matches Task screen FormDetailSection (date, alert, time)
  *
  * layout: topSectionAnchor fixed at top (zIndex 10) with context menu; content scrolls below
  * grouped list: same as FormDetailSection - primarySecondaryBlend bg, solid separator, separator starts at text (iconColumnWidth 30)
  */
 
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import React, { useRef } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Pressable, Platform, TextInput } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
+import GlassView from 'expo-glass-effect/build/GlassView';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // layout and ui components
@@ -90,6 +91,9 @@ export default function BrowseScreen() {
   // My Lists section expand/collapse - true = expanded (pills visible)
   const [isMyListsExpanded, setIsMyListsExpanded] = React.useState(true);
 
+  // search input ref - focus when tapped to open keyboard
+  const searchInputRef = useRef<TextInput>(null);
+
   return (
     <View style={{ flex: 1 }}>
       {/* top section - blur + gradient, fixed row for context menu (same as Today/Planner) */}
@@ -128,7 +132,64 @@ export default function BrowseScreen() {
         safeAreaBottom={false}
       >
         <View style={styles.contentWrapper}>
-          {/* grouped list section - same styling as Task screen FormDetailSection (date, alert, time) */}
+          {/* liquid glass search tab - TextInput opens keyboard when tapped */}
+          {Platform.OS === 'ios' ? (
+            <GlassView
+              style={styles.searchTab}
+              glassEffectStyle="clear"
+              tintColor={themeColors.background.primary() as any}
+              isInteractive
+            >
+              <Pressable
+                onPress={() => searchInputRef.current?.focus()}
+                style={styles.searchTabInner}
+              >
+                <SFSymbolIcon
+                  name="magnifyingglass"
+                  size={20}
+                  color={themeColors.text.tertiary?.() ?? themeColors.text.secondary()}
+                  fallback={<BrowseIcon size={18} color={themeColors.text.tertiary?.() ?? themeColors.text.secondary()} />}
+                />
+                <TextInput
+                  ref={searchInputRef}
+                  style={[styles.searchTabInput, { color: themeColors.text.primary() }]}
+                  placeholder="Search"
+                  placeholderTextColor={themeColors.text.tertiary?.() ?? themeColors.text.secondary()}
+                  selectionColor="white"
+                  cursorColor="white"
+                  returnKeyType="search"
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                />
+              </Pressable>
+            </GlassView>
+          ) : (
+            <TouchableOpacity
+              style={[styles.searchTab, styles.searchTabAndroid, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
+              onPress={() => searchInputRef.current?.focus()}
+              activeOpacity={0.7}
+            >
+              <SFSymbolIcon
+                name="magnifyingglass"
+                size={20}
+                color={themeColors.text.tertiary?.() ?? themeColors.text.secondary()}
+                fallback={<BrowseIcon size={18} color={themeColors.text.tertiary?.() ?? themeColors.text.secondary()} />}
+              />
+              <TextInput
+                ref={searchInputRef}
+                style={[styles.searchTabInput, { color: themeColors.text.primary() }]}
+                placeholder="Search"
+                placeholderTextColor={themeColors.text.tertiary?.() ?? themeColors.text.secondary()}
+                selectionColor="white"
+                cursorColor="white"
+                returnKeyType="search"
+                autoCorrect={false}
+                autoCapitalize="none"
+              />
+            </TouchableOpacity>
+          )}
+
+          {/* grouped list section - moved down below search tab */}
           <View style={styles.groupedListSection}>
             <GroupedList
               containerStyle={styles.listContainer}
@@ -141,23 +202,6 @@ export default function BrowseScreen() {
             separatorConsiderIconColumn={true}
             iconColumnWidth={30}
           >
-              <FormDetailButton
-                key="search"
-                iconComponent={
-                  <SFSymbolIcon
-                    name="magnifyingglass"
-                    size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
-                  />
-                }
-                label="Search"
-                value=""
-                onPress={() => {
-                  // placeholder - search functionality to be implemented
-                }}
-                showChevron={false}
-              />
               <FormDetailButton
                 key="inbox"
                 iconComponent={
@@ -317,11 +361,13 @@ const createStyles = (
     },
 
     // content wrapper - primary background, padding for grouped list
+    // overflow: visible so liquid glass search tab expansion is not clipped
     contentWrapper: {
       flex: 1,
       paddingTop: insets.top + 48,
       paddingHorizontal: Paddings.screen,
       backgroundColor: themeColors.background.primary(),
+      overflow: 'visible',
     },
 
     // My Lists section header - 24px top padding to separate from grouped list above
@@ -329,9 +375,42 @@ const createStyles = (
       marginTop: 24,
     },
 
-    // grouped list section - top padding so grouped list aligns with content (first section)
+    // liquid glass search tab - pill above grouped list
+    // overflow: visible so iOS GlassView expansion/blur can extend beyond bounds (matches ScreenContextButton)
+    searchTab: {
+      borderRadius: 20,
+      overflow: 'visible',
+      marginTop: 16,
+    },
+    searchTabInner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: Paddings.groupedListContentHorizontal,
+      paddingVertical: Paddings.pillVertical,
+      minHeight: 44,
+    },
+    searchTabLabel: {
+      ...typography.getTextStyle('body-large'),
+      marginLeft: Paddings.groupedListIconTextSpacing,
+    },
+    // TextInput inside search tab - flex to fill space, matches body-large typography
+    searchTabInput: {
+      flex: 1,
+      ...typography.getTextStyle('body-large'),
+      marginLeft: Paddings.groupedListIconTextSpacing,
+      paddingVertical: 0, // remove default padding so it aligns with icon
+    },
+    searchTabAndroid: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: Paddings.groupedListContentHorizontal,
+      paddingVertical: Paddings.pillVertical,
+      minHeight: 44,
+    },
+
+    // grouped list section - top padding only (no bottom padding)
     groupedListSection: {
-      paddingTop: 16,
+      paddingTop: 24,
     },
 
     // list container - no extra margin (FormDetailSection uses marginVertical: 0)
