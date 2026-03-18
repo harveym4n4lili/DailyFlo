@@ -12,8 +12,9 @@
  * grouped list: same as FormDetailSection - primarySecondaryBlend bg, solid separator, separator starts at text (iconColumnWidth 30)
  */
 
-import React, { useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Animated, Easing } from 'react-native';
+import React from 'react';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -80,9 +81,6 @@ const EXAMPLE_LISTS: List[] = [
   },
 ];
 
-// duration for My Lists section collapse/expand (linear transition)
-const MY_LISTS_ANIMATION_DURATION = 200;
-
 export default function BrowseScreen() {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -91,24 +89,6 @@ export default function BrowseScreen() {
 
   // My Lists section expand/collapse - true = expanded (pills visible)
   const [isMyListsExpanded, setIsMyListsExpanded] = React.useState(true);
-  const sectionAnimValue = useRef(new Animated.Value(1)).current;
-
-  // animate section when isMyListsExpanded changes - linear transition
-  useEffect(() => {
-    Animated.timing(sectionAnimValue, {
-      toValue: isMyListsExpanded ? 1 : 0,
-      duration: MY_LISTS_ANIMATION_DURATION,
-      easing: Easing.linear,
-      useNativeDriver: false, // maxHeight requires false
-    }).start();
-  }, [isMyListsExpanded, sectionAnimValue]);
-
-  // interpolate: 0 = collapsed (maxHeight 0, opacity 0), 1 = expanded (maxHeight 500, opacity 1)
-  const sectionAnimatedStyle = {
-    maxHeight: sectionAnimValue.interpolate({ inputRange: [0, 1], outputRange: [0, 500] }),
-    opacity: sectionAnimValue.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
-    overflow: 'hidden' as const,
-  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -232,7 +212,7 @@ export default function BrowseScreen() {
             </GroupedList>
           </View>
 
-          {/* My Lists section header - dropdown arrow toggles section with linear transition */}
+          {/* My Lists section header - dropdown arrow toggles section (layout transition slides up like ListCard task removal) */}
           <GroupedListHeader
             title="My Lists"
             showDropdownArrow
@@ -241,46 +221,52 @@ export default function BrowseScreen() {
             style={styles.myListsHeader}
           />
 
-          {/* Lists as separated pills - animates height/opacity with linear transition when collapsed */}
-          <Animated.View style={[styles.listsPillsContainer, sectionAnimatedStyle]}>
-            <TouchableOpacity
-              style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
-              onPress={() => {
-                // placeholder - manage lists to be implemented
-              }}
-              activeOpacity={0.7}
+          {/* pills section - entering/exiting works in ScrollView (layout transition does not) */}
+          {isMyListsExpanded && (
+            <Animated.View
+              entering={FadeInUp.duration(200)}
+              exiting={FadeOutUp.duration(200)}
+              style={styles.listsPillsContainer}
             >
-              <PencilIcon size={20} color={themeColors.text.primary()} />
-              <Text
-                style={[styles.listPillName, styles.listPillNameBold, { color: themeColors.text.primary() }]}
-                numberOfLines={1}
-              >
-                Manage Lists
-              </Text>
-            </TouchableOpacity>
-            {EXAMPLE_LISTS.map((list) => (
               <TouchableOpacity
-                key={list.id}
                 style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
                 onPress={() => {
-                  // placeholder - navigate to list detail
+                  // placeholder - manage lists to be implemented
                 }}
                 activeOpacity={0.7}
               >
-                <LeafIcon size={20} color={themeColors.text.tertiary()} />
+                <PencilIcon size={20} color={themeColors.text.primary()} />
                 <Text
-                  style={[styles.listPillName, { color: themeColors.text.primary() }]}
+                  style={[styles.listPillName, styles.listPillNameBold, { color: themeColors.text.primary() }]}
                   numberOfLines={1}
                 >
-                  {list.name}
-                </Text>
-                <View style={styles.listPillCountGap} />
-                <Text style={[styles.listPillCount, { color: themeColors.text.secondary() }]}>
-                  {list.metadata?.taskCount ?? 0}
+                  Manage Lists
                 </Text>
               </TouchableOpacity>
-            ))}
-          </Animated.View>
+              {EXAMPLE_LISTS.map((list) => (
+                <TouchableOpacity
+                  key={list.id}
+                  style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
+                  onPress={() => {
+                    // placeholder - navigate to list detail
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <LeafIcon size={20} color={themeColors.text.tertiary()} />
+                  <Text
+                    style={[styles.listPillName, { color: themeColors.text.primary() }]}
+                    numberOfLines={1}
+                  >
+                    {list.name}
+                  </Text>
+                  <View style={styles.listPillCountGap} />
+                  <Text style={[styles.listPillCount, { color: themeColors.text.secondary() }]}>
+                    {list.metadata?.taskCount ?? 0}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </Animated.View>
+          )}
         </View>
       </ScreenContainer>
     </View>
