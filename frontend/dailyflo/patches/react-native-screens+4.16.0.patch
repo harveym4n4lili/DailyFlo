@@ -1,0 +1,14 @@
+diff --git a/node_modules/react-native-screens/ios/RNSScreenStack.mm b/node_modules/react-native-screens/ios/RNSScreenStack.mm
+index 229dc58..b0fad59 100644
+--- a/node_modules/react-native-screens/ios/RNSScreenStack.mm
++++ b/node_modules/react-native-screens/ios/RNSScreenStack.mm
+@@ -376,6 +376,9 @@ namespace react = facebook::react;
+   _presentedModals = [NSMutableArray new];
+   _controller = [RNSNavigationController new];
+   _controller.delegate = self;
++  // fix: prevent white flash in dark mode during push/slide transitions.
++  // UINavigationController.view has nil backgroundColor by default; systemBackgroundColor adapts to light/dark.
++  _controller.view.backgroundColor = [UIColor systemBackgroundColor];
+ #if !TARGET_OS_TV && !TARGET_OS_VISION
+   [self setupGestureHandlers];
+ #endif

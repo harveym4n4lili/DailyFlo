@@ -53,9 +53,9 @@ export default function OnboardingLayout() {
       <Stack
         screenOptions={{
           headerShown: false, // Hide header for onboarding screens
-          animation: 'fade', // cross-fade animation between screens
-          animationDuration: 200, // faster transition (default is 350ms, this makes it quicker)
+          animation: 'default', // native iOS slide-from-right (push) animation
           gestureEnabled: true, // Allow swipe back gesture
+          contentStyle: { backgroundColor: themeColors.background.primary() },
         }}
       >
         <Stack.Screen 
