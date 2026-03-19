@@ -8,7 +8,6 @@ export default function BrowseLayout() {
       screenOptions={{
         animation: 'default', // native iOS slide-from-right (push)
         gestureEnabled: true,
-        // match theme background so no white flash around edges during slide transition
         contentStyle: { backgroundColor: themeColors.background.primary() },
       }}
     >
@@ -19,11 +18,37 @@ export default function BrowseLayout() {
           headerShown: false,
         }}
       />
-      {/* settings: slides in from right when cog icon tapped, has back button */}
+      {/* settings: same as activity-log – modal, close via MainCloseButton */}
       <Stack.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          headerShown: false,
+          presentation: 'modal',
+          gestureEnabled: false,
+          contentStyle: {
+            backgroundColor: themeColors.background.primary(),
+          },
+        }}
+      />
+      {/* inbox, completed, tags: layout pages with back button + header + scroll view */}
+      <Stack.Screen
+        name="inbox"
+        options={{
+          title: 'Inbox',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="completed"
+        options={{
+          title: 'Completed',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="tags"
+        options={{
+          title: 'Tags',
           headerShown: false,
         }}
       />
