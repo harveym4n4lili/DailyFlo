@@ -202,9 +202,7 @@ export default function BrowseScreen() {
                 }
                 label="Inbox"
                 value=""
-                onPress={() => {
-                  // placeholder - inbox view to be implemented
-                }}
+                onPress={() => router.push('/(tabs)/browse/inbox')}
                 showChevron={false}
               />
               <FormDetailButton
@@ -219,9 +217,7 @@ export default function BrowseScreen() {
                 }
                 label="Completed"
                 value=""
-                onPress={() => {
-                  // placeholder - completed tasks view to be implemented
-                }}
+                onPress={() => router.push('/(tabs)/browse/completed')}
                 showChevron={false}
               />
               <FormDetailButton
@@ -236,9 +232,7 @@ export default function BrowseScreen() {
                 }
                 label="Tags"
                 value=""
-                onPress={() => {
-                  // placeholder - tags view to be implemented
-                }}
+                onPress={() => router.push('/(tabs)/browse/tags')}
                 showChevron={false}
               />
             </GroupedList>

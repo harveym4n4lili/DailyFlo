@@ -1,0 +1,225 @@
+/**
+ * Inbox Screen
+ *
+ * Layout matches Today screen: big header above content, mini header in top section
+ * fades in when scrolled. Blur + gradient top section, back button left.
+ */
+
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedScrollHandler,
+  useAnimatedReaction,
+  withTiming,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useThemeColors } from '@/hooks/useColorPalette';
+import { useTypography } from '@/hooks/useTypography';
+import { MainBackButton } from '@/components/ui/button';
+import { Paddings } from '@/constants/Paddings';
+
+const TOP_SECTION_ROW_HEIGHT = 48;
+const TOP_SECTION_ANCHOR_HEIGHT = 64;
+// mini header appears earlier (lower threshold) since padding excludes insets.top
+const SCROLL_THRESHOLD = 16;
+
+export default function InboxScreen() {
+  const router = useRouter();
+  const themeColors = useThemeColors();
+  const typography = useTypography();
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(themeColors, typography, insets);
+
+  const scrollY = useSharedValue(0);
+  const miniHeaderOpacity = useSharedValue(0);
+
+  useAnimatedReaction(
+    () => scrollY.value > SCROLL_THRESHOLD,
+    (shouldShow) => {
+      miniHeaderOpacity.value = withTiming(shouldShow ? 1 : 0, { duration: 200 });
+    }
+  );
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
+
+  const miniHeaderStyle = useAnimatedStyle(() => ({
+    opacity: miniHeaderOpacity.value,
+  }));
+
+  const bigHeaderStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.value,
+      [0, SCROLL_THRESHOLD],
+      [1, 0],
+      Extrapolation.CLAMP
+    ),
+  }));
+
+  const backButtonTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
+
+  return (
+    <View style={{ flex: 1 }}>
+      {/* top section – blur + gradient + mini header that fades in on scroll */}
+      <View
+        style={[
+          styles.topSectionAnchor,
+          { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT },
+        ]}
+      >
+        <BlurView
+          tint={themeColors.isDark ? 'dark' : 'light'}
+          intensity={1}
+          style={StyleSheet.absoluteFill}
+        />
+        <LinearGradient
+          colors={[
+            themeColors.background.primary(),
+            themeColors.withOpacity(themeColors.background.primary(), 0),
+          ]}
+          locations={[0.4, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <View style={styles.topSectionRow} pointerEvents="box-none">
+          <View style={styles.topSectionPlaceholder} pointerEvents="none" />
+          <Animated.View style={[styles.miniHeader, miniHeaderStyle]} pointerEvents="none">
+            <Text style={[styles.miniHeaderText, { color: themeColors.text.primary() }]}>
+              Inbox
+            </Text>
+          </Animated.View>
+          <View style={styles.topSectionPlaceholder} pointerEvents="none" />
+        </View>
+      </View>
+
+      <View style={styles.backButtonContainer} pointerEvents="box-none">
+        <MainBackButton
+          onPress={() => router.back()}
+          top={backButtonTop}
+          left={Paddings.screen}
+        />
+      </View>
+
+      <Animated.ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View style={bigHeaderStyle}>
+          <Text style={[styles.bigHeader, { color: themeColors.text.primary() }]}>
+            Inbox
+          </Text>
+        </Animated.View>
+        <Text style={[styles.exampleTitle, { color: themeColors.text.secondary() }]}>
+          Example content
+        </Text>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <View
+            key={i}
+            style={[
+              styles.exampleItem,
+              { backgroundColor: themeColors.background.primarySecondaryBlend() },
+            ]}
+          >
+            <Text style={[styles.exampleItemText, { color: themeColors.text.primary() }]}>
+              Inbox item {i}
+            </Text>
+          </View>
+        ))}
+        <View style={styles.bottomSpacer} />
+      </Animated.ScrollView>
+    </View>
+  );
+}
+
+const createStyles = (
+  themeColors: ReturnType<typeof useThemeColors>,
+  typography: ReturnType<typeof useTypography>,
+  insets: ReturnType<typeof useSafeAreaInsets>
+) =>
+  StyleSheet.create({
+    topSectionAnchor: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+      overflow: 'hidden',
+    },
+    topSectionRow: {
+      position: 'absolute',
+      top: insets.top,
+      left: 0,
+      right: 0,
+      height: TOP_SECTION_ROW_HEIGHT,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: Paddings.screen,
+    },
+    topSectionPlaceholder: {
+      width: 44,
+      height: 44,
+    },
+    miniHeader: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    miniHeaderText: {
+      ...typography.getTextStyle('heading-3'),
+    },
+    backButtonContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: insets.top + TOP_SECTION_ROW_HEIGHT,
+      zIndex: 11,
+      overflow: 'visible',
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: Paddings.screen,
+      // top spacing like Today (64), no insets.top – content scrolls under
+      paddingTop: TOP_SECTION_ANCHOR_HEIGHT,
+    },
+    bigHeader: {
+      ...typography.getTextStyle('heading-1'),
+      marginBottom: 8,
+    },
+    exampleTitle: {
+      ...typography.getTextStyle('body-large'),
+      marginBottom: 16,
+    },
+    exampleItem: {
+      paddingVertical: 16,
+      paddingHorizontal: Paddings.groupedListContentHorizontal,
+      borderRadius: 12,
+      marginBottom: 8,
+    },
+    exampleItemText: {
+      ...typography.getTextStyle('body'),
+    },
+    bottomSpacer: {
+      height: 200,
+    },
+  });
