@@ -299,6 +299,19 @@ export default function RootLayout() {
                 },
               }}
             />
+            <Stack.Screen
+              name="list-select"
+              options={{
+                headerShown: false,
+                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+                sheetGrabberVisible: false,
+                sheetAllowedDetents: [0.8],
+                sheetInitialDetentIndex: 0,
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
+                },
+              }}
+            />
             <Stack.Screen name="+not-found" />
           </Stack>
           </PlannerMonthSelectProvider>

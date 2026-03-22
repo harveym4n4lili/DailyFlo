@@ -4,7 +4,7 @@
  * With flex: 1 only, form sheet / safe area can leave a gap above the content.
  */
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,9 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { IconColorModal } from './modals';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
+import { useLists } from '@/store/hooks';
+import { EXAMPLE_LISTS } from '@/app/(tabs)/browse/_data/exampleLists';
+import { getListDisplayName } from '@/utils/listDisplayName';
 import { FormDetailSection, SubtaskSection } from './sections';
 import { TrashIcon, ClockIcon, SFSymbolIcon } from '@/components/ui/icon';
 import { SaveButton, MainCloseButton } from '@/components/ui/button';
@@ -160,6 +163,8 @@ export interface TaskCreationContentProps {
     onShowDatePicker: () => void;
     onShowTimeDurationPicker: () => void;
     onShowAlertsPicker: () => void;
+    /** pushes /list-select (liquid glass formSheet); seed pickedListId in draft before calling */
+    onShowListPicker?: () => void;
   };
 
   /** Optional: called when Activity log is selected from actions menu */
@@ -203,7 +208,14 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   showDragIndicator = true,
 }) => {
   const router = useRouter();
-  const draftContext = useCreateTaskDraft();
+  const { setDraft } = useCreateTaskDraft();
+  const { lists: reduxLists } = useLists();
+
+  // tray pill label: Inbox vs list name (redux lists, else example browse lists for mock ids)
+  const listDestinationLabel = useMemo(
+    () => getListDisplayName(values.listId, reduxLists, EXAMPLE_LISTS),
+    [values.listId, reduxLists]
+  );
   const { themeColor } = useThemeColor();
   const colors = useColorPalette();
   const themeColors = useThemeColors();
@@ -211,11 +223,22 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   const titleInputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // only icon/color still uses an in-screen modal (no stack screen for it yet)
+  // only icon/color still uses an in-screen DraggableModal (no stack route for it yet)
   const [isColorPickerVisible, setIsColorPickerVisible] = useState(false);
   useEffect(() => {
     onPickerVisibilityChange?.(isColorPickerVisible);
   }, [isColorPickerVisible, onPickerVisibilityChange]);
+
+  // list-select is a root stack formSheet (like date-select); seed pickedListId so the sheet shows the right row
+  const handleOpenListPicker = useCallback(() => {
+    Keyboard.dismiss();
+    setDraft({ pickedListId: values.listId ? values.listId : null });
+    if (pickerHandlers?.onShowListPicker) {
+      pickerHandlers.onShowListPicker();
+    } else {
+      router.push('/list-select' as any);
+    }
+  }, [setDraft, values.listId, pickerHandlers, router]);
 
   // date/time/alert: use stack screens (seed draft and push, or use passed pickerHandlers)
   const handleShowDatePicker = () => {
@@ -224,7 +247,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       return;
     }
     Keyboard.dismiss();
-    draftContext.setDraft({
+    setDraft({
       dueDate: values.dueDate ?? new Date().toISOString(),
       time: values.time,
       duration: values.duration,
@@ -250,7 +273,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       return;
     }
     Keyboard.dismiss();
-    draftContext.setDraft({
+    setDraft({
       dueDate: values.dueDate ?? new Date().toISOString(),
       time: values.time,
       duration: values.duration,
@@ -265,7 +288,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       return;
     }
     Keyboard.dismiss();
-    draftContext.setDraft({
+    setDraft({
       dueDate: values.dueDate ?? new Date().toISOString(),
       time: values.time,
       duration: values.duration,
@@ -407,6 +430,8 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
             alertsCount={values.alerts?.length ?? 0}
             routineType={(values.routineType as RoutineType) || 'once'}
             onRoutineTypeChange={(routineType) => onChange('routineType', routineType)}
+            onOpenListPicker={handleOpenListPicker}
+            listDestinationLabel={listDestinationLabel}
           />
         </View>
 

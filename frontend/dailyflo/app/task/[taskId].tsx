@@ -108,6 +108,7 @@ export default function TaskEditScreen() {
       time: t.time,
       duration: t.duration,
       alerts: (t.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
+      pickedListId: undefined,
     });
     setLocalValues({
       title: t.title,
@@ -174,6 +175,12 @@ export default function TaskEditScreen() {
       time: draft.time,
       duration: draft.duration,
       alerts: draft.alerts?.length ? draft.alerts : localValues.alerts,
+      listId:
+        draft.pickedListId === undefined
+          ? localValues.listId
+          : draft.pickedListId === null
+            ? undefined
+            : draft.pickedListId,
     }),
     [localValues, draft],
   );
@@ -232,16 +239,19 @@ export default function TaskEditScreen() {
         const o = init.subtasks[i];
         return !o || s.title !== o.title || s.isCompleted !== o.isCompleted;
       });
+    // list: compare to server task so immediate list-select API save does not leave Save stuck on
+    const normList = (x: string | null | undefined) => x ?? '';
+    const listDirty = normList(v.listId) !== normList(task?.listId);
     return !!(
       (v.title?.trim() ?? '') !== (init.values.title ?? '') ||
       (v.description ?? '') !== (init.values.description ?? '') ||
       (v.color ?? '') !== (init.values.color ?? '') ||
       (v.icon ?? '') !== (init.values.icon ?? '') ||
-      (v.listId ?? '') !== (init.values.listId ?? '') ||
+      listDirty ||
       (v.priorityLevel ?? 3) !== (init.values.priorityLevel ?? 3) ||
       subtasksChanged
     );
-  }, [values, subtasks]);
+  }, [values, subtasks, task?.listId]);
 
   const isSaveButtonVisible = hasChanges;
 
@@ -424,8 +434,10 @@ export default function TaskEditScreen() {
       onShowDatePicker: () => router.push('/date-select'),
       onShowTimeDurationPicker: () => router.push('/time-duration-select'),
       onShowAlertsPicker: () => router.push('/alert-select'),
+      onShowListPicker: () =>
+        router.push({ pathname: '/list-select', params: { taskId: taskId! } } as any),
     }),
-    [router],
+    [router, taskId],
   );
 
   if (!taskId || !task) {

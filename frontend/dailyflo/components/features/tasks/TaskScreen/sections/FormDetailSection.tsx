@@ -14,6 +14,7 @@ import { GroupedList, FormDetailButton } from '@/components/ui/list/GroupedList'
 import { DropdownList } from '@/components/ui/list';
 import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
+import { Ionicons } from '@expo/vector-icons';
 import { CalendarIcon, ClockIcon, BellIcon, RepeatIcon, SFSymbolIcon } from '@/components/ui/icon';
 import { getTimeDurationDisplayLabels } from '@/components/ui/button';
 import type { RoutineType } from '@/types';
@@ -49,6 +50,10 @@ export interface FormDetailSectionProps {
   alertsCount?: number;
   routineType?: RoutineType;
   onRoutineTypeChange?: (routineType: RoutineType) => void;
+  /** opens list-select stack sheet */
+  onOpenListPicker?: () => void;
+  /** inbox vs chosen list name — shown on the tray pill next to recurrence */
+  listDestinationLabel?: string;
 }
 
 export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
@@ -62,6 +67,8 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
   alertsCount = 0,
   routineType = 'once',
   onRoutineTypeChange,
+  onOpenListPicker,
+  listDestinationLabel = 'Inbox',
 }) => {
   const themeColors = useThemeColors();
   const [isRepeatingMenuVisible, setIsRepeatingMenuVisible] = useState(false);
@@ -164,80 +171,118 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
             />
           </GroupedList>
 
-          {/* Repeating: iOS = native ContextMenu (liquid glass), Android = DropdownList */}
-          {Platform.OS === 'ios' ? (
-            <View style={styles.repeatingWrapper}>
-              <Host matchContents={false} style={styles.repeatingHost}>
-                <ContextMenu activationMethod="singlePress">
-                  <ContextMenu.Trigger>
-                    <View style={styles.repeatingTapArea}>
-                      <View
-                        style={[
-                          styles.repeatingPill,
-                          { backgroundColor: themeColors.background.primarySecondaryBlend() },
-                        ]}
-                      >
-                        <SFSymbolIcon
-                          name="repeat"
-                          size={18}
-                          color={themeColors.text.primary()}
-                          fallback={<RepeatIcon size={18} color={themeColors.text.primary()} style={styles.repeatingIcon} />}
-                          style={styles.repeatingIcon}
-                        />
-                        <Text style={[styles.repeatingText, { color: themeColors.text.primary() }]}>
-                          {ROUTINE_TYPE_LABELS[routineType]}
-                        </Text>
+          {/* recurrence + inbox: one row, same pill chrome as recurrence (padding, radius, type) */}
+          <View style={styles.repeatingRow}>
+            {Platform.OS === 'ios' ? (
+              <View style={styles.repeatingRecurrenceWrap}>
+                <Host matchContents={false} style={styles.repeatingHost}>
+                  <ContextMenu activationMethod="singlePress">
+                    <ContextMenu.Trigger>
+                      <View style={styles.repeatingTapAreaCompact}>
+                        <View
+                          style={[
+                            styles.repeatingPill,
+                            { backgroundColor: themeColors.background.primarySecondaryBlend() },
+                          ]}
+                        >
+                          <SFSymbolIcon
+                            name="repeat"
+                            size={18}
+                            color={themeColors.text.primary()}
+                            fallback={<RepeatIcon size={18} color={themeColors.text.primary()} style={styles.repeatingIcon} />}
+                            style={styles.repeatingIcon}
+                          />
+                          <Text style={[styles.repeatingText, { color: themeColors.text.primary() }]}>
+                            {ROUTINE_TYPE_LABELS[routineType]}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
-                  </ContextMenu.Trigger>
-                  <ContextMenu.Items>
-                    {ROUTINE_MENU_OPTIONS.map((opt) => (
-                      <Button key={opt.id} onPress={() => onRoutineTypeChange?.(opt.id)}>
-                        {opt.label}
-                      </Button>
-                    ))}
-                  </ContextMenu.Items>
-                </ContextMenu>
-              </Host>
-            </View>
-          ) : (
-            <>
-              <Pressable
-                style={styles.repeatingTapArea}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setIsRepeatingMenuVisible(true);
-                }}
-              >
-                <View
-                  style={[
-                    styles.repeatingPill,
-                    { backgroundColor: themeColors.background.primarySecondaryBlend() },
-                  ]}
+                    </ContextMenu.Trigger>
+                    <ContextMenu.Items>
+                      {ROUTINE_MENU_OPTIONS.map((opt) => (
+                        <Button key={opt.id} onPress={() => onRoutineTypeChange?.(opt.id)}>
+                          {opt.label}
+                        </Button>
+                      ))}
+                    </ContextMenu.Items>
+                  </ContextMenu>
+                </Host>
+              </View>
+            ) : (
+              <>
+                <Pressable
+                  style={styles.repeatingTapAreaCompact}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setIsRepeatingMenuVisible(true);
+                  }}
                 >
-                  <RepeatIcon size={18} color={themeColors.text.primary()} style={styles.repeatingIcon} />
-                  <Text style={[styles.repeatingText, { color: themeColors.text.primary() }]}>
-                    {ROUTINE_TYPE_LABELS[routineType]}
-                  </Text>
-                </View>
-              </Pressable>
-              <DropdownList
-                visible={isRepeatingMenuVisible}
-                onClose={() => setIsRepeatingMenuVisible(false)}
-                items={ROUTINE_MENU_OPTIONS.map((opt) => ({
-                  id: opt.id,
-                  label: opt.label,
-                  onPress: () => {
-                    onRoutineTypeChange?.(opt.id);
-                    setIsRepeatingMenuVisible(false);
-                  },
-                }))}
-                anchorPosition="top-left"
-                topOffset={120}
-                leftOffset={20}
-              />
-            </>
-          )}
+                  <View
+                    style={[
+                      styles.repeatingPill,
+                      { backgroundColor: themeColors.background.primarySecondaryBlend() },
+                    ]}
+                  >
+                    <RepeatIcon size={18} color={themeColors.text.primary()} style={styles.repeatingIcon} />
+                    <Text style={[styles.repeatingText, { color: themeColors.text.primary() }]}>
+                      {ROUTINE_TYPE_LABELS[routineType]}
+                    </Text>
+                  </View>
+                </Pressable>
+                <DropdownList
+                  visible={isRepeatingMenuVisible}
+                  onClose={() => setIsRepeatingMenuVisible(false)}
+                  items={ROUTINE_MENU_OPTIONS.map((opt) => ({
+                    id: opt.id,
+                    label: opt.label,
+                    onPress: () => {
+                      onRoutineTypeChange?.(opt.id);
+                      setIsRepeatingMenuVisible(false);
+                    },
+                  }))}
+                  anchorPosition="top-left"
+                  topOffset={120}
+                  leftOffset={20}
+                />
+              </>
+            )}
+
+            <Pressable
+              style={styles.repeatingTapAreaCompact}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onOpenListPicker?.();
+              }}
+            >
+              <View
+                style={[
+                  styles.repeatingPill,
+                  { backgroundColor: themeColors.background.primarySecondaryBlend() },
+                ]}
+              >
+                <SFSymbolIcon
+                  name="tray.fill"
+                  size={18}
+                  color={themeColors.text.primary()}
+                  fallback={
+                    <Ionicons
+                      name="file-tray"
+                      size={18}
+                      color={themeColors.text.primary()}
+                      style={styles.repeatingIcon}
+                    />
+                  }
+                  style={styles.repeatingIcon}
+                />
+                <Text
+                  style={[styles.repeatingText, { color: themeColors.text.primary() }]}
+                  numberOfLines={1}
+                >
+                  {listDestinationLabel}
+                </Text>
+              </View>
+            </Pressable>
+          </View>
         </View>
       )}
     </View>
@@ -255,19 +300,24 @@ const styles = StyleSheet.create({
   listContainer: {
     marginVertical: 0,
   },
-  repeatingWrapper: {
+  repeatingRow: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    alignItems: 'center' as const,
     marginTop: 12,
-    alignSelf: 'stretch' as const,
+    gap: 12,
+  },
+  repeatingRecurrenceWrap: {
+    alignSelf: 'flex-start' as const,
   },
   repeatingHost: {
-    alignSelf: 'stretch' as const,
+    alignSelf: 'flex-start' as const,
   },
-  // full-width tap area
-  repeatingTapArea: {
+  // tap area for each pill (recurrence + inbox) — same vertical touch target as before
+  repeatingTapAreaCompact: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    alignSelf: 'stretch' as const,
-    marginTop: 12,
+    alignSelf: 'flex-start' as const,
     minHeight: 48,
   },
   repeatingIcon: {
