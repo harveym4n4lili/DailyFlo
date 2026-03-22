@@ -86,7 +86,7 @@ export interface ListCardProps {
   loading?: boolean; // whether the list is currently loading
 
   // optional list configuration
-  groupBy?: 'priority' | 'dueDate' | 'color' | 'allDay' | 'none'; // how to group tasks (allDay = single "All day tasks" group for planner)
+  groupBy?: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'none'; // routine = one-time vs recurring (browse list detail); allDay = planner all-day bucket
   sortBy?: 'createdAt' | 'dueDate' | 'priority' | 'title'; // how to sort tasks
   sortDirection?: 'asc' | 'desc'; // sort direction
 
