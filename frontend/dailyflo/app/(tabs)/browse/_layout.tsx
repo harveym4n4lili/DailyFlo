@@ -52,6 +52,13 @@ export default function BrowseLayout() {
           headerShown: false,
         }}
       />
+      {/* list/[listId]: push screen for a single list (same chrome pattern as inbox) */}
+      <Stack.Screen
+        name="list/[listId]"
+        options={{
+          headerShown: false,
+        }}
+      />
       {/* manage-lists: full-screen modal, no sheet detents — close via MainCloseButton (same as settings) */}
       <Stack.Screen
         name="manage-lists"

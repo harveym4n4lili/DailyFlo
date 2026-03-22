@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -116,6 +116,9 @@ export default function CompletedScreen() {
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       >
         <Animated.View style={bigHeaderStyle}>
           <Text style={[styles.bigHeader, { color: themeColors.text.primary() }]}>
@@ -201,6 +204,7 @@ const createStyles = (
       paddingHorizontal: Paddings.screen,
       // top spacing like Today (64), no insets.top – content scrolls under
       paddingTop: TOP_SECTION_ANCHOR_HEIGHT,
+      flexGrow: 1,
     },
     bigHeader: {
       ...typography.getTextStyle('heading-1'),

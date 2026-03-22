@@ -32,58 +32,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CREATE_OPENED_FROM_BROWSE } from './navigationParams';
-
-// types - List matches backend Django List model
-import type { List } from '@/types';
-
-/**
- * Example list data for UI testing - structure matches backend List model
- * (id, name, description, color, icon, isDefault, sortOrder, metadata, etc.)
- */
-const EXAMPLE_LISTS: List[] = [
-  {
-    id: 'example-list-1',
-    userId: 'example-user',
-    name: 'Work',
-    description: '',
-    color: 'blue',
-    icon: 'briefcase',
-    isDefault: false,
-    sortOrder: 0,
-    metadata: { taskCount: 12 },
-    softDeleted: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: 'example-list-2',
-    userId: 'example-user',
-    name: 'Personal',
-    description: '',
-    color: 'green',
-    icon: 'person',
-    isDefault: false,
-    sortOrder: 1,
-    metadata: { taskCount: 5 },
-    softDeleted: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: 'example-list-3',
-    userId: 'example-user',
-    name: 'Shopping',
-    description: '',
-    color: 'orange',
-    icon: 'cart',
-    isDefault: false,
-    sortOrder: 2,
-    metadata: { taskCount: 3 },
-    softDeleted: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
+import { EXAMPLE_LISTS } from './_data/exampleLists';
 
 export default function BrowseScreen() {
   const router = useRouter();
@@ -273,9 +222,9 @@ export default function BrowseScreen() {
                 <TouchableOpacity
                   key={list.id}
                   style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
-                  onPress={() => {
-                    // placeholder - navigate to list detail
-                  }}
+                  onPress={() =>
+                    router.push(`/(tabs)/browse/list/${list.id}` as any)
+                  }
                   activeOpacity={0.7}
                 >
                   <LeafIcon size={20} color={themeColors.text.tertiary()} />

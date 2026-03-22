@@ -27,11 +27,18 @@ export function formatDateForGroup(date: Date): string {
  * @param groupBy - Grouping strategy
  * @returns Group key string
  */
+/** group titles when groupBy is "routine" (browse list detail: one-off vs repeating tasks) */
+export const ROUTINE_GROUP_ONE_TIME = 'One-time';
+export const ROUTINE_GROUP_RECURRING = 'Recurring';
+
 export function getTaskGroupKey(
   task: Task,
-  groupBy: 'priority' | 'dueDate' | 'color' | 'allDay' | 'none'
+  groupBy: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'none'
 ): string {
   switch (groupBy) {
+    case 'routine':
+      // routineType "once" = single occurrence; anything else repeats on a schedule
+      return task.routineType === 'once' ? ROUTINE_GROUP_ONE_TIME : ROUTINE_GROUP_RECURRING;
     case 'allDay':
       // used by planner screen - all tasks in this group are "all day" (no time set)
       return 'All day tasks';
@@ -75,7 +82,7 @@ export function getTaskGroupKey(
  */
 export function groupTasks(
   tasks: Task[],
-  groupBy: 'priority' | 'dueDate' | 'color' | 'allDay' | 'none'
+  groupBy: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'none'
 ): Record<string, Task[]> {
   if (groupBy === 'none') {
     return { 'All Tasks': tasks };
@@ -186,6 +193,15 @@ export function sortGroupEntries(
     // Overdue group goes after Today
     if (titleA === 'Overdue') return 1;
     if (titleB === 'Overdue') return -1;
+
+    // browse list: show one-time tasks above recurring sections
+    const routineRank = (t: string) =>
+      t === ROUTINE_GROUP_ONE_TIME ? 0 : t === ROUTINE_GROUP_RECURRING ? 1 : 2;
+    const ra = routineRank(titleA);
+    const rb = routineRank(titleB);
+    if (ra !== 2 || rb !== 2) {
+      if (ra !== rb) return ra - rb;
+    }
 
     // Otherwise maintain original order
     return 0;

@@ -24,6 +24,7 @@ import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
+import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
 
 // STORE FOLDER IMPORTS - Redux state management
 // The store folder contains all Redux-related code for managing app state
@@ -459,16 +460,7 @@ export default function TodayScreen() {
         onTaskComplete={handleTaskComplete}
         onTaskEdit={handleTaskEdit}
         onTaskDelete={handleTaskDelete}
-        showCategory={false}
-        compact={false}
-        showIcon={false}
-        showIndicators={false}
-        showMetadata={false}
-        metadataVariant="today"
-        cardSpacing={0}
-        showDashedSeparator={true}
-        hideBackground={true}
-        removeInnerPadding={true}
+        {...LIST_CARD_TASK_ROW_PRESET_TODAY}
         emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
         loading={isLoading && todaysTasks.length === 0}
         groupBy="dueDate" // group tasks by due date to separate overdue and today's tasks
