@@ -18,8 +18,9 @@ export const Paddings = {
   // used by: reminders, completion (description/instruction padding)
   screenLarge: 32,
 
-  // section padding - for elevated sections, cards, modals (not yet used)
-  section: 20,
+  // section padding - for elevated sections, cards, modals
+  // used by: list-create (vertical gap between stacked GroupedLists)
+  section: 32,
   sectionCompact: 16,
 
   // card padding

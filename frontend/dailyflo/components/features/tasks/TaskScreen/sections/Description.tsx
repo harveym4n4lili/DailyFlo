@@ -13,7 +13,6 @@ import { View, StyleSheet } from 'react-native';
 
 import { CustomTextInput } from '@/components/ui/textinput';
 import { ParagraphIcon, SFSymbolIcon } from '@/components/ui/icon';
-import { CUSTOM_FORM_DETAIL_BUTTON_CONSTANTS } from '@/components/ui/button/TaskButton';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 import type { TaskColor } from '@/types';
@@ -31,6 +30,11 @@ export interface DescriptionProps {
   taskColor?: TaskColor;
   onFocus?: () => void;
   onBlur?: () => void;
+  /**
+   * When true (task create/edit): keeps the tall empty state (~120pt) like TaskScreen.
+   * When false (e.g. list create): no reserved min height; field starts ~one line and grows with each newline inside CustomTextInput.
+   */
+  useInitialMinHeight?: boolean;
 }
 
 export const Description: React.FC<DescriptionProps> = ({
@@ -40,6 +44,7 @@ export const Description: React.FC<DescriptionProps> = ({
   taskColor = 'blue',
   onFocus,
   onBlur,
+  useInitialMinHeight = true,
 }) => {
   const [localDescription, setLocalDescription] = useState(description);
   const themeColors = useThemeColors();
@@ -60,7 +65,7 @@ export const Description: React.FC<DescriptionProps> = ({
   );
 
   return (
-    <View style={styles.wrapper}>
+    <View style={useInitialMinHeight ? styles.wrapper : styles.wrapperCompact}>
       <View style={styles.container}>
         {/* icon + content layout: icon on left, text input on right */}
         <View style={styles.iconContentRow}>
@@ -76,6 +81,7 @@ export const Description: React.FC<DescriptionProps> = ({
               maxLength={500}
               taskColor={taskColor}
               multiline={true}
+              compactInitialHeight={!useInitialMinHeight}
               containerStyle={styles.textInputContainer}
               inputStyle={styles.descriptionInputPadding}
               onFocus={onFocus}
@@ -89,8 +95,14 @@ export const Description: React.FC<DescriptionProps> = ({
 };
 
 const styles = StyleSheet.create({
+  // task screen: empty description still shows a generous tap target / notes area
   wrapper: {
     minHeight: 120,
+  },
+  // list create: height follows content from first line upward
+  wrapperCompact: {
+    minHeight: 0,
+    alignSelf: 'stretch',
   },
   container: {
     paddingHorizontal: Paddings.none,

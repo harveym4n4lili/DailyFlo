@@ -10,3 +10,6 @@ export type { MainCloseButtonProps } from './MainCloseButton';
 export { MainBackButton } from './MainBackButton';
 export type { MainBackButtonProps } from './MainBackButton';
 
+export { MainSubmitButton } from './MainSubmitButton';
+export type { MainSubmitButtonProps } from './MainSubmitButton';
+

@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // layout and ui components
 import { ScreenContainer } from '@/components';
 import { ScreenHeaderActions } from '@/components/ui';
+import { FloatingActionButton } from '@/components/ui/button';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/list/GroupedList';
 import { SFSymbolIcon, TickIcon, BrowseIcon, LeafIcon, PencilIcon } from '@/components/ui/icon';
 
@@ -30,6 +31,7 @@ import { SFSymbolIcon, TickIcon, BrowseIcon, LeafIcon, PencilIcon } from '@/comp
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
+import { LIST_CREATE_OPENED_FROM_BROWSE } from './navigationParams';
 
 // types - List matches backend Django List model
 import type { List } from '@/types';
@@ -256,9 +258,7 @@ export default function BrowseScreen() {
             >
               <TouchableOpacity
                 style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
-                onPress={() => {
-                  // placeholder - manage lists to be implemented
-                }}
+                onPress={() => router.push('/(tabs)/browse/manage-lists')}
                 activeOpacity={0.7}
               >
                 <PencilIcon size={20} color={themeColors.text.primary()} />
@@ -295,6 +295,32 @@ export default function BrowseScreen() {
           )}
         </View>
       </ScreenContainer>
+
+      {/* FAB: opens list-create with openedFrom so that screen knows browse launched it (for save/back later) */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          right: 0,
+          left: 0,
+          height: 120,
+          zIndex: 20,
+        }}
+        pointerEvents="box-none"
+      >
+        <FloatingActionButton
+          onPress={() =>
+            router.push({
+              pathname: '/(tabs)/browse/list-create' as any,
+              params: { openedFrom: LIST_CREATE_OPENED_FROM_BROWSE },
+            })
+          }
+          backgroundColor={themeColors.background.invertedPrimary()}
+          iconColor={themeColors.text.invertedPrimary()}
+          accessibilityLabel="Create new list"
+          accessibilityHint="Opens the new list screen"
+        />
+      </View>
     </View>
   );
 }
@@ -347,6 +373,7 @@ const createStyles = (
     contentWrapper: {
       flex: 1,
       paddingTop: insets.top + 48,
+      paddingBottom: 120,
       paddingHorizontal: Paddings.screen,
       backgroundColor: themeColors.background.primary(),
       overflow: 'visible',

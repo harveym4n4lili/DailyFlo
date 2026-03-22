@@ -30,7 +30,7 @@ export default function BrowseLayout() {
           },
         }}
       />
-      {/* inbox, completed, tags: layout pages with back button + header + scroll view */}
+      {/* inbox, completed, tags: push + back + big/mini header */}
       <Stack.Screen
         name="inbox"
         options={{
@@ -50,6 +50,32 @@ export default function BrowseLayout() {
         options={{
           title: 'Tags',
           headerShown: false,
+        }}
+      />
+      {/* manage-lists: full-screen modal, no sheet detents — close via MainCloseButton (same as settings) */}
+      <Stack.Screen
+        name="manage-lists"
+        options={{
+          title: 'Manage Lists',
+          headerShown: false,
+          presentation: 'modal',
+          gestureEnabled: false,
+          contentStyle: {
+            backgroundColor: themeColors.background.primary(),
+          },
+        }}
+      />
+      {/* list-create: full-screen modal from FAB — close via MainCloseButton (same as manage-lists) */}
+      <Stack.Screen
+        name="list-create"
+        options={{
+          title: 'New List',
+          headerShown: false,
+          presentation: 'modal',
+          gestureEnabled: false,
+          contentStyle: {
+            backgroundColor: themeColors.background.primary(),
+          },
         }}
       />
     </Stack>
