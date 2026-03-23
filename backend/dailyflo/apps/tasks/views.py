@@ -163,6 +163,13 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer = TaskListSerializer(tasks, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'])
+    def inbox(self, request):
+        """inbox tasks: no list assigned, not completed, not soft-deleted (get_queryset already excludes soft-deleted)"""
+        tasks = self.get_queryset().filter(list__isnull=True, is_completed=False)
+        serializer = TaskListSerializer(tasks, many=True)
+        return Response(serializer.data)
+
 
 class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -173,6 +180,8 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ActivityLogSerializer
     ordering = ['-created_at']
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['action_type']
 
     def get_queryset(self):
         """return only the current user's activity logs, newest first."""
