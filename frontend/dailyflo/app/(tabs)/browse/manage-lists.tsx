@@ -1,30 +1,199 @@
 /**
- * Manage Lists – full-screen modal on the browse stack (see browse/_layout: presentation modal).
- * No form-sheet snap points: fills the screen; dismiss with MainCloseButton like Browse Settings.
- * Content scrolls under the blur header overlay (same pattern as settings.tsx).
+ * Manage Lists – full-screen modal on the browse stack.
+ * Card rows: tap row opens that list’s browse screen; long-press to reorder; trash deletes
+ * (react-native-draggable-flatlist). ScaleDecorator slightly scales the row while it is being dragged.
  */
 
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
-import { useRouter } from 'expo-router';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { MainCloseButton } from '@/components/ui/button';
+import { MainCloseButton, MainCreateButton } from '@/components/ui/button';
+import { LIST_CREATE_OPENED_FROM_BROWSE } from './navigationParams';
 import { Paddings } from '@/constants/Paddings';
+import { getFontFamilyWithWeight } from '@/constants/Typography';
+import { LeafIcon } from '@/components/ui/icon';
+import { useLists } from '@/store/hooks';
+import type { List } from '@/types';
 
 const HEADER_ROW_HEIGHT = 42;
 const HEADER_TOP = Paddings.screen;
 const FADE_OVERFLOW = 48;
 const TOP_SECTION_HEIGHT = HEADER_TOP + HEADER_ROW_HEIGHT + FADE_OVERFLOW;
 
+// match LogCard / activity row icon size
+const ROW_ICON_SIZE = 20;
+// drag handle column same width as icon so columns line up visually
+const DRAG_HANDLE_COLUMN = ROW_ICON_SIZE;
+// uniform scale while this row is the active drag target (library ties this to drag lifecycle)
+const DRAG_ACTIVE_SCALE = 1.05;
+// trash sits in a touchable column; keep row height comfortable
+const DELETE_HIT_WIDTH = 44;
+// grouped-list style chrome (matches browse settings / list-create GroupedList)
+const LIST_CARD_RADIUS = 24;
+
 export default function ManageListsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
+  const semanticColors = useSemanticColors();
   const typography = useTypography();
   const styles = createStyles(typography);
+
+  const {
+    lists,
+    isLoading,
+    fetchLists,
+    reorderLists,
+    deleteList,
+  } = useLists();
+
+  // when this screen opens, pull lists into redux (mock api today) so rows exist
+  useFocusEffect(
+    useCallback(() => {
+      void fetchLists();
+    }, [fetchLists])
+  );
+
+  // stable sort from redux (source of truth for fetch/delete)
+  const orderedLists = useMemo(
+    () => [...lists].sort((a, b) => a.sortOrder - b.sortOrder),
+    [lists]
+  );
+
+  // local row order for DraggableFlatList: updating here inside onDragEnd keeps the list in sync
+  // before redux re-renders. if we only passed redux data, the flatlist saw a second data change and
+  // ran its internal reset() — that caused the one-frame “jump to top” flash after drop.
+  const displayDataRef = useRef<List[]>([]);
+  const [displayData, setDisplayData] = useState<List[]>([]);
+
+  useLayoutEffect(() => {
+    const sorted = [...lists].sort((a, b) => a.sortOrder - b.sortOrder);
+    const nextSig = sorted.map((l) => l.id).join(',');
+    const prevSig = displayDataRef.current.map((l) => l.id).join(',');
+    if (nextSig === prevSig && sorted.length === displayDataRef.current.length) {
+      return;
+    }
+    displayDataRef.current = sorted;
+    setDisplayData(sorted);
+  }, [lists]);
+
+  const onDragEnd = useCallback(
+    ({ data }: { data: List[] }) => {
+      displayDataRef.current = data;
+      setDisplayData(data);
+      reorderLists(data.map((l) => l.id));
+    },
+    [reorderLists]
+  );
+
+  const confirmDelete = useCallback(
+    (list: List) => {
+      if (list.isDefault) {
+        Alert.alert('Cannot delete', 'The default list cannot be deleted.');
+        return;
+      }
+      Alert.alert('Delete list', `Remove “${list.name}”? This cannot be undone.`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void deleteList(list.id);
+          },
+        },
+      ]);
+    },
+    [deleteList]
+  );
+
+  // replace this modal with list/[listId] so back from the list returns to browse (same as FAB → list-create)
+  const openListDetail = useCallback(
+    (listId: string) => {
+      router.replace(`/(tabs)/browse/list/${listId}` as any);
+    },
+    [router]
+  );
+
+  const renderItem = useCallback(
+    ({ item, drag, isActive, getIndex }: RenderItemParams<List>) => {
+      const index = getIndex() ?? 0;
+      const tertiary = themeColors.text.tertiary();
+      const titleStyle = {
+        ...typography.getTextStyle('heading-4'),
+        fontFamily: getFontFamilyWithWeight('medium'),
+        color: themeColors.text.primary(),
+        flex: 1,
+      };
+      const cardBg = themeColors.background.primarySecondaryBlend();
+
+      return (
+        <View
+          style={[
+            styles.cardOuter,
+            index < displayData.length - 1 ? styles.cardOuterGap : null,
+          ]}
+        >
+          <ScaleDecorator activeScale={DRAG_ACTIVE_SCALE}>
+            <View style={[styles.card, { backgroundColor: cardBg, borderRadius: LIST_CARD_RADIUS }]}>
+              {/* short tap → open list; long-press → drag (rn won’t fire onPress if long press wins) */}
+              <Pressable
+                onPress={() => openListDetail(item.id)}
+                onLongPress={drag}
+                delayLongPress={220}
+                disabled={isActive}
+                style={({ pressed }) => [
+                  styles.row,
+                  pressed && !isActive ? styles.rowPressed : null,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Open ${item.name}`}
+              >
+                {/* visual-only handle: same column width as list icon below activity log pattern */}
+                <View style={styles.dragHandleColumn} pointerEvents="none">
+                  <Ionicons name="reorder-three" size={22} color={tertiary} />
+                </View>
+
+                {/* same leaf as browse My Lists pills — not per-list icon from redux yet */}
+                <View style={styles.listIconWrap}>
+                  <LeafIcon size={ROW_ICON_SIZE} color={tertiary} />
+                </View>
+
+                <Text style={titleStyle} numberOfLines={1}>
+                  {item.name}
+                </Text>
+
+                <Pressable
+                  onPress={() => confirmDelete(item)}
+                  style={styles.deletePressable}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel={`Delete ${item.name}`}
+                >
+                  <Ionicons name="trash-outline" size={22} color={semanticColors.error()} />
+                </Pressable>
+              </Pressable>
+            </View>
+          </ScaleDecorator>
+        </View>
+      );
+    },
+    [
+      confirmDelete,
+      displayData.length,
+      openListDetail,
+      semanticColors,
+      themeColors,
+      typography,
+    ]
+  );
+
+  const keyExtractor = useCallback((item: List) => item.id, []);
 
   const topSectionHeight = TOP_SECTION_HEIGHT;
   const headerTitleStyle = {
@@ -32,26 +201,55 @@ export default function ManageListsScreen() {
     color: themeColors.text.primary(),
   };
 
+  const listEmpty = !isLoading && orderedLists.length === 0;
+
+  // replace modal so manage-lists dismisses and list-create opens in one navigation (same stack as FAB)
+  const openListCreate = useCallback(() => {
+    router.replace({
+      pathname: '/(tabs)/browse/list-create' as any,
+      params: { openedFrom: LIST_CREATE_OPENED_FROM_BROWSE },
+    });
+  }, [router]);
+
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
       <View style={styles.contentArea}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingTop: HEADER_ROW_HEIGHT + 40 },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={[styles.bodyLead, { color: themeColors.text.secondary() }]}>
-            Reorder and edit lists here (coming soon).
-          </Text>
-          <View style={styles.bottomSpacer} />
-        </ScrollView>
+        {isLoading && orderedLists.length === 0 ? (
+          <View style={[styles.centered, { paddingTop: HEADER_ROW_HEIGHT + 48 }]}>
+            <ActivityIndicator color={themeColors.text.tertiary()} />
+          </View>
+        ) : listEmpty ? (
+          <View style={[styles.emptyWrap, { paddingTop: HEADER_ROW_HEIGHT + 40 }]}>
+            <Text style={[styles.emptyText, { color: themeColors.text.secondary() }]}>
+              No lists yet. Create one from the browse tab.
+            </Text>
+          </View>
+        ) : (
+          <DraggableFlatList
+            data={displayData}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
+            onDragEnd={onDragEnd}
+            dragItemOverflow
+            extraData={displayData.length}
+            contentContainerStyle={[
+              styles.listContent,
+              {
+                paddingTop: HEADER_ROW_HEIGHT + 40,
+                paddingBottom: 200 + insets.bottom,
+              },
+            ]}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
       </View>
 
       {/* fixed header: blur + gradient + centered title + close (matches browse settings) */}
-      <View collapsable={false} style={[styles.headerOverlay, { height: topSectionHeight }]} pointerEvents="box-none">
+      <View
+        collapsable={false}
+        style={[styles.headerOverlay, { height: topSectionHeight }]}
+        pointerEvents="box-none"
+      >
         <View style={[styles.topSectionAnchor, { height: topSectionHeight }]}>
           <BlurView
             tint={themeColors.isDark ? 'dark' : 'light'}
@@ -63,7 +261,7 @@ export default function ManageListsScreen() {
               themeColors.background.primary(),
               themeColors.withOpacity(themeColors.background.primary(), 0),
             ]}
-            locations={[0.4, 1]}
+            locations={[0.4, 0.8]}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
@@ -75,11 +273,17 @@ export default function ManageListsScreen() {
           </View>
           <View style={styles.headerPlaceholder} pointerEvents="none" />
         </View>
-        <View style={styles.closeButtonContainer} pointerEvents="box-none">
+        <View style={styles.headerActionsContainer} pointerEvents="box-none">
           <MainCloseButton
             onPress={() => router.back()}
             top={Paddings.screen}
             left={Paddings.screen}
+          />
+          <MainCreateButton
+            onPress={openListCreate}
+            top={Paddings.screen}
+            right={Paddings.screen}
+            accessibilityLabel="Create new list"
           />
         </View>
       </View>
@@ -111,15 +315,56 @@ const createStyles = (typography: ReturnType<typeof useTypography>) =>
       zIndex: 9,
       overflow: 'hidden',
     },
-    scroll: {
-      flex: 1,
-    },
-    scrollContent: {
+    listContent: {
       paddingHorizontal: Paddings.screen,
     },
-    bodyLead: {
+    cardOuter: {
+      width: '100%',
+    },
+    // vertical gap between cards — same token as list row rhythm (browse My Lists pills use gap: 12)
+    cardOuterGap: {
+      marginBottom: Paddings.listItemVertical,
+    },
+    card: {
+      overflow: 'hidden',
+      paddingHorizontal: Paddings.groupedListContentHorizontal,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: Paddings.card,
+      // matches GroupedList row spacing (icon column ↔ title)
+      gap: Paddings.groupedListContentHorizontal,
+    },
+    rowPressed: {
+      opacity: 0.85,
+    },
+    dragHandleColumn: {
+      width: DRAG_HANDLE_COLUMN,
+      height: DRAG_HANDLE_COLUMN,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    listIconWrap: {
+      width: ROW_ICON_SIZE,
+      height: ROW_ICON_SIZE,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    deletePressable: {
+      width: DELETE_HIT_WIDTH,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    centered: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    emptyWrap: {
+      paddingHorizontal: Paddings.screen,
+    },
+    emptyText: {
       ...typography.getTextStyle('body-large'),
-      marginBottom: 16,
     },
     headerRow: {
       position: 'absolute',
@@ -145,7 +390,7 @@ const createStyles = (typography: ReturnType<typeof useTypography>) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    closeButtonContainer: {
+    headerActionsContainer: {
       position: 'absolute',
       top: 0,
       left: 0,
@@ -153,8 +398,5 @@ const createStyles = (typography: ReturnType<typeof useTypography>) =>
       height: TOP_SECTION_HEIGHT,
       zIndex: 11,
       overflow: 'visible',
-    },
-    bottomSpacer: {
-      height: 200,
     },
   });

@@ -10,6 +10,7 @@ import { useCallback } from 'react';
 import { useAppSelector, useAppDispatch, RootState } from './index';
 // import the thunk so the hook can expose a fetchLogs action
 import { fetchActivityLogs, clearActivityLogs, clearError } from './slices/activityLogs/activityLogsSlice';
+import { fetchLists, deleteList } from './slices/lists/listsSlice';
 
 /**
  * Custom hook for accessing tasks state
@@ -65,6 +66,12 @@ export const useLists = () => {
     setEditingListId: useCallback((listId: string | null) => dispatch({ type: 'lists/setEditingListId', payload: listId }), [dispatch]),
     updateListTaskCount: useCallback((data: any) => dispatch({ type: 'lists/updateListTaskCount', payload: data }), [dispatch]),
     optimisticUpdateList: useCallback((data: any) => dispatch({ type: 'lists/optimisticUpdateList', payload: data }), [dispatch]),
+    // load lists from api (mock today); call on manage-lists so redux has rows to reorder
+    fetchLists: useCallback(() => dispatch(fetchLists()), [dispatch]),
+    // remove a list after user confirms delete
+    deleteList: useCallback((listId: string) => dispatch(deleteList(listId)), [dispatch]),
+    // persist new order from drag end: payload is list ids top-to-bottom
+    reorderLists: useCallback((orderedIds: string[]) => dispatch({ type: 'lists/reorderLists', payload: orderedIds }), [dispatch]),
   };
 };
 
