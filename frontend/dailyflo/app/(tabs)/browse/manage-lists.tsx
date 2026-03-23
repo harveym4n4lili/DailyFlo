@@ -51,6 +51,7 @@ export default function ManageListsScreen() {
     isLoading,
     fetchLists,
     reorderLists,
+    persistListOrder,
     deleteList,
   } = useLists();
 
@@ -86,11 +87,14 @@ export default function ManageListsScreen() {
 
   const onDragEnd = useCallback(
     ({ data }: { data: List[] }) => {
+      const ids = data.map((l) => l.id);
       displayDataRef.current = data;
       setDisplayData(data);
-      reorderLists(data.map((l) => l.id));
+      reorderLists(ids);
+      // PATCH sort_order on server (refetch on failure inside thunk)
+      void persistListOrder(ids);
     },
-    [reorderLists]
+    [reorderLists, persistListOrder]
   );
 
   const confirmDelete = useCallback(
@@ -99,16 +103,21 @@ export default function ManageListsScreen() {
         Alert.alert('Cannot delete', 'The default list cannot be deleted.');
         return;
       }
-      Alert.alert('Delete list', `Remove “${list.name}”? This cannot be undone.`, [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            void deleteList(list.id);
+      // copy matches backend: DELETE /lists/ soft-deletes list and sets those tasks' list to null (inbox)
+      Alert.alert(
+        'Delete list',
+        `Remove “${list.name}”? Tasks in this list will move to your Inbox. This cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => {
+              void deleteList(list.id);
+            },
           },
-        },
-      ]);
+        ]
+      );
     },
     [deleteList]
   );
@@ -142,42 +151,40 @@ export default function ManageListsScreen() {
         >
           <ScaleDecorator activeScale={DRAG_ACTIVE_SCALE}>
             <View style={[styles.card, { backgroundColor: cardBg, borderRadius: LIST_CARD_RADIUS }]}>
-              {/* short tap → open list; long-press → drag (rn won’t fire onPress if long press wins) */}
-              <Pressable
-                onPress={() => openListDetail(item.id)}
-                onLongPress={drag}
-                delayLongPress={220}
-                disabled={isActive}
-                style={({ pressed }) => [
-                  styles.row,
-                  pressed && !isActive ? styles.rowPressed : null,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Open ${item.name}`}
-              >
-                {/* visual-only handle: same column width as list icon below activity log pattern */}
-                <View style={styles.dragHandleColumn} pointerEvents="none">
-                  <Ionicons name="reorder-three" size={22} color={tertiary} />
-                </View>
-
-                {/* same leaf as browse My Lists pills — not per-list icon from redux yet */}
-                <View style={styles.listIconWrap}>
-                  <LeafIcon size={ROW_ICON_SIZE} color={tertiary} />
-                </View>
-
-                <Text style={titleStyle} numberOfLines={1}>
-                  {item.name}
-                </Text>
-
+              {/* row split: main area opens list / drag; trash is a sibling so its tap never triggers openListDetail (nested pressables often bubble to parent and replace() unmounted this screen before Alert showed) */}
+              <View style={styles.row}>
+                <Pressable
+                  onPress={() => openListDetail(item.id)}
+                  onLongPress={drag}
+                  delayLongPress={220}
+                  disabled={isActive}
+                  style={({ pressed }) => [
+                    styles.rowMain,
+                    pressed && !isActive ? styles.rowPressed : null,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${item.name}`}
+                >
+                  <View style={styles.dragHandleColumn} pointerEvents="none">
+                    <Ionicons name="reorder-three" size={22} color={tertiary} />
+                  </View>
+                  <View style={styles.listIconWrap}>
+                    <LeafIcon size={ROW_ICON_SIZE} color={tertiary} />
+                  </View>
+                  <Text style={titleStyle} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                </Pressable>
                 <Pressable
                   onPress={() => confirmDelete(item)}
                   style={styles.deletePressable}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityLabel={`Delete ${item.name}`}
+                  accessibilityRole="button"
                 >
                   <Ionicons name="trash-outline" size={22} color={semanticColors.error()} />
                 </Pressable>
-              </Pressable>
+              </View>
             </View>
           </ScaleDecorator>
         </View>
@@ -333,7 +340,13 @@ const createStyles = (typography: ReturnType<typeof useTypography>) =>
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: Paddings.card,
-      // matches GroupedList row spacing (icon column ↔ title)
+      gap: Paddings.groupedListContentHorizontal,
+    },
+    rowMain: {
+      flex: 1,
+      minWidth: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: Paddings.groupedListContentHorizontal,
     },
     rowPressed: {

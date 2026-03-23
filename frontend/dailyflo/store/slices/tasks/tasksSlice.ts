@@ -232,7 +232,7 @@ async function retryWithExponentialBackoff<T>(
  * @param apiTask - Task data from API (may be snake_case or camelCase)
  * @returns Task object in the format expected by our app
  */
-function transformApiTaskToTask(apiTask: any): Task {
+export function transformApiTaskToTask(apiTask: any): Task {
   // Handle both snake_case (from Django) and camelCase (if already converted)
   // This makes the function flexible and works with different API response formats
   return {

@@ -4,13 +4,13 @@
  * top-right uses the same dashboard + ellipsis glass strip as Today (activity log, select tasks).
  *
  * ListCard + TaskCard are the same building blocks as Today; task row look comes from
- * LIST_CARD_TASK_ROW_PRESET_TODAY (constants/listCardTaskRowPreset.ts). Mock tasks live in
- * _data/exampleListTasks. groupBy="routine" splits one-time vs recurring. complete/delete are local state.
+ * LIST_CARD_TASK_ROW_PRESET_TODAY (constants/listCardTaskRowPreset.ts). Tasks load from
+ * GET /lists/<id>/tasks/ (listsApi + transformApiTaskToTask). groupBy="routine" splits one-time vs recurring.
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -31,9 +31,9 @@ import { ClockIcon } from '@/components/ui/icon';
 import { ListCard } from '@/components/ui/card';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
-import { useUI } from '@/store/hooks';
-import { getExampleListById } from '../_data/exampleLists';
-import { getMockTasksForExampleListId } from '../_data/exampleListTasks';
+import { useUI, useLists } from '@/store/hooks';
+import { transformApiTaskToTask } from '@/store/slices/tasks/tasksSlice';
+import listsApi from '@/services/api/lists';
 import { Task } from '@/types';
 
 const TOP_SECTION_ROW_HEIGHT = 48;
@@ -49,19 +49,46 @@ export default function BrowseListDetailScreen() {
   const typography = useTypography();
   const insets = useSafeAreaInsets();
   const { enterSelectionMode, selection, toggleItemSelection } = useUI();
+  const { lists, fetchLists } = useLists();
 
-  const list = useMemo(() => (listId ? getExampleListById(listId) : undefined), [listId]);
+  useFocusEffect(
+    useCallback(() => {
+      void fetchLists();
+    }, [fetchLists])
+  );
+
+  const list = useMemo(
+    () => (listId ? lists.find((l) => l.id === listId) : undefined),
+    [lists, listId]
+  );
   const title = list?.name ?? 'List';
 
-  // fresh copy of mock rows whenever user opens a different list from browse
-  const seedTasks = useMemo(
-    () => (listId ? getMockTasksForExampleListId(listId) : []),
-    [listId]
-  );
   const [listTasks, setListTasks] = useState<Task[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+
+  // GET /lists/<id>/tasks/ — same task shape as /tasks/
   useEffect(() => {
-    setListTasks(seedTasks);
-  }, [seedTasks]);
+    if (!listId) {
+      setListTasks([]);
+      return;
+    }
+    let cancelled = false;
+    setTasksLoading(true);
+    (async () => {
+      try {
+        const raw = await listsApi.fetchTasksForList(listId);
+        if (cancelled) return;
+        setListTasks(raw.map((row) => transformApiTaskToTask(row)));
+      } catch {
+        if (!cancelled) setListTasks([]);
+      } finally {
+        if (!cancelled) setTasksLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [listId]);
 
   const styles = useMemo(() => createStyles(typography, insets), [typography, insets]);
 
@@ -228,8 +255,8 @@ export default function BrowseListDetailScreen() {
             onTaskEdit={handleTaskEdit}
             onTaskDelete={handleTaskDelete}
             paddingHorizontal={Paddings.screen}
-            emptyMessage="No mock tasks for this list. Add rows in _data/exampleListTasks.ts."
-            loading={false}
+            emptyMessage="No tasks in this list yet."
+            loading={tasksLoading}
             scrollEnabled={false}
             disableInitialLayoutTransition
           />

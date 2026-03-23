@@ -10,7 +10,14 @@ import { useCallback } from 'react';
 import { useAppSelector, useAppDispatch, RootState } from './index';
 // import the thunk so the hook can expose a fetchLogs action
 import { fetchActivityLogs, clearActivityLogs, clearError } from './slices/activityLogs/activityLogsSlice';
-import { fetchLists, deleteList } from './slices/lists/listsSlice';
+import type { CreateListInput, UpdateListInput } from '@/types';
+import {
+  fetchLists,
+  deleteList,
+  createList,
+  updateList,
+  persistListOrder,
+} from './slices/lists/listsSlice';
 
 /**
  * Custom hook for accessing tasks state
@@ -72,6 +79,20 @@ export const useLists = () => {
     deleteList: useCallback((listId: string) => dispatch(deleteList(listId)), [dispatch]),
     // persist new order from drag end: payload is list ids top-to-bottom
     reorderLists: useCallback((orderedIds: string[]) => dispatch({ type: 'lists/reorderLists', payload: orderedIds }), [dispatch]),
+    // PATCH sort_order on server after reorder (call after reorderLists)
+    persistListOrder: useCallback(
+      (orderedIds: string[]) => dispatch(persistListOrder(orderedIds)),
+      [dispatch]
+    ),
+    createList: useCallback(
+      (input: CreateListInput) => dispatch(createList(input)).unwrap(),
+      [dispatch]
+    ),
+    updateList: useCallback(
+      (payload: { id: string; updates: Omit<UpdateListInput, 'id'> }) =>
+        dispatch(updateList(payload)).unwrap(),
+      [dispatch]
+    ),
   };
 };
 

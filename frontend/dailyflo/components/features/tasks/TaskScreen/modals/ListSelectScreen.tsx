@@ -7,7 +7,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -15,7 +15,6 @@ import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { useLists } from '@/store/hooks';
 import { useAppDispatch } from '@/store';
 import { updateTask } from '@/store/slices/tasks/tasksSlice';
-import { EXAMPLE_LISTS } from '@/app/(tabs)/browse/_data/exampleLists';
 import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 import { DashedSeparator } from '@/components/ui/borders';
@@ -40,8 +39,7 @@ export function ListSelectScreen() {
   const rows = useMemo((): ListSelectRow[] => {
     const inbox: ListSelectRow = { id: null, name: 'Inbox' };
     const active = reduxLists.filter((l) => !l.softDeleted).map((l) => ({ id: l.id, name: l.name }));
-    if (active.length > 0) return [inbox, ...active];
-    return [inbox, ...EXAMPLE_LISTS.map((l) => ({ id: l.id, name: l.name }))];
+    return [inbox, ...active];
   }, [reduxLists]);
 
   const handlePick = async (id: string | null) => {
