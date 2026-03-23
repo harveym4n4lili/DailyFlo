@@ -23,7 +23,6 @@ import { useRouter } from 'expo-router';
 import { IconColorModal } from './modals';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { useLists } from '@/store/hooks';
-import { EXAMPLE_LISTS } from '@/app/(tabs)/browse/_data/exampleLists';
 import { getListDisplayName } from '@/utils/listDisplayName';
 import { FormDetailSection, SubtaskSection } from './sections';
 import { TrashIcon, ClockIcon, SFSymbolIcon } from '@/components/ui/icon';
@@ -211,9 +210,9 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   const { setDraft } = useCreateTaskDraft();
   const { lists: reduxLists } = useLists();
 
-  // tray pill label: Inbox vs list name (redux lists, else example browse lists for mock ids)
+  // tray pill label: Inbox vs list name from redux (same lists as /lists/ api)
   const listDestinationLabel = useMemo(
-    () => getListDisplayName(values.listId, reduxLists, EXAMPLE_LISTS),
+    () => getListDisplayName(values.listId, reduxLists),
     [values.listId, reduxLists]
   );
   const { themeColor } = useThemeColor();

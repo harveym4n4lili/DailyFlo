@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, Switch, ScrollView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Switch, ScrollView, Platform, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -20,6 +20,7 @@ import { Paddings } from '@/constants/Paddings';
 import { LIST_CREATE_OPENED_FROM_BROWSE } from './navigationParams';
 import type { ListColor, TaskColor } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
+import { useLists } from '@/store/hooks';
 
 const HEADER_ROW_HEIGHT = 42;
 const HEADER_TOP = Paddings.screen;
@@ -44,14 +45,29 @@ export default function ListCreateScreen() {
   const [listDescription, setListDescription] = useState('');
   const [isFavorited, setIsFavorited] = useState(false);
 
+  const { createList, isCreating } = useLists();
+
+  // POST /lists/ via redux thunk; unwrap rejects on network/validation errors
   const handleSubmit = useCallback(() => {
     const name = listTitle.trim();
-    if (!name) return;
-    // later: create list api + redux; openedFrom still available for navigation
-    router.back();
-  }, [listTitle, router]);
+    if (!name || isCreating) return;
+    void (async () => {
+      try {
+        await createList({
+          name,
+          description: listDescription.trim() || undefined,
+          color: DEFAULT_LIST_COLOR,
+          metadata: { favorited: isFavorited },
+        });
+        router.back();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Could not create list';
+        Alert.alert('Create list failed', msg);
+      }
+    })();
+  }, [listTitle, listDescription, isFavorited, isCreating, createList, router]);
 
-  const canSubmit = listTitle.trim().length > 0;
+  const canSubmit = listTitle.trim().length > 0 && !isCreating;
 
   const topSectionHeight = TOP_SECTION_HEIGHT;
   const headerTitleStyle = {

@@ -12,9 +12,9 @@
  * grouped list: same as FormDetailSection - primarySecondaryBlend bg, solid separator, separator starts at text (iconColumnWidth 30)
  */
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Pressable, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import GlassView from 'expo-glass-effect/build/GlassView';
@@ -32,7 +32,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CREATE_OPENED_FROM_BROWSE } from './navigationParams';
-import { EXAMPLE_LISTS } from './_data/exampleLists';
+import { useLists } from '@/store/hooks';
 
 export default function BrowseScreen() {
   const router = useRouter();
@@ -40,6 +40,19 @@ export default function BrowseScreen() {
   const typography = useTypography();
   const insets = useSafeAreaInsets();
   const styles = createStyles(themeColors, typography, insets);
+  const { lists, fetchLists } = useLists();
+
+  // load lists when browse is focused so pills match manage-lists + API
+  useFocusEffect(
+    useCallback(() => {
+      void fetchLists();
+    }, [fetchLists])
+  );
+
+  const sortedLists = useMemo(
+    () => [...lists].sort((a, b) => a.sortOrder - b.sortOrder),
+    [lists]
+  );
 
   // My Lists section expand/collapse - true = expanded (pills visible)
   const [isMyListsExpanded, setIsMyListsExpanded] = React.useState(true);
@@ -218,7 +231,7 @@ export default function BrowseScreen() {
                   Manage Lists
                 </Text>
               </TouchableOpacity>
-              {EXAMPLE_LISTS.map((list) => (
+              {sortedLists.map((list) => (
                 <TouchableOpacity
                   key={list.id}
                   style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}

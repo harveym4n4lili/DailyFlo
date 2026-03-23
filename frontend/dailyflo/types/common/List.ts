@@ -33,6 +33,7 @@ export interface List {
   
   // Additional metadata stored as JSON in backend
   metadata: {
+    favorited?: boolean;            // user-starred list (stored in django JSON metadata)
     taskCount?: number;             // Cached count of tasks in this list
     completedTaskCount?: number;    // Cached count of completed tasks
     lastUsed?: Date;                // When this list was last accessed
