@@ -18,10 +18,10 @@ class ActivityLogsApiService {
    * The backend returns entries ordered by -created_at (newest first).
    * Authentication is handled automatically by apiClient (injects the auth token).
    */
-  async fetchActivityLogs(): Promise<ActivityLog[]> {
+  async fetchActivityLogs(params?: { action_type?: string }): Promise<ActivityLog[]> {
     try {
-      // GET /tasks/activity-logs/ - Django router registered under 'tasks/' prefix
-      const response = await apiClient.get('/tasks/activity-logs/');
+      // GET /tasks/activity-logs/ — optional action_type=completed for browse Completed screen only
+      const response = await apiClient.get('/tasks/activity-logs/', { params });
 
       // Django REST Framework returns either an array directly or a paginated object with 'results'.
       // Handle both formats for robustness.

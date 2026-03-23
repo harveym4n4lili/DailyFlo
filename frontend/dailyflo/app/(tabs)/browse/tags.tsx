@@ -24,6 +24,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainBackButton } from '@/components/ui/button';
 import { Paddings } from '@/constants/Paddings';
+import { browseScrollPaddingTop } from '@/constants/browseScrollPaddingTop';
 
 const TOP_SECTION_ROW_HEIGHT = 48;
 const TOP_SECTION_ANCHOR_HEIGHT = 64;
@@ -202,8 +203,7 @@ const createStyles = (
     },
     scrollContent: {
       paddingHorizontal: Paddings.screen,
-      // top spacing like Today (64), no insets.top – content scrolls under
-      paddingTop: TOP_SECTION_ANCHOR_HEIGHT,
+      paddingTop: browseScrollPaddingTop(insets.top),
       flexGrow: 1,
     },
     bigHeader: {

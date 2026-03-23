@@ -632,6 +632,25 @@ class TasksApiService {
   }
 
   /**
+   * Inbox tasks — GET /tasks/inbox/ (list is null, not completed).
+   * Returns the same task row shape as list(); map with transformApiTaskToTask in the UI.
+   */
+  async fetchInboxTasks(): Promise<unknown[]> {
+    try {
+      const response = await apiClient.get('/tasks/inbox/');
+      const data = response.data as unknown;
+      if (Array.isArray(data)) return data;
+      const o = data as Record<string, unknown>;
+      if (o?.data && Array.isArray(o.data)) return o.data as unknown[];
+      if (o?.results && Array.isArray(o.results)) return o.results as unknown[];
+      return [];
+    } catch (error) {
+      console.error('Fetch inbox tasks failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Search tasks
    * This searches for tasks based on a text query
    * 

@@ -235,10 +235,25 @@ async function retryWithExponentialBackoff<T>(
 export function transformApiTaskToTask(apiTask: any): Task {
   // Handle both snake_case (from Django) and camelCase (if already converted)
   // This makes the function flexible and works with different API response formats
+  const rawList =
+    apiTask.list_id !== undefined && apiTask.list_id !== null
+      ? apiTask.list_id
+      : apiTask.listId !== undefined && apiTask.listId !== null
+        ? apiTask.listId
+        : apiTask.list;
+  const listId =
+    rawList === undefined || rawList === null || rawList === ''
+      ? null
+      : typeof rawList === 'string'
+        ? rawList
+        : typeof rawList === 'object' && rawList !== null && 'id' in rawList
+          ? String((rawList as { id: string }).id)
+          : null;
+
   return {
     id: apiTask.id || '',
     userId: apiTask.user_id || apiTask.userId || '',
-    listId: apiTask.list_id !== undefined ? apiTask.list_id : (apiTask.listId !== undefined ? apiTask.listId : null),
+    listId,
     title: apiTask.title || '',
     description: apiTask.description || '',
     icon: apiTask.icon,

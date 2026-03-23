@@ -1,13 +1,11 @@
 /**
- * Completed Screen
- *
- * Layout matches Today screen: big header above content, mini header in top section
- * fades in when scrolled. Blur + gradient top section, back button left.
+ * Completed — browse stack. Activity log rows filtered to completed only.
+ * Top chrome + scroll spacing match inbox.tsx (same paddingTop, paddedHorizontal, miniHeader insets).
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Platform, ActivityIndicator, Pressable } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -22,12 +20,16 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { getFontFamilyWithWeight } from '@/constants/Typography';
 import { MainBackButton } from '@/components/ui/button';
 import { Paddings } from '@/constants/Paddings';
+import { browseScrollPaddingTop } from '@/constants/browseScrollPaddingTop';
+import { ActivityLog } from '@/types/common/ActivityLog';
+import activityLogsApiService from '@/services/api/activityLogs';
+import { groupLogsByDate, ActivityLogSection } from '@/components/features/activity-log';
 
 const TOP_SECTION_ROW_HEIGHT = 48;
 const TOP_SECTION_ANCHOR_HEIGHT = 64;
-// mini header appears earlier (lower threshold) since padding excludes insets.top
 const SCROLL_THRESHOLD = 16;
 
 export default function CompletedScreen() {
@@ -35,7 +37,33 @@ export default function CompletedScreen() {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
-  const styles = createStyles(themeColors, typography, insets);
+  const styles = createStyles(typography, insets);
+
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadCompletedLogs = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await activityLogsApiService.fetchActivityLogs({ action_type: 'completed' });
+      setLogs(data);
+    } catch (e) {
+      setLogs([]);
+      setError(e instanceof Error ? e.message : 'Failed to load completed activity');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadCompletedLogs();
+    }, [loadCompletedLogs])
+  );
+
+  const sections = useMemo(() => groupLogsByDate(logs), [logs]);
 
   const scrollY = useSharedValue(0);
   const miniHeaderOpacity = useSharedValue(0);
@@ -58,24 +86,38 @@ export default function CompletedScreen() {
   }));
 
   const bigHeaderStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      scrollY.value,
-      [0, SCROLL_THRESHOLD],
-      [1, 0],
-      Extrapolation.CLAMP
-    ),
+    opacity: interpolate(scrollY.value, [0, SCROLL_THRESHOLD], [1, 0], Extrapolation.CLAMP),
   }));
 
   const backButtonTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
 
+  const handleLogPress = useCallback(
+    (log: ActivityLog) => {
+      if (!log.taskId || log.actionType === 'deleted') return;
+      router.push({
+        pathname: '/task/[taskId]',
+        params: {
+          taskId: log.taskId,
+          ...(log.occurrenceDate ? { occurrenceDate: log.occurrenceDate } : {}),
+        },
+      } as any);
+    },
+    [router]
+  );
+
+  const secondaryTextStyle = useMemo(
+    () => ({
+      ...typography.getTextStyle('body-large'),
+      fontFamily: getFontFamilyWithWeight('regular'),
+      color: themeColors.text.secondary(),
+    }),
+    [typography, themeColors]
+  );
+
   return (
     <View style={{ flex: 1 }}>
-      {/* top section – blur + gradient + mini header that fades in on scroll */}
       <View
-        style={[
-          styles.topSectionAnchor,
-          { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT },
-        ]}
+        style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}
       >
         <BlurView
           tint={themeColors.isDark ? 'dark' : 'light'}
@@ -120,27 +162,45 @@ export default function CompletedScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       >
-        <Animated.View style={bigHeaderStyle}>
-          <Text style={[styles.bigHeader, { color: themeColors.text.primary() }]}>
-            Completed
-          </Text>
-        </Animated.View>
-        <Text style={[styles.exampleTitle, { color: themeColors.text.secondary() }]}>
-          Example content
-        </Text>
-        {[1, 2, 3, 4, 5].map((i) => (
-          <View
-            key={i}
-            style={[
-              styles.exampleItem,
-              { backgroundColor: themeColors.background.primarySecondaryBlend() },
-            ]}
-          >
-            <Text style={[styles.exampleItemText, { color: themeColors.text.primary() }]}>
-              Completed item {i}
+        <View style={styles.paddedHorizontal}>
+          <Animated.View style={bigHeaderStyle}>
+            <Text style={[styles.bigHeader, { color: themeColors.text.primary() }]}>
+              Completed
             </Text>
-          </View>
-        ))}
+          </Animated.View>
+
+          {isLoading && logs.length === 0 ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator color={themeColors.text.tertiary()} />
+            </View>
+          ) : error ? (
+            <View style={styles.messageBlock}>
+              <Text style={[secondaryTextStyle, styles.centerText]}>{error}</Text>
+              <Pressable
+                onPress={() => void loadCompletedLogs()}
+                style={({ pressed }) => [styles.retryButton, pressed && { opacity: 0.85 }]}
+              >
+                <Text style={[typography.getTextStyle('body-large'), { color: themeColors.text.primary() }]}>
+                  Retry
+                </Text>
+              </Pressable>
+            </View>
+          ) : sections.length === 0 ? (
+            <Text style={[secondaryTextStyle, styles.centerText, styles.emptyCopy]}>
+              No completed tasks yet.{'\n'}When you check off a task, it will show up here.
+            </Text>
+          ) : (
+            sections.map(({ dateKey, entries }) => (
+              <ActivityLogSection
+                key={dateKey}
+                dateKey={dateKey}
+                entries={entries}
+                onLogPress={handleLogPress}
+              />
+            ))
+          )}
+        </View>
+
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
     </View>
@@ -148,7 +208,6 @@ export default function CompletedScreen() {
 }
 
 const createStyles = (
-  themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>
 ) =>
@@ -184,6 +243,7 @@ const createStyles = (
       bottom: 0,
       alignItems: 'center',
       justifyContent: 'center',
+      paddingHorizontal: 56,
     },
     miniHeaderText: {
       ...typography.getTextStyle('heading-3'),
@@ -201,27 +261,34 @@ const createStyles = (
       flex: 1,
     },
     scrollContent: {
-      paddingHorizontal: Paddings.screen,
-      // top spacing like Today (64), no insets.top – content scrolls under
-      paddingTop: TOP_SECTION_ANCHOR_HEIGHT,
+      paddingTop: browseScrollPaddingTop(insets.top),
       flexGrow: 1,
+    },
+    paddedHorizontal: {
+      paddingHorizontal: Paddings.screen,
     },
     bigHeader: {
       ...typography.getTextStyle('heading-1'),
       marginBottom: 8,
     },
-    exampleTitle: {
-      ...typography.getTextStyle('body-large'),
-      marginBottom: 16,
+    loadingWrap: {
+      paddingVertical: 32,
+      alignItems: 'center',
     },
-    exampleItem: {
-      paddingVertical: 16,
-      paddingHorizontal: Paddings.groupedListContentHorizontal,
-      borderRadius: 12,
-      marginBottom: 8,
+    messageBlock: {
+      paddingVertical: 24,
+      alignItems: 'center',
+      gap: 16,
     },
-    exampleItemText: {
-      ...typography.getTextStyle('body'),
+    centerText: {
+      textAlign: 'center',
+    },
+    emptyCopy: {
+      marginTop: 8,
+    },
+    retryButton: {
+      paddingVertical: Paddings.card,
+      paddingHorizontal: Paddings.section,
     },
     bottomSpacer: {
       height: 200,

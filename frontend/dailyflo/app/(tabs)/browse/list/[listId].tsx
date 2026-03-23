@@ -30,6 +30,7 @@ import { ScreenHeaderActions } from '@/components/ui';
 import { ClockIcon } from '@/components/ui/icon';
 import { ListCard } from '@/components/ui/card';
 import { Paddings } from '@/constants/Paddings';
+import { browseScrollPaddingTop } from '@/constants/browseScrollPaddingTop';
 import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
 import { useUI, useLists } from '@/store/hooks';
 import { transformApiTaskToTask } from '@/store/slices/tasks/tasksSlice';
@@ -327,7 +328,7 @@ const createStyles = (
       flex: 1,
     },
     scrollContent: {
-      paddingTop: TOP_SECTION_ANCHOR_HEIGHT,
+      paddingTop: browseScrollPaddingTop(insets.top),
       flexGrow: 1,
     },
     paddedHorizontal: {
