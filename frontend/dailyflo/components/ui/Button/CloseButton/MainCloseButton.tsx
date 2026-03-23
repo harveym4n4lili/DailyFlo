@@ -16,10 +16,6 @@ import React from 'react';
 // building blocks from react native for UI components
 import { Pressable, Text, Platform, useWindowDimensions, View } from 'react-native';
 
-// REACT NATIVE SAFE AREA CONTEXT IMPORT
-// useSafeAreaInsets: hook that provides safe area insets for the device
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 // EXPO VECTOR ICONS IMPORT
 // ionicons: fallback icons on Android/Web (SF Symbols not available there)
 import { Ionicons } from '@expo/vector-icons';
@@ -65,6 +61,12 @@ export interface MainCloseButtonProps {
   
   /** Optional right position override (if provided, left is ignored) */
   right?: number;
+
+  /**
+   * modal: fullscreen overlay + absolute position (default — sheets / modals).
+   * inline: same glass / X styling in a normal row (e.g. next to a search field).
+   */
+  layout?: 'modal' | 'inline';
 }
 
 /**
@@ -80,12 +82,11 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
   top,
   left = 0,
   right,
+  layout = 'modal',
 }) => {
   // HOOKS
   // get theme-aware colors for styling
   const themeColors = useThemeColors();
-  // get safe area insets for positioning
-  const insets = useSafeAreaInsets();
   // window dimensions for absolute positioning relative to screen
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
@@ -125,17 +126,16 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
   // on iOS we always render the GlassView wrapper; on unsupported platforms
   // expo-glass-effect falls back internally so we don't need an explicit check.
   const glassAvailable = Platform.OS === 'ios';
+  const isInline = layout === 'inline';
 
-  // base positioning style shared between glass + non-glass versions
+  // base positioning style shared between glass + non-glass versions (modal only)
   const basePositionStyle = {
     position: 'absolute' as const,
-    // use right position if provided, otherwise use left position
     ...(right !== undefined ? { right } : { left }),
     top: topPosition,
     zIndex: 10,
   };
 
-  // wrapper: absolutely positioned to window so button stays fixed at top-left when content scrolls
   const absoluteWrapperStyle = {
     position: 'absolute' as const,
     top: 0,
@@ -145,24 +145,18 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
     zIndex: 10,
   };
 
+  const glassCircleStyle = {
+    width: 42,
+    height: 42,
+    borderRadius: 24,
+    overflow: 'visible' as const,
+  };
+
   // when glass is available on newer iOS we wrap the pressable in a GlassView
   if (isNewerIOS && glassAvailable) {
-    return (
-      <View pointerEvents="box-none" style={absoluteWrapperStyle}>
-        <GlassView
-        // container uses slightly larger size than the visible icon circle
-        // so the liquid glass highlight has room to expand on press
-        style={{
-          ...basePositionStyle,
-          width: 42,
-          height: 42,
-          borderRadius: 24,
-          // keep the actual view background transparent so the tint stands out
-     
-          // allow the glass effect to bleed out naturally instead of clipping it
-          overflow: 'visible',
-        }}
-        // clear style + themed tint matches the FAB's liquid glass styling
+    const glassBody = (
+      <GlassView
+        style={isInline ? glassCircleStyle : { ...basePositionStyle, ...glassCircleStyle }}
         tintColor={closeButtonBackgroundColor as any}
         glassEffectStyle="regular"
         isInteractive
@@ -170,59 +164,77 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
         <Pressable
           onPress={onPress}
           style={{
-            // make the pressable fill the glass circle so the whole area is tappable
             width: '100%',
             height: '100%',
             alignItems: 'center',
             justifyContent: 'center',
-            // add a subtle 1px border that hugs the glass circle
-            // keeping it here ensures the border moves perfectly with the button content
             borderWidth: 0,
             borderColor: themeColors.border.primary(),
             borderRadius: 21,
           }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
         >
           <SFSymbolIcon name="xmark" size={20} color={getIconColor()} fallback={<Ionicons name="close" size={28} color={getIconColor()} />} />
         </Pressable>
       </GlassView>
-    </View>
+    );
+    if (isInline) return glassBody;
+    return (
+      <View pointerEvents="box-none" style={absoluteWrapperStyle}>
+        {glassBody}
+      </View>
     );
   }
 
-  // fallback for Android, web, and older iOS:
-  // - newer iOS with no liquid glass: circular icon button with transparent background
-  // - older iOS: keep the original "Cancel" pill button using task color background
-  return (
-    <View pointerEvents="box-none" style={absoluteWrapperStyle}>
-    <Pressable
-      onPress={onPress}
-      style={{
+  // fallback for Android, web, and older iOS
+  const fallbackPressableStyle = isInline
+    ? isNewerIOS
+      ? {
+          width: 42,
+          height: 42,
+          borderRadius: 21,
+          alignItems: 'center' as const,
+          justifyContent: 'center' as const,
+          backgroundColor: closeButtonBackgroundColor,
+        }
+      : {
+          paddingHorizontal: Paddings.contextMenuHorizontal,
+          paddingVertical: Paddings.contextMenuVertical,
+          borderRadius: 20,
+          backgroundColor: themeColors.interactive.primary(),
+        }
+    : {
         ...basePositionStyle,
         ...(isNewerIOS
           ? {
-              // iOS 15+ without glass: circular icon button with no visible background
               width: 42,
               height: 42,
               borderRadius: 21,
-              alignItems: 'center',
-              justifyContent: 'center',
+              alignItems: 'center' as const,
+              justifyContent: 'center' as const,
               backgroundColor: closeButtonBackgroundColor,
             }
           : {
-              // iOS < 15 (older): text button with colored background (preserve old design)
               paddingHorizontal: Paddings.contextMenuHorizontal,
               paddingVertical: Paddings.contextMenuVertical,
               borderRadius: 20,
               backgroundColor: themeColors.interactive.primary(),
             }),
-      }}
+      };
+
+  const fallbackBody = (
+    <Pressable
+      onPress={onPress}
+      style={fallbackPressableStyle}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      accessibilityRole="button"
+      accessibilityLabel="Cancel"
     >
       {isNewerIOS ? (
-        // newer iOS fallback: X icon with primary text color, background is transparent
         <SFSymbolIcon name="xmark" size={28} color={getIconColor()} fallback={<Ionicons name="close" size={28} color={getIconColor()} />} />
       ) : (
-        // iOS < 15 (older): text button (current style)
         <Text
           style={{
             ...getTextStyle('button-secondary'),
@@ -233,6 +245,12 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
         </Text>
       )}
     </Pressable>
+  );
+
+  if (isInline) return fallbackBody;
+  return (
+    <View pointerEvents="box-none" style={absoluteWrapperStyle}>
+      {fallbackBody}
     </View>
   );
 };

@@ -1,48 +1,220 @@
 /**
  * Browse Screen
  *
- * Displays grouped list sections for browsing tasks.
- * Structure matches Today and Planner screens:
- * - Top section with context menu in top right
- * - Primary background color
- * - Liquid glass search tab above grouped list (Inbox, Completed, Tags)
- * - Grouped list styling matches Task screen FormDetailSection (date, alert, time)
- *
- * layout: topSectionAnchor fixed at top (zIndex 10) with context menu; content scrolls below
- * grouped list: same as FormDetailSection - primarySecondaryBlend bg, solid separator, separator starts at text (iconColumnWidth 30)
+ * Search mode: `searchOpen` / `isBrowseSearchMode` — user tapped the search row; floating field docks, top chrome hides.
+ * Non-search content unmounts while search is “active”; `browseSearchContent` shows instead.
+ * On close tap, `exitingBrowseSearch` is set so lists/FAB and filter chips hide immediately while `searchOpen` stays true until the bar/chrome finish sliding down.
+ * `browseModesLayout` — animated wrapper: translates scroll content by the same delta as the floating search bar (row → docked) so the body moves with the bar.
+ * Filter chips render only when `isBrowseSearchMode`; they sit in the same absolutely positioned block as the bar so they stay directly under it while animating.
+ * That block includes a `searchModeTopFade` layer (BlurView + LinearGradient) matching the main browse top chrome so scroll content fades underneath.
+ * While search is open, `searchModeTopInsetFill` stays solid above the scroll through the exit animation; `searchModeTopFade` unmounts on close tap so blur/gradient don’t linger.
+ * The floating pill width tracks `focusProgress`: clipped row starts full-width with cancel off-screen; narrowing reveals the cancel sliding in (reverse when exiting).
  */
 
-import React, { useCallback, useMemo } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Pressable, Platform } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  Platform,
+  TextInput,
+  Keyboard,
+  ScrollView,
+  Pressable,
+  useWindowDimensions,
+  type TextStyle,
+} from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
+import Animated, {
+  FadeInUp,
+  FadeOutUp,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  interpolate,
+  interpolateColor,
+  Extrapolation,
+  Easing,
+  runOnJS,
+} from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import GlassView from 'expo-glass-effect/build/GlassView';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// layout and ui components
-import { ScreenContainer } from '@/components';
 import { ScreenHeaderActions } from '@/components/ui';
-import { FloatingActionButton } from '@/components/ui/button';
+import { FloatingActionButton, MainCloseButton } from '@/components/ui/button';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/list/GroupedList';
 import { SFSymbolIcon, TickIcon, BrowseIcon, LeafIcon, PencilIcon } from '@/components/ui/icon';
-
-// theme and typography
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CREATE_OPENED_FROM_BROWSE } from './navigationParams';
 import { useLists } from '@/store/hooks';
 
+const TOP_SECTION_ROW_HEIGHT = 48;
+const FOCUS_ANIM_MS = 320;
+// gap between search pill and cancel; included in FLOATING_ROW_CANCEL_RESERVE so width + translateX animations stay aligned
+const SEARCH_TO_CANCEL_GAP = 16;
+// matches MainCloseButton `inline`: 42 circle on iOS glass; wider text cancel on android/web fallback
+const INLINE_CANCEL_TOUCH_SIZE = Platform.OS === 'ios' ? 42 : 76;
+// horizontal space the cancel column needs when visible (gap + button width)
+const FLOATING_ROW_CANCEL_RESERVE = SEARCH_TO_CANCEL_GAP + INLINE_CANCEL_TOUCH_SIZE;
+// extra width on the floating block so the cancel’s glass/shadow isn’t clipped by the absolute layer
+const FLOATING_SEARCH_BLOCK_WIDTH_BLEED = 8;
+// height of the docked search row (matches searchTabInner minHeight) — used to stack filter chips below the bar
+const FLOATING_SEARCH_BAR_ROW_HEIGHT = 44;
+// vertical space between docked search row and chip strip (also folded into fade height + scroll placeholder inset)
+const SEARCH_BAR_TO_CHIPS_GAP = 16;
+// placeholder/results need top inset so text is not under the absolute search bar + gap + chip row
+const SEARCH_OVERLAY_TOP_CLEARANCE =
+  FLOATING_SEARCH_BAR_ROW_HEIGHT + SEARCH_BAR_TO_CHIPS_GAP;
+// blur + gradient behind search row + gap + chips; tail fades into scroll content
+// chip row + contentContainerStyle paddingVertical so fade still covers liquid-glass halo
+const SEARCH_CHIPS_ROW_ESTIMATE = 60;
+const SEARCH_MODE_TOP_FADE_HEIGHT =
+  FLOATING_SEARCH_BAR_ROW_HEIGHT +
+  SEARCH_BAR_TO_CHIPS_GAP +
+  SEARCH_CHIPS_ROW_ESTIMATE +
+  28;
+
+// filter chips: order is fixed; ids are for toggles until search api exists
+const DEFAULT_SEARCH_FILTER_CHIP_ID = 'recent';
+const SEARCH_FILTER_CHIPS: { id: string; label: string }[] = [
+  { id: 'recent', label: 'Recent' },
+  { id: 'top', label: 'Top' },
+  { id: 'task', label: 'Task' },
+  { id: 'description', label: 'Description' },
+  { id: 'lists', label: 'Lists' },
+];
+
+const CHIP_COLOR_ANIM_MS = 260;
+
+type BrowseSearchFilterChipStyles = {
+  searchFilterChipGlass: object;
+  searchFilterChipInner: object;
+  searchFilterChipAndroid: object;
+  searchFilterChipLabel: TextStyle;
+};
+
+// shared-value progress drives interpolateColor only — font size/weight stay fixed so chip width doesn’t shift neighbors in the row
+function BrowseSearchFilterChip({
+  chip,
+  selected,
+  onToggle,
+  themeColors,
+  styles,
+}: {
+  chip: { id: string; label: string };
+  selected: boolean;
+  onToggle: (id: string) => void;
+  themeColors: ReturnType<typeof useThemeColors>;
+  styles: BrowseSearchFilterChipStyles;
+}) {
+  const progress = useSharedValue(selected ? 1 : 0);
+  const primaryTint = themeColors.background.primary();
+  const selectedTint = themeColors.interactive.primary();
+  const primaryText = themeColors.text.primary();
+  const invertedText = themeColors.text.invertedPrimary();
+  const pillIdle = themeColors.background.primarySecondaryBlend();
+  const pillSelected = themeColors.interactive.primary();
+
+  useEffect(() => {
+    progress.value = withTiming(selected ? 1 : 0, {
+      duration: CHIP_COLOR_ANIM_MS,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [selected, progress]);
+
+  const tintWashStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(progress.value, [0, 1], ['rgba(0,0,0,0)', selectedTint]),
+  }));
+
+  const labelAnimStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(progress.value, [0, 1], [primaryText, invertedText]),
+  }));
+
+  const androidPillStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(progress.value, [0, 1], [pillIdle, pillSelected]),
+  }));
+
+  const a11y = {
+    accessibilityRole: 'button' as const,
+    accessibilityState: { selected },
+    accessibilityLabel: `${chip.label} filter`,
+    accessibilityHint: selected
+      ? 'Selected — double tap a different chip to change the filter'
+      : 'Double tap to select this filter',
+  };
+
+  if (Platform.OS === 'ios') {
+    return (
+      <GlassView
+        style={styles.searchFilterChipGlass}
+        glassEffectStyle="clear"
+        tintColor={primaryTint as any}
+        isInteractive
+      >
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFillObject, { borderRadius: 20 }, tintWashStyle]}
+        />
+        <Pressable onPress={() => onToggle(chip.id)} style={styles.searchFilterChipInner} {...a11y}>
+          <Animated.Text style={[styles.searchFilterChipLabel, labelAnimStyle]}>{chip.label}</Animated.Text>
+        </Pressable>
+      </GlassView>
+    );
+  }
+
+  return (
+    <Pressable
+      onPress={() => onToggle(chip.id)}
+      style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+      {...a11y}
+    >
+      <Animated.View style={[styles.searchFilterChipAndroid, androidPillStyle]}>
+        <Animated.Text style={[styles.searchFilterChipLabel, labelAnimStyle]}>{chip.label}</Animated.Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 export default function BrowseScreen() {
   const router = useRouter();
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const styles = createStyles(themeColors, typography, insets);
   const { lists, fetchLists } = useLists();
 
-  // load lists when browse is focused so pills match manage-lists + API
+  const rootRef = useRef<View>(null);
+  const searchAnchorRef = useRef<View>(null);
+  const floatingInputRef = useRef<TextInput>(null);
+
+  const [query, setQuery] = useState('');
+  // searchOpen: floating docked field + hidden idle row (true until close animation finishes)
+  const [searchOpen, setSearchOpen] = useState(false);
+  // exitingBrowseSearch: user tapped cancel/close — show browse lists/fab immediately while bar still slides
+  const [exitingBrowseSearch, setExitingBrowseSearch] = useState(false);
+  const isBrowseSearchMode = searchOpen;
+  const showBrowseBodyContent = !searchOpen || exitingBrowseSearch;
+  const searchOpenRef = useRef(false);
+  const closeAnimatingRef = useRef(false);
+
+  useEffect(() => {
+    searchOpenRef.current = searchOpen;
+  }, [searchOpen]);
+
+  const contentTopPad = insets.top + TOP_SECTION_ROW_HEIGHT;
+  const dockedSearchTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
+  const topChromeSlideDistance = contentTopPad;
+  const horizontalPadding = Paddings.screen;
+  const floatingRowWidth = windowWidth - horizontalPadding * 2;
+
+  const focusProgress = useSharedValue(0);
+  const measuredRowTop = useSharedValue(0);
+
   useFocusEffect(
     useCallback(() => {
       void fetchLists();
@@ -54,13 +226,175 @@ export default function BrowseScreen() {
     [lists]
   );
 
-  // My Lists section expand/collapse - true = expanded (pills visible)
-  const [isMyListsExpanded, setIsMyListsExpanded] = React.useState(true);
+  const [isMyListsExpanded, setIsMyListsExpanded] = useState(true);
+  // exactly one chip is always selected; resets to Recent when search closes or opens
+  const [activeSearchFilterId, setActiveSearchFilterId] = useState<string>(DEFAULT_SEARCH_FILTER_CHIP_ID);
+
+  const toggleSearchFilterChip = useCallback((id: string) => {
+    setActiveSearchFilterId((prev) => (prev === id ? prev : id));
+  }, []);
+
+  // anchor y relative to root (so floating `top` matches the same coordinate system as dockedSearchTop)
+  const measureSearchAnchorTop = useCallback((): Promise<number> => {
+    return new Promise((resolve) => {
+      searchAnchorRef.current?.measureInWindow((ax, ay, aw, ah) => {
+        rootRef.current?.measureInWindow((rx, ry, rw, rh) => {
+          resolve(ay - ry);
+        });
+      });
+    });
+  }, []);
+
+  const openSearch = useCallback(async () => {
+    const top = await measureSearchAnchorTop();
+    measuredRowTop.value = top;
+    setExitingBrowseSearch(false);
+    setSearchOpen(true);
+  }, [measureSearchAnchorTop, measuredRowTop]);
+
+  const finishCloseSearch = useCallback(() => {
+    closeAnimatingRef.current = false;
+    setSearchOpen(false);
+    setExitingBrowseSearch(false);
+    setActiveSearchFilterId(DEFAULT_SEARCH_FILTER_CHIP_ID);
+  }, []);
+
+  const closeSearch = useCallback(() => {
+    if (!searchOpenRef.current || closeAnimatingRef.current) return;
+    closeAnimatingRef.current = true;
+    Keyboard.dismiss();
+    // swap scroll body back to lists right away; keep searchOpen true so idle row stays hidden until bar finishes
+    setExitingBrowseSearch(true);
+    // do not update measuredRowTop here while focusProgress is still 1 — that changes `lift` in
+    // browseModesLayoutStyle instantly and the bar/content jump instead of animating down.
+    // exit uses the same measuredRowTop from open; next open re-measures.
+    focusProgress.value = withTiming(
+      0,
+      { duration: FOCUS_ANIM_MS, easing: Easing.out(Easing.cubic) },
+      (finished) => {
+        if (finished) runOnJS(finishCloseSearch)();
+      }
+    );
+  }, [finishCloseSearch, focusProgress]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    focusProgress.value = 0;
+    focusProgress.value = withTiming(1, {
+      duration: FOCUS_ANIM_MS,
+      easing: Easing.out(Easing.cubic),
+    });
+    const t = requestAnimationFrame(() => {
+      floatingInputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(t);
+  }, [searchOpen, focusProgress]);
+
+  const topChromeStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY: interpolate(
+          focusProgress.value,
+          [0, 1],
+          [0, -topChromeSlideDistance],
+          Extrapolation.CLAMP
+        ),
+      },
+    ],
+  }));
+
+  // overflow visible so glass/hitSlop aren’t clipped; cancel translateX hides it at progress 0 (same distance as reserve) then slides in with the narrowing pill
+  const floatingSearchRowLayoutStyle = useAnimatedStyle(() => ({
+    width: floatingRowWidth + FLOATING_SEARCH_BLOCK_WIDTH_BLEED,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: FLOATING_SEARCH_BAR_ROW_HEIGHT,
+    overflow: 'visible',
+  }));
+
+  const floatingCancelSlideStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateX: interpolate(
+          focusProgress.value,
+          [0, 1],
+          [FLOATING_ROW_CANCEL_RESERVE, 0],
+          Extrapolation.CLAMP
+        ),
+      },
+    ],
+  }));
+
+  const floatingSearchPillWidthStyle = useAnimatedStyle(() => ({
+    width: interpolate(
+      focusProgress.value,
+      [0, 1],
+      [floatingRowWidth, floatingRowWidth - FLOATING_ROW_CANCEL_RESERVE],
+      Extrapolation.CLAMP
+    ),
+    minWidth: 0,
+  }));
+
+  // whole block (search row + filter chips) moves with focusProgress so chips stay glued under the bar
+  const floatingSearchBlockStyle = useAnimatedStyle(() => {
+    const top = interpolate(
+      focusProgress.value,
+      [0, 1],
+      [measuredRowTop.value, dockedSearchTop],
+      Extrapolation.CLAMP
+    );
+    return {
+      position: 'absolute' as const,
+      top,
+      left: horizontalPadding,
+      width: floatingRowWidth + FLOATING_SEARCH_BLOCK_WIDTH_BLEED,
+      overflow: 'visible',
+      zIndex: 22,
+    };
+  });
+
+  // lifts scroll content with the search bar: same distance the bar moves up (measured row y → docked y)
+  const browseModesLayoutStyle = useAnimatedStyle(() => {
+    const lift = measuredRowTop.value - dockedSearchTop;
+    return {
+      transform: [
+        {
+          translateY: interpolate(focusProgress.value, [0, 1], [0, -lift], Extrapolation.CLAMP),
+        },
+      ],
+    };
+  });
+
+  const searchField = (
+    <>
+      <SFSymbolIcon
+        name="magnifyingglass"
+        size={20}
+        color={themeColors.text.primary()}
+        fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
+      />
+      <TextInput
+        ref={floatingInputRef}
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Tasks/Lists"
+        // tertiary while actively searching; on close tap match idle row label (primary) before the bar finishes moving
+        placeholderTextColor={
+          exitingBrowseSearch ? themeColors.text.primary() : themeColors.text.tertiary()
+        }
+        style={[styles.searchInput, { color: themeColors.text.primary() }]}
+        returnKeyType="search"
+        autoCorrect={false}
+        autoCapitalize="none"
+      />
+    </>
+  );
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* top section - blur + gradient, fixed row for context menu (same as Today/Planner) */}
-      <View style={[styles.topSectionAnchor, { height: insets.top + 48 }]}>
+    <View ref={rootRef} style={{ flex: 1 }}>
+      <Animated.View
+        style={[styles.topSectionAnchor, { height: contentTopPad }, topChromeStyle]}
+      >
         <BlurView
           tint={themeColors.isDark ? 'dark' : 'light'}
           intensity={1}
@@ -76,7 +410,6 @@ export default function BrowseScreen() {
           pointerEvents="none"
         />
         <View style={styles.topSectionRow} pointerEvents="box-none">
-          {/* placeholder on left to keep context menu aligned right */}
           <View style={styles.topSectionPlaceholder} pointerEvents="none" />
           <ScreenHeaderActions
             variant="browse"
@@ -85,204 +418,326 @@ export default function BrowseScreen() {
             tint="primary"
           />
         </View>
-      </View>
+      </Animated.View>
 
-      {/* main content - scrollable, primary background, grouped list at top with padding */}
-      <ScreenContainer
-        scrollable={true}
-        paddingHorizontal={0}
-        paddingVertical={0}
-        safeAreaTop={false}
-        safeAreaBottom={false}
+      <ScrollView
+        style={styles.mainScroll}
+        contentContainerStyle={styles.scrollContentContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       >
+        <Animated.View style={[styles.browseModesLayout, browseModesLayoutStyle]}>
         <View style={styles.contentWrapper}>
-          {/* liquid glass search tab - icon + text (no input) */}
-          {Platform.OS === 'ios' ? (
-            <GlassView
-              style={styles.searchTab}
-              glassEffectStyle="clear"
-              tintColor={themeColors.background.primary() as any}
-              isInteractive
+          <View ref={searchAnchorRef} style={styles.searchAnchor}>
+            {/* same tree always so row height never changes when toggling search mode */}
+            <View
+              style={[styles.searchIdleWrap, isBrowseSearchMode && styles.searchIdleHidden]}
+              pointerEvents={isBrowseSearchMode ? 'none' : 'auto'}
+              accessibilityElementsHidden={isBrowseSearchMode}
+              importantForAccessibility={isBrowseSearchMode ? 'no-hide-descendants' : 'auto'}
             >
-              <Pressable
-                onPress={() => {
-                  // placeholder - search functionality to be implemented
-                }}
-                style={styles.searchTabInner}
-              >
-                <SFSymbolIcon
-                  name="magnifyingglass"
-                  size={20}
-                  color={themeColors.text.primary()}
-                  fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
-                />
-                <Text style={[styles.searchTabLabel, { color: themeColors.text.primary() }]}>
-                  Tasks/Lists
-                </Text>
-              </Pressable>
-            </GlassView>
-          ) : (
-            <TouchableOpacity
-              style={[styles.searchTab, styles.searchTabAndroid, { backgroundColor: themeColors.background.primary() }]}
-              onPress={() => {
-                // placeholder - search functionality to be implemented
-              }}
-              activeOpacity={0.7}
-            >
-              <SFSymbolIcon
-                name="magnifyingglass"
-                size={20}
-                color={themeColors.text.primary()}
-                fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
-              />
-              <Text style={[styles.searchTabLabel, { color: themeColors.text.primary() }]}>
-                Tasks/Lists
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {/* grouped list section - first list has manual 24px top spacing */}
-          <View style={[styles.groupedListSection, styles.firstGroupedListSection]}>
-            <GroupedList
-              containerStyle={styles.listContainer}
-              backgroundColor={themeColors.background.primarySecondaryBlend()}
-              separatorColor={themeColors.border.primary()}
-            separatorInsetRight={Paddings.groupedListContentHorizontal}
-            separatorVariant="solid"
-            borderRadius={24}
-            minimalStyle={false}
-            separatorConsiderIconColumn={true}
-            iconColumnWidth={30}
-          >
-              <FormDetailButton
-                key="inbox"
-                iconComponent={
-                  <SFSymbolIcon
-                    name="tray.full"
-                    size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
-                  />
-                }
-                label="Inbox"
-                value=""
-                onPress={() => router.push('/(tabs)/browse/inbox')}
-                showChevron={false}
-              />
-              <FormDetailButton
-                key="completed"
-                iconComponent={
-                  <SFSymbolIcon
-                    name="checkmark.circle.fill"
-                    size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<TickIcon size={18} color={themeColors.text.primary()} />}
-                  />
-                }
-                label="Completed"
-                value=""
-                onPress={() => router.push('/(tabs)/browse/completed')}
-                showChevron={false}
-              />
-              <FormDetailButton
-                key="tags"
-                iconComponent={
-                  <SFSymbolIcon
-                    name="tag"
-                    size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
-                  />
-                }
-                label="Tags"
-                value=""
-                onPress={() => router.push('/(tabs)/browse/tags')}
-                showChevron={false}
-              />
-            </GroupedList>
-          </View>
-
-          {/* My Lists section header - dropdown arrow toggles section (layout transition slides up like ListCard task removal) */}
-          <GroupedListHeader
-            title="My Lists"
-            showDropdownArrow
-            isExpanded={isMyListsExpanded}
-            onPress={() => setIsMyListsExpanded((prev) => !prev)}
-            style={styles.myListsHeader}
-          />
-
-          {/* pills section - entering/exiting works in ScrollView (layout transition does not) */}
-          {isMyListsExpanded && (
-            <Animated.View
-              entering={FadeInUp.duration(200)}
-              exiting={FadeOutUp.duration(200)}
-              style={styles.listsPillsContainer}
-            >
-              <TouchableOpacity
-                style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
-                onPress={() => router.push('/(tabs)/browse/manage-lists')}
-                activeOpacity={0.7}
-              >
-                <PencilIcon size={20} color={themeColors.text.primary()} />
-                <Text
-                  style={[styles.listPillName, styles.listPillNameBold, { color: themeColors.text.primary() }]}
-                  numberOfLines={1}
+              {Platform.OS === 'ios' ? (
+                <GlassView
+                  style={styles.searchTab}
+                  glassEffectStyle="clear"
+                  tintColor={themeColors.background.primary() as any}
+                  isInteractive
                 >
-                  Manage Lists
-                </Text>
-              </TouchableOpacity>
-              {sortedLists.map((list) => (
+                  <Pressable onPress={openSearch} style={styles.searchTabInner}>
+                    <SFSymbolIcon
+                      name="magnifyingglass"
+                      size={20}
+                      color={themeColors.text.primary()}
+                      fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
+                    />
+                    <Text style={[styles.searchTabLabel, { color: themeColors.text.primary() }]}>
+                      Tasks/Lists
+                    </Text>
+                  </Pressable>
+                </GlassView>
+              ) : (
                 <TouchableOpacity
-                  key={list.id}
-                  style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
-                  onPress={() =>
-                    router.push(`/(tabs)/browse/list/${list.id}` as any)
-                  }
+                  style={[styles.searchTab, styles.searchTabAndroid, { backgroundColor: themeColors.background.primary() }]}
+                  onPress={openSearch}
                   activeOpacity={0.7}
                 >
-                  <LeafIcon size={20} color={themeColors.text.tertiary()} />
-                  <Text
-                    style={[styles.listPillName, { color: themeColors.text.primary() }]}
-                    numberOfLines={1}
-                  >
-                    {list.name}
-                  </Text>
-                  <View style={styles.listPillCountGap} />
-                  <Text style={[styles.listPillCount, { color: themeColors.text.secondary() }]}>
-                    {list.metadata?.taskCount ?? 0}
+                  <SFSymbolIcon
+                    name="magnifyingglass"
+                    size={20}
+                    color={themeColors.text.primary()}
+                    fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
+                  />
+                  <Text style={[styles.searchTabLabel, { color: themeColors.text.primary() }]}>
+                    Tasks/Lists
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </Animated.View>
+              )}
+            </View>
+          </View>
+
+          {/* browse non-search: lists + my lists — hidden during search placeholder; shown again as soon as user closes search */}
+          {showBrowseBodyContent ? (
+            <>
+              <View style={styles.groupedListSection}>
+                <GroupedList
+                  containerStyle={styles.listContainer}
+                  backgroundColor={themeColors.background.primarySecondaryBlend()}
+                  separatorColor={themeColors.border.primary()}
+                  separatorInsetRight={Paddings.groupedListContentHorizontal}
+                  separatorVariant="solid"
+                  borderRadius={24}
+                  minimalStyle={false}
+                  separatorConsiderIconColumn={true}
+                  iconColumnWidth={30}
+                >
+                  <FormDetailButton
+                    key="inbox"
+                    iconComponent={
+                      <SFSymbolIcon
+                        name="tray.full"
+                        size={20}
+                        color={themeColors.text.primary()}
+                        fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
+                      />
+                    }
+                    label="Inbox"
+                    value=""
+                    onPress={() => router.push('/(tabs)/browse/inbox')}
+                    showChevron={false}
+                  />
+                  <FormDetailButton
+                    key="completed"
+                    iconComponent={
+                      <SFSymbolIcon
+                        name="checkmark.circle.fill"
+                        size={20}
+                        color={themeColors.text.primary()}
+                        fallback={<TickIcon size={18} color={themeColors.text.primary()} />}
+                      />
+                    }
+                    label="Completed"
+                    value=""
+                    onPress={() => router.push('/(tabs)/browse/completed')}
+                    showChevron={false}
+                  />
+                  <FormDetailButton
+                    key="tags"
+                    iconComponent={
+                      <SFSymbolIcon
+                        name="tag"
+                        size={20}
+                        color={themeColors.text.primary()}
+                        fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
+                      />
+                    }
+                    label="Tags"
+                    value=""
+                    onPress={() => router.push('/(tabs)/browse/tags')}
+                    showChevron={false}
+                  />
+                </GroupedList>
+              </View>
+
+              <GroupedListHeader
+                title="My Lists"
+                showDropdownArrow
+                isExpanded={isMyListsExpanded}
+                onPress={() => setIsMyListsExpanded((prev) => !prev)}
+                style={styles.myListsHeader}
+              />
+
+              {isMyListsExpanded && (
+                <Animated.View
+                  entering={FadeInUp.duration(200)}
+                  exiting={FadeOutUp.duration(200)}
+                  style={styles.listsPillsContainer}
+                >
+                  <TouchableOpacity
+                    style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
+                    onPress={() => router.push('/(tabs)/browse/manage-lists')}
+                    activeOpacity={0.7}
+                  >
+                    <PencilIcon size={20} color={themeColors.text.primary()} />
+                    <Text
+                      style={[styles.listPillName, styles.listPillNameBold, { color: themeColors.text.primary() }]}
+                      numberOfLines={1}
+                    >
+                      Manage Lists
+                    </Text>
+                  </TouchableOpacity>
+                  {sortedLists.map((list) => (
+                    <TouchableOpacity
+                      key={list.id}
+                      style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
+                      onPress={() =>
+                        router.push(`/(tabs)/browse/list/${list.id}` as any)
+                      }
+                      activeOpacity={0.7}
+                    >
+                      <LeafIcon size={20} color={themeColors.text.tertiary()} />
+                      <Text
+                        style={[styles.listPillName, { color: themeColors.text.primary() }]}
+                        numberOfLines={1}
+                      >
+                        {list.name}
+                      </Text>
+                      <View style={styles.listPillCountGap} />
+                      <Text style={[styles.listPillCount, { color: themeColors.text.secondary() }]}>
+                        {list.metadata?.taskCount ?? 0}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </Animated.View>
+              )}
+            </>
+          ) : (
+            <View
+              style={[styles.browseSearchContent, styles.browseSearchContentBelowFloating]}
+              accessibilityRole="summary"
+              accessibilityLabel="Search: type to find tasks and lists. Filters and live results are not connected yet."
+            >
+              {/* static copy until search hits the backend — explains what this area will do */}
+              <Text style={[styles.searchModeHeadline, { color: themeColors.text.primary() }]}>
+                Search tasks & lists
+              </Text>
+              <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                Type in the field above to look across your tasks and list names. When search is wired to the
+                server, matches will appear here as you type, with the same look and feel as the rest of Browse.
+              </Text>
+              <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                Scroll the chip row horizontally for Recent, Top, Task, Description, and Lists — only one filter
+                stays selected at a time (tap again to clear); the API will use that choice for search results.
+              </Text>
+              <Text style={[styles.searchModeHint, { color: themeColors.text.tertiary() }]}>
+                Tip: tap Cancel or the close control to leave search and return to Inbox, Completed, Tags, and My
+                Lists.
+              </Text>
+            </View>
           )}
         </View>
-      </ScreenContainer>
+        </Animated.View>
+      </ScrollView>
 
-      {/* FAB: opens list-create with openedFrom so that screen knows browse launched it (for save/back later) */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          right: 0,
-          left: 0,
-          height: 120,
-          zIndex: 20,
-        }}
-        pointerEvents="box-none"
-      >
-        <FloatingActionButton
-          onPress={() =>
-            router.push({
-              pathname: '/(tabs)/browse/list-create' as any,
-              params: { openedFrom: LIST_CREATE_OPENED_FROM_BROWSE },
-            })
-          }
-          backgroundColor={themeColors.background.invertedPrimary()}
-          iconColor={themeColors.text.invertedPrimary()}
-          accessibilityLabel="Create new list"
-          accessibilityHint="Opens the new list screen"
-        />
-      </View>
+      {/* solid header band while search chrome is slid away — stays through exit anim so scroll doesn’t bleed into insets */}
+      {isBrowseSearchMode ? <View style={styles.searchModeTopInsetFill} pointerEvents="none" /> : null}
+
+      {isBrowseSearchMode ? (
+        <Animated.View
+          style={[floatingSearchBlockStyle, Platform.OS === 'android' && { elevation: 16 }]}
+        >
+          {/* unmount on close tap with chips so blur/gradient don’t linger while the bar animates down */}
+          {!exitingBrowseSearch ? (
+            <View style={styles.searchModeTopFade} pointerEvents="none">
+              <BlurView
+                tint={themeColors.isDark ? 'dark' : 'light'}
+                intensity={1}
+                style={StyleSheet.absoluteFill}
+              />
+              <LinearGradient
+                colors={[
+                  themeColors.background.primary(),
+                  themeColors.withOpacity(themeColors.background.primary(), 0),
+                ]}
+                locations={[0.4, 1]}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
+            </View>
+          ) : null}
+          <View style={styles.searchModeFloatingForeground} pointerEvents="box-none">
+            <Animated.View style={floatingSearchRowLayoutStyle}>
+              <Animated.View style={[floatingSearchPillWidthStyle, styles.floatingSearchPillSlot]}>
+                {Platform.OS === 'ios' ? (
+                  <GlassView
+                    style={[styles.searchTabFloating, styles.floatingSearchPillFill]}
+                    glassEffectStyle="clear"
+                    tintColor={themeColors.background.primary() as any}
+                    isInteractive
+                  >
+                    <View style={styles.searchTabInner}>{searchField}</View>
+                  </GlassView>
+                ) : (
+                  <View
+                    style={[
+                      styles.searchTabFloating,
+                      styles.searchTabAndroid,
+                      styles.floatingSearchPillFill,
+                      { backgroundColor: themeColors.background.primary() },
+                    ]}
+                  >
+                    {searchField}
+                  </View>
+                )}
+              </Animated.View>
+              <Animated.View
+                style={[
+                  styles.floatingCancelSlot,
+                  { marginLeft: SEARCH_TO_CANCEL_GAP },
+                  floatingCancelSlideStyle,
+                ]}
+              >
+                <MainCloseButton layout="inline" onPress={closeSearch} />
+              </Animated.View>
+            </Animated.View>
+            {/* chips hide on the same tap as close (exitingBrowseSearch) so only the bar animates down */}
+            {!exitingBrowseSearch ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+                removeClippedSubviews={false}
+                style={[
+                  styles.searchFilterChipsScroll,
+                  // full-bleed strip: cancel parent’s screen inset so the scroll view hits physical edges
+                  { marginLeft: -horizontalPadding, width: windowWidth, overflow: 'visible' },
+                ]}
+                contentContainerStyle={styles.searchFilterChipsContent}
+              >
+                {SEARCH_FILTER_CHIPS.map((chip) => (
+                  <BrowseSearchFilterChip
+                    key={chip.id}
+                    chip={chip}
+                    selected={activeSearchFilterId === chip.id}
+                    onToggle={toggleSearchFilterChip}
+                    themeColors={themeColors}
+                    styles={styles}
+                  />
+                ))}
+              </ScrollView>
+            ) : null}
+          </View>
+        </Animated.View>
+      ) : null}
+
+      {showBrowseBodyContent ? (
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            right: 0,
+            left: 0,
+            height: 120,
+            zIndex: 20,
+          }}
+          pointerEvents="box-none"
+        >
+          <FloatingActionButton
+            onPress={() =>
+              router.push({
+                pathname: '/(tabs)/browse/list-create' as any,
+                params: { openedFrom: LIST_CREATE_OPENED_FROM_BROWSE },
+              })
+            }
+            backgroundColor={themeColors.background.invertedPrimary()}
+            iconColor={themeColors.text.invertedPrimary()}
+            accessibilityLabel="Create new list"
+            accessibilityHint="Opens the new list screen"
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -293,7 +748,6 @@ const createStyles = (
   insets: ReturnType<typeof useSafeAreaInsets>
 ) =>
   StyleSheet.create({
-    // top section anchor - blur + gradient, fixed row for context menu (matches Today/Planner)
     topSectionAnchor: {
       position: 'absolute',
       top: 0,
@@ -302,56 +756,79 @@ const createStyles = (
       zIndex: 10,
       overflow: 'hidden',
     },
-
-    // row container for context menu - matches Today/Planner topSectionRow
     topSectionRow: {
       position: 'absolute',
       top: insets.top,
       left: 0,
       right: 0,
-      height: 48,
+      height: TOP_SECTION_ROW_HEIGHT,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'flex-end',
       paddingHorizontal: Paddings.screen,
     },
-
-    // placeholder on left - keeps context menu aligned right
     topSectionPlaceholder: {
       width: 44,
       height: 44,
       marginRight: 'auto',
     },
-
-    // context menu button - transparent bg to match Today screen
     topSectionContextButton: {
       marginLeft: 'auto',
       alignSelf: 'center',
       backgroundColor: 'transparent',
     },
-
-    // content wrapper - primary background, padding for grouped list
-    // overflow: visible so liquid glass search tab expansion is not clipped
+    mainScroll: {
+      flex: 1,
+      zIndex: 1,
+    },
+    searchModeTopInsetFill: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 9,
+      height: insets.top + TOP_SECTION_ROW_HEIGHT,
+      backgroundColor: themeColors.background.primary(),
+    },
+    searchModeTopFade: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      height: SEARCH_MODE_TOP_FADE_HEIGHT,
+      zIndex: 0,
+      overflow: 'visible',
+    },
+    searchModeFloatingForeground: {
+      zIndex: 1,
+    },
+    scrollContentContainer: {
+      flexGrow: 1,
+    },
+    browseModesLayout: {
+      flexGrow: 1,
+      alignSelf: 'stretch',
+    },
     contentWrapper: {
       flex: 1,
-      paddingTop: insets.top + 48,
+      paddingTop: insets.top + TOP_SECTION_ROW_HEIGHT + 12, // DO NOT CHANGE THIS FOR NOW
       paddingBottom: 120,
       paddingHorizontal: Paddings.screen,
       backgroundColor: themeColors.background.primary(),
       overflow: 'visible',
     },
-
-    // My Lists section header - 24px top padding to separate from grouped list above
-    myListsHeader: {
-      marginTop: 24,
+    searchAnchor: {
+      marginBottom: Paddings.groupedListHeaderContentGap + 4,
     },
-
-    // liquid glass search tab - pill above grouped list
-    // overflow: visible so iOS GlassView expansion/blur can extend beyond bounds (matches ScreenContextButton)
+    searchIdleWrap: {
+      alignSelf: 'stretch',
+    },
+    searchIdleHidden: {
+      opacity: 0,
+    },
     searchTab: {
       borderRadius: 20,
       overflow: 'visible',
-      marginTop: 16,
     },
     searchTabInner: {
       flexDirection: 'row',
@@ -371,22 +848,107 @@ const createStyles = (
       paddingVertical: Paddings.pillVertical,
       minHeight: 44,
     },
-
-    // grouped list section - no top padding (first list adds it manually)
+    floatingSearchPillSlot: {
+      minWidth: 0,
+    },
+    floatingSearchPillFill: {
+      width: '100%',
+    },
+    floatingCancelSlot: {
+      width: INLINE_CANCEL_TOUCH_SIZE,
+      minWidth: INLINE_CANCEL_TOUCH_SIZE,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'visible',
+    },
+    // horizontal-only chip strip; overflow visible + removeClippedSubviews false so liquid glass can extend past chip bounds
+    searchFilterChipsScroll: {
+      marginTop: SEARCH_BAR_TO_CHIPS_GAP,
+      flexGrow: 0,
+      overflow: 'visible',
+    },
+    searchFilterChipsContent: {
+      flexDirection: 'row',
+      flexWrap: 'nowrap',
+      alignItems: 'center',
+      gap: 16,
+      paddingTop: 0,
+      paddingBottom: 10,
+      // inset lives on scroll content, not the scroll view — aligns first chip with search field above
+      paddingLeft: Paddings.screen,
+      paddingRight: Paddings.screen,
+    },
+    searchFilterChipGlass: {
+      borderRadius: 20,
+      overflow: 'visible',
+    },
+    searchFilterChipInner: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      minHeight: 36,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    searchFilterChipAndroid: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      minHeight: 36,
+      borderRadius: 20,
+      overflow: 'visible',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    // fixed metrics for all states so selected vs idle doesn’t resize the pill and nudge sibling chips
+    searchFilterChipLabel: {
+      ...typography.getTextStyle('body-medium'),
+      fontWeight: '600',
+    },
+    searchTabFloating: {
+      borderRadius: 20,
+      overflow: 'visible',
+    },
+    searchInput: {
+      ...typography.getTextStyle('body-large'),
+      flex: 1,
+      marginLeft: Paddings.groupedListIconTextSpacing,
+      padding: 0,
+      backgroundColor: 'transparent',
+    },
+    myListsHeader: {
+      marginTop: 24,
+    },
+    browseSearchContent: {
+      flexGrow: 1,
+      minHeight: 120,
+      paddingTop: Paddings.touchTargetSmall,
+      // temporary: extra space so search placeholder scrolls on short screens; trim when real results list ships
+      paddingBottom: 480,
+    },
+    browseSearchContentBelowFloating: {
+      // keeps placeholder text below the absolute search bar + chip strip
+      paddingTop: SEARCH_OVERLAY_TOP_CLEARANCE,
+    },
+    searchModeHeadline: {
+      ...typography.getTextStyle('body-large'),
+      fontWeight: '600',
+      marginBottom: 12,
+    },
+    searchModeBody: {
+      ...typography.getTextStyle('body-medium'),
+      marginBottom: 14,
+      lineHeight: 22,
+    },
+    searchModeHint: {
+      ...typography.getTextStyle('body-small'),
+      marginTop: 8,
+      lineHeight: 20,
+    },
     groupedListSection: {
       paddingTop: 0,
     },
-    // first grouped list only - 24px spacing above (search tab → list)
-    firstGroupedListSection: {
-      paddingTop: 24,
-    },
-
-    // list container - no extra margin (FormDetailSection uses marginVertical: 0)
     listContainer: {
       marginVertical: 0,
     },
-
-    // lists as separated pills - gap between My Lists header and pills (matches header-to-list spacing)
     listsPillsContainer: {
       flexDirection: 'row',
       flexWrap: 'wrap',
