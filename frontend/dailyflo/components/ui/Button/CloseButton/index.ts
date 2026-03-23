@@ -13,3 +13,5 @@ export type { MainBackButtonProps } from './MainBackButton';
 export { MainSubmitButton } from './MainSubmitButton';
 export type { MainSubmitButtonProps } from './MainSubmitButton';
 
+export { MainCreateButton } from './MainCreateButton';
+export type { MainCreateButtonProps } from './MainCreateButton';

@@ -6,6 +6,7 @@
  */
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { EXAMPLE_LISTS } from '@/app/(tabs)/browse/_data/exampleLists';
 import { List, CreateListInput, UpdateListInput, ListFilters, ListSortOptions } from '../../../types';
 
 /**
@@ -90,47 +91,8 @@ export const fetchLists = createAsyncThunk(
       // const response = await api.getLists();
       // return response.data;
       
-      // For now, return mock data
-      const mockLists: List[] = [
-        {
-          id: '1',
-          userId: 'user1',
-          name: 'Work',
-          description: 'Work-related tasks',
-          color: 'blue',
-          icon: 'briefcase',
-          isDefault: false,
-          sortOrder: 0,
-          metadata: {
-            taskCount: 5,
-            completedTaskCount: 2,
-            lastUsed: new Date(),
-          },
-          softDeleted: false,
-          createdAt: new Date('2024-01-01'),
-          updatedAt: new Date('2024-01-10'),
-        },
-        {
-          id: '2',
-          userId: 'user1',
-          name: 'Personal',
-          description: 'Personal tasks and errands',
-          color: 'green',
-          icon: 'home',
-          isDefault: true,
-          sortOrder: 1,
-          metadata: {
-            taskCount: 3,
-            completedTaskCount: 1,
-            lastUsed: new Date(),
-          },
-          softDeleted: false,
-          createdAt: new Date('2024-01-01'),
-          updatedAt: new Date('2024-01-10'),
-        },
-      ];
-      
-      return mockLists;
+      // same lists as browse “My Lists” pills so manage-lists + list/[id] stay aligned on ids
+      return EXAMPLE_LISTS.map((l) => ({ ...l }));
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch lists');
     }
@@ -299,6 +261,28 @@ const listsSlice = createSlice({
           state.filteredLists[filteredIndex] = { ...state.filteredLists[filteredIndex], ...updates };
         }
       }
+    },
+
+    // reorder lists after drag-and-drop: ids in display order; rewrites sortOrder 0..n-1
+    reorderLists: (state, action: PayloadAction<string[]>) => {
+      const orderedIds = action.payload;
+      const map = new Map(state.lists.map((l) => [l.id, l]));
+      const next: List[] = [];
+      let i = 0;
+      for (const id of orderedIds) {
+        const list = map.get(id);
+        if (list) {
+          next.push({ ...list, sortOrder: i, updatedAt: new Date() });
+          map.delete(id);
+          i += 1;
+        }
+      }
+      map.forEach((list) => {
+        next.push({ ...list, sortOrder: i, updatedAt: new Date() });
+        i += 1;
+      });
+      state.lists = next;
+      state.filteredLists = applyFilters(next, state.filters);
     },
   },
   
@@ -471,6 +455,7 @@ export const {
   setEditingListId,
   updateListTaskCount,
   optimisticUpdateList,
+  reorderLists,
 } = listsSlice.actions;
 
 export default listsSlice.reducer;
