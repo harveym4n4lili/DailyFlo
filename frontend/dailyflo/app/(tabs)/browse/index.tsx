@@ -3,7 +3,7 @@
  *
  * Search mode: `searchOpen` / `isBrowseSearchMode` — user tapped the search row; floating field docks, top chrome hides.
  * Search results/placeholder live in an **overlay** `ScrollView`; browse lists stay in a **persistent** `ScrollView` (never unmounted for search) so cold-load and post-search top spacing match — only opacity/pointerEvents toggle.
- * Idle “Tasks/Lists” is **position: absolute** at `idleSearchBarTop` so its Y matches `measuredRowTop` used in `floatingSearchBlockStyle` / lift — no measureInWindow drift.
+ * Idle “Search” pill is **position: absolute** at `idleSearchBarTop` so its Y matches `measuredRowTop` used in `floatingSearchBlockStyle` / lift — no measureInWindow drift.
  * On close tap, `exitingBrowseSearch` is set so lists/FAB and filter chips hide immediately while `searchOpen` stays true until the bar/chrome finish sliding down.
  * `browseModesLayout` — animated wrapper: translates scroll content by the same delta as the floating search bar (row → docked) so the body moves with the bar.
  * Filter chips render only when `isBrowseSearchMode`; they sit in the same absolutely positioned block as the bar so they stay directly under it while animating.
@@ -527,18 +527,16 @@ export default function BrowseScreen() {
       <SFSymbolIcon
         name="magnifyingglass"
         size={20}
-        color={themeColors.text.primary()}
-        fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
+        color={themeColors.text.tertiary()}
+        fallback={<BrowseIcon size={18} color={themeColors.text.tertiary()} />}
       />
       <TextInput
         ref={floatingInputRef}
         value={query}
         onChangeText={setQuery}
-        placeholder="Tasks/Lists"
-        // tertiary while actively searching; on close tap match idle row label (primary) before the bar finishes moving
-        placeholderTextColor={
-          exitingBrowseSearch ? themeColors.text.primary() : themeColors.text.tertiary()
-        }
+        placeholder="Search"
+        // same as idle pill: tertiary for empty field; typed query uses primary() below
+        placeholderTextColor={themeColors.text.tertiary()}
         style={[styles.searchInput, { color: themeColors.text.primary() }]}
         returnKeyType="search"
         autoCorrect={false}
@@ -679,10 +677,10 @@ export default function BrowseScreen() {
                   <SFSymbolIcon
                     name="magnifyingglass"
                     size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
+                    color={themeColors.text.tertiary()}
+                    fallback={<BrowseIcon size={18} color={themeColors.text.tertiary()} />}
                   />
-                  <Text style={[styles.searchTabLabel, { color: themeColors.text.primary() }]}>Tasks/Lists</Text>
+                  <Text style={[styles.searchTabLabel, { color: themeColors.text.tertiary() }]}>Search</Text>
                 </Pressable>
               </GlassView>
             ) : (
@@ -694,10 +692,10 @@ export default function BrowseScreen() {
                 <SFSymbolIcon
                   name="magnifyingglass"
                   size={20}
-                  color={themeColors.text.primary()}
-                  fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
+                  color={themeColors.text.tertiary()}
+                  fallback={<BrowseIcon size={18} color={themeColors.text.tertiary()} />}
                 />
-                <Text style={[styles.searchTabLabel, { color: themeColors.text.primary() }]}>Tasks/Lists</Text>
+                <Text style={[styles.searchTabLabel, { color: themeColors.text.tertiary() }]}>Search</Text>
               </TouchableOpacity>
             )}
           </View>
