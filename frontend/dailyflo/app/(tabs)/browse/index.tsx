@@ -2,7 +2,8 @@
  * Browse Screen
  *
  * Search mode: `searchOpen` / `isBrowseSearchMode` — user tapped the search row; floating field docks, top chrome hides.
- * Non-search content unmounts while search is “active”; `browseSearchContent` shows instead.
+ * Search results/placeholder live in an **overlay** `ScrollView`; browse lists stay in a **persistent** `ScrollView` (never unmounted for search) so cold-load and post-search top spacing match — only opacity/pointerEvents toggle.
+ * Idle “Tasks/Lists” is **position: absolute** at `idleSearchBarTop` so its Y matches `measuredRowTop` used in `floatingSearchBlockStyle` / lift — no measureInWindow drift.
  * On close tap, `exitingBrowseSearch` is set so lists/FAB and filter chips hide immediately while `searchOpen` stays true until the bar/chrome finish sliding down.
  * `browseModesLayout` — animated wrapper: translates scroll content by the same delta as the floating search bar (row → docked) so the body moves with the bar.
  * Filter chips render only when `isBrowseSearchMode`; they sit in the same absolutely positioned block as the bar so they stay directly under it while animating.
@@ -25,7 +26,7 @@ import {
   useWindowDimensions,
   type TextStyle,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, type Router } from 'expo-router';
 import Animated, {
   FadeInUp,
   FadeOutUp,
@@ -64,19 +65,33 @@ const FLOATING_ROW_CANCEL_RESERVE = SEARCH_TO_CANCEL_GAP + INLINE_CANCEL_TOUCH_S
 const FLOATING_SEARCH_BLOCK_WIDTH_BLEED = 8;
 // height of the docked search row (matches searchTabInner minHeight) — used to stack filter chips below the bar
 const FLOATING_SEARCH_BAR_ROW_HEIGHT = 44;
+// non-search: gradient/blur band continues this far *below* the idle floating search bar into the list area (larger = longer fade)
+const BROWSE_IDLE_TOP_BLUR_TAIL_PAST_PILL = TOP_SECTION_ROW_HEIGHT + (FLOATING_SEARCH_BAR_ROW_HEIGHT / 2);
 // vertical space between docked search row and chip strip (also folded into fade height + scroll placeholder inset)
 const SEARCH_BAR_TO_CHIPS_GAP = 16;
-// placeholder/results need top inset so text is not under the absolute search bar + gap + chip row
+// keep in sync with styles.searchFilterChipInner + styles.searchFilterChipsContent (chip vertical padding + minHeight + row paddingBottom)
+const SEARCH_FILTER_CHIP_PADDING_V = 8;
+const SEARCH_FILTER_CHIP_MIN_HEIGHT = 36;
+const SEARCH_FILTER_CHIPS_CONTENT_PADDING_BOTTOM = 10;
+const SEARCH_CHIP_ROW_HEIGHT =
+  SEARCH_FILTER_CHIP_PADDING_V * 2 +
+  SEARCH_FILTER_CHIP_MIN_HEIGHT +
+  SEARCH_FILTER_CHIPS_CONTENT_PADDING_BOTTOM;
+// floating row uses minHeight 44; searchTabInner paddingVertical (pillVertical) sits *inside* that box — no extra add here
+// scroll placeholder starts below full bar + gap + chip scroller (includes chip paddings + content paddingBottom)
 const SEARCH_OVERLAY_TOP_CLEARANCE =
-  FLOATING_SEARCH_BAR_ROW_HEIGHT + SEARCH_BAR_TO_CHIPS_GAP;
-// blur + gradient behind search row + gap + chips; tail fades into scroll content
-// chip row + contentContainerStyle paddingVertical so fade still covers liquid-glass halo
-const SEARCH_CHIPS_ROW_ESTIMATE = 60;
+  FLOATING_SEARCH_BAR_ROW_HEIGHT + SEARCH_BAR_TO_CHIPS_GAP + SEARCH_CHIP_ROW_HEIGHT;
+// blur strip behind bar + gap + chips + small bleed below chips for liquid-glass halo
+const SEARCH_MODE_TOP_FADE_BLEED_BELOW_CHIPS = 28;
 const SEARCH_MODE_TOP_FADE_HEIGHT =
   FLOATING_SEARCH_BAR_ROW_HEIGHT +
   SEARCH_BAR_TO_CHIPS_GAP +
-  SEARCH_CHIPS_ROW_ESTIMATE +
-  28;
+  SEARCH_CHIP_ROW_HEIGHT +
+  SEARCH_MODE_TOP_FADE_BLEED_BELOW_CHIPS;
+
+// ios default is "automatic": system adds safe-area to scroll content insets ON TOP of our paddingTop (insets.top + …) — cold start looks like huge pill→list gap; remount after search often "fixes" because insets settle. we handle safe area only in layout math.
+const iosScrollNoAutomaticSafeAreaInsets =
+  Platform.OS === 'ios' ? ({ contentInsetAdjustmentBehavior: 'never' as const } as const) : {};
 
 // filter chips: order is fixed; ids are for toggles until search api exists
 const DEFAULT_SEARCH_FILTER_CHIP_ID = 'recent';
@@ -179,6 +194,136 @@ function BrowseSearchFilterChip({
   );
 }
 
+// shared list column so browse scroll can wrap it in Animated (exit lift only) or plain View (idle — no hidden translateY)
+function BrowseListsColumn({
+  browseListsPaddingTop,
+  styles,
+  themeColors,
+  router,
+  sortedLists,
+  isMyListsExpanded,
+  setIsMyListsExpanded,
+}: {
+  browseListsPaddingTop: number;
+  styles: ReturnType<typeof createStyles>;
+  themeColors: ReturnType<typeof useThemeColors>;
+  router: Router;
+  sortedLists: { id: string; name: string; metadata?: { taskCount?: number }; sortOrder: number }[];
+  isMyListsExpanded: boolean;
+  setIsMyListsExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
+  return (
+    <View style={[styles.browseListsContentWrapper, { paddingTop: browseListsPaddingTop }]}>
+      <View style={styles.groupedListSection}>
+        <GroupedList
+          containerStyle={styles.listContainer}
+          backgroundColor={themeColors.background.primarySecondaryBlend()}
+          separatorColor={themeColors.border.primary()}
+          separatorInsetRight={Paddings.groupedListContentHorizontal}
+          separatorVariant="solid"
+          borderRadius={24}
+          minimalStyle={false}
+          separatorConsiderIconColumn={true}
+          iconColumnWidth={30}
+        >
+          <FormDetailButton
+            key="inbox"
+            iconComponent={
+              <SFSymbolIcon
+                name="tray.full"
+                size={20}
+                color={themeColors.text.primary()}
+                fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
+              />
+            }
+            label="Inbox"
+            value=""
+            onPress={() => router.push('/(tabs)/browse/inbox')}
+            showChevron={false}
+          />
+          <FormDetailButton
+            key="completed"
+            iconComponent={
+              <SFSymbolIcon
+                name="checkmark.circle.fill"
+                size={20}
+                color={themeColors.text.primary()}
+                fallback={<TickIcon size={18} color={themeColors.text.primary()} />}
+              />
+            }
+            label="Completed"
+            value=""
+            onPress={() => router.push('/(tabs)/browse/completed')}
+            showChevron={false}
+          />
+          <FormDetailButton
+            key="tags"
+            iconComponent={
+              <SFSymbolIcon
+                name="tag"
+                size={20}
+                color={themeColors.text.primary()}
+                fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
+              />
+            }
+            label="Tags"
+            value=""
+            onPress={() => router.push('/(tabs)/browse/tags')}
+            showChevron={false}
+          />
+        </GroupedList>
+      </View>
+
+      <GroupedListHeader
+        title="My Lists"
+        showDropdownArrow
+        isExpanded={isMyListsExpanded}
+        onPress={() => setIsMyListsExpanded((prev) => !prev)}
+        style={styles.myListsHeader}
+      />
+
+      {isMyListsExpanded && (
+        <Animated.View
+          entering={FadeInUp.duration(200)}
+          exiting={FadeOutUp.duration(200)}
+          style={styles.listsPillsContainer}
+        >
+          <TouchableOpacity
+            style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
+            onPress={() => router.push('/(tabs)/browse/manage-lists')}
+            activeOpacity={0.7}
+          >
+            <PencilIcon size={20} color={themeColors.text.primary()} />
+            <Text
+              style={[styles.listPillName, styles.listPillNameBold, { color: themeColors.text.primary() }]}
+              numberOfLines={1}
+            >
+              Manage Lists
+            </Text>
+          </TouchableOpacity>
+          {sortedLists.map((list) => (
+            <TouchableOpacity
+              key={list.id}
+              style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
+              onPress={() => router.push(`/(tabs)/browse/list/${list.id}` as any)}
+              activeOpacity={0.7}
+            >
+              <LeafIcon size={20} color={themeColors.text.tertiary()} />
+              <Text style={[styles.listPillName, { color: themeColors.text.primary() }]} numberOfLines={1}>
+                {list.name}
+              </Text>
+              <View style={styles.listPillCountGap} />
+              <Text style={[styles.listPillCount, { color: themeColors.text.secondary() }]}>
+                {list.metadata?.taskCount ?? 0}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </Animated.View>
+      )}
+    </View>
+  );
+}
+
 export default function BrowseScreen() {
   const router = useRouter();
   const themeColors = useThemeColors();
@@ -189,7 +334,6 @@ export default function BrowseScreen() {
   const { lists, fetchLists } = useLists();
 
   const rootRef = useRef<View>(null);
-  const searchAnchorRef = useRef<View>(null);
   const floatingInputRef = useRef<TextInput>(null);
 
   const [query, setQuery] = useState('');
@@ -206,14 +350,29 @@ export default function BrowseScreen() {
     searchOpenRef.current = searchOpen;
   }, [searchOpen]);
 
-  const contentTopPad = insets.top + TOP_SECTION_ROW_HEIGHT;
   const dockedSearchTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
-  const topChromeSlideDistance = contentTopPad;
   const horizontalPadding = Paddings.screen;
   const floatingRowWidth = windowWidth - horizontalPadding * 2;
 
+  // fixed Y for idle pill + animation anchor (same as old scroll-row top): aligns with floating bar interpolate(measuredRowTop → dockedSearchTop)
+  const idleSearchBarTop = insets.top + TOP_SECTION_ROW_HEIGHT + 12;
+  // blur/gradient chrome covers settings row + gap + pill + tail so fade continues past the idle bar (non-search); search open uses same slide distance so the whole band clears
+  const topChromeHeight =
+    idleSearchBarTop + FLOATING_SEARCH_BAR_ROW_HEIGHT + BROWSE_IDLE_TOP_BLUR_TAIL_PAST_PILL;
+  const topChromeSlideDistance = topChromeHeight;
+  // first list row starts below the absolute pill + same gap as former searchAnchor marginBottom
+  const browseListsPaddingTop =
+   FLOATING_SEARCH_BAR_ROW_HEIGHT + TOP_SECTION_ROW_HEIGHT + Paddings.screen + 12;
+
   const focusProgress = useSharedValue(0);
-  const measuredRowTop = useSharedValue(0);
+  const measuredRowTop = useSharedValue(idleSearchBarTop);
+
+  // keep anchor in sync with safe-area when not in search mode so open/close math matches layout
+  useEffect(() => {
+    if (!searchOpen) {
+      measuredRowTop.value = idleSearchBarTop;
+    }
+  }, [idleSearchBarTop, searchOpen, measuredRowTop]);
 
   useFocusEffect(
     useCallback(() => {
@@ -234,30 +393,21 @@ export default function BrowseScreen() {
     setActiveSearchFilterId((prev) => (prev === id ? prev : id));
   }, []);
 
-  // anchor y relative to root (so floating `top` matches the same coordinate system as dockedSearchTop)
-  const measureSearchAnchorTop = useCallback((): Promise<number> => {
-    return new Promise((resolve) => {
-      searchAnchorRef.current?.measureInWindow((ax, ay, aw, ah) => {
-        rootRef.current?.measureInWindow((rx, ry, rw, rh) => {
-          resolve(ay - ry);
-        });
-      });
-    });
-  }, []);
-
-  const openSearch = useCallback(async () => {
-    const top = await measureSearchAnchorTop();
-    measuredRowTop.value = top;
+  const openSearch = useCallback(() => {
+    // absolute idle bar uses idleSearchBarTop — snapshot that value for the floating bar + scroll lift (same as pre-absolute measure path)
+    measuredRowTop.value = idleSearchBarTop;
     setExitingBrowseSearch(false);
     setSearchOpen(true);
-  }, [measureSearchAnchorTop, measuredRowTop]);
+  }, [idleSearchBarTop, measuredRowTop]);
 
   const finishCloseSearch = useCallback(() => {
     closeAnimatingRef.current = false;
     setSearchOpen(false);
     setExitingBrowseSearch(false);
     setActiveSearchFilterId(DEFAULT_SEARCH_FILTER_CHIP_ID);
-  }, []);
+    // hard-zero so browse scroll never keeps a stale translateY after exit (fixes pill→Inbox gap vs cold start)
+    focusProgress.value = 0;
+  }, [focusProgress]);
 
   const closeSearch = useCallback(() => {
     if (!searchOpenRef.current || closeAnimatingRef.current) return;
@@ -267,7 +417,7 @@ export default function BrowseScreen() {
     setExitingBrowseSearch(true);
     // do not update measuredRowTop here while focusProgress is still 1 — that changes `lift` in
     // browseModesLayoutStyle instantly and the bar/content jump instead of animating down.
-    // exit uses the same measuredRowTop from open; next open re-measures.
+    // exit uses the same measuredRowTop from open (idleSearchBarTop when bar is absolute).
     focusProgress.value = withTiming(
       0,
       { duration: FOCUS_ANIM_MS, easing: Easing.out(Easing.cubic) },
@@ -289,6 +439,13 @@ export default function BrowseScreen() {
     });
     return () => cancelAnimationFrame(t);
   }, [searchOpen, focusProgress]);
+
+  // when browse is the only mode again, guarantee lift transform is cleared (covers edge cases where reanimated leaves epsilon or remount order differs from cold load)
+  useEffect(() => {
+    if (!searchOpen && !exitingBrowseSearch) {
+      focusProgress.value = 0;
+    }
+  }, [searchOpen, exitingBrowseSearch, focusProgress]);
 
   const topChromeStyle = useAnimatedStyle(() => ({
     transform: [
@@ -393,19 +550,20 @@ export default function BrowseScreen() {
   return (
     <View ref={rootRef} style={{ flex: 1 }}>
       <Animated.View
-        style={[styles.topSectionAnchor, { height: contentTopPad }, topChromeStyle]}
+        style={[styles.topSectionAnchor, { height: topChromeHeight }, topChromeStyle]}
       >
         <BlurView
           tint={themeColors.isDark ? 'dark' : 'light'}
           intensity={1}
           style={StyleSheet.absoluteFill}
         />
+        {/* three stops so fade reads through the pill row and keeps softening below it (top chrome height includes pill + BROWSE_IDLE_TOP_BLUR_TAIL_PAST_PILL) */}
         <LinearGradient
           colors={[
             themeColors.background.primary(),
             themeColors.withOpacity(themeColors.background.primary(), 0),
           ]}
-          locations={[0.4, 1]}
+          locations={[0.4,0.8]}
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
@@ -420,204 +578,131 @@ export default function BrowseScreen() {
         </View>
       </Animated.View>
 
-      <ScrollView
-        style={styles.mainScroll}
-        contentContainerStyle={styles.scrollContentContainer}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-      >
-        <Animated.View style={[styles.browseModesLayout, browseModesLayoutStyle]}>
-        <View style={styles.contentWrapper}>
-          <View ref={searchAnchorRef} style={styles.searchAnchor}>
-            {/* same tree always so row height never changes when toggling search mode */}
-            <View
-              style={[styles.searchIdleWrap, isBrowseSearchMode && styles.searchIdleHidden]}
-              pointerEvents={isBrowseSearchMode ? 'none' : 'auto'}
-              accessibilityElementsHidden={isBrowseSearchMode}
-              importantForAccessibility={isBrowseSearchMode ? 'no-hide-descendants' : 'auto'}
-            >
-              {Platform.OS === 'ios' ? (
-                <GlassView
-                  style={styles.searchTab}
-                  glassEffectStyle="clear"
-                  tintColor={themeColors.background.primary() as any}
-                  isInteractive
+      {/* browse scroll stays mounted (opacity off during full search) so ios/android don’t remeasure a new scroll view — fixes pill→list gap differing cold vs after search */}
+      <View style={styles.browseScrollStack}>
+        <ScrollView
+          {...iosScrollNoAutomaticSafeAreaInsets}
+          style={[styles.mainScroll, !showBrowseBodyContent && styles.browseScrollHidden]}
+          pointerEvents={showBrowseBodyContent ? 'auto' : 'none'}
+          contentContainerStyle={styles.scrollContentContainerBrowse}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        >
+          {/* lift transform only while exit animation runs — idle browse uses a plain View so no hidden translateY vs cold load */}
+          {exitingBrowseSearch ? (
+            <Animated.View style={[styles.browseModesLayoutBrowse, browseModesLayoutStyle]}>
+              <BrowseListsColumn
+                browseListsPaddingTop={browseListsPaddingTop}
+                styles={styles}
+                themeColors={themeColors}
+                router={router}
+                sortedLists={sortedLists}
+                isMyListsExpanded={isMyListsExpanded}
+                setIsMyListsExpanded={setIsMyListsExpanded}
+              />
+            </Animated.View>
+          ) : (
+            <View style={styles.browseModesLayoutBrowse}>
+              <BrowseListsColumn
+                browseListsPaddingTop={browseListsPaddingTop}
+                styles={styles}
+                themeColors={themeColors}
+                router={router}
+                sortedLists={sortedLists}
+                isMyListsExpanded={isMyListsExpanded}
+                setIsMyListsExpanded={setIsMyListsExpanded}
+              />
+            </View>
+          )}
+        </ScrollView>
+
+        {isBrowseSearchMode && !exitingBrowseSearch ? (
+          <ScrollView
+            {...iosScrollNoAutomaticSafeAreaInsets}
+            style={[styles.mainScroll, styles.searchScrollOverlay]}
+            contentContainerStyle={styles.scrollContentContainer}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          >
+            <Animated.View style={[styles.browseModesLayout, browseModesLayoutStyle]}>
+              <View style={styles.contentWrapper}>
+                <View
+                  style={[styles.browseSearchContent, styles.browseSearchContentBelowFloating]}
+                  accessibilityRole="summary"
+                  accessibilityLabel="Search: type to find tasks and lists. Filters and live results are not connected yet."
                 >
-                  <Pressable onPress={openSearch} style={styles.searchTabInner}>
-                    <SFSymbolIcon
-                      name="magnifyingglass"
-                      size={20}
-                      color={themeColors.text.primary()}
-                      fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
-                    />
-                    <Text style={[styles.searchTabLabel, { color: themeColors.text.primary() }]}>
-                      Tasks/Lists
-                    </Text>
-                  </Pressable>
-                </GlassView>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.searchTab, styles.searchTabAndroid, { backgroundColor: themeColors.background.primary() }]}
-                  onPress={openSearch}
-                  activeOpacity={0.7}
-                >
+                  {/* static copy until search hits the backend — explains what this area will do */}
+                  <Text style={[styles.searchModeHeadline, { color: themeColors.text.primary() }]}>
+                    Search tasks & lists
+                  </Text>
+                  <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                    Type in the field above to look across your tasks and list names. When search is wired to the
+                    server, matches will appear here as you type, with the same look and feel as the rest of Browse.
+                  </Text>
+                  <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                    Scroll the chip row horizontally for Recent, Top, Task, Description, and Lists — only one filter
+                    stays selected at a time (tap again to clear); the API will use that choice for search results.
+                  </Text>
+                  <Text style={[styles.searchModeHint, { color: themeColors.text.tertiary() }]}>
+                    Tip: tap Cancel or the close control to leave search and return to Inbox, Completed, Tags, and My
+                    Lists.
+                  </Text>
+                </View>
+              </View>
+            </Animated.View>
+          </ScrollView>
+        ) : null}
+      </View>
+
+      {/* idle pill fixed in window space — measuredRowTop === idleSearchBarTop so floating bar anim matches without layout measure */}
+      {showBrowseBodyContent ? (
+        <View
+          style={[styles.searchIdleAbsolute, { top: idleSearchBarTop }]}
+          pointerEvents="box-none"
+        >
+          <View
+            style={[styles.searchIdleWrap, isBrowseSearchMode && styles.searchIdleHidden]}
+            pointerEvents={isBrowseSearchMode ? 'none' : 'auto'}
+            accessibilityElementsHidden={isBrowseSearchMode}
+            importantForAccessibility={isBrowseSearchMode ? 'no-hide-descendants' : 'auto'}
+          >
+            {Platform.OS === 'ios' ? (
+              <GlassView
+                style={styles.searchTab}
+                glassEffectStyle="clear"
+                tintColor={themeColors.background.primary() as any}
+                isInteractive
+              >
+                <Pressable onPress={openSearch} style={styles.searchTabInner}>
                   <SFSymbolIcon
                     name="magnifyingglass"
                     size={20}
                     color={themeColors.text.primary()}
                     fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
                   />
-                  <Text style={[styles.searchTabLabel, { color: themeColors.text.primary() }]}>
-                    Tasks/Lists
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
+                  <Text style={[styles.searchTabLabel, { color: themeColors.text.primary() }]}>Tasks/Lists</Text>
+                </Pressable>
+              </GlassView>
+            ) : (
+              <TouchableOpacity
+                style={[styles.searchTab, styles.searchTabAndroid, { backgroundColor: themeColors.background.primary() }]}
+                onPress={openSearch}
+                activeOpacity={0.7}
+              >
+                <SFSymbolIcon
+                  name="magnifyingglass"
+                  size={20}
+                  color={themeColors.text.primary()}
+                  fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
+                />
+                <Text style={[styles.searchTabLabel, { color: themeColors.text.primary() }]}>Tasks/Lists</Text>
+              </TouchableOpacity>
+            )}
           </View>
-
-          {/* browse non-search: lists + my lists — hidden during search placeholder; shown again as soon as user closes search */}
-          {showBrowseBodyContent ? (
-            <>
-              <View style={styles.groupedListSection}>
-                <GroupedList
-                  containerStyle={styles.listContainer}
-                  backgroundColor={themeColors.background.primarySecondaryBlend()}
-                  separatorColor={themeColors.border.primary()}
-                  separatorInsetRight={Paddings.groupedListContentHorizontal}
-                  separatorVariant="solid"
-                  borderRadius={24}
-                  minimalStyle={false}
-                  separatorConsiderIconColumn={true}
-                  iconColumnWidth={30}
-                >
-                  <FormDetailButton
-                    key="inbox"
-                    iconComponent={
-                      <SFSymbolIcon
-                        name="tray.full"
-                        size={20}
-                        color={themeColors.text.primary()}
-                        fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
-                      />
-                    }
-                    label="Inbox"
-                    value=""
-                    onPress={() => router.push('/(tabs)/browse/inbox')}
-                    showChevron={false}
-                  />
-                  <FormDetailButton
-                    key="completed"
-                    iconComponent={
-                      <SFSymbolIcon
-                        name="checkmark.circle.fill"
-                        size={20}
-                        color={themeColors.text.primary()}
-                        fallback={<TickIcon size={18} color={themeColors.text.primary()} />}
-                      />
-                    }
-                    label="Completed"
-                    value=""
-                    onPress={() => router.push('/(tabs)/browse/completed')}
-                    showChevron={false}
-                  />
-                  <FormDetailButton
-                    key="tags"
-                    iconComponent={
-                      <SFSymbolIcon
-                        name="tag"
-                        size={20}
-                        color={themeColors.text.primary()}
-                        fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />}
-                      />
-                    }
-                    label="Tags"
-                    value=""
-                    onPress={() => router.push('/(tabs)/browse/tags')}
-                    showChevron={false}
-                  />
-                </GroupedList>
-              </View>
-
-              <GroupedListHeader
-                title="My Lists"
-                showDropdownArrow
-                isExpanded={isMyListsExpanded}
-                onPress={() => setIsMyListsExpanded((prev) => !prev)}
-                style={styles.myListsHeader}
-              />
-
-              {isMyListsExpanded && (
-                <Animated.View
-                  entering={FadeInUp.duration(200)}
-                  exiting={FadeOutUp.duration(200)}
-                  style={styles.listsPillsContainer}
-                >
-                  <TouchableOpacity
-                    style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
-                    onPress={() => router.push('/(tabs)/browse/manage-lists')}
-                    activeOpacity={0.7}
-                  >
-                    <PencilIcon size={20} color={themeColors.text.primary()} />
-                    <Text
-                      style={[styles.listPillName, styles.listPillNameBold, { color: themeColors.text.primary() }]}
-                      numberOfLines={1}
-                    >
-                      Manage Lists
-                    </Text>
-                  </TouchableOpacity>
-                  {sortedLists.map((list) => (
-                    <TouchableOpacity
-                      key={list.id}
-                      style={[styles.listPill, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
-                      onPress={() =>
-                        router.push(`/(tabs)/browse/list/${list.id}` as any)
-                      }
-                      activeOpacity={0.7}
-                    >
-                      <LeafIcon size={20} color={themeColors.text.tertiary()} />
-                      <Text
-                        style={[styles.listPillName, { color: themeColors.text.primary() }]}
-                        numberOfLines={1}
-                      >
-                        {list.name}
-                      </Text>
-                      <View style={styles.listPillCountGap} />
-                      <Text style={[styles.listPillCount, { color: themeColors.text.secondary() }]}>
-                        {list.metadata?.taskCount ?? 0}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </Animated.View>
-              )}
-            </>
-          ) : (
-            <View
-              style={[styles.browseSearchContent, styles.browseSearchContentBelowFloating]}
-              accessibilityRole="summary"
-              accessibilityLabel="Search: type to find tasks and lists. Filters and live results are not connected yet."
-            >
-              {/* static copy until search hits the backend — explains what this area will do */}
-              <Text style={[styles.searchModeHeadline, { color: themeColors.text.primary() }]}>
-                Search tasks & lists
-              </Text>
-              <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
-                Type in the field above to look across your tasks and list names. When search is wired to the
-                server, matches will appear here as you type, with the same look and feel as the rest of Browse.
-              </Text>
-              <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
-                Scroll the chip row horizontally for Recent, Top, Task, Description, and Lists — only one filter
-                stays selected at a time (tap again to clear); the API will use that choice for search results.
-              </Text>
-              <Text style={[styles.searchModeHint, { color: themeColors.text.tertiary() }]}>
-                Tip: tap Cancel or the close control to leave search and return to Inbox, Completed, Tags, and My
-                Lists.
-              </Text>
-            </View>
-          )}
         </View>
-        </Animated.View>
-      </ScrollView>
+      ) : null}
 
       {/* solid header band while search chrome is slid away — stays through exit anim so scroll doesn’t bleed into insets */}
       {isBrowseSearchMode ? <View style={styles.searchModeTopInsetFill} pointerEvents="none" /> : null}
@@ -777,9 +862,34 @@ const createStyles = (
       alignSelf: 'center',
       backgroundColor: 'transparent',
     },
+    browseScrollStack: {
+      flex: 1,
+      // default relative so searchScrollOverlay absolute fill is bounded to tab body
+      position: 'relative',
+    },
     mainScroll: {
       flex: 1,
       zIndex: 1,
+    },
+    // hides lists under search overlay without unmounting — keeps one native scroll metrics path for grouped lists
+    browseScrollHidden: {
+      opacity: 0,
+    },
+    // full-area search scroll above browse; only mounted while search is active (exit swaps back to browse-only chrome)
+    searchScrollOverlay: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      zIndex: 3,
+    },
+    // absolute idle pill — same horizontal inset as scroll lists (contentWrapper)
+    searchIdleAbsolute: {
+      position: 'absolute',
+      left: Paddings.screen,
+      right: Paddings.screen,
+      zIndex: 15,
     },
     searchModeTopInsetFill: {
       position: 'absolute',
@@ -805,8 +915,15 @@ const createStyles = (
     scrollContentContainer: {
       flexGrow: 1,
     },
+    // browse lists only: don’t grow content to fill viewport — avoids different vertical distribution after search scroll remount vs first load
+    scrollContentContainerBrowse: {
+      flexGrow: 0,
+    },
     browseModesLayout: {
       flexGrow: 1,
+      alignSelf: 'stretch',
+    },
+    browseModesLayoutBrowse: {
       alignSelf: 'stretch',
     },
     contentWrapper: {
@@ -817,8 +934,13 @@ const createStyles = (
       backgroundColor: themeColors.background.primary(),
       overflow: 'visible',
     },
-    searchAnchor: {
-      marginBottom: Paddings.groupedListHeaderContentGap + 4,
+    // browse lists only: paddingTop applied inline (below absolute search row); no flex:1 so scroll height follows content
+    browseListsContentWrapper: {
+      
+      paddingBottom: 120,
+      paddingHorizontal: Paddings.screen,
+      backgroundColor: themeColors.background.primary(),
+      overflow: 'visible',
     },
     searchIdleWrap: {
       alignSelf: 'stretch',
