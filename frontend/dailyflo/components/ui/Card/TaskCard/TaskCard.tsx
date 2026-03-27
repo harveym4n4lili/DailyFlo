@@ -68,6 +68,10 @@ export interface TaskCardProps {
   removeInnerPadding?: boolean; // whether to remove horizontal padding inside the card (default false)
   isLastItem?: boolean; // whether this is the last item in the list (default false)
   isFirstItem?: boolean; // whether this is the first item in the list (default false)
+  /** when set, replaces the title-row time range on the right (e.g. list name in browse search) */
+  titleRightLabel?: string;
+  /** when titleRightLabel is set: show leaf icon in tertiary (matches list search rows) */
+  titleRightShowLeaf?: boolean;
 
   // selection mode - when true, card shows selection checkbox and tap toggles selection
   // parent (ListCard or TimelineItem) passes these from Redux selection state; TaskCard is presentational
@@ -113,6 +117,8 @@ function taskCardPropsAreEqual(prev: TaskCardProps, next: TaskCardProps) {
     prev.removeInnerPadding === next.removeInnerPadding &&
     prev.isLastItem === next.isLastItem &&
     prev.isFirstItem === next.isFirstItem &&
+    prev.titleRightLabel === next.titleRightLabel &&
+    prev.titleRightShowLeaf === next.titleRightShowLeaf &&
     prev.selectionMode === next.selectionMode &&
     prev.isSelected === next.isSelected &&
     prev.onSelect === next.onSelect
@@ -139,6 +145,8 @@ const TaskCard = React.memo(function TaskCard({
   removeInnerPadding = false,
   isLastItem = false,
   isFirstItem = false,
+  titleRightLabel,
+  titleRightShowLeaf = false,
   selectionMode = false,
   isSelected = false,
   onSelect,
@@ -211,6 +219,8 @@ const TaskCard = React.memo(function TaskCard({
                   task={{ ...task, isCompleted: displayCompleted }}
                   taskColor={taskColor}
                   compact={compact}
+                  titleRightLabel={titleRightLabel}
+                  titleRightShowLeaf={titleRightShowLeaf}
                 />
 
               {/* task metadata - date, time, duration (hidden when showMetadata is false) */}
@@ -285,7 +295,6 @@ const createStyles = (
       flexDirection: 'row',
       alignItems: 'center',
     },
-
 
     // icon wrapper - provides spacing for icon
     iconWrapper: {
