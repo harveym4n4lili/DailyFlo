@@ -44,14 +44,34 @@ import GlassView from 'expo-glass-effect/build/GlassView';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeaderActions } from '@/components/ui';
-import { FloatingActionButton, MainCloseButton } from '@/components/ui/button';
+import { FloatingActionButton, MainCloseButton, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
+import { DashedSeparator } from '@/components/ui/borders';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/list/GroupedList';
-import { SFSymbolIcon, TickIcon, BrowseIcon, LeafIcon, PencilIcon } from '@/components/ui/icon';
+import { SFSymbolIcon, TickIcon, BrowseIcon, LeafIcon, PencilIcon, ClockIcon } from '@/components/ui/icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CREATE_OPENED_FROM_BROWSE } from './navigationParams';
-import { useLists } from '@/store/hooks';
+import {
+  loadRecentSearches,
+  loadRecentlyViewed,
+  persistRecentSearches,
+  persistRecentlyViewed,
+  pushRecentSearch,
+  pushRecentlyViewed,
+  type RecentlyViewedEntry,
+} from './browseSearchHistory';
+import { useLists, useTasks } from '@/store/hooks';
+import { useAppDispatch, store } from '@/store';
+import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
+import { Task, type List } from '@/types';
+import { TaskCard, BrowseListSearchCard, BrowseDescriptionSearchCard } from '@/components/ui/card';
+import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
+import {
+  isExpandedRecurrenceId,
+  getBaseTaskId,
+  getOccurrenceDateFromId,
+} from '@/utils/recurrenceUtils';
 
 const TOP_SECTION_ROW_HEIGHT = 48;
 const FOCUS_ANIM_MS = 320;
@@ -104,6 +124,82 @@ const SEARCH_FILTER_CHIPS: { id: string; label: string }[] = [
 ];
 
 const CHIP_COLOR_ANIM_MS = 260;
+
+// higher score = better match; title beats description; earlier substring index in title wins (closest match)
+function taskSearchRelevanceScore(task: Task, qLower: string): number {
+  const title = task.title.toLowerCase();
+  const desc = (task.description || '').toLowerCase();
+  if (title === qLower) return 100_000;
+  if (title.startsWith(qLower)) return 50_000 - title.length;
+  const ti = title.indexOf(qLower);
+  if (ti >= 0) return 40_000 - ti * 100 - title.length * 0.01;
+  const di = desc.indexOf(qLower);
+  if (di >= 0) return 20_000 - di * 50;
+  return -1;
+}
+
+// redux tasks → ordered matches for browse search (task chip); empty query → no rows (caller shows hint)
+function filterTasksForBrowseSearch(tasks: Task[], query: string): Task[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const active = tasks.filter((t) => !t.softDeleted);
+  return active
+    .map((task) => ({ task, score: taskSearchRelevanceScore(task, q) }))
+    .filter((x) => x.score >= 0)
+    .sort((a, b) => b.score - a.score)
+    .map((x) => x.task);
+}
+
+// top + recent: task rows are title matches only — description matches use BrowseDescriptionSearchCard below
+function titleOnlySearchRelevanceScore(task: Task, qLower: string): number {
+  const title = task.title.toLowerCase();
+  if (title === qLower) return 100_000;
+  if (title.startsWith(qLower)) return 50_000 - title.length;
+  const ti = title.indexOf(qLower);
+  if (ti >= 0) return 40_000 - ti * 100 - title.length * 0.01;
+  return -1;
+}
+
+function filterTasksByTitleForBrowseSearch(tasks: Task[], query: string): Task[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const active = tasks.filter((t) => !t.softDeleted);
+  return active
+    .map((task) => ({ task, score: titleOnlySearchRelevanceScore(task, q) }))
+    .filter((x) => x.score >= 0)
+    .sort((a, b) => b.score - a.score)
+    .map((x) => x.task);
+}
+
+// description chip: tasks whose body text contains the query (title-only hits stay on Task chip)
+function descriptionSearchRelevanceScore(task: Task, qLower: string): number {
+  const desc = (task.description || '').toLowerCase();
+  const di = desc.indexOf(qLower);
+  if (di < 0) return -1;
+  return 10_000 - di * 10;
+}
+
+function filterTasksByDescriptionForBrowseSearch(tasks: Task[], query: string): Task[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const active = tasks.filter((t) => !t.softDeleted && (t.description || '').trim().length > 0);
+  return active
+    .map((task) => ({ task, score: descriptionSearchRelevanceScore(task, q) }))
+    .filter((x) => x.score >= 0)
+    .sort((a, b) => b.score - a.score)
+    .map((x) => x.task);
+}
+
+// list name / description match for lists chip (same idea as task search)
+function filterListsForBrowseSearch(lists: List[], query: string): List[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  return lists.filter((list) => {
+    const name = list.name.toLowerCase();
+    const desc = (list.description ?? '').toLowerCase();
+    return name.includes(q) || desc.includes(q);
+  });
+}
 
 type BrowseSearchFilterChipStyles = {
   searchFilterChipGlass: object;
@@ -326,17 +422,21 @@ function BrowseListsColumn({
 
 export default function BrowseScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const styles = createStyles(themeColors, typography, insets);
-  const { lists, fetchLists } = useLists();
+  const { lists, fetchLists, isLoading: listsLoading } = useLists();
+  const { tasks, isLoading: tasksLoading } = useTasks();
 
   const rootRef = useRef<View>(null);
   const floatingInputRef = useRef<TextInput>(null);
 
   const [query, setQuery] = useState('');
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedEntry[]>([]);
   // searchOpen: floating docked field + hidden idle row (true until close animation finishes)
   const [searchOpen, setSearchOpen] = useState(false);
   // exitingBrowseSearch: user tapped cancel/close — show browse lists/fab immediately while bar still slides
@@ -380,6 +480,21 @@ export default function BrowseScreen() {
     }, [fetchLists])
   );
 
+  // load persisted recent searches + recently viewed (asyncstorage)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [qs, rv] = await Promise.all([loadRecentSearches(), loadRecentlyViewed()]);
+      if (!cancelled) {
+        setRecentSearches(qs);
+        setRecentlyViewed(rv);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const sortedLists = useMemo(
     () => [...lists].sort((a, b) => a.sortOrder - b.sortOrder),
     [lists]
@@ -393,12 +508,184 @@ export default function BrowseScreen() {
     setActiveSearchFilterId((prev) => (prev === id ? prev : id));
   }, []);
 
+  // load tasks when user searches by task or description so redux has rows to filter (same source as Today)
+  useEffect(() => {
+    if (searchOpen && (activeSearchFilterId === 'task' || activeSearchFilterId === 'description')) {
+      void dispatch(fetchTasks());
+    }
+  }, [searchOpen, activeSearchFilterId, dispatch]);
+
+  // lists chip: same api as my lists column
+  useEffect(() => {
+    if (searchOpen && activeSearchFilterId === 'lists') {
+      void fetchLists();
+    }
+  }, [searchOpen, activeSearchFilterId, fetchLists]);
+
+  // recent + top: need tasks + lists for TaskCard / BrowseListSearchCard / history
+  useEffect(() => {
+    if (searchOpen && (activeSearchFilterId === 'recent' || activeSearchFilterId === 'top')) {
+      void dispatch(fetchTasks());
+      void fetchLists();
+    }
+  }, [searchOpen, activeSearchFilterId, dispatch, fetchLists]);
+
+  const taskSearchMatches = useMemo(
+    () =>
+      activeSearchFilterId === 'task' ? filterTasksForBrowseSearch(tasks, query) : [],
+    [tasks, query, activeSearchFilterId]
+  );
+
+  const descriptionSearchMatches = useMemo(
+    () =>
+      activeSearchFilterId === 'description' ? filterTasksByDescriptionForBrowseSearch(tasks, query) : [],
+    [tasks, query, activeSearchFilterId]
+  );
+
+  const listSearchMatches = useMemo(
+    () => (activeSearchFilterId === 'lists' ? filterListsForBrowseSearch(lists, query) : []),
+    [lists, query, activeSearchFilterId]
+  );
+
+  // top + recent: same three buckets — title tasks, description notes, lists (when query non-empty on recent, show these too)
+  const topOrRecentTitleTasks = useMemo(
+    () =>
+      activeSearchFilterId === 'top' || activeSearchFilterId === 'recent'
+        ? filterTasksByTitleForBrowseSearch(tasks, query)
+        : [],
+    [tasks, query, activeSearchFilterId]
+  );
+
+  const topOrRecentDescriptionTasks = useMemo(
+    () =>
+      activeSearchFilterId === 'top' || activeSearchFilterId === 'recent'
+        ? filterTasksByDescriptionForBrowseSearch(tasks, query)
+        : [],
+    [tasks, query, activeSearchFilterId]
+  );
+
+  const topOrRecentListMatches = useMemo(
+    () =>
+      activeSearchFilterId === 'top' || activeSearchFilterId === 'recent'
+        ? filterListsForBrowseSearch(lists, query)
+        : [],
+    [lists, query, activeSearchFilterId]
+  );
+
+  // trim + dedupe recent queries; called on open search, cancel, keyboard search
+  const commitRecentSearch = useCallback((raw: string) => {
+    setRecentSearches((prev) => {
+      const next = pushRecentSearch(raw, prev);
+      if (next === prev) return prev;
+      void persistRecentSearches(next);
+      return next;
+    });
+  }, []);
+
+  // task row right column: inbox vs list name — same typography slot as time range on TaskCard
+  const browseSearchTaskTitleRightLabel = useCallback(
+    (task: Task) =>
+      task.listId ? lists.find((l) => l.id === task.listId)?.name ?? 'List' : 'Inbox',
+    [lists]
+  );
+
+  const handleRecentlyViewedPress = useCallback(
+    (entry: RecentlyViewedEntry) => {
+      setRecentlyViewed((prev) => {
+        const next = pushRecentlyViewed(entry, prev);
+        void persistRecentlyViewed(next);
+        return next;
+      });
+      if (entry.kind === 'task') {
+        router.push({ pathname: '/task/[taskId]', params: { taskId: entry.id } });
+      } else {
+        router.push(`/(tabs)/browse/list/${entry.id}` as any);
+      }
+    },
+    [router]
+  );
+
+  const handleBrowseSearchTaskPress = useCallback(
+    (task: Task) => {
+      const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+      const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
+      setRecentlyViewed((prev) => {
+        const next = pushRecentlyViewed({ kind: 'task', id: baseId, label: task.title }, prev);
+        void persistRecentlyViewed(next);
+        return next;
+      });
+      router.push({
+        pathname: '/task/[taskId]',
+        params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) },
+      });
+    },
+    [router]
+  );
+
+  const handleBrowseSearchTaskComplete = useCallback(
+    (task: Task, targetCompleted?: boolean) => {
+      const isCompleted = targetCompleted ?? !task.isCompleted;
+      if (isExpandedRecurrenceId(task.id)) {
+        const baseId = getBaseTaskId(task.id);
+        const occurrenceDate = getOccurrenceDateFromId(task.id);
+        if (!occurrenceDate) return;
+        const tasksFromStore = store.getState().tasks.tasks;
+        const baseTask = tasksFromStore.find((t) => t.id === baseId);
+        if (!baseTask) return;
+        const completions = baseTask.metadata?.recurrence_completions ?? [];
+        const newCompletions = isCompleted
+          ? [...completions, occurrenceDate]
+          : completions.filter((d) => d !== occurrenceDate);
+        dispatch(
+          updateTask({
+            id: baseId,
+            updates: {
+              id: baseId,
+              metadata: { ...baseTask.metadata, recurrence_completions: newCompletions },
+            },
+          })
+        );
+      } else {
+        dispatch(updateTask({ id: task.id, updates: { id: task.id, isCompleted } }));
+      }
+    },
+    [dispatch]
+  );
+
+  const handleBrowseSearchTaskEdit = useCallback(
+    (task: Task) => {
+      handleBrowseSearchTaskPress(task);
+    },
+    [handleBrowseSearchTaskPress]
+  );
+
+  const handleBrowseSearchTaskDelete = useCallback(
+    (task: Task) => {
+      const taskId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+      dispatch(deleteTask(taskId));
+    },
+    [dispatch]
+  );
+
+  const handleBrowseSearchListPress = useCallback(
+    (list: List) => {
+      setRecentlyViewed((prev) => {
+        const next = pushRecentlyViewed({ kind: 'list', id: list.id, label: list.name }, prev);
+        void persistRecentlyViewed(next);
+        return next;
+      });
+      router.push(`/(tabs)/browse/list/${list.id}` as any);
+    },
+    [router]
+  );
+
   const openSearch = useCallback(() => {
+    commitRecentSearch(query);
     // absolute idle bar uses idleSearchBarTop — snapshot that value for the floating bar + scroll lift (same as pre-absolute measure path)
     measuredRowTop.value = idleSearchBarTop;
     setExitingBrowseSearch(false);
     setSearchOpen(true);
-  }, [idleSearchBarTop, measuredRowTop]);
+  }, [commitRecentSearch, query, idleSearchBarTop, measuredRowTop]);
 
   const finishCloseSearch = useCallback(() => {
     closeAnimatingRef.current = false;
@@ -413,6 +700,8 @@ export default function BrowseScreen() {
     if (!searchOpenRef.current || closeAnimatingRef.current) return;
     closeAnimatingRef.current = true;
     Keyboard.dismiss();
+    // clear field on exit tap so placeholder returns immediately; don’t wait for close animation end
+    setQuery('');
     // swap scroll body back to lists right away; keep searchOpen true so idle row stays hidden until bar finishes
     setExitingBrowseSearch(true);
     // do not update measuredRowTop here while focusProgress is still 1 — that changes `lift` in
@@ -425,7 +714,7 @@ export default function BrowseScreen() {
         if (finished) runOnJS(finishCloseSearch)();
       }
     );
-  }, [finishCloseSearch, focusProgress]);
+  }, [commitRecentSearch, query, finishCloseSearch, focusProgress]);
 
   useEffect(() => {
     if (!searchOpen) return;
@@ -539,6 +828,7 @@ export default function BrowseScreen() {
         placeholderTextColor={themeColors.text.tertiary()}
         style={[styles.searchInput, { color: themeColors.text.primary() }]}
         returnKeyType="search"
+        onSubmitEditing={() => commitRecentSearch(query)}
         autoCorrect={false}
         autoCapitalize="none"
       />
@@ -629,24 +919,411 @@ export default function BrowseScreen() {
                 <View
                   style={[styles.browseSearchContent, styles.browseSearchContentBelowFloating]}
                   accessibilityRole="summary"
-                  accessibilityLabel="Search: type to find tasks and lists. Filters and live results are not connected yet."
+                  accessibilityLabel={
+                    activeSearchFilterId === 'recent'
+                      ? 'Recent: saved terms, recently viewed, and live title/description/list matches while you type.'
+                      : activeSearchFilterId === 'top'
+                        ? 'Top search: tasks (title), matching descriptions, and lists.'
+                        : activeSearchFilterId === 'task'
+                          ? 'Task search: results update as you type.'
+                          : activeSearchFilterId === 'description'
+                            ? 'Description search: tasks whose notes match your query.'
+                            : activeSearchFilterId === 'lists'
+                              ? 'List search: matching lists by name or description.'
+                              : 'Search: choose a filter chip.'
+                  }
                 >
-                  {/* static copy until search hits the backend — explains what this area will do */}
-                  <Text style={[styles.searchModeHeadline, { color: themeColors.text.primary() }]}>
-                    Search tasks & lists
-                  </Text>
-                  <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
-                    Type in the field above to look across your tasks and list names. When search is wired to the
-                    server, matches will appear here as you type, with the same look and feel as the rest of Browse.
-                  </Text>
-                  <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
-                    Scroll the chip row horizontally for Recent, Top, Task, Description, and Lists — only one filter
-                    stays selected at a time (tap again to clear); the API will use that choice for search results.
-                  </Text>
-                  <Text style={[styles.searchModeHint, { color: themeColors.text.tertiary() }]}>
-                    Tip: tap Cancel or the close control to leave search and return to Inbox, Completed, Tags, and My
-                    Lists.
-                  </Text>
+                  {activeSearchFilterId === 'recent' ? (
+                    <>
+                      <GroupedListHeader title="Recent searches" />
+                      {recentSearches.length === 0 ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          Search terms you submit or cancel with appear here (up to four).
+                        </Text>
+                      ) : (
+                        <View style={styles.recentSearchRows}>
+                          {recentSearches.map((q, i) => (
+                            <Pressable
+                              key={`${q}-${i}`}
+                              onPress={() => setQuery(q)}
+                              style={[styles.recentSearchRow, i < recentSearches.length - 1 && styles.recentSearchRowSpacing]}
+                            >
+                              <SFSymbolIcon
+                                name="clock.arrow.circlepath"
+                                size={20}
+                                color={themeColors.text.tertiary()}
+                                fallback={<ClockIcon size={18} color={themeColors.text.tertiary()} />}
+                              />
+                              <Text
+                                style={[styles.recentSearchRowText, { color: themeColors.text.primary() }]}
+                                numberOfLines={2}
+                              >
+                                {q}
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      )}
+                      <GroupedListHeader title="Recently viewed" style={styles.myListsHeader} />
+                      {recentlyViewed.length === 0 ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          Tasks and lists you open from search appear here (up to six).
+                        </Text>
+                      ) : (
+                        <View style={styles.recentlyViewedBlocks}>
+                          {recentlyViewed.map((entry, i) => {
+                            const isLast = i === recentlyViewed.length - 1;
+                            if (entry.kind === 'task') {
+                              const task = tasks.find((t) => t.id === entry.id);
+                              if (task) {
+                                return (
+                                  <View key={`task:${entry.id}`}>
+                                    <TaskCard
+                                      task={task}
+                                      {...LIST_CARD_TASK_ROW_PRESET_TODAY}
+                                      titleRightLabel={browseSearchTaskTitleRightLabel(task)}
+                                      titleRightShowLeaf
+                                      onPress={handleBrowseSearchTaskPress}
+                                      onComplete={handleBrowseSearchTaskComplete}
+                                      onEdit={handleBrowseSearchTaskEdit}
+                                      onDelete={handleBrowseSearchTaskDelete}
+                                      isFirstItem={i === 0}
+                                      isLastItem={isLast}
+                                      separatorPaddingHorizontal={Paddings.screen}
+                                    />
+                                  </View>
+                                );
+                              }
+                              return (
+                                <View key={`task:${entry.id}`}>
+                                  <Pressable
+                                    onPress={() => handleRecentlyViewedPress(entry)}
+                                    style={styles.recentSearchRow}
+                                  >
+                                    <SFSymbolIcon
+                                      name="clock.arrow.circlepath"
+                                      size={20}
+                                      color={themeColors.text.tertiary()}
+                                      fallback={<ClockIcon size={18} color={themeColors.text.tertiary()} />}
+                                    />
+                                    <Text
+                                      style={[styles.recentSearchRowText, { color: themeColors.text.secondary() }]}
+                                      numberOfLines={2}
+                                    >
+                                      {entry.label}
+                                    </Text>
+                                  </Pressable>
+                                  {!isLast ? (
+                                    <DashedSeparator
+                                      paddingLeft={CHECKBOX_SIZE_DEFAULT + 12}
+                                      paddingRight={Paddings.screen}
+                                    />
+                                  ) : null}
+                                </View>
+                              );
+                            }
+                            const list = lists.find((l) => l.id === entry.id);
+                            return (
+                              <View key={`list:${entry.id}`}>
+                                <BrowseListSearchCard
+                                  name={list?.name ?? entry.label}
+                                  onPress={() => handleRecentlyViewedPress(entry)}
+                                  isLastItem={isLast}
+                                  separatorPaddingHorizontal={Paddings.screen}
+                                  cardSpacing={0}
+                                />
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
+                      {/* recent tab: while query is set, show same title / description / list matches as Top */}
+                      {query.trim() !== '' ? (
+                        <>
+                          {(tasksLoading && tasks.length === 0) || (listsLoading && lists.length === 0) ? (
+                            <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                              Loading…
+                            </Text>
+                          ) : topOrRecentTitleTasks.length === 0 &&
+                            topOrRecentDescriptionTasks.length === 0 &&
+                            topOrRecentListMatches.length === 0 ? (
+                            <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                              No tasks, descriptions, or lists match “{query.trim()}”.
+                            </Text>
+                          ) : (
+                            <>
+                              {topOrRecentTitleTasks.length > 0 ? (
+                                <>
+                                  <GroupedListHeader title="Tasks" style={styles.myListsHeader} />
+                                  {topOrRecentTitleTasks.map((task, i) => (
+                                    <TaskCard
+                                      key={`recent-top:${task.id}`}
+                                      task={task}
+                                      {...LIST_CARD_TASK_ROW_PRESET_TODAY}
+                                      titleRightLabel={browseSearchTaskTitleRightLabel(task)}
+                                      titleRightShowLeaf
+                                      onPress={handleBrowseSearchTaskPress}
+                                      onComplete={handleBrowseSearchTaskComplete}
+                                      onEdit={handleBrowseSearchTaskEdit}
+                                      onDelete={handleBrowseSearchTaskDelete}
+                                      isFirstItem={i === 0}
+                                      isLastItem={
+                                        i === topOrRecentTitleTasks.length - 1 &&
+                                        topOrRecentDescriptionTasks.length === 0 &&
+                                        topOrRecentListMatches.length === 0
+                                      }
+                                      separatorPaddingHorizontal={Paddings.screen}
+                                    />
+                                  ))}
+                                </>
+                              ) : null}
+                              {topOrRecentDescriptionTasks.length > 0 ? (
+                                <>
+                                  <GroupedListHeader title="Descriptions" style={styles.myListsHeader} />
+                                  {topOrRecentDescriptionTasks.map((task, i) => (
+                                    <BrowseDescriptionSearchCard
+                                      key={`recent-desc:${task.id}`}
+                                      descriptionText={(task.description || '').trim()}
+                                      taskTitle={task.title}
+                                      query={query}
+                                      listOrInboxLabel={browseSearchTaskTitleRightLabel(task)}
+                                      onPress={() => handleBrowseSearchTaskPress(task)}
+                                      isLastItem={
+                                        i === topOrRecentDescriptionTasks.length - 1 &&
+                                        topOrRecentListMatches.length === 0
+                                      }
+                                      separatorPaddingHorizontal={Paddings.screen}
+                                      cardSpacing={0}
+                                    />
+                                  ))}
+                                </>
+                              ) : null}
+                              {topOrRecentListMatches.length > 0 ? (
+                                <>
+                                  <GroupedListHeader title="Lists" style={styles.myListsHeader} />
+                                  {topOrRecentListMatches.map((list, i) => (
+                                    <BrowseListSearchCard
+                                      key={`recent-list:${list.id}`}
+                                      name={list.name}
+                                      onPress={() => handleBrowseSearchListPress(list)}
+                                      isLastItem={i === topOrRecentListMatches.length - 1}
+                                      separatorPaddingHorizontal={Paddings.screen}
+                                      cardSpacing={0}
+                                    />
+                                  ))}
+                                </>
+                              ) : null}
+                            </>
+                          )}
+                        </>
+                      ) : null}
+                    </>
+                  ) : activeSearchFilterId === 'top' ? (
+                    <>
+                      {(tasksLoading && tasks.length === 0) || (listsLoading && lists.length === 0) ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          Loading…
+                        </Text>
+                      ) : query.trim() === '' ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          Type to search tasks (by title), descriptions, and lists together.
+                        </Text>
+                      ) : topOrRecentTitleTasks.length === 0 &&
+                        topOrRecentDescriptionTasks.length === 0 &&
+                        topOrRecentListMatches.length === 0 ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          No tasks, descriptions, or lists match “{query.trim()}”.
+                        </Text>
+                      ) : (
+                        <>
+                          {topOrRecentTitleTasks.length > 0 ? (
+                            <>
+                              <GroupedListHeader title="Tasks" />
+                              {topOrRecentTitleTasks.map((task, i) => (
+                                <TaskCard
+                                  key={task.id}
+                                  task={task}
+                                  {...LIST_CARD_TASK_ROW_PRESET_TODAY}
+                                  titleRightLabel={browseSearchTaskTitleRightLabel(task)}
+                                  titleRightShowLeaf
+                                  onPress={handleBrowseSearchTaskPress}
+                                  onComplete={handleBrowseSearchTaskComplete}
+                                  onEdit={handleBrowseSearchTaskEdit}
+                                  onDelete={handleBrowseSearchTaskDelete}
+                                  isFirstItem={i === 0}
+                                  isLastItem={
+                                    i === topOrRecentTitleTasks.length - 1 &&
+                                    topOrRecentDescriptionTasks.length === 0 &&
+                                    topOrRecentListMatches.length === 0
+                                  }
+                                  separatorPaddingHorizontal={Paddings.screen}
+                                />
+                              ))}
+                            </>
+                          ) : null}
+                          {topOrRecentDescriptionTasks.length > 0 ? (
+                            <>
+                              <GroupedListHeader
+                                title="Descriptions"
+                                style={
+                                  topOrRecentTitleTasks.length > 0 ? styles.myListsHeader : undefined
+                                }
+                              />
+                              {topOrRecentDescriptionTasks.map((task, i) => (
+                                <BrowseDescriptionSearchCard
+                                  key={`desc:${task.id}`}
+                                  descriptionText={(task.description || '').trim()}
+                                  taskTitle={task.title}
+                                  query={query}
+                                  listOrInboxLabel={browseSearchTaskTitleRightLabel(task)}
+                                  onPress={() => handleBrowseSearchTaskPress(task)}
+                                  isLastItem={
+                                    i === topOrRecentDescriptionTasks.length - 1 &&
+                                    topOrRecentListMatches.length === 0
+                                  }
+                                  separatorPaddingHorizontal={Paddings.screen}
+                                  cardSpacing={0}
+                                />
+                              ))}
+                            </>
+                          ) : null}
+                          {topOrRecentListMatches.length > 0 ? (
+                            <>
+                              <GroupedListHeader
+                                title="Lists"
+                                style={
+                                  topOrRecentTitleTasks.length > 0 || topOrRecentDescriptionTasks.length > 0
+                                    ? styles.myListsHeader
+                                    : undefined
+                                }
+                              />
+                              {topOrRecentListMatches.map((list, i) => (
+                                <BrowseListSearchCard
+                                  key={list.id}
+                                  name={list.name}
+                                  onPress={() => handleBrowseSearchListPress(list)}
+                                  isLastItem={i === topOrRecentListMatches.length - 1}
+                                  separatorPaddingHorizontal={Paddings.screen}
+                                  cardSpacing={0}
+                                />
+                              ))}
+                            </>
+                          ) : null}
+                        </>
+                      )}
+                    </>
+                  ) : activeSearchFilterId === 'task' ? (
+                    <>
+                      {/* task chip: filter redux tasks on every keystroke; rows use same TaskCard preset as Today/list */}
+                      {tasksLoading && tasks.length === 0 ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          Loading tasks…
+                        </Text>
+                      ) : query.trim() === '' ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          Type to search tasks by title or description.
+                        </Text>
+                      ) : taskSearchMatches.length === 0 ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          No tasks match “{query.trim()}”.
+                        </Text>
+                      ) : (
+                        taskSearchMatches.map((task, i) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            {...LIST_CARD_TASK_ROW_PRESET_TODAY}
+                            titleRightLabel={browseSearchTaskTitleRightLabel(task)}
+                            titleRightShowLeaf
+                            onPress={handleBrowseSearchTaskPress}
+                            onComplete={handleBrowseSearchTaskComplete}
+                            onEdit={handleBrowseSearchTaskEdit}
+                            onDelete={handleBrowseSearchTaskDelete}
+                            isFirstItem={i === 0}
+                            isLastItem={i === taskSearchMatches.length - 1}
+                            separatorPaddingHorizontal={Paddings.screen}
+                          />
+                        ))
+                      )}
+                    </>
+                  ) : activeSearchFilterId === 'description' ? (
+                    <>
+                      {/* description chip: paragraph row — matched text in body, task title below, leaf+list like task search */}
+                      {tasksLoading && tasks.length === 0 ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          Loading tasks…
+                        </Text>
+                      ) : query.trim() === '' ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          Type to search task descriptions and notes.
+                        </Text>
+                      ) : descriptionSearchMatches.length === 0 ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          No descriptions match “{query.trim()}”.
+                        </Text>
+                      ) : (
+                        descriptionSearchMatches.map((task, i) => (
+                          <BrowseDescriptionSearchCard
+                            key={task.id}
+                            descriptionText={(task.description || '').trim()}
+                            taskTitle={task.title}
+                            query={query}
+                            listOrInboxLabel={browseSearchTaskTitleRightLabel(task)}
+                            onPress={() => handleBrowseSearchTaskPress(task)}
+                            isLastItem={i === descriptionSearchMatches.length - 1}
+                            separatorPaddingHorizontal={Paddings.screen}
+                            cardSpacing={0}
+                          />
+                        ))
+                      )}
+                    </>
+                  ) : activeSearchFilterId === 'lists' ? (
+                    <>
+                      {/* lists chip: BrowseListSearchCard mirrors TaskCard — leaf in checkbox slot, title + “List” */}
+                      {listsLoading && lists.length === 0 ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          Loading lists…
+                        </Text>
+                      ) : query.trim() === '' ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          Type to search lists by name or description.
+                        </Text>
+                      ) : listSearchMatches.length === 0 ? (
+                        <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                          No lists match “{query.trim()}”.
+                        </Text>
+                      ) : (
+                        listSearchMatches.map((list, i) => (
+                          <BrowseListSearchCard
+                            key={list.id}
+                            name={list.name}
+                            onPress={() => handleBrowseSearchListPress(list)}
+                            isLastItem={i === listSearchMatches.length - 1}
+                            separatorPaddingHorizontal={Paddings.screen}
+                            cardSpacing={0}
+                          />
+                        ))
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Text style={[styles.searchModeHeadline, { color: themeColors.text.primary() }]}>
+                        Search tasks & lists
+                      </Text>
+                      <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                        Type in the field above. Use Top to search tasks and lists at once, or Task / Lists for one kind
+                        only; other filters will follow.
+                      </Text>
+                      <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                        Scroll the chip row horizontally for Recent, Top, Task, Description, and Lists — only one filter
+                        stays selected at a time.
+                      </Text>
+                      <Text style={[styles.searchModeHint, { color: themeColors.text.tertiary() }]}>
+                        Tip: tap Cancel or the close control to leave search and return to Inbox, Completed, Tags, and
+                        My Lists.
+                      </Text>
+                    </>
+                  )}
                 </View>
               </View>
             </Animated.View>
@@ -1062,6 +1739,27 @@ const createStyles = (
       ...typography.getTextStyle('body-small'),
       marginTop: 8,
       lineHeight: 20,
+    },
+    recentSearchRows: {
+      alignSelf: 'stretch',
+    },
+    recentSearchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 44,
+      paddingVertical: 10,
+      paddingHorizontal: Paddings.touchTargetSmall,
+    },
+    recentSearchRowSpacing: {
+      marginBottom: 4,
+    },
+    recentSearchRowText: {
+      ...typography.getTextStyle('body-large'),
+      flex: 1,
+      marginLeft: Paddings.groupedListIconTextSpacing,
+    },
+    recentlyViewedBlocks: {
+      alignSelf: 'stretch',
     },
     groupedListSection: {
       paddingTop: 0,
