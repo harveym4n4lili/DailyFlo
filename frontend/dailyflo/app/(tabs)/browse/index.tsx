@@ -2,7 +2,7 @@
  * Browse Screen
  *
  * Search mode: `searchOpen` / `isBrowseSearchMode` — user tapped the search row; floating field docks, top chrome hides.
- * Search results/placeholder live in an **overlay** `ScrollView`; browse lists stay in a **persistent** `ScrollView` (never unmounted for search) so cold-load and post-search top spacing match — only opacity/pointerEvents toggle.
+ * Search results/placeholder live in an **overlay** `ScrollView`; browse lists stay in a **persistent** `ScrollView` (never unmounted for search) so cold-load and post-search top spacing match — overlay scroll is inset with `top: browseListsPaddingTop + SEARCH_SCROLL_OVERLAY_TOP_INSET` so it does not cover the inbox row (full-screen overlay sat above browse z-index and blocked taps).
  * Idle “Search” pill is **position: absolute** at `idleSearchBarTop` so its Y matches `measuredRowTop` used in `floatingSearchBlockStyle` / lift — no measureInWindow drift.
  * On close tap, `exitingBrowseSearch` is set so lists/FAB and filter chips hide immediately while `searchOpen` stays true until the bar/chrome finish sliding down.
  * `browseModesLayout` — animated wrapper: translates scroll content by the same delta as the floating search bar (row → docked) so the body moves with the bar.
@@ -101,6 +101,8 @@ const SEARCH_CHIP_ROW_HEIGHT =
 // scroll placeholder starts below full bar + gap + chip scroller (includes chip paddings + content paddingBottom)
 const SEARCH_OVERLAY_TOP_CLEARANCE =
   FLOATING_SEARCH_BAR_ROW_HEIGHT + SEARCH_BAR_TO_CHIPS_GAP + SEARCH_CHIP_ROW_HEIGHT;
+// first grouped row (inbox) ≈ this tall — search overlay must start below it or full-screen ScrollView steals taps (z-index above browse)
+const SEARCH_SCROLL_OVERLAY_TOP_INSET = 56;
 // blur strip behind bar + gap + chips + small bleed below chips for liquid-glass halo
 const SEARCH_MODE_TOP_FADE_BLEED_BELOW_CHIPS = 28;
 const SEARCH_MODE_TOP_FADE_HEIGHT =
@@ -463,6 +465,13 @@ export default function BrowseScreen() {
   // first list row starts below the absolute pill + same gap as former searchAnchor marginBottom
   const browseListsPaddingTop =
    FLOATING_SEARCH_BAR_ROW_HEIGHT + TOP_SECTION_ROW_HEIGHT + Paddings.screen + 12;
+  // search overlay scroll must not cover inbox row (same y as first grouped row) — full-screen overlay sat z-index above browse and blocked taps
+  const searchScrollOverlayTop = browseListsPaddingTop + SEARCH_SCROLL_OVERLAY_TOP_INSET;
+  // inner padding so first search line still clears docked bar + chips after overlay frame is pushed down
+  const searchScrollContentPaddingTop = Math.max(
+    Paddings.touchTargetSmall,
+    dockedSearchTop + SEARCH_OVERLAY_TOP_CLEARANCE - searchScrollOverlayTop
+  );
 
   const focusProgress = useSharedValue(0);
   const measuredRowTop = useSharedValue(idleSearchBarTop);
@@ -837,13 +846,16 @@ export default function BrowseScreen() {
 
   return (
     <View ref={rootRef} style={{ flex: 1 }}>
+      {/* box-none + blur none: tall chrome band must not steal taps meant for browse grouped list (inbox) behind it — only topSectionRow / settings stays interactive */}
       <Animated.View
+        pointerEvents="box-none"
         style={[styles.topSectionAnchor, { height: topChromeHeight }, topChromeStyle]}
       >
         <BlurView
           tint={themeColors.isDark ? 'dark' : 'light'}
           intensity={1}
           style={StyleSheet.absoluteFill}
+          pointerEvents="none"
         />
         {/* three stops so fade reads through the pill row and keeps softening below it (top chrome height includes pill + BROWSE_IDLE_TOP_BLUR_TAIL_PAST_PILL) */}
         <LinearGradient
@@ -871,7 +883,7 @@ export default function BrowseScreen() {
         <ScrollView
           {...iosScrollNoAutomaticSafeAreaInsets}
           style={[styles.mainScroll, !showBrowseBodyContent && styles.browseScrollHidden]}
-          pointerEvents={showBrowseBodyContent ? 'auto' : 'none'}
+          pointerEvents="auto"
           contentContainerStyle={styles.scrollContentContainerBrowse}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -908,16 +920,16 @@ export default function BrowseScreen() {
         {isBrowseSearchMode && !exitingBrowseSearch ? (
           <ScrollView
             {...iosScrollNoAutomaticSafeAreaInsets}
-            style={[styles.mainScroll, styles.searchScrollOverlay]}
-            contentContainerStyle={styles.scrollContentContainer}
+            style={[styles.mainScroll, styles.searchScrollOverlay, { top: searchScrollOverlayTop }]}
+            contentContainerStyle={styles.searchScrollContentContainer}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           >
-            <Animated.View style={[styles.browseModesLayout, browseModesLayoutStyle]}>
-              <View style={styles.contentWrapper}>
+            <Animated.View style={[styles.browseModesLayout, styles.browseModesLayoutSearchOverlay, browseModesLayoutStyle]}>
+              <View style={[styles.contentWrapper, styles.contentWrapperSearchOverlay]}>
                 <View
-                  style={[styles.browseSearchContent, styles.browseSearchContentBelowFloating]}
+                  style={[styles.browseSearchContent, { paddingTop: searchScrollContentPaddingTop }]}
                   accessibilityRole="summary"
                   accessibilityLabel={
                     activeSearchFilterId === 'recent'
@@ -1590,6 +1602,10 @@ const createStyles = (
     scrollContentContainer: {
       flexGrow: 1,
     },
+    // search overlay: don’t stretch content to full viewport so touches below short results fall through to browse (box-none on ScrollView)
+    searchScrollContentContainer: {
+      flexGrow: 0,
+    },
     // browse lists only: don’t grow content to fill viewport — avoids different vertical distribution after search scroll remount vs first load
     scrollContentContainerBrowse: {
       flexGrow: 0,
@@ -1597,6 +1613,12 @@ const createStyles = (
     browseModesLayout: {
       flexGrow: 1,
       alignSelf: 'stretch',
+    },
+    browseModesLayoutSearchOverlay: {
+      flexGrow: 0,
+    },
+    contentWrapperSearchOverlay: {
+      flex: 0,
     },
     browseModesLayoutBrowse: {
       alignSelf: 'stretch',
@@ -1720,10 +1742,6 @@ const createStyles = (
       paddingTop: Paddings.touchTargetSmall,
       // temporary: extra space so search placeholder scrolls on short screens; trim when real results list ships
       paddingBottom: 480,
-    },
-    browseSearchContentBelowFloating: {
-      // keeps placeholder text below the absolute search bar + chip strip
-      paddingTop: SEARCH_OVERLAY_TOP_CLEARANCE,
     },
     searchModeHeadline: {
       ...typography.getTextStyle('body-large'),
