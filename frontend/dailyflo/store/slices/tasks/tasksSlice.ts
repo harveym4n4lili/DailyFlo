@@ -267,7 +267,20 @@ export function transformApiTaskToTask(apiTask: any): Task {
     routineType: apiTask.routine_type || apiTask.routineType || 'once',
     sortOrder: apiTask.sort_order || apiTask.sortOrder || 0,
     metadata: {
-      subtasks: apiTask.metadata?.subtasks || [],
+      // json metadata keeps snake_case from django; normalize subtasks so ui always sees isCompleted
+      subtasks: Array.isArray(apiTask.metadata?.subtasks)
+        ? apiTask.metadata.subtasks.map((s: any) => ({
+            id: String(s.id ?? ''),
+            title: s.title ?? '',
+            isCompleted:
+              s.is_completed !== undefined
+                ? s.is_completed
+                : s.isCompleted !== undefined
+                  ? s.isCompleted
+                  : false,
+            sortOrder: s.sort_order ?? s.sortOrder ?? 0,
+          }))
+        : [],
       reminders: apiTask.metadata?.reminders || [],
       notes: apiTask.metadata?.notes,
       tags: apiTask.metadata?.tags,

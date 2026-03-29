@@ -143,6 +143,14 @@ export interface TaskCreationContentProps {
   showTitleCheckbox?: boolean;
 
   /**
+   * when editing an existing task, pass redux isCompleted so the box matches the server;
+   * use with onTitleCheckboxToggle so taps patch the task (otherwise local-only state is used).
+   */
+  titleCheckboxCompleted?: boolean;
+  /** dispatch updateTask (or similar) when the title checkbox is pressed in edit mode */
+  onTitleCheckboxToggle?: () => void;
+
+  /**
    * When true, show MainCloseButton in top left (e.g. create mode).
    * When false (default), no close button in header.
    */
@@ -203,6 +211,8 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   onDuplicateTask,
   onDeleteTask,
   showTitleCheckbox = true,
+  titleCheckboxCompleted,
+  onTitleCheckboxToggle,
   showMainCloseButton = false,
   showDragIndicator = true,
 }) => {
@@ -296,8 +306,10 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
     router.push('/alert-select');
   };
 
-  // checkbox state for task title checkbox
-  const [titleCheckboxChecked, setTitleCheckboxChecked] = useState(false);
+  // title checkbox: edit screen passes server state + onTitleCheckboxToggle; otherwise local-only (legacy)
+  const [internalTitleCheckboxChecked, setInternalTitleCheckboxChecked] = useState(false);
+  const titleCheckboxChecked =
+    onTitleCheckboxToggle != null ? (titleCheckboxCompleted ?? false) : internalTitleCheckboxChecked;
 
   // keyboard height for scroll content bottom padding so content can scroll above keyboard
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -380,7 +392,11 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
                 checked={titleCheckboxChecked}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setTitleCheckboxChecked((prev) => !prev);
+                  if (onTitleCheckboxToggle) {
+                    onTitleCheckboxToggle();
+                  } else {
+                    setInternalTitleCheckboxChecked((prev) => !prev);
+                  }
                 }}
               />
             </View>
