@@ -1560,3 +1560,16 @@ Updated User app, models, serializers, views and urls
 
 ### Notes
 - should go over AI scope (make my own LLM or pay for API), theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [30/03/2026] - [Monday]
+
+### Today's Goals
+- [x] Planned LLM integration
+- [X] begun redux research
+
+### Plans For Future
+- GO THROUGH A MVP-REALIGNEMNT, AND STRATETGIC REVIEW WITH NEW FEATURES
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
