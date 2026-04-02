@@ -132,10 +132,10 @@ const getIOSVersion = (): number => {
  * Renders a save button with tick/checkmark icon.
  * Adapts styling based on iOS version (circular icon button for iOS 15+, text button for older).
  */
-// spring when button appears (more overshoot for a bouncy entrance)
-const SPRING_CONFIG_SHOW = { damping: 5, stiffness: 100, overshootClamping: false, mass: 0.2 };
+// spring when button appears (more overshoot for a bouncy entrance) — shared with MainSubmitButton
+export const SAVE_BUTTON_SPRING_SHOW = { damping: 5, stiffness: 100, overshootClamping: false, mass: 0.2 };
 // spring when button disappears (snappier, less bounce)
-const SPRING_CONFIG_HIDE = { damping: 18, stiffness: 100, overshootClamping: true, mass: 0.1 };
+export const SAVE_BUTTON_SPRING_HIDE = { damping: 18, stiffness: 100, overshootClamping: true, mass: 0.1 };
 
 export const SaveButton: React.FC<SaveButtonProps> = ({
   onPress,
@@ -152,7 +152,7 @@ export const SaveButton: React.FC<SaveButtonProps> = ({
   // reanimated: scale value for show/hide spring animation (0 = hidden, 1 = visible)
   const scale = useSharedValue(visible ? 1 : 0);
   useEffect(() => {
-    scale.value = withSpring(visible ? 1 : 0, visible ? SPRING_CONFIG_SHOW : SPRING_CONFIG_HIDE);
+    scale.value = withSpring(visible ? 1 : 0, visible ? SAVE_BUTTON_SPRING_SHOW : SAVE_BUTTON_SPRING_HIDE);
   }, [visible, scale]);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],

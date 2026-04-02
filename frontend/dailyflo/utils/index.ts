@@ -7,3 +7,4 @@
 export * from './taskFormatters';
 export * from './taskColors';
 export * from './taskGrouping';
+export * from './todayIcon';

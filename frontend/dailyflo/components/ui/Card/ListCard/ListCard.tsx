@@ -12,10 +12,11 @@
  */
 
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, ListRenderItem, RefreshControl, Animated, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ListRenderItem, RefreshControl, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UIManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { EllipsisIcon } from '@/components/ui/icon';
 
 // enable layout animations on android for smooth group expansion animations
 // this ensures android can use layout animations like ios does
@@ -39,29 +40,19 @@ import { CHECKBOX_HIDE_DELAY_MS, TASK_HEIGHT_ESTIMATE } from '@/constants/Checkb
 
 // import custom hooks for animation management
 import { useGroupAnimations } from '@/hooks/useGroupAnimations';
-import { useTaskCardAnimations } from '@/hooks/useTaskCardAnimations';
-import AnimatedReanimated, { useAnimatedStyle, useSharedValue, useAnimatedScrollHandler, runOnJS, interpolate, Extrapolation, LinearTransition, FadeOut, type SharedValue } from 'react-native-reanimated';
+import AnimatedReanimated, { useAnimatedStyle, useSharedValue, useAnimatedScrollHandler, runOnJS, interpolate, Extrapolation, FadeOut, FadeInUp, FadeOutUp, type SharedValue } from 'react-native-reanimated';
+import { LAYOUT_TRANSITION_SPRING } from '@/constants/LayoutTransitions';
 
 const AnimatedFlatList = AnimatedReanimated.createAnimatedComponent(FlatList);
-
-// spring-based layout transition for smooth item removal when hideCompletedTasks
-// overshootClamping prevents bounce past target; damping 28 + stiffness 300 = quick, smooth settle
-const LAYOUT_TRANSITION = LinearTransition.springify()
-  .damping(28)
-  .stiffness(300)
-  .overshootClamping(true);
-
-
-// import utility functions for task grouping and sorting
-import { groupTasks, sortTasks, sortGroupEntries, formatDateForGroup } from '@/utils/taskGrouping';
-
-// import dropdown list component for header actions menu
 import { DropdownList, DropdownListItem } from '@/components/ui/list';
 
 // import sub-components
 import GroupHeader from './GroupHeader';
 import EmptyState from './EmptyState';
 import LoadingState from './LoadingState';
+
+// import utility functions for task grouping and sorting
+import { groupTasks, sortTasks, sortGroupEntries, formatDateForGroup } from '@/utils/taskGrouping';
 
 /**
  * Props interface for ListCard component
@@ -95,7 +86,7 @@ export interface ListCardProps {
   loading?: boolean; // whether the list is currently loading
 
   // optional list configuration
-  groupBy?: 'priority' | 'dueDate' | 'color' | 'allDay' | 'none'; // how to group tasks (allDay = single "All day tasks" group for planner)
+  groupBy?: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'none'; // routine = one-time vs recurring (browse list detail); allDay = planner all-day bucket
   sortBy?: 'createdAt' | 'dueDate' | 'priority' | 'title'; // how to sort tasks
   sortDirection?: 'asc' | 'desc'; // sort direction
 
@@ -329,7 +320,6 @@ export default function ListCard({
     isGroupCollapsed,
   } = useGroupAnimations();
 
-  const { getTaskCardAnimation, markGroupExpanding } = useTaskCardAnimations();
 
   // when hideCompletedTasks: hide completed tasks (local + redux). optimistically hide on tap so we don't wait for redux
   const [locallyCompletedIds, setLocallyCompletedIds] = useState<Set<string>>(() => new Set());
@@ -477,21 +467,13 @@ export default function ListCard({
     return sortGroupEntries(entries);
   }, [groupedTasks, groupBy]);
 
-  // handle group toggle with animation tracking
   const handleGroupToggle = (groupTitle: string) => {
-    const wasCollapsed = isGroupCollapsed(groupTitle);
     toggleGroupCollapse(groupTitle);
-
-    // if expanding, mark group as expanding so task cards animate
-    if (wasCollapsed) {
-      markGroupExpanding(groupTitle);
-    }
   };
 
   // memoized render - stable ref so FlatList doesn't re-render all items when parent updates
   const renderTaskCard = useCallback<ListRenderItem<Task>>(
     ({ item: task, index }) => {
-      const { opacityValue, scaleValue, shouldAnimate } = getTaskCardAnimation(task.id, index || 0);
       const isLastItem = index === processedTasks.length - 1;
       const isFirstItem = index === 0;
       const isSelected = selectionMode && selectedTaskIds.includes(task.id);
@@ -521,23 +503,15 @@ export default function ListCard({
             onSelect={selectionMode && onToggleTaskSelection ? (t: Task, _selected?: boolean) => onToggleTaskSelection(t.id) : undefined}
           />
       );
-      const wrapper = shouldAnimate && opacityValue && scaleValue ? (
-        <Animated.View style={{ opacity: opacityValue, transform: [{ scale: scaleValue }] }}>
-          {card}
-        </Animated.View>
-      ) : (
-        <View>{card}</View>
-      );
       return hideCompletedTasks ? (
-        <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION : undefined} exiting={FadeOut.duration(200)}>
-          {wrapper}
+        <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION_SPRING : undefined} exiting={FadeOut.duration(200)}>
+          {card}
         </AnimatedReanimated.View>
       ) : (
-        wrapper
+        card
       );
     },
     [
-      getTaskCardAnimation,
       processedTasks.length,
       hideCompletedTasks,
       onTaskPress,
@@ -787,8 +761,7 @@ export default function ListCard({
                 onPress={handleDropdownButtonPress}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name="ellipsis-horizontal"
+                <EllipsisIcon
                   size={24}
                   color={themeColors.text.primary()}
                 />
@@ -849,7 +822,7 @@ export default function ListCard({
           data={processedTasks}
           renderItem={renderTaskCard}
           keyExtractor={(task) => `${instanceId}-${task.id}`}
-          itemLayoutAnimation={layoutTransitionEnabled && hideCompletedTasks ? LAYOUT_TRANSITION : undefined}
+          itemLayoutAnimation={layoutTransitionEnabled && hideCompletedTasks ? LAYOUT_TRANSITION_SPRING : undefined}
           onContentSizeChange={hideCompletedTasks ? handleContentSizeChange : undefined}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={contentContainerStyle}
@@ -873,7 +846,7 @@ export default function ListCard({
       ? [styles.container, { flex: undefined, height: listHeight }]
       : styles.container;
     return (
-      <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION : undefined} style={groupedContainerStyle}>
+      <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION_SPRING : undefined} style={groupedContainerStyle}>
         {/* dropdown list component - shown when dropdownItems are provided */}
         {dropdownItems && dropdownItems.length > 0 && (
           <DropdownList
@@ -888,7 +861,7 @@ export default function ListCard({
         )}
         <AnimatedFlatList
           data={sortedGroupEntries}
-          itemLayoutAnimation={layoutTransitionEnabled && (hideCompletedTasks || groupBy !== 'none') ? LAYOUT_TRANSITION : undefined}
+          itemLayoutAnimation={layoutTransitionEnabled && (hideCompletedTasks || groupBy !== 'none') ? LAYOUT_TRANSITION_SPRING : undefined}
           onContentSizeChange={handleGroupedListContentSizeChange}
           onLayout={(e) => {
             layoutHeightRef.current = e.nativeEvent.layout.height;
@@ -901,29 +874,28 @@ export default function ListCard({
           renderItem={({ item: [groupTitle, groupTasks] }) => {
             const isCollapsed = isGroupCollapsed(groupTitle);
             return (
-              <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION : undefined} style={styles.group}>
+              <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION_SPRING : undefined} style={styles.group}>
                 {renderGroupHeader(groupTitle, groupTasks.length, groupTasks as Task[])}
                 {!isCollapsed && (
-                  <AnimatedFlatList
-                    data={groupTasks}
-                    scrollEnabled={false}
-                    removeClippedSubviews={!hideCompletedTasks}
-                    maxToRenderPerBatch={6}
-                    initialNumToRender={6}
-                    keyExtractor={(task) => task.id}
-                    itemLayoutAnimation={layoutTransitionEnabled && hideCompletedTasks ? LAYOUT_TRANSITION : undefined}
-                    showsVerticalScrollIndicator={false}
-                    renderItem={({ item: task, index }) => {
-                      const { opacityValue, scaleValue, shouldAnimate } = getTaskCardAnimation(
-                        task.id,
-                        index || 0,
-                        groupTitle
-                      );
-                      const isLastItem = index === groupTasks.length - 1;
-                      const isFirstItem = index === 0;
-                      const isSelected = selectionMode && selectedTaskIds.includes(task.id);
-                      const card = (
-                        <TaskCard
+                  <AnimatedReanimated.View
+                    entering={FadeInUp.duration(200)}
+                    exiting={FadeOutUp.duration(200)}
+                  >
+                    <AnimatedFlatList
+                      data={groupTasks}
+                      scrollEnabled={false}
+                      removeClippedSubviews={!hideCompletedTasks}
+                      maxToRenderPerBatch={6}
+                      initialNumToRender={6}
+                      keyExtractor={(task) => task.id}
+                      itemLayoutAnimation={layoutTransitionEnabled && hideCompletedTasks ? LAYOUT_TRANSITION_SPRING : undefined}
+                      showsVerticalScrollIndicator={false}
+                      renderItem={({ item: task, index }) => {
+                        const isLastItem = index === groupTasks.length - 1;
+                        const isFirstItem = index === 0;
+                        const isSelected = selectionMode && selectedTaskIds.includes(task.id);
+                        const card = (
+                          <TaskCard
                           task={task}
                           onPress={selectionMode && onToggleTaskSelection ? undefined : onTaskPress}
                           onComplete={selectionMode ? undefined : handleTaskComplete}
@@ -946,30 +918,22 @@ export default function ListCard({
                           selectionMode={selectionMode}
                           isSelected={isSelected}
                           onSelect={selectionMode && onToggleTaskSelection ? (t: Task, _selected?: boolean) => onToggleTaskSelection(t.id) : undefined}
-                        />
-                      );
-                      const wrapper = shouldAnimate && opacityValue && scaleValue ? (
-                        <Animated.View style={{ opacity: opacityValue, transform: [{ scale: scaleValue }] }}>
-                          {card}
-                        </Animated.View>
-                      ) : (
-                        <View>{card}</View>
-                      );
-                      return hideCompletedTasks ? (
-                        <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION : undefined} exiting={FadeOut.duration(200)}>
-                          {wrapper}
-                        </AnimatedReanimated.View>
-                      ) : (
-                        wrapper
-                      );
-                    }}
-                  />
+                          />
+                        );
+                        return hideCompletedTasks ? (
+                          <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION_SPRING : undefined} exiting={FadeOut.duration(200)}>
+                            {card}
+                          </AnimatedReanimated.View>
+                        ) : (
+                          card
+                        );
+                      }}
+                    />
+                  </AnimatedReanimated.View>
                 )}
               </AnimatedReanimated.View>
             );
           }}
-          ref={groupedFlatListRef as any}
-          keyExtractor={([groupTitle]) => `${instanceId}-${groupTitle}`}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={contentContainerStyle}
           refreshControl={refreshControl}

@@ -18,8 +18,9 @@ export const Paddings = {
   // used by: reminders, completion (description/instruction padding)
   screenLarge: 32,
 
-  // section padding - for elevated sections, cards, modals (not yet used)
-  section: 20,
+  // section padding - for elevated sections, cards, modals
+  // used by: list-create (vertical gap between stacked GroupedLists)
+  section: 32,
   sectionCompact: 16,
 
   // card padding
@@ -49,9 +50,9 @@ export const Paddings = {
   // used by: GroupHeader, ModalHeader, TaskForm, +not-found
   touchTargetSmall: 4,
 
-  // pill/chip padding
+  // pill/chip padding - matches FormDetailSection routine pill, used by browse list pills
   pillHorizontal: 14, // not yet used (recurrence pill uses groupedListContentHorizontal)
-  pillVertical: 12, // not yet used
+  pillVertical: 12, // used by: FormDetailSection (repeating pill), browse list pills
 
   // indicator/tag padding
   // used by: TaskIndicators
@@ -72,6 +73,9 @@ export const Paddings = {
   // icon-to-text spacing in GroupedList rows (FormDetailButton, recurrence pill)
   // used by: FormDetailButton, CustomFormDetailButton, FormDetailSection (recurrence)
   groupedListIconTextSpacing: 12,
+  // gap between GroupedListHeader and content below (grouped list or pills)
+  // used by: browse screen (groupedListSection, listsPillsContainer)
+  groupedListHeaderContentGap: 10,
 
   // modal/sheet padding (not yet used - modalBottomExtra used instead)
   modalHorizontal: 24,
@@ -118,6 +122,10 @@ export const Paddings = {
   // IconColorModal - padding for content below floating color slider
   // used by: IconColorModal
   iconColorModalContentTop: 80,
+
+  // AI tab — space between the input section (message field + send) and the native bottom tab bar
+  // used by: app/(tabs)/ai/index
+  tabBarInputGap: 12,
 
   // zero - for reset or no-padding cases
   // used by: Description, CustomFormDetailButton, SubtaskListItem, ModalHeader, TaskScreenContent, TaskCard, FormPickerButton, planner/index, CreateSubtaskButton, SubtaskListItem (TaskScreen), SubtaskCreateButton, AlertSelectScreen, QuickDateOptions, WeekView, TimelineItem, DragOverlay

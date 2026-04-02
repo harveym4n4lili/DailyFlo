@@ -45,5 +45,26 @@ export type { SparklesIconProps } from './icons/SparklesIcon';
 export { RepeatIcon } from './icons/RepeatIcon';
 export type { RepeatIconProps } from './icons/RepeatIcon';
 
+export { EllipsisIcon } from './icons/EllipsisIcon';
+export type { EllipsisIconProps } from './icons/EllipsisIcon';
+
+export { GearIcon } from './icons/GearIcon';
+export type { GearIconProps } from './icons/GearIcon';
+
+export { DashboardIcon } from './icons/DashboardIcon';
+export type { DashboardIconProps } from './icons/DashboardIcon';
+
+export { TagIcon } from './icons/TagIcon';
+export type { TagIconProps } from './icons/TagIcon';
+
+export { HashtagIcon } from './icons/HashtagIcon';
+export type { HashtagIconProps } from './icons/HashtagIcon';
+
+export { LeafIcon } from './icons/LeafIcon';
+export type { LeafIconProps } from './icons/LeafIcon';
+
+export { PencilIcon } from './icons/PencilIcon';
+export type { PencilIconProps } from './icons/PencilIcon';
+
 export { SFSymbolIcon } from './SFSymbolIcon';
 export type { SFSymbolIconProps } from './SFSymbolIcon';

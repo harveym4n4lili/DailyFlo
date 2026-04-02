@@ -34,7 +34,7 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   children,
   containerStyle,
   separatorColor,
-  separatorInsetLeft = 0,
+  separatorInsetLeft,
   separatorInsetRight = 0,
   borderRadius = 28, // default iOS-style border radius
   backgroundColor,
@@ -61,14 +61,18 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   const finalBorderRadius = minimalStyle ? 0 : borderRadius;
   const finalContentMinHeight = minimalStyle ? undefined : contentMinHeight;
 
-  // when fullWidthSeparators is true, separators span full width (no inset)
-  // when separatorConsiderIconColumn is true, calculate inset to skip icon column
-  let finalSeparatorInsetLeft = fullWidthSeparators ? 0 : separatorInsetLeft;
+  // separator insets: fullWidth → flush; icon column → after padding + icon width; else → match cell padding (not icon-sized inset)
   const finalSeparatorInsetRight = fullWidthSeparators ? 0 : separatorInsetRight;
-  
-  // if separator should consider icon column, align with main label (content padding + icon + gap)
-  if (separatorConsiderIconColumn && !fullWidthSeparators) {
+
+  let finalSeparatorInsetLeft: number;
+  if (fullWidthSeparators) {
+    finalSeparatorInsetLeft = 0;
+  } else if (separatorConsiderIconColumn) {
     finalSeparatorInsetLeft = finalContentPaddingHorizontal + iconColumnWidth;
+  } else if (separatorInsetLeft !== undefined) {
+    finalSeparatorInsetLeft = separatorInsetLeft;
+  } else {
+    finalSeparatorInsetLeft = finalContentPaddingHorizontal;
   }
 
   // use provided separator color or default to theme border color

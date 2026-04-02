@@ -1,163 +1,178 @@
 /**
  * MainBackButton Component
- * 
- * A back button component for modals that adapts its styling based on iOS version.
- * For iOS 15+: displays a circular back arrow icon button with tertiary background.
- * For older iOS: displays a text "Back" button with task category color background.
- * 
- * This component is similar to MainCloseButton but uses a back arrow icon instead of close icon.
+ *
+ * A back button component for screens that adapts its styling based on iOS version.
+ * Same sizing and styling as MainCloseButton but uses SF back arrow (chevron.left).
+ * For iOS 15+: displays circular back arrow with liquid glass (GlassView).
+ * For older iOS/Android: displays circular back arrow with tertiary background.
  */
 
 // REACT IMPORTS
-// react: core react library for building components
 import React from 'react';
 
 // REACT NATIVE IMPORTS
-// building blocks from react native for UI components
-import { Pressable, Text, Platform } from 'react-native';
-
-// REACT NATIVE SAFE AREA CONTEXT IMPORT
-// useSafeAreaInsets: hook that provides safe area insets for the device
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, Text, Platform, useWindowDimensions, View } from 'react-native';
 
 // EXPO VECTOR ICONS IMPORT
-// ionicons: provides icons for the UI
+// ionicons: fallback on Android/Web where SF Symbols are not available
 import { Ionicons } from '@expo/vector-icons';
 
+// CUSTOM ICON IMPORTS
+// SFSymbolIcon: SF Symbols on iOS (chevron.left = back arrow)
+import { SFSymbolIcon } from '@/components/ui/icon';
+
 // CONSTANTS IMPORTS
-// design system constants for styling
 import { getTextStyle } from '@/constants/Typography';
-import { TaskCategoryColors } from '@/constants/ColorPalette';
 import { Paddings } from '@/constants/Paddings';
 
 // CUSTOM HOOKS IMPORTS
-// hooks for accessing design system and theme
 import { useThemeColors } from '@/hooks/useColorPalette';
 
+// EXPO GLASS EFFECT IMPORTS
+// GlassView: native iOS UIVisualEffectView liquid glass (same pattern as MainCloseButton)
+import GlassView from 'expo-glass-effect/build/GlassView';
+
 // TYPES IMPORTS
-// typescript types for type safety
 import type { TaskColor } from '@/types';
 
-/**
- * Props for MainBackButton component
- */
 export interface MainBackButtonProps {
   /** Callback when button is pressed */
   onPress: () => void;
-  
-  /** Task color for styling (used for older iOS text button background) */
+  /** Task color for older iOS text button (kept for compatibility) */
   color?: TaskColor;
-  
-  /** Optional top position override (defaults to 16 + safe area top for newer iOS, 20 + safe area top for older iOS) */
+  /** Optional top position override (defaults to 20) */
   top?: number;
-  
-  /** Optional left position override (defaults to 16) */
+  /** Optional left position override (defaults to Paddings.screen) */
   left?: number;
-  
   /** Optional right position override (if provided, left is ignored) */
   right?: number;
 }
 
 /**
- * MainBackButton Component
- * 
- * Renders a back button that adapts to iOS version:
- * - iOS 15+: circular back arrow icon button with tertiary background
- * - Older iOS: text "Back" button with task category color background
+ * MainBackButton – liquid glass back button, same sizing as MainCloseButton.
+ * Uses SF chevron.left on iOS, Ionicons arrow-back on Android/Web.
  */
 export const MainBackButton: React.FC<MainBackButtonProps> = ({
   onPress,
   color = 'blue',
   top,
-  left = 16,
+  left = Paddings.screen,
   right,
 }) => {
-  // HOOKS
-  // get theme-aware colors for styling
   const themeColors = useThemeColors();
-  // get safe area insets for positioning
-  const insets = useSafeAreaInsets();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
-  // IOS VERSION DETECTION
-  // get iOS version number for conditional styling
-  // iOS 15+ introduced the glass UI design with updated header styling
-  // returns the major version number (e.g., 14, 15, 16, 17)
   const getIOSVersion = (): number => {
     if (Platform.OS !== 'ios') return 0;
     const version = Platform.Version as string;
-    // Platform.Version can be a string like "15.0" or number like 15
-    // parse it to get the major version number
-    const majorVersion = typeof version === 'string' 
-      ? parseInt(version.split('.')[0], 10) 
-      : Math.floor(version as number);
+    const majorVersion =
+      typeof version === 'string'
+        ? parseInt(version.split('.')[0], 10)
+        : Math.floor(version as number);
     return majorVersion;
   };
-  
-  // check if running on iOS 15+ (newer glass UI design)
+
   const isNewerIOS = getIOSVersion() >= 15;
-  
-  // determine button text/icon color based on task category color
-  // always use task category color, including white case
-  const getButtonTextColor = () => {
-    return TaskCategoryColors[color][500]; // task category color
+  const iconColor = themeColors.text.primary();
+  const closeButtonBackgroundColor = themeColors.background.primary();
+  const topPosition = top !== undefined ? top : 20;
+  const glassAvailable = Platform.OS === 'ios';
+
+  const basePositionStyle = {
+    position: 'absolute' as const,
+    ...(right !== undefined ? { right } : { left }),
+    top: topPosition,
+    zIndex: 10,
   };
 
-  // calculate top position
-  // defaults to 16px from top + safe area inset for newer iOS, 20px for older iOS
-  // or uses provided top value if specified
-  const topPosition = top !== undefined 
-    ? top 
-    : isNewerIOS 
-      ? 16 + insets.top  // newer iOS: 16px from top
-      : 20 + insets.top; // older iOS: 20px from top
+  const absoluteWrapperStyle = {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    width: windowWidth,
+    height: windowHeight,
+    zIndex: 10,
+  };
 
+  // liquid glass variant: same as MainCloseButton but with chevron.left
+  if (isNewerIOS && glassAvailable) {
+    return (
+      <View pointerEvents="box-none" style={absoluteWrapperStyle}>
+        <GlassView
+          style={{
+            ...basePositionStyle,
+            width: 42,
+            height: 42,
+            borderRadius: 24,
+            overflow: 'visible',
+          }}
+          tintColor={closeButtonBackgroundColor as any}
+          glassEffectStyle="regular"
+          isInteractive
+        >
+          <Pressable
+            onPress={onPress}
+            style={{
+              width: '100%',
+              height: '100%',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 0,
+              borderColor: themeColors.border.primary(),
+              borderRadius: 21,
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <SFSymbolIcon
+              name="chevron.left"
+              size={20}
+              color={iconColor}
+              fallback={<Ionicons name="arrow-back" size={24} color={iconColor} />}
+            />
+          </Pressable>
+        </GlassView>
+      </View>
+    );
+  }
+
+  // fallback for Android, web, older iOS
   return (
-    <Pressable
-      onPress={onPress}
-      style={{
-        position: 'absolute',
-        // use right position if provided, otherwise use left position
-        ...(right !== undefined 
-          ? { right: right } 
-          : { left: left }
-        ),
-        top: topPosition, // top position (default 16px + safe area top)
-        zIndex: 10, // ensure button appears above other content
-        ...(isNewerIOS ? {
-          // iOS 15+ (newer): circular back arrow icon button with tertiary background
-          width: 42, // button width
-          height: 42, // button height
-          borderRadius: 21, // circular shape (half of width/height)
-          alignItems: 'center', // center icon horizontally
-          justifyContent: 'center', // center icon vertically
-          backgroundColor: themeColors.background.lightOverlay(), // tertiary background for newer iOS
-        } : {
-          // iOS < 15 (older): text button with colored background
-          paddingHorizontal: Paddings.contextMenuHorizontal,
-          paddingVertical: Paddings.contextMenuVertical,
-          borderRadius: 20, // rounded corners
-          backgroundColor: TaskCategoryColors[color][500], // task category color background
-        }),
-      }}
-    >
-      {isNewerIOS ? (
-        // iOS 15+ (newer): back arrow icon button
-        <Ionicons
-          name="arrow-back"
-          size={32}
-          color={getButtonTextColor()}
-        />
-      ) : (
-        // iOS < 15 (older): text button (current style)
-        <Text style={{
-          ...getTextStyle('button-secondary'),
-          // use white text for contrast on colored backgrounds
-          color: '#FFFFFF',
-        }}>
-          Back
-        </Text>
-      )}
-    </Pressable>
+    <View pointerEvents="box-none" style={absoluteWrapperStyle}>
+      <Pressable
+        onPress={onPress}
+        style={{
+          ...basePositionStyle,
+          ...(isNewerIOS
+            ? {
+                width: 42,
+                height: 42,
+                borderRadius: 21,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: closeButtonBackgroundColor,
+              }
+            : {
+                paddingHorizontal: Paddings.contextMenuHorizontal,
+                paddingVertical: Paddings.contextMenuVertical,
+                borderRadius: 20,
+                backgroundColor: themeColors.interactive.primary(),
+              }),
+        }}
+      >
+        {isNewerIOS ? (
+          <SFSymbolIcon
+            name="chevron.left"
+            size={20}
+            color={iconColor}
+            fallback={<Ionicons name="arrow-back" size={24} color={iconColor} />}
+          />
+        ) : (
+          <Text style={{ ...getTextStyle('button-secondary'), color: '#FFFFFF' }}>
+            Back
+          </Text>
+        )}
+      </Pressable>
+    </View>
   );
 };
 

@@ -59,6 +59,11 @@ export interface CustomTextInputProps {
   onFocus?: () => void;
   /** Callback when input is blurred */
   onBlur?: () => void;
+  /**
+   * When true, empty / newline-only content uses ~one line of vertical space and grows per logical line (\\n).
+   * When false (task description default), uses taller minimum + padding so the field feels like a notes area.
+   */
+  compactInitialHeight?: boolean;
 }
 
 /**
@@ -79,6 +84,7 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   inputStyle,
   onFocus: onFocusProp,
   onBlur: onBlurProp,
+  compactInitialHeight = false,
 }) => {
   // get current color scheme (light/dark mode)
   const colorScheme = useColorScheme() || 'dark';
@@ -250,10 +256,10 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
     lines.push('');
   }
   
-  // calculate dynamic height based on content
-  const lineHeight = 20; // matches our text style line height
-  const minHeight = 40; // minimum height for the input
-  const paddingVertical = 24; // top + bottom padding (12 + 12)
+  // calculate dynamic height based on content (lineHeight matches styles.text / body-large)
+  const lineHeight = 20;
+  const minHeight = compactInitialHeight ? lineHeight : 40;
+  const paddingVertical = compactInitialHeight ? 0 : 24; // task form uses 12+12; compact matches Description row padding cleared via inputStyle
   
   // calculate content height based on number of lines (with safety check)
   const linesCount = lines?.length || 1;

@@ -159,6 +159,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, onSubmitted }) => {
             onBlur={() => onBlur('title')}
             placeholder="Task title"
             placeholderTextColor={themeColors.text.tertiary?.() || labelColor}
+            selectionColor="white"
+            cursorColor="white"
             style={{
               ...getTextStyle('heading-2'),
               color: themeColors.text.primary(),

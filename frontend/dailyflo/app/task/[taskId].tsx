@@ -21,9 +21,23 @@ import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { useDuplicateTask } from '@/app/task/DuplicateTaskContext';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
 
-function taskToFormSubtasks(metaSubtasks?: { id: string; title: string; isCompleted: boolean; sortOrder?: number }[]): Subtask[] {
+// map metadata subtasks to form rows; api may use is_completed while ts types use isCompleted
+function taskToFormSubtasks(
+  metaSubtasks?: { id: string; title: string; isCompleted?: boolean; is_completed?: boolean; sortOrder?: number; sort_order?: number }[],
+): Subtask[] {
   if (!metaSubtasks?.length) return [];
   return metaSubtasks
+    .map((s) => ({
+      id: s.id,
+      title: s.title ?? '',
+      isCompleted:
+        s.isCompleted !== undefined
+          ? s.isCompleted
+          : (s as { is_completed?: boolean }).is_completed !== undefined
+            ? !!(s as { is_completed?: boolean }).is_completed
+            : false,
+      sortOrder: s.sortOrder ?? s.sort_order ?? 0,
+    }))
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
     .map((s) => ({ id: s.id, title: s.title, isCompleted: s.isCompleted, isEditing: false }));
 }
@@ -108,6 +122,7 @@ export default function TaskEditScreen() {
       time: t.time,
       duration: t.duration,
       alerts: (t.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
+      pickedListId: undefined,
     });
     setLocalValues({
       title: t.title,
@@ -174,6 +189,12 @@ export default function TaskEditScreen() {
       time: draft.time,
       duration: draft.duration,
       alerts: draft.alerts?.length ? draft.alerts : localValues.alerts,
+      listId:
+        draft.pickedListId === undefined
+          ? localValues.listId
+          : draft.pickedListId === null
+            ? undefined
+            : draft.pickedListId,
     }),
     [localValues, draft],
   );
@@ -215,9 +236,57 @@ export default function TaskEditScreen() {
   const handleSubtaskFinishEditing = (subtaskId: string) => {
     setSubtasks((prev) => prev.map((s) => (s.id === subtaskId ? { ...s, isEditing: false } : s)));
   };
-  const handleSubtaskToggle = (subtaskId: string) => {
-    setSubtasks((prev) => prev.map((s) => (s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted } : s)));
-  };
+  // toggle subtask: update ui immediately, then patch metadata so list/detail stay in sync without pressing save
+  const handleSubtaskToggle = useCallback(
+    (subtaskId: string) => {
+      if (!taskId || !task) return;
+      const prevSnapshot = subtasks;
+      const nextSubtasks = subtasks.map((s) => (s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted } : s));
+      setSubtasks(nextSubtasks);
+      const taskSubtasks: TaskSubtask[] = nextSubtasks.map((st, index) => ({
+        id: st.id,
+        title: st.title,
+        isCompleted: st.isCompleted,
+        sortOrder: index,
+      }));
+      dispatch(
+        updateTask({
+          id: taskId,
+          updates: {
+            id: taskId,
+            metadata: {
+              ...(task.metadata ?? {}),
+              subtasks: taskSubtasks,
+            },
+          },
+        }),
+      )
+        .unwrap()
+        .then((updated) => {
+          if (initialValuesRef.current) {
+            initialValuesRef.current = {
+              ...initialValuesRef.current,
+              subtasks: taskToFormSubtasks(updated.metadata?.subtasks),
+            };
+          }
+        })
+        .catch(() => {
+          setSubtasks(prevSnapshot);
+        });
+    },
+    [taskId, task, subtasks, dispatch],
+  );
+
+  // title checkbox: same completion flag as task cards — patch isCompleted so redux + checkbox stay aligned
+  const handleTitleCheckboxToggle = useCallback(() => {
+    if (!taskId || !task) return;
+    dispatch(
+      updateTask({
+        id: taskId,
+        updates: { id: taskId, isCompleted: !task.isCompleted },
+      }),
+    );
+  }, [taskId, task, dispatch]);
   const handleSubtaskDelete = (subtaskId: string) => {
     setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId));
   };
@@ -232,16 +301,19 @@ export default function TaskEditScreen() {
         const o = init.subtasks[i];
         return !o || s.title !== o.title || s.isCompleted !== o.isCompleted;
       });
+    // list: compare to server task so immediate list-select API save does not leave Save stuck on
+    const normList = (x: string | null | undefined) => x ?? '';
+    const listDirty = normList(v.listId) !== normList(task?.listId);
     return !!(
       (v.title?.trim() ?? '') !== (init.values.title ?? '') ||
       (v.description ?? '') !== (init.values.description ?? '') ||
       (v.color ?? '') !== (init.values.color ?? '') ||
       (v.icon ?? '') !== (init.values.icon ?? '') ||
-      (v.listId ?? '') !== (init.values.listId ?? '') ||
+      listDirty ||
       (v.priorityLevel ?? 3) !== (init.values.priorityLevel ?? 3) ||
       subtasksChanged
     );
-  }, [values, subtasks]);
+  }, [values, subtasks, task?.listId]);
 
   const isSaveButtonVisible = hasChanges;
 
@@ -424,8 +496,10 @@ export default function TaskEditScreen() {
       onShowDatePicker: () => router.push('/date-select'),
       onShowTimeDurationPicker: () => router.push('/time-duration-select'),
       onShowAlertsPicker: () => router.push('/alert-select'),
+      onShowListPicker: () =>
+        router.push({ pathname: '/list-select', params: { taskId: taskId! } } as any),
     }),
-    [router],
+    [router, taskId],
   );
 
   if (!taskId || !task) {
@@ -461,6 +535,8 @@ export default function TaskEditScreen() {
         onActivityLog={() => router.push('/activity-log' as any)}
         onDuplicateTask={handleDuplicateTask}
         onDeleteTask={handleDeleteTask}
+        titleCheckboxCompleted={task.isCompleted}
+        onTitleCheckboxToggle={handleTitleCheckboxToggle}
       />
   );
 }

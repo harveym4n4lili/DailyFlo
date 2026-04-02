@@ -1,3 +1,4 @@
+from django.db.models import Max
 from rest_framework import serializers
 from .models import List
 
@@ -13,12 +14,16 @@ class ListSerializer(serializers.ModelSerializer):
     class Meta:
         model = List
         fields = [
-            'id', 'name', 'description', 'color', 'icon',
-            'is_default', 'sort_order', 'task_count',
-            'completed_task_count', 'pending_task_count',
-            'created_at', 'updated_at'
+            'id', 'user', 'name', 'description', 'color', 'icon',
+            'is_default', 'sort_order', 'metadata', 'soft_deleted',
+            'task_count', 'completed_task_count', 'pending_task_count',
+            'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = [
+            'id', 'user', 'created_at', 'updated_at', 'soft_deleted', 'is_default',
+            'metadata',
+            'task_count', 'completed_task_count', 'pending_task_count',
+        ]
     
     def get_task_count(self, obj):
         return obj.get_task_count()
@@ -42,11 +47,16 @@ class ListCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = List
-        fields = ['name', 'description', 'color', 'icon', 'sort_order']
+        fields = ['name', 'description', 'color', 'icon', 'sort_order', 'metadata']
     
     def create(self, validated_data):
-        """create new list with current user"""
-        validated_data['user'] = self.context['request'].user
+        """create new list with current user; default sort_order to max+1 when omitted"""
+        user = self.context['request'].user
+        if 'sort_order' not in validated_data:
+            agg = List.objects.filter(user=user, soft_deleted=False).aggregate(m=Max('sort_order'))
+            max_so = agg['m']
+            validated_data['sort_order'] = (max_so if max_so is not None else -1) + 1
+        validated_data['user'] = user
         return super().create(validated_data)
 
 class ListUpdateSerializer(serializers.ModelSerializer):
@@ -56,7 +66,7 @@ class ListUpdateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = List
-        fields = ['name', 'description', 'color', 'icon', 'sort_order']
+        fields = ['name', 'description', 'color', 'icon', 'sort_order', 'metadata']
         # Note: No 'is_default' field - users shouldn't be able to change this
     
     def validate_name(self, value):

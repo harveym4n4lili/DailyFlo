@@ -4,7 +4,7 @@
  * With flex: 1 only, form sheet / safe area can leave a gap above the content.
  */
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -22,9 +22,11 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { IconColorModal } from './modals';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
+import { useLists } from '@/store/hooks';
+import { getListDisplayName } from '@/utils/listDisplayName';
 import { FormDetailSection, SubtaskSection } from './sections';
 import { TrashIcon, ClockIcon, SFSymbolIcon } from '@/components/ui/icon';
-import { SaveButton } from '@/components/ui/button';
+import { SaveButton, MainCloseButton } from '@/components/ui/button';
 import { ActionContextMenu } from '@/components/ui';
 import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisplay } from '@/components/ui/button';
 import { getTextStyle } from '@/constants/Typography';
@@ -135,6 +137,32 @@ export interface TaskCreationContentProps {
   saveButtonBottomInsetWhenKeyboardHidden?: number;
 
   /**
+   * When true (default), show checkbox next to task title.
+   * When false (e.g. create mode), hide checkbox so title input spans full width.
+   */
+  showTitleCheckbox?: boolean;
+
+  /**
+   * when editing an existing task, pass redux isCompleted so the box matches the server;
+   * use with onTitleCheckboxToggle so taps patch the task (otherwise local-only state is used).
+   */
+  titleCheckboxCompleted?: boolean;
+  /** dispatch updateTask (or similar) when the title checkbox is pressed in edit mode */
+  onTitleCheckboxToggle?: () => void;
+
+  /**
+   * When true, show MainCloseButton in top left (e.g. create mode).
+   * When false (default), no close button in header.
+   */
+  showMainCloseButton?: boolean;
+
+  /**
+   * When true (default), show drag indicator pill at top.
+   * When false (e.g. create mode when not draggable), hide the pill.
+   */
+  showDragIndicator?: boolean;
+
+  /**
    * Optional: use these to open date/time/alert pickers (e.g. custom navigation).
    * When not provided, stack screens are used (router.push + CreateTaskDraftContext).
    */
@@ -142,6 +170,8 @@ export interface TaskCreationContentProps {
     onShowDatePicker: () => void;
     onShowTimeDurationPicker: () => void;
     onShowAlertsPicker: () => void;
+    /** pushes /list-select (liquid glass formSheet); seed pickedListId in draft before calling */
+    onShowListPicker?: () => void;
   };
 
   /** Optional: called when Activity log is selected from actions menu */
@@ -180,9 +210,21 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   onActivityLog,
   onDuplicateTask,
   onDeleteTask,
+  showTitleCheckbox = true,
+  titleCheckboxCompleted,
+  onTitleCheckboxToggle,
+  showMainCloseButton = false,
+  showDragIndicator = true,
 }) => {
   const router = useRouter();
-  const draftContext = useCreateTaskDraft();
+  const { setDraft } = useCreateTaskDraft();
+  const { lists: reduxLists } = useLists();
+
+  // tray pill label: Inbox vs list name from redux (same lists as /lists/ api)
+  const listDestinationLabel = useMemo(
+    () => getListDisplayName(values.listId, reduxLists),
+    [values.listId, reduxLists]
+  );
   const { themeColor } = useThemeColor();
   const colors = useColorPalette();
   const themeColors = useThemeColors();
@@ -190,11 +232,22 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   const titleInputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // only icon/color still uses an in-screen modal (no stack screen for it yet)
+  // only icon/color still uses an in-screen DraggableModal (no stack route for it yet)
   const [isColorPickerVisible, setIsColorPickerVisible] = useState(false);
   useEffect(() => {
     onPickerVisibilityChange?.(isColorPickerVisible);
   }, [isColorPickerVisible, onPickerVisibilityChange]);
+
+  // list-select is a root stack formSheet (like date-select); seed pickedListId so the sheet shows the right row
+  const handleOpenListPicker = useCallback(() => {
+    Keyboard.dismiss();
+    setDraft({ pickedListId: values.listId ? values.listId : null });
+    if (pickerHandlers?.onShowListPicker) {
+      pickerHandlers.onShowListPicker();
+    } else {
+      router.push('/list-select' as any);
+    }
+  }, [setDraft, values.listId, pickerHandlers, router]);
 
   // date/time/alert: use stack screens (seed draft and push, or use passed pickerHandlers)
   const handleShowDatePicker = () => {
@@ -203,7 +256,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       return;
     }
     Keyboard.dismiss();
-    draftContext.setDraft({
+    setDraft({
       dueDate: values.dueDate ?? new Date().toISOString(),
       time: values.time,
       duration: values.duration,
@@ -229,7 +282,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       return;
     }
     Keyboard.dismiss();
-    draftContext.setDraft({
+    setDraft({
       dueDate: values.dueDate ?? new Date().toISOString(),
       time: values.time,
       duration: values.duration,
@@ -244,7 +297,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       return;
     }
     Keyboard.dismiss();
-    draftContext.setDraft({
+    setDraft({
       dueDate: values.dueDate ?? new Date().toISOString(),
       time: values.time,
       duration: values.duration,
@@ -253,8 +306,10 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
     router.push('/alert-select');
   };
 
-  // checkbox state for task title checkbox
-  const [titleCheckboxChecked, setTitleCheckboxChecked] = useState(false);
+  // title checkbox: edit screen passes server state + onTitleCheckboxToggle; otherwise local-only (legacy)
+  const [internalTitleCheckboxChecked, setInternalTitleCheckboxChecked] = useState(false);
+  const titleCheckboxChecked =
+    onTitleCheckboxToggle != null ? (titleCheckboxCompleted ?? false) : internalTitleCheckboxChecked;
 
   // keyboard height for scroll content bottom padding so content can scroll above keyboard
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -322,32 +377,39 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
         style={[styles.scroll]}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: isEditMode ? 60 : 48, paddingBottom: keyboardHeight > 0 ? keyboardHeight + 32 : 160 },
+          { paddingTop: showMainCloseButton ? 24 : (isEditMode ? 60 : 48), paddingBottom: keyboardHeight > 0 ? keyboardHeight + 32 : 160 },
         ]}
         showsVerticalScrollIndicator
         keyboardShouldPersistTaps="handled"
       >
-        {/* task title input + checkbox row (checkbox on left) */}
-        <View style={styles.titleRow}>
-          <View style={styles.checkboxWrap}>
-            <Checkbox
-              size={CHECKBOX_SIZE_TASK_VIEW}
-              checked={titleCheckboxChecked}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setTitleCheckboxChecked((prev) => !prev);
-              }}
-            />
-          </View>
-          <View style={styles.titleInputWrap}>
+        {/* task title input + optional checkbox row (checkbox on left when showTitleCheckbox) */}
+        {/* create variant: extra left padding so title has 20px gap from MainCloseButton (16 + 42 + 20 - screen padding) */}
+        <View style={[styles.titleRow, showMainCloseButton && { paddingLeft: 16 + 42 + 20 - Paddings.screen }]}>
+          {showTitleCheckbox && (
+            <View style={styles.checkboxWrap}>
+              <Checkbox
+                size={CHECKBOX_SIZE_TASK_VIEW}
+                checked={titleCheckboxChecked}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  if (onTitleCheckboxToggle) {
+                    onTitleCheckboxToggle();
+                  } else {
+                    setInternalTitleCheckboxChecked((prev) => !prev);
+                  }
+                }}
+              />
+            </View>
+          )}
+          <View style={[styles.titleInputWrap, !showTitleCheckbox && styles.titleInputWrapNoCheckbox]}>
             <TextInput
               ref={titleInputRef}
               value={values.title || ''}
               onChangeText={(t) => onChange('title', t)}
               placeholder="e.g., Answering emails"
               placeholderTextColor={themeColors.text.tertiary()}
-              selectionColor="white"
-              cursorColor="white"
+              selectionColor="#FFFFFF"
+              cursorColor="#FFFFFF"
               style={[
                 getTextStyle('heading-2'),
                 {
@@ -355,6 +417,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
                   paddingBottom: Paddings.none,
                   paddingHorizontal: Paddings.none,
                   maxHeight: 68, // 2 lines max (fontSize 26 * ~1.3 line height)
+                  caretColor: '#FFFFFF', // iOS: style-based cursor color fallback
                 },
               ]}
               multiline
@@ -382,6 +445,8 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
             alertsCount={values.alerts?.length ?? 0}
             routineType={(values.routineType as RoutineType) || 'once'}
             onRoutineTypeChange={(routineType) => onChange('routineType', routineType)}
+            onOpenListPicker={handleOpenListPicker}
+            listDestinationLabel={listDestinationLabel}
           />
         </View>
 
@@ -422,6 +487,15 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       {/* header container: all non-scroll content - collapsable: false required for RNScreens FormSheet
           (expects at most 2 subviews: header + ScrollView) */}
       <View style={styles.headerContainer} collapsable={false} pointerEvents="box-none">
+        {/* MainCloseButton: top left when showMainCloseButton (e.g. create mode) */}
+        {showMainCloseButton && (
+          <MainCloseButton
+            onPress={onClose}
+            color={buttonColor}
+            top={20}
+            left={20}
+          />
+        )}
         {/* drag indicator + actions */}
         <View style={styles.headerWrap} pointerEvents="box-none">
           {isEditMode && (
@@ -434,19 +508,21 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
               />
             </View>
           )}
-          <View style={styles.dragIndicatorWrap} pointerEvents="none">
-            <View
-              style={[
-                styles.dragIndicatorPill,
-                {
-                  width: pillWidth,
-                  height: pillHeight,
-                  borderRadius: pillRadius,
-                  backgroundColor: themeColors.interactive.tertiary(),
-                },
-              ]}
-            />
-          </View>
+          {showDragIndicator && (
+            <View style={styles.dragIndicatorWrap} pointerEvents="none">
+              <View
+                style={[
+                  styles.dragIndicatorPill,
+                  {
+                    width: pillWidth,
+                    height: pillHeight,
+                    borderRadius: pillRadius,
+                    backgroundColor: themeColors.interactive.tertiary(),
+                  },
+                ]}
+              />
+            </View>
+          )}
         </View>
         {/* save button overlay */}
         {embedHeaderButtons && (
@@ -559,6 +635,8 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center' },
   // right padding matches left: checkbox (18) + gap (16) for visual symmetry
   titleInputWrap: { flex: 1, minWidth: 0, paddingLeft: Paddings.none, paddingRight: CHECKBOX_SIZE_TASK_VIEW + 16 },
+  // when no checkbox: remove right padding (was for visual symmetry with checkbox)
+  titleInputWrapNoCheckbox: { paddingRight: Paddings.none },
   titleSpacer: { height: 8 },
   checkboxWrap: { width: CHECKBOX_SIZE_TASK_VIEW, marginTop: -10, height: CHECKBOX_SIZE_TASK_VIEW, marginRight: Paddings.groupedListIconTextSpacing + 4, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   pickerSectionWrap: { marginTop: 12 },

@@ -17,6 +17,7 @@ type TextLineLayout = { x: number; y: number; width: number; height: number };
 
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { LeafIcon } from '@/components/ui/icon';
 import { formatTimeRange } from '@/utils/taskFormatters';
 import { getStrikethroughDuration, STRIKETHROUGH_MIN_MS } from '@/constants/Checkbox';
 
@@ -30,7 +31,13 @@ interface TaskCardContentProps {
   taskColor: string;
   // whether to use compact layout - not used but kept for consistency
   compact?: boolean;
+  /** when set (e.g. browse search), replaces the time range on the right */
+  titleRightLabel?: string;
+  /** browse task search: show leaf (same as list rows) beside list name / inbox — tertiary like subtext */
+  titleRightShowLeaf?: boolean;
 }
+
+const TITLE_RIGHT_LEAF_SIZE = 14;
 
 /** single strikethrough line for one text line - animates width left-to-right, positioned at line's vertical center */
 function StrikethroughLine({
@@ -70,6 +77,8 @@ export default function TaskCardContent({
   task,
   taskColor,
   compact = false,
+  titleRightLabel,
+  titleRightShowLeaf = false,
 }: TaskCardContentProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -106,13 +115,17 @@ export default function TaskCardContent({
   // create dynamic styles using theme colors and typography
   const styles = createStyles(themeColors, typography);
 
-  // format time label - shows time range if available
+  // format time label — or browse search override (e.g. list name) on the right
   const timeLabel = formatTimeRange(task.time, task.duration);
+  const rightLabel = titleRightLabel !== undefined ? titleRightLabel : timeLabel;
+  // browse task search: title on the left, trailing cluster is leaf + list/inbox (tight, tertiary) — not the time column
+  const showListNameWithLeaf =
+    titleRightShowLeaf && titleRightLabel !== undefined && Boolean(rightLabel);
 
   return (
     <View style={styles.content}>
-      {/* row container for title and time label */}
-      <View style={styles.titleRow}>
+      {/* row: title (flex) then time, or leaf+list name tucked next to each other on the right */}
+      <View style={[styles.titleRow, showListNameWithLeaf && styles.titleRowWithListBadge]}>
         {/* outer wrapper - flex: 1 for row layout so time label stays right-aligned */}
         <View style={styles.titleWrapper}>
           {/* inner wrapper - alignSelf: flex-start sizes to text content; strikethrough per line via onTextLayout */}
@@ -140,17 +153,34 @@ export default function TaskCardContent({
           </View>
         </View>
 
-        {/* time label on the right - shows time range if available */}
-        {timeLabel ? (
-          <Text
-            style={[
-              styles.timeLabel,
-              task.isCompleted && styles.completedTimeLabel, // dimmed color when completed
-            ]}
-            numberOfLines={1}
-          >
-            {timeLabel}
-          </Text>
+        {/* right: clock time, or list/inbox + leaf as one unit (browse task search) */}
+        {rightLabel ? (
+          showListNameWithLeaf ? (
+            <View style={styles.titleRightLeafCluster}>
+              <LeafIcon size={TITLE_RIGHT_LEAF_SIZE} color={themeColors.text.tertiary()} />
+              <Text
+                style={[
+                  styles.timeLabelWithLeaf,
+                  task.isCompleted && styles.completedTimeLabel,
+                ]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {rightLabel}
+              </Text>
+            </View>
+          ) : (
+            <Text
+              style={[
+                styles.timeLabel,
+                task.isCompleted && styles.completedTimeLabel, // dimmed color when completed
+              ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {rightLabel}
+            </Text>
+          )
         ) : (
           <View style={styles.timeLabelPlaceholder} />
         )}
@@ -175,6 +205,10 @@ const createStyles = (
     alignItems: 'center', // vertically center title and time label
     justifyContent: 'space-between', // space between title and time label
     gap: 12, // spacing between title and time label
+  },
+  // multi-line title: keep leaf+list name aligned to first line (same row as title start)
+  titleRowWithListBadge: {
+    alignItems: 'flex-start',
   },
 
   // outer wrapper - flex: 1 so title area takes remaining space in row (time label stays right)
@@ -227,6 +261,24 @@ const createStyles = (
     width: 90,
     textAlign: 'right',
     flexShrink: 0,
+  },
+  // leaf + list/inbox (browse search): icon tight to label, same tertiary as subtext — mirrors list rows
+  titleRightLeafCluster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    flexShrink: 1,
+    minWidth: 0,
+    maxWidth: '46%',
+    marginLeft: 4,
+    paddingTop: 2,
+  },
+  timeLabelWithLeaf: {
+    ...typography.getTextStyle('body-medium'),
+    color: themeColors.text.tertiary(),
+    flexShrink: 1,
+    minWidth: 0,
+    textAlign: 'left',
   },
 });
 

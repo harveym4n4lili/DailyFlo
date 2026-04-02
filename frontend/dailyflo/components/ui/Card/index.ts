@@ -7,6 +7,10 @@
 
 export { TaskCard } from './TaskCard';
 export type { TaskCardProps } from './TaskCard/TaskCard';
+export { BrowseListSearchCard } from './BrowseListSearchCard';
+export type { BrowseListSearchCardProps } from './BrowseListSearchCard';
+export { BrowseDescriptionSearchCard } from './BrowseDescriptionSearchCard';
+export type { BrowseDescriptionSearchCardProps } from './BrowseDescriptionSearchCard';
 export { ListCard } from './ListCard';
 export type { ListCardProps } from './ListCard/ListCard';
 export { LogCard } from './LogCard';

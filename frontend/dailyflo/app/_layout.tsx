@@ -10,7 +10,10 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, useRef } from 'react';
-import { Platform } from 'react-native';
+import { Platform, TextInput } from 'react-native';
+
+// set default cursor/selection color to white app-wide (overrides iOS blue tint on TextInputs)
+TextInput.defaultProps = { ...(TextInput.defaultProps || {}), selectionColor: '#FFFFFF', cursorColor: '#FFFFFF' };
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -191,24 +194,41 @@ export default function RootLayout() {
     return null;
   }
 
+  // custom theme matching app background – prevents white flash in corners during screen transitions
+  const navTheme = {
+    ...(colorScheme === 'dark' ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(colorScheme === 'dark' ? DarkTheme.colors : DefaultTheme.colors),
+      background: themeColors.background.primary(),
+      card: themeColors.background.primary(),
+    },
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ReduxProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <ThemeProvider value={navTheme}>
           {/* Task stack and sub-screens share draft via context; DuplicateTaskProvider for pre-filling create from Duplicate */}
           <CreateTaskDraftProvider>
           <DuplicateTaskProvider>
           <PlannerMonthSelectProvider>
-          <Stack>
+          <Stack
+            screenOptions={{
+              animation: 'default', // native iOS slide-from-right for all stack transitions
+              gestureEnabled: true,
+              contentStyle: { backgroundColor: themeColors.background.primary() },
+            }}
+          >
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            {/* task-create: full screen, no indent, drag to close only */}
+            {/* task-create: full screen, no indent, not draggable, close via MainCloseButton */}
             <Stack.Screen
               name="task-create"
               options={{
                 headerShown: false,
                 presentation: 'formSheet',
-                gestureEnabled: true,
+                gestureEnabled: false,
+                sheetGrabberVisible: false,
                 contentStyle: {
                   backgroundColor: themeColors.background.primary(),
                 },
@@ -273,6 +293,19 @@ export default function RootLayout() {
                 presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
                 sheetGrabberVisible: false,
                 sheetAllowedDetents: [0.7],
+                sheetInitialDetentIndex: 0,
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
+                },
+              }}
+            />
+            <Stack.Screen
+              name="list-select"
+              options={{
+                headerShown: false,
+                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+                sheetGrabberVisible: false,
+                sheetAllowedDetents: [0.8],
                 sheetInitialDetentIndex: 0,
                 contentStyle: {
                   backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),

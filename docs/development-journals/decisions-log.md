@@ -133,3 +133,27 @@ Decided to remove toast notifications from the application.
 
 ### Notes
 - No notes
+---
+## [18/03/2026] - [Wednesday]
+
+### Decision 1
+Replaced the main tab bar **Settings** tab with an **AI** tab and moved **Settings** into the **Browse** stack (gear entry), with `ai/index` as a placeholder for future in-app AI features (`14c8d8d`).
+
+#### Decision Goal
+> Keep primary navigation aligned with core daily flows (Today, Planner, Browse, AI) while still exposing Settings from Browse; reserve a first-class tab for future AI product work.
+
+#### Decision Context
+* Bottom tabs were updated (`NativeTabs` **settings** → **ai**); Settings remains available from Browse.
+* The AI screen is intentionally minimal until backend/product scope for assistant features is defined.
+
+### Decision 2
+Adopted **AI-assisted development** (IDE tooling such as Cursor) as part of the regular workflow, recorded on the same milestone date as the **AI tab** landing (**18/03/2026**) so product and tooling decisions stay traceable together.
+
+#### Decision Goal
+> Speed up implementation, refactors, and documentation while keeping human review of commits and architecture.
+
+#### Decision Context
+* Heavy UI work on Browse, search, and navigation benefited from assisted coding; commits remain authored and reviewed in the normal Git flow.
+
+### Notes
+- Anchor date follows the commit that added `frontend/dailyflo/app/(tabs)/ai/index.tsx` and `ai/_layout.tsx`.

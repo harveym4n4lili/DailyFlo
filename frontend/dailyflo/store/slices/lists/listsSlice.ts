@@ -6,6 +6,7 @@
  */
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import listsApi, { getListApiErrorMessage } from '../../../services/api/lists';
 import { List, CreateListInput, UpdateListInput, ListFilters, ListSortOptions } from '../../../types';
 
 /**
@@ -86,53 +87,9 @@ export const fetchLists = createAsyncThunk(
   'lists/fetchLists',
   async (_, { rejectWithValue }) => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.getLists();
-      // return response.data;
-      
-      // For now, return mock data
-      const mockLists: List[] = [
-        {
-          id: '1',
-          userId: 'user1',
-          name: 'Work',
-          description: 'Work-related tasks',
-          color: 'blue',
-          icon: 'briefcase',
-          isDefault: false,
-          sortOrder: 0,
-          metadata: {
-            taskCount: 5,
-            completedTaskCount: 2,
-            lastUsed: new Date(),
-          },
-          softDeleted: false,
-          createdAt: new Date('2024-01-01'),
-          updatedAt: new Date('2024-01-10'),
-        },
-        {
-          id: '2',
-          userId: 'user1',
-          name: 'Personal',
-          description: 'Personal tasks and errands',
-          color: 'green',
-          icon: 'home',
-          isDefault: true,
-          sortOrder: 1,
-          metadata: {
-            taskCount: 3,
-            completedTaskCount: 1,
-            lastUsed: new Date(),
-          },
-          softDeleted: false,
-          createdAt: new Date('2024-01-01'),
-          updatedAt: new Date('2024-01-10'),
-        },
-      ];
-      
-      return mockLists;
+      return await listsApi.fetchLists();
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch lists');
+      return rejectWithValue(getListApiErrorMessage(error));
     }
   }
 );
@@ -142,67 +99,50 @@ export const createList = createAsyncThunk(
   'lists/createList',
   async (listData: CreateListInput, { rejectWithValue }) => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.createList(listData);
-      // return response.data;
-      
-      // For now, create a mock list
-      const newList: List = {
-        id: Date.now().toString(), // Simple ID generation
-        userId: 'user1',
-        name: listData.name,
-        description: listData.description || '',
-        color: listData.color || 'blue',
-        icon: listData.icon || '',
-        isDefault: listData.isDefault || false,
-        sortOrder: listData.sortOrder || 0,
-        metadata: {
-          taskCount: 0,
-          completedTaskCount: 0,
-          lastUsed: new Date(),
-          ...listData.metadata,
-        },
-        softDeleted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      return newList;
+      return await listsApi.createList(listData);
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to create list');
+      return rejectWithValue(getListApiErrorMessage(error));
     }
   }
 );
 
-// Update an existing list
+// Update an existing list (PATCH)
 export const updateList = createAsyncThunk(
   'lists/updateList',
-  async ({ id, updates }: { id: string; updates: UpdateListInput }, { rejectWithValue }) => {
+  async (
+    { id, updates }: { id: string; updates: Omit<UpdateListInput, 'id'> },
+    { rejectWithValue }
+  ) => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.updateList(id, updates);
-      // return response.data;
-      
-      // For now, return the updated list data
-      return { id, updates };
+      return await listsApi.patchList(id, updates);
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to update list');
+      return rejectWithValue(getListApiErrorMessage(error));
     }
   }
 );
 
-// Delete a list
+// Delete a list (soft delete on server)
 export const deleteList = createAsyncThunk(
   'lists/deleteList',
   async (listId: string, { rejectWithValue }) => {
     try {
-      // TODO: Replace with actual API call
-      // await api.deleteList(listId);
-      
-      // For now, just return the list ID
+      await listsApi.deleteList(listId);
       return listId;
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to delete list');
+      return rejectWithValue(getListApiErrorMessage(error));
+    }
+  }
+);
+
+// after local reorderLists reducer, PATCH sort_order for each row; on failure refetch to restore
+export const persistListOrder = createAsyncThunk(
+  'lists/persistListOrder',
+  async (orderedIds: string[], { dispatch, rejectWithValue }) => {
+    try {
+      await listsApi.patchSortOrders(orderedIds);
+    } catch (error) {
+      await dispatch(fetchLists());
+      return rejectWithValue(getListApiErrorMessage(error));
     }
   }
 );
@@ -300,6 +240,28 @@ const listsSlice = createSlice({
         }
       }
     },
+
+    // reorder lists after drag-and-drop: ids in display order; rewrites sortOrder 0..n-1
+    reorderLists: (state, action: PayloadAction<string[]>) => {
+      const orderedIds = action.payload;
+      const map = new Map(state.lists.map((l) => [l.id, l]));
+      const next: List[] = [];
+      let i = 0;
+      for (const id of orderedIds) {
+        const list = map.get(id);
+        if (list) {
+          next.push({ ...list, sortOrder: i, updatedAt: new Date() });
+          map.delete(id);
+          i += 1;
+        }
+      }
+      map.forEach((list) => {
+        next.push({ ...list, sortOrder: i, updatedAt: new Date() });
+        i += 1;
+      });
+      state.lists = next;
+      state.filteredLists = applyFilters(next, state.filters);
+    },
   },
   
   /**
@@ -345,11 +307,10 @@ const listsSlice = createSlice({
       })
       .addCase(updateList.fulfilled, (state, action) => {
         state.isUpdating = false;
-        const { id, updates } = action.payload;
-        const listIndex = state.lists.findIndex(list => list.id === id);
-        
+        const list = action.payload;
+        const listIndex = state.lists.findIndex((l) => l.id === list.id);
         if (listIndex !== -1) {
-          state.lists[listIndex] = { ...state.lists[listIndex], ...updates };
+          state.lists[listIndex] = list;
           state.filteredLists = applyFilters(state.lists, state.filters);
         }
       })
@@ -373,6 +334,9 @@ const listsSlice = createSlice({
       .addCase(deleteList.rejected, (state, action) => {
         state.isDeleting = false;
         state.deleteError = action.payload as string;
+      })
+      .addCase(persistListOrder.rejected, (state, action) => {
+        state.error = (action.payload as string) || 'Failed to save list order';
       });
   },
 });
@@ -471,6 +435,7 @@ export const {
   setEditingListId,
   updateListTaskCount,
   optimisticUpdateList,
+  reorderLists,
 } = listsSlice.actions;
 
 export default listsSlice.reducer;

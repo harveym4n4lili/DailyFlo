@@ -25,7 +25,11 @@ export interface GroupedListProps {
   // custom separator color (defaults to theme border color)
   separatorColor?: string;
   
-  // left inset for separator line in pt (default 0 = align to left edge)
+  /**
+   * Left inset for the separator line (pt). When omitted and `separatorConsiderIconColumn` is false,
+   * defaults to `contentPaddingHorizontal` so the rule lines up with the cell’s inner padding (not flush to the group edge).
+   * Pass `0` for a flush-left line. When `separatorConsiderIconColumn` is true, this prop is ignored in favor of padding + icon width.
+   */
   separatorInsetLeft?: number;
   // right inset for separator line in pt (default 0 = align to right edge)
   separatorInsetRight?: number;
@@ -74,9 +78,8 @@ export interface GroupedListProps {
   itemWrapperPaddingVertical?: number;
 
   /**
-   * When true, separators will automatically calculate left inset to align with content (skipping icon column).
-   * Requires iconColumnWidth to be provided for accurate calculation.
-   * When enabled, separatorInsetLeft is overridden with calculated value (iconColumnWidth).
+   * When true, separators use left inset = contentPaddingHorizontal + iconColumnWidth (label alignment).
+   * When false, omitted separatorInsetLeft defaults to contentPaddingHorizontal (not icon-wide inset).
    */
   separatorConsiderIconColumn?: boolean;
 
