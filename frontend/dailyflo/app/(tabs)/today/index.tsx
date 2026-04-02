@@ -13,7 +13,7 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 // import our new task components
 import { ListCard } from '@/components/ui/card';
 import { FloatingActionButton, SelectionCloseButton, SelectAllButton } from '@/components/ui/button';
-import { ActionContextMenu } from '@/components/ui';
+import { ScreenHeaderActions } from '@/components/ui';
 import { ClockIcon } from '@/components/ui/icon';
 import { ModalContainer } from '@/components/layout/ModalLayout';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
@@ -24,6 +24,7 @@ import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 // import typography system for consistent text styling
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
+import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
 
 // STORE FOLDER IMPORTS - Redux state management
 // The store folder contains all Redux-related code for managing app state
@@ -427,15 +428,15 @@ export default function TodayScreen() {
               style={styles.topSectionSelectAllButton}
             />
           ) : (
-            <ActionContextMenu
-              items={[
+            <ScreenHeaderActions
+              variant="dashboard"
+              contextMenuItems={[
                 { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => router.push('/activity-log' as any) },
                 { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
               ]}
-              style={styles.topSectionContextButton}
-              accessibilityLabel="Open menu"
               dropdownAnchorTopOffset={insets.top + 48}
               dropdownAnchorRightOffset={24}
+              style={styles.topSectionContextButton}
               tint="primary"
             />
           )}
@@ -459,16 +460,7 @@ export default function TodayScreen() {
         onTaskComplete={handleTaskComplete}
         onTaskEdit={handleTaskEdit}
         onTaskDelete={handleTaskDelete}
-        showCategory={false}
-        compact={false}
-        showIcon={false}
-        showIndicators={false}
-        showMetadata={false}
-        metadataVariant="today"
-        cardSpacing={0}
-        showDashedSeparator={true}
-        hideBackground={true}
-        removeInnerPadding={true}
+        {...LIST_CARD_TASK_ROW_PRESET_TODAY}
         emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
         loading={isLoading && todaysTasks.length === 0}
         groupBy="dueDate" // group tasks by due date to separate overdue and today's tasks

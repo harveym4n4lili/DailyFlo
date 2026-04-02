@@ -350,9 +350,6 @@ Update authentication.md - Add social auth flows
 - begin to plan task decomposition, plan next steps
 ### Notes
 - no notes
-<<<<<<< Updated upstream
----
-=======
 ---
 ## [12/09/2025] - [Friday]
 
@@ -1418,3 +1415,185 @@ Updated User app, models, serializers, views and urls
 - today screen taskcard completion needs to be slower: slower linear transition.
 - strikethrough needs to be at a constant speed rather than same time animation for all text sizes
 - style close button with SF close, and add close button and remove checkbox UI in task screen create.
+---
+## [11/03/2026] - [Tuesday]
+### Today's Goals
+- [X] Upgraded strikethrough animation, and lienar transition control
+- [X] Begun to implement browse page
+- [X] Designed some custom icons for navbar and other buttons
+- [X] Update task screen create UI.
+ 
+### Plans For Future
+- plan to implement browse page.
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
+- let AI tab replace the settings tab
+- plan to improve activity log performance by fetching up to 2 weeks worth of tasks.
+---
+## [13/03/2026] - [Friday]
+### Today's Goals
+- [X] Styling Changes
+ 
+### Plans For Future
+- plan to implement browse page.
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
+- let AI tab replace the settings tab
+- plan to improve activity log performance by fetching up to 2 weeks worth of tasks.
+---
+## [14/03/2026] - [Saturday]
+### Today's Goals
+- [X] UI Research for planning
+ 
+### Plans For Future
+- plan to implement browse page.
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
+- plan to improve activity log performance by fetching up to 2 weeks worth of tasks.
+---
+## [17/03/2026] - [Tuesday]
+### Today's Goals
+- [X] Designed lists grouped list in browse
+ 
+### Plans For Future
+- plan to implement browse page.
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
+- plan to move search bar at top as its own tab
+---
+## [18/03/2026] - [Wednesday]
+
+### Today's Goals
+- [x] I redesigned the settings screen and wired browse as a proper stack so I could nest screens cleanly.
+- [x] I polished the browse search bar (static label, primary text and icon, blended background).
+- [x] I moved Settings off the bottom tab into Browse, added the AI tab as a placeholder, patched the stack so dark-mode pushes don’t flash white, and brought MainBackButton in line with the glass styling.
+- [x] I updated the dev logbook.
+
+### Plans For Future
+- plan to implement browse page buttons
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
+- no notes
+---
+## [19/03/2026] - [Thursday]
+
+### Today's Goals
+- [x] Laid out the browse sub-routes and stack structure so the next screens could plug in without rework.
+
+### Plans For Future
+- plan to implement browse page buttons
+- plan to implement full list crud functionality.
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
+- no notes
+---
+## [22/03/2026] - [Sunday]
+
+### Today's Goals
+- [x] List detail screen with ListCard (including routines), opened Manage Lists and New List as full-screen modals
+- [x] added the list-select sheet with the tray label for where a task goes, in task create
+
+### Plans For Future
+- plan to implement inbox and completed screens
+- finish list update functionality, with drag reorder.
+- rewire to not use mock data
+- reimplement search
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
+- no notes
+---
+## [23/03/2026] - [Monday]
+
+### Today's Goals
+- [x] Implented Manage Lists with drag reorder synced through Redux, hooked list CRUD to the Django API
+- [x] wired Inbox and Completed to real data
+- [x] implemented the docked search animation with chips, chrome lift UI, and reset when search opens or closes.
+
+### Plans For Future
+- improve search bar UX
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
+- no notes
+---
+## [25/03/2026] - [Wednesday]
+
+### Today's Goals
+- [x] refactored browse list scroll mounted during search
+- [x] restyled the search bar so the layout didn’t jump.
+
+### Plans For Future
+- add search filters
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
+- no notes
+---
+## [27/03/2026] - [Friday]
+
+### Today's Goals
+- [x] I broadened browse search with the filter chips
+- [x] unified Top/Recent results, added description matches, and tightened list/leaf presentation on task cards.
+
+### Plans For Future
+- Fix the task updating with the taskview/create subtask check and main checkbox check
+
+### Notes
+- no notes
+---
+## [29/03/2026] - [Sunday]
+
+### Today's Goals
+- [x] I pushed the search overlay down so it doesn’t sit over the first grouped row, recalculated padding, and adjusted the top chrome so taps behave correctly through the fade.
+- [x] Fixed task update with checkbox in task screens
+- [x] ensured devlog docs were up to date.
+
+### Plans For Future
+- GO THROUGH A MVP-REALIGNEMNT, AND STRATETGIC REVIEW WITH NEW FEATURES
+
+### Notes
+- should go over AI scope (make my own LLM or pay for API), theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [30/03/2026] - [Monday]
+
+### Today's Goals
+- [x] Planned LLM integration
+- [X] begun redux research
+
+### Plans For Future
+- GO THROUGH A MVP-REALIGNEMNT, AND STRATETGIC REVIEW WITH NEW FEATURES
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [01/04/2026] - [Wednesday]
+
+### Today's Goals
+- [x] continued REDUX research
+
+### Plans For Future
+- GO THROUGH A MVP-REALIGNEMNT, AND STRATETGIC REVIEW WITH NEW FEATURES
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [02/04/2026] - [Thursday]
+
+### Today's Goals
+- [x] implemented simple controls for AI tab
+
+### Plans For Future
+- Go through new UI overhaul
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)

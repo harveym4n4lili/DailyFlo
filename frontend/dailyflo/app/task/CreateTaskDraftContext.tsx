@@ -1,10 +1,10 @@
 /**
  * CreateTaskDraftContext
  *
- * Holds the "picker" form fields (dueDate, time, duration, alerts) that are edited
- * on stack screens (date-select, time-duration-select, alert-select) so they stay
- * in sync with the main task form (index). All screens in the task
- * stack read/write this context so we don't need to pass params when pushing.
+ * Holds the "picker" form fields (dueDate, time, duration, alerts, list destination) that are edited
+ * on stack screens (date-select, time-duration-select, alert-select, list-select) so they stay
+ * in sync with the main task form. list-select uses pickedListId: null = Inbox, string = list id,
+ * undefined = not set from that sheet (use form local listId).
  */
 
 import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react';
@@ -14,6 +14,11 @@ export interface CreateTaskDraftSlice {
   time: string | undefined;
   duration: number | undefined;
   alerts: string[];
+  /**
+   * from list-select sheet only: null = Inbox (no list), string = list id.
+   * omit or undefined = merged values use form state listId until user opens list-select.
+   */
+  pickedListId?: string | null;
 }
 
 interface CreateTaskDraftContextValue {

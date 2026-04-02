@@ -59,6 +59,7 @@ export default function TaskCreateScreen() {
         time: dup.values.time,
         duration: dup.values.duration,
         alerts: dup.values.alerts ?? [],
+        pickedListId: undefined,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount to consume duplicate data
@@ -70,7 +71,7 @@ export default function TaskCreateScreen() {
   useEffect(() => {
     if (hasConsumedDuplicateRef.current) return;
     const initialDueDate = params.dueDate ?? new Date().toISOString();
-    setDraft({ dueDate: initialDueDate, time: undefined, duration: undefined, alerts: [] });
+    setDraft({ dueDate: initialDueDate, time: undefined, duration: undefined, alerts: [], pickedListId: undefined });
     if (params.dueDate) setLocalValues((prev) => ({ ...prev, dueDate: params.dueDate }));
     setSubtasks([]);
   }, [params.dueDate, setDraft]);
@@ -82,6 +83,12 @@ export default function TaskCreateScreen() {
       time: draft.time,
       duration: draft.duration,
       alerts: draft.alerts?.length ? draft.alerts : localValues.alerts,
+      listId:
+        draft.pickedListId === undefined
+          ? localValues.listId
+          : draft.pickedListId === null
+            ? undefined
+            : draft.pickedListId,
     }),
     [localValues, draft],
   );
@@ -170,7 +177,7 @@ export default function TaskCreateScreen() {
       if (createTask.fulfilled.match(result)) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
         setLocalValues({ ...getDefaults(themeColor) });
-        setDraft({ dueDate: undefined, time: undefined, duration: undefined, alerts: [] });
+        setDraft({ dueDate: undefined, time: undefined, duration: undefined, alerts: [], pickedListId: undefined });
         setSubtasks([]);
         router.back();
       }
@@ -191,6 +198,7 @@ export default function TaskCreateScreen() {
       onShowDatePicker: () => router.push('/date-select'),
       onShowTimeDurationPicker: () => router.push('/time-duration-select'),
       onShowAlertsPicker: () => router.push('/alert-select'),
+      onShowListPicker: () => router.push('/list-select'),
     }),
     [router],
   );
@@ -219,6 +227,9 @@ export default function TaskCreateScreen() {
         onClearPendingFocus={() => setPendingFocusSubtaskId(null)}
         embedHeaderButtons={true}
         isEditMode={false}
+        showTitleCheckbox={false}
+        showMainCloseButton={true}
+        showDragIndicator={false}
         saveButtonBottomInsetWhenKeyboardHidden={44}
         pickerHandlers={pickerHandlers}
         onActivityLog={() => {}}

@@ -111,17 +111,7 @@ const DayCell: React.FC<DayCellProps> = ({
   }, [isSelected, selectionOpacity]);
 
   return (
-    <View style={[
-      styles.dateCellContainer,
-      // dashed circular outline for non-selected days
-      !isSelected && {
-        borderWidth: 1,
-        borderStyle: 'dashed',
-        borderRadius: 19,
-        borderColor: themeColors.text.tertiary(),
-
-      },
-    ]}>
+    <View style={styles.dateCellContainer}>
       {/* background highlight for selected day with quick fade-in */}
       {isSelected && (
         <Animated.View

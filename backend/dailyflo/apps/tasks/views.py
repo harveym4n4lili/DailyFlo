@@ -8,10 +8,9 @@ from django.db.models import Q
 from .models import Task, ActivityLog
 from .serializers import (
     TaskListSerializer, TaskDetailSerializer, TaskCreateSerializer,
-    TaskUpdateSerializer, TaskCompleteSerializer, ListSerializer, ListCreateSerializer,
+    TaskUpdateSerializer, TaskCompleteSerializer,
     ActivityLogSerializer,
 )
-from apps.lists.models import List
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -164,68 +163,12 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer = TaskListSerializer(tasks, many=True)
         return Response(serializer.data)
 
-
-class ListViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for list management
-    """
-    permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    ordering_fields = ['sort_order', 'name', 'created_at']
-    ordering = ['sort_order', 'name']
-    
-    def get_queryset(self):
-        """filter lists by current user"""
-        return List.objects.filter(
-            user=self.request.user,
-            soft_deleted=False
-        )
-    
-    def get_serializer_class(self):
-        """return appropriate serializer based on action"""
-        if self.action == 'create':
-            return ListCreateSerializer
-        else:
-            return ListSerializer
-    
-    def perform_create(self, serializer):
-        """create list with current user"""
-        serializer.save(user=self.request.user)
-    
-    @action(detail=True, methods=['get'])
-    def tasks(self, request, pk=None):
-        """get tasks for a specific list"""
-        list_obj = self.get_object()
-        tasks = Task.objects.filter(
-            list=list_obj,
-            user=request.user,
-            soft_deleted=False
-        ).select_related('list')
-        
-        # apply filters
-        is_completed = request.query_params.get('completed')
-        if is_completed is not None:
-            tasks = tasks.filter(is_completed=is_completed.lower() == 'true')
-        
-        serializer = TaskListSerializer(tasks, many=True)
-        return Response(serializer.data)
-    
     @action(detail=False, methods=['get'])
     def inbox(self, request):
-        """get inbox (default) list"""
-        try:
-            inbox_list = List.objects.get(
-                user=request.user,
-                is_default=True,
-                soft_deleted=False
-            )
-            serializer = ListSerializer(inbox_list)
-            return Response(serializer.data)
-        except List.DoesNotExist:
-            return Response(
-                {'error': 'Inbox list not found'}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
+        """inbox tasks: no list assigned, not completed, not soft-deleted (get_queryset already excludes soft-deleted)"""
+        tasks = self.get_queryset().filter(list__isnull=True, is_completed=False)
+        serializer = TaskListSerializer(tasks, many=True)
+        return Response(serializer.data)
 
 
 class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
@@ -237,6 +180,8 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ActivityLogSerializer
     ordering = ['-created_at']
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['action_type']
 
     def get_queryset(self):
         """return only the current user's activity logs, newest first."""

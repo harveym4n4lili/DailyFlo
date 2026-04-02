@@ -64,14 +64,22 @@ export const store = configureStore({
           'auth/checkAuthStatus/fulfilled',
           'auth/checkAuthStatus/pending',
           'auth/checkAuthStatus/rejected',
+          // list thunks put full List objects in the fulfilled payload (Date on createdAt/updatedAt/metadata)
+          'lists/fetchLists/fulfilled',
+          'lists/createList/fulfilled',
+          'lists/updateList/fulfilled',
         ],
         // Ignore Date objects in auth.user path (lastLogin, createdAt, updatedAt)
         // Date objects are not serializable but are needed for the User type
         // When connecting to real API, dates will come as ISO strings and be converted
         ignoredPaths: [
-          'auth.user.lastLogin', 
-          'auth.user.createdAt', 
+          'auth.user.lastLogin',
+          'auth.user.createdAt',
           'auth.user.updatedAt',
+          // lists store List entities with Date fields (createdAt, updatedAt, metadata.lastUsed)
+          // RTK warns on non-serializable values; ignoring these subtrees matches current types
+          'lists.lists',
+          'lists.filteredLists',
         ],
       },
     }),

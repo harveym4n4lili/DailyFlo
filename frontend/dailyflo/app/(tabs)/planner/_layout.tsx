@@ -8,7 +8,13 @@ export default function PlannerLayout() {
   const themeColors = useThemeColors();
 
   return (
-    <Stack>
+    <Stack
+      screenOptions={{
+        animation: 'default', // native iOS slide-from-right for push screens
+        gestureEnabled: true,
+        contentStyle: { backgroundColor: themeColors.background.primary() },
+      }}
+    >
       <Stack.Screen
         name="index"
         options={{

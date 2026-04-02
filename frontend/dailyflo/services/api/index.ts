@@ -20,3 +20,6 @@ export { default as tasksApiService } from './tasks';
 
 // Activity Logs API - read-only log of task actions
 export { default as activityLogsApiService } from './activityLogs';
+
+// LLM API - authenticated proxy to backend (no vendor keys in the app)
+export { default as llmApiService, mapLlmErrorToUserMessage } from './llm';

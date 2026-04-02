@@ -21,6 +21,9 @@ export type { ScreenContextButtonProps } from './button';
 export { ActionContextMenu } from './contextMenu';
 export type { ActionContextMenuProps, ActionContextMenuItem } from './contextMenu';
 
+export { ScreenHeaderActions } from './ScreenHeaderActions';
+export type { ScreenHeaderActionsProps, ScreenHeaderActionsVariant } from './ScreenHeaderActions';
+
 // export FormPickerButton utilities
 export {
   getDatePickerDisplay,
