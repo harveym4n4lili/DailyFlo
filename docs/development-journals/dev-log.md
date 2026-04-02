@@ -1573,3 +1573,27 @@ Updated User app, models, serializers, views and urls
 ### Notes
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [01/04/2026] - [Wednesday]
+
+### Today's Goals
+- [x] continued REDUX research
+
+### Plans For Future
+- GO THROUGH A MVP-REALIGNEMNT, AND STRATETGIC REVIEW WITH NEW FEATURES
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [02/04/2026] - [Thursday]
+
+### Today's Goals
+- [x] implemented simple controls for AI tab
+
+### Plans For Future
+- Go through new UI overhaul
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
