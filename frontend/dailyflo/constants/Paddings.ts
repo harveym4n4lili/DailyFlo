@@ -123,6 +123,10 @@ export const Paddings = {
   // used by: IconColorModal
   iconColorModalContentTop: 80,
 
+  // AI tab — space between the input section (message field + send) and the native bottom tab bar
+  // used by: app/(tabs)/ai/index
+  tabBarInputGap: 12,
+
   // zero - for reset or no-padding cases
   // used by: Description, CustomFormDetailButton, SubtaskListItem, ModalHeader, TaskScreenContent, TaskCard, FormPickerButton, planner/index, CreateSubtaskButton, SubtaskListItem (TaskScreen), SubtaskCreateButton, AlertSelectScreen, QuickDateOptions, WeekView, TimelineItem, DragOverlay
   none: 0,
