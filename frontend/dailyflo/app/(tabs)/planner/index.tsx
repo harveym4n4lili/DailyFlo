@@ -391,6 +391,7 @@ export default function PlannerScreen() {
                     metadataVariant="today"
                     cardSpacing={0}
                     showDashedSeparator={true}
+                    taskRowSeparatorVariant="dashed"
                     hideBackground={true}
                     removeInnerPadding={true}
                     emptyMessage="No all-day tasks for this date."
@@ -419,8 +420,6 @@ export default function PlannerScreen() {
             onPress={() => {
               router.push({ pathname: '/task-create' as any, params: { dueDate: selectedDate } });
             }}
-            backgroundColor={themeColors.background.invertedPrimary()}
-            iconColor={themeColors.text.invertedPrimary()}
             accessibilityLabel="Add new task"
             accessibilityHint="Double tap to create a new task"
           />

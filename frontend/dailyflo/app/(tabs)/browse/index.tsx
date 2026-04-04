@@ -45,7 +45,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeaderActions } from '@/components/ui';
 import { FloatingActionButton, MainCloseButton, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
-import { DashedSeparator } from '@/components/ui/borders';
+import { SolidSeparator } from '@/components/ui/borders';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/list/GroupedList';
 import { SFSymbolIcon, TickIcon, BrowseIcon, LeafIcon, PencilIcon, ClockIcon } from '@/components/ui/icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -1026,9 +1026,9 @@ export default function BrowseScreen() {
                                     </Text>
                                   </Pressable>
                                   {!isLast ? (
-                                    <DashedSeparator
+                                    <SolidSeparator
                                       paddingLeft={CHECKBOX_SIZE_DEFAULT + 12}
-                                      paddingRight={Paddings.screen}
+                                      paddingRight={0}
                                     />
                                   ) : null}
                                 </View>
@@ -1503,8 +1503,6 @@ export default function BrowseScreen() {
                 params: { openedFrom: LIST_CREATE_OPENED_FROM_BROWSE },
               })
             }
-            backgroundColor={themeColors.background.invertedPrimary()}
-            iconColor={themeColors.text.invertedPrimary()}
             accessibilityLabel="Create new list"
             accessibilityHint="Opens the new list screen"
           />

@@ -31,7 +31,7 @@ export default function TabLayout() {
     : 'other';
 
   // activeColor: base brand color token (same 500 shade we use elsewhere, e.g. FAB)
-  const activeColor = themeColors.text.primary();
+  const activeColor = themeColors.primaryButton.fill();
 
   // tintColor: on iOS we wrap the color with DynamicColorIOS so the system treats it
   // as a dynamic color; on Android we just use the raw hex string.
@@ -47,8 +47,12 @@ export default function TabLayout() {
     ...(Platform.OS === 'ios' && { fontFamily: 'ui-rounded' }),
   };
 
-  // solid opaque tab bar instead of clear/liquid glass: use theme background + no blur
+  // solid tab bar (same idea on both platforms)
   const tabBarBackgroundColor = themeColors.background.primary();
+
+  // minimizeBehavior: native prop → UITabBarMinimizeBehavior (iOS 26+). this is the *setting* for “minimize on scroll down”.
+  // the *trigger* (UIKit actually driving minimize from scroll) is separate: expo native-tabs docs → Known limitations → “Limited support for FlatList”
+  // states scroll-to-top and minimize-on-scroll aren’t supported with FlatList + native tabs yet. most of our tabs use ListCard (FlatList).
 
   return (
     <View style={{ flex: 1 }}>
@@ -57,7 +61,7 @@ export default function TabLayout() {
       tintColor={tintColor}
       backgroundColor={tabBarBackgroundColor}
       blurEffect="none"
-      disableTransparentOnScrollEdge
+      {...(Platform.OS === 'ios' ? { minimizeBehavior: 'onScrollDown' as const } : {})}
     >
       <NativeTabs.Trigger name="today">
         <NativeTabLabel>Today</NativeTabLabel>
@@ -69,7 +73,7 @@ export default function TabLayout() {
         <NativeTabIcon src={require('@/assets/icons/Timeline.png')} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="ai">
+      <NativeTabs.Trigger name="ai" >
         <NativeTabLabel>AI</NativeTabLabel>
         <NativeTabIcon src={require('@/assets/icons/Sparkles.png')} />
       </NativeTabs.Trigger>

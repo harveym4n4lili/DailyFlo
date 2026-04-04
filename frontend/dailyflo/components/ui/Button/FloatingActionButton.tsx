@@ -121,10 +121,9 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   const insets = useSafeAreaInsets();
   const { getThemeColorValue } = useThemeColor();
   const themeColors = useThemeColors();
-  // backgroundColor: use custom prop or fall back to theme secondary
-  const backgroundColor = customBackgroundColor ?? themeColors.background.secondary();
-  // iconColor: use custom prop or fall back to primary text color
-  const iconColor = customIconColor ?? themeColors.text.primary();
+  // default fill + icon from primaryButton palette (same tokens for other primary solid buttons)
+  const backgroundColor = customBackgroundColor ?? themeColors.primaryButton.fill();
+  const iconColor = customIconColor ?? themeColors.primaryButton.icon();
   // tintColor: iOS uses DynamicColorIOS so the system can treat this as a "dynamic" color
   // just like the navbar; Android falls back to the plain hex value.
   const tintColor =
@@ -149,7 +148,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
     // iOS with glass available: single glassview with pressable child for a clean glass FAB
     <GlassView
       style={[styles.fab, style]}
-      glassEffectStyle="clear"
+      glassEffectStyle="regular"
       // cast to any so we can pass DynamicColorIOS on iOS while keeping TypeScript happy
       tintColor={tintColor as any}
       isInteractive

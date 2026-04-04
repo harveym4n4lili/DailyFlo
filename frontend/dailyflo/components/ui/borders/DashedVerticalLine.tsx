@@ -22,7 +22,7 @@ interface DashedVerticalLineProps {
   dashWidth?: number;
   // optional style override for positioning (position, left, top, etc.)
   style?: ViewStyle;
-  // optional color override - defaults to primarySecondaryBlend
+  // optional color override - defaults to border.secondary (matches horizontal dashes)
   color?: string;
 }
 
@@ -38,7 +38,7 @@ export default function DashedVerticalLine({
   color,
 }: DashedVerticalLineProps) {
   const themeColors = useThemeColors();
-  const lineColor = color ?? themeColors.background.primarySecondaryBlend();
+  const lineColor = color ?? themeColors.border.secondary();
 
   // pattern: 10px dash + 4px gap = 14px per segment (matches DashedSeparator proportions)
   const dashHeight = 4;

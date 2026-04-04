@@ -14,7 +14,7 @@ export const Paddings = {
   // used by: today/index, planner/index, welcome, reminders, signup, completion, OnboardingActions, OnboardingNavigation, SignInModal, EmailAuthModal, EmailAuth, EmailAuthInputs, SocialAuthActions, TaskForm, ScreenContainer
   screen: 20,
   // used by: ListCard, ModalContainer, settings/index, TaskForm, TaskSummary, TimeDurationSelectScreen, AlertSelectScreen
-  screenSmall: 20,
+  screenSmall: 16,
   // used by: reminders, completion (description/instruction padding)
   screenLarge: 32,
 
@@ -32,9 +32,10 @@ export const Paddings = {
   // list/item padding
   // used by: DropdownList
   listItemHorizontal: 16,
-  // used by: FormDetailSection, TimelineItem, DragOverlay, OnboardingActions, settings/index, QuickDateOptions, SignInModal, AlertSelectScreen, EmailAuthModal, CustomTextInput, TimeDurationSelectScreen, +not-found
+  // used by: FormDetailSection, TimelineItem, DragOverlay, OnboardingActions, settings/index, QuickDateOptions, SignInModal, AlertSelectScreen, EmailAuthModal, CustomTextInput, TimeDurationSelectScreen, GroupHeader, +not-found
   listItemVertical: 12,
-  listItemTight: 8, // not yet used
+  /** gap under the group title row before the first task (GroupHeader) */
+  groupHeaderPaddingBottom: 0,
 
   // button padding
   // used by: OnboardingActions, SignInModal, EmailAuthModal
