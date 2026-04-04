@@ -216,6 +216,7 @@ export const GroupedListItemWrapper: React.FC<GroupedListItemWrapperProps> = ({
           />
         ) : (
           <DashedSeparator
+            color={separatorColor}
             paddingLeft={separatorInsetLeft}
             paddingRight={separatorInsetRight}
             style={itemWrapperPaddingVertical != null ? { marginTop: itemWrapperPaddingVertical } : undefined}

@@ -369,12 +369,15 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
     return items;
   }, [onActivityLog, onDuplicateTask, onDeleteTask]);
 
+  // screen fill: ThemeColors.background.primary (from ColorPalette) — required when stack uses transparent formSheet (ios glass) so we still paint the app surface
+  const screenBg = { backgroundColor: themeColors.background.primary() };
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, screenBg]}>
       {/* ScrollView first so header overlays on top (header has zIndex) */}
       <ScrollView
         ref={scrollViewRef}
-        style={[styles.scroll]}
+        style={[styles.scroll, screenBg]}
         contentContainerStyle={[
           styles.scrollContent,
           { paddingTop: showMainCloseButton ? 24 : (isEditMode ? 60 : 48), paddingBottom: keyboardHeight > 0 ? keyboardHeight + 32 : 160 },

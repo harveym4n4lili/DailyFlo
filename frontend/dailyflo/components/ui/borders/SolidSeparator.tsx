@@ -3,7 +3,8 @@
  *
  * A full-width solid line separator. Uses paddingLeft and paddingRight
  * to control where the line starts and ends (e.g. align with text content).
- * Uses borderBottomWidth: 1 to match DashedSeparator's dash height (1px).
+ * Set paddingRight to 0 for a line that meets the container’s right edge.
+ * Uses borderBottomWidth: 1 to match DashedSeparator’s dash height (1px).
  *
  * Usage:
  * ```tsx
@@ -32,7 +33,7 @@ export default function SolidSeparator({
   collapsable = false,
 }: SolidSeparatorProps) {
   const themeColors = useThemeColors();
-  const lineColor = color ?? themeColors.border.primary();
+  const lineColor = color ?? themeColors.border.secondary();
 
   return (
     <View collapsable={collapsable} style={[styles.container, { paddingLeft, paddingRight }, style]}>
@@ -53,6 +54,7 @@ const styles = StyleSheet.create({
   },
   line: {
     width: '100%',
-    // borderBottomWidth draws the line; width 100% makes it span the padded content area (aligns with button main label)
+    alignSelf: 'stretch',
+    // borderBottomWidth draws the line; fills the horizontal space after container padding
   },
 });

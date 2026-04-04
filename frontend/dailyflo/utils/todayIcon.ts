@@ -4,8 +4,10 @@
  * Add new entries as you create Today{N}.png assets (with @2x/@3x for retina).
  */
 
+import type { ImageSourcePropType } from 'react-native';
+
 // map day of month (1–31) to icon – each day has its own Today{N}.png asset
-const TODAY_ICONS_BY_DAY: Record<number, ReturnType<typeof require>> = {
+const TODAY_ICONS_BY_DAY: Record<number, ImageSourcePropType> = {
   1: require('@/assets/icons/Today1.png'),
   2: require('@/assets/icons/Today2.png'),
   3: require('@/assets/icons/Today3.png'),
@@ -39,14 +41,13 @@ const TODAY_ICONS_BY_DAY: Record<number, ReturnType<typeof require>> = {
   31: require('@/assets/icons/Today31.png'),
 };
 
-// fallback when no day-specific icon exists
-const TODAY_ICON_FALLBACK = require('@/assets/icons/Today.png');
+const TODAY_ICON_FALLBACK = require('@/assets/icons/Today.png') as ImageSourcePropType;
 
 /**
  * Returns the Today tab icon for the current day of the month.
  * Uses Today{N}.png when available, otherwise Today.png.
  */
-export function getTodayTabIcon(): ReturnType<typeof require> {
+export function getTodayTabIcon(): ImageSourcePropType {
   const day = new Date().getDate();
-  return TODAY_ICONS_BY_DAY[day] ?? TODAY_ICON_FALLBACK;
+  return (TODAY_ICONS_BY_DAY[day] ?? TODAY_ICON_FALLBACK) as ImageSourcePropType;
 }

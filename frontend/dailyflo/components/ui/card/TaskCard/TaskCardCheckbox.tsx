@@ -102,8 +102,9 @@ export default function TaskCardCheckbox({
   const checked = selectionMode ? isSelected : displayCompleted;
   const handlePress = selectionMode ? onSelect : (onComplete ? handleCheckboxComplete : undefined);
 
+  // alignSelf flex-start: parent TaskCard wraps us in a slot whose height = first title line; slot justifyContent centers the checkbox on that line
   return (
-    <View style={{ width: CHECKBOX_SIZE_DEFAULT, height: CHECKBOX_SIZE_DEFAULT, marginRight: 12, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', zIndex: 1 }}>
+    <View style={{ width: CHECKBOX_SIZE_DEFAULT, height: CHECKBOX_SIZE_DEFAULT, marginRight: 12, justifyContent: 'center', alignItems: 'center', alignSelf: 'flex-start', zIndex: 1 }}>
       <Checkbox
         checked={checked}
         onPress={handlePress}

@@ -22,7 +22,7 @@ export interface GroupedListProps {
   // optional style overrides for the entire container
   containerStyle?: ViewStyle;
   
-  // custom separator color (defaults to theme border color)
+  // custom separator color (defaults: border.primary when rounded container, border.secondary when minimalStyle)
   separatorColor?: string;
   
   /**

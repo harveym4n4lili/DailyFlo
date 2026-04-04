@@ -63,6 +63,13 @@ export {
   BrowseIcon,
 } from './icon';
 
+// blurred mesh gradient backgrounds (full-screen; use behind transparent screens)
+export { MeshGradientBackground } from './background';
+export type {
+  MeshGradientBackgroundProps,
+  MeshGradientPresetName,
+} from './background';
+
 // export message components (dynamic today message, etc.)
 export { TaskSummary } from './message';
 export type { TaskSummaryProps } from './message';

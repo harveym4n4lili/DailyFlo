@@ -75,8 +75,10 @@ export const GroupedList: React.FC<GroupedListProps> = ({
     finalSeparatorInsetLeft = finalContentPaddingHorizontal;
   }
 
-  // use provided separator color or default to theme border color
-  const finalSeparatorColor = separatorColor || themeColors.border.primary();
+  // default: rounded container lists use hairline (primary); minimal embedded lists keep stronger secondary
+  const finalSeparatorColor =
+    separatorColor ??
+    (minimalStyle ? themeColors.border.secondary() : themeColors.border.primary());
 
   // convert children to array for easier manipulation
   // React.Children.toArray handles both single child and multiple children

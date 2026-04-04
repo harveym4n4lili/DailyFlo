@@ -35,6 +35,8 @@ interface TaskCardContentProps {
   titleRightLabel?: string;
   /** browse task search: show leaf (same as list rows) beside list name / inbox — tertiary like subtext */
   titleRightShowLeaf?: boolean;
+  /** fired with measured height of the first title line (from onTextLayout) so checkbox can center in that band */
+  onFirstLineHeightChange?: (height: number) => void;
 }
 
 const TITLE_RIGHT_LEAF_SIZE = 14;
@@ -79,6 +81,7 @@ export default function TaskCardContent({
   compact = false,
   titleRightLabel,
   titleRightShowLeaf = false,
+  onFirstLineHeightChange,
 }: TaskCardContentProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -100,9 +103,14 @@ export default function TaskCardContent({
     }
   }, [task.isCompleted]);
 
-  // onTextLayout provides x, y, width, height for each rendered line - used to position strikethrough per line
+  // onTextLayout provides x, y, width, height per line — strikethrough + parent checkbox column height (first line only)
   const handleTextLayout = (e: { nativeEvent: { lines: TextLineLayout[] } }) => {
-    setLines(e.nativeEvent.lines ?? []);
+    const nextLines = e.nativeEvent.lines ?? [];
+    setLines(nextLines);
+    const h0 = nextLines[0]?.height;
+    if (h0 != null && onFirstLineHeightChange) {
+      onFirstLineHeightChange(h0);
+    }
   };
 
   // animate title color from primary to secondary (dimmed) as strikeProgress goes 0→1 - syncs with strikethrough

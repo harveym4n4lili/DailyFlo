@@ -1,6 +1,6 @@
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { StyleSheet, RefreshControl, View, Text, Animated } from 'react-native';
+import { StyleSheet, RefreshControl, View, Text, Animated, Platform } from 'react-native';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, useAnimatedReaction, withTiming, withSpring, runOnJS } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -369,30 +369,94 @@ export default function TodayScreen() {
     router.push('/date-select');
   };
 
+  // full-screen wash behind content (same solid surface in light and dark)
+  // zIndex -1 when not the first sibling: keeps it behind the list (see main return order below)
+  const screenBackdrop = useMemo(
+    () => (
+      <View
+        style={[
+          StyleSheet.absoluteFillObject,
+          { backgroundColor: themeColors.background.primary(), zIndex: -1 },
+        ]}
+        pointerEvents="none"
+      />
+    ),
+    [themeColors.theme],
+  );
+
   // render loading state when no tasks are loaded yet
   if (isLoading && tasks.length === 0) {
     return (
-      <ScreenContainer scrollable={false} paddingHorizontal={0}>
-        {/* loading content with centered text */}
-        <Text style={styles.loadingText}>Loading tasks...</Text>
-      </ScreenContainer>
+      <View style={{ flex: 1 }}>
+        <ScreenContainer scrollable={false} paddingHorizontal={0} backgroundColor="transparent">
+          <Text style={styles.loadingText}>Loading tasks...</Text>
+        </ScreenContainer>
+        {screenBackdrop}
+      </View>
     );
   }
 
   // render error state when task loading fails
   if (error && tasks.length === 0) {
     return (
-      <ScreenContainer scrollable={false} paddingHorizontal={0}>
-        {/* error content with retry instructions */}
-        <Text style={styles.errorText}>Failed to load tasks</Text>
-        <Text style={styles.hint}>Pull down to try again</Text>
-      </ScreenContainer>
+      <View style={{ flex: 1 }}>
+        <ScreenContainer scrollable={false} paddingHorizontal={0} backgroundColor="transparent">
+          <Text style={styles.errorText}>Failed to load tasks</Text>
+          <Text style={styles.hint}>Pull down to try again</Text>
+        </ScreenContainer>
+        {screenBackdrop}
+      </View>
     );
   }
 
   // render main content with today's tasks
   return (
     <View style={{ flex: 1 }}>
+      {/* list must be first child: ios tab minimize + rnscreens scroll inset walk first-subview-only; backdrop-as-first blocked the chain */}
+      <ScreenContainer
+        scrollable={false}
+        paddingHorizontal={0}
+        paddingVertical={0}
+        safeAreaTop={false}
+        safeAreaBottom={false}
+        backgroundColor="transparent"
+      >
+      <ListCard
+        key="today-screen-listcard"
+        tasks={todaysTasks}
+        selectionMode={selection.isSelectionMode && selection.selectionType === 'tasks'}
+        selectedTaskIds={selection.selectedItems}
+        onToggleTaskSelection={selection.isSelectionMode ? toggleItemSelection : undefined}
+        hideCompletedTasks={true}
+        onTaskPress={handleTaskPress}
+        onTaskComplete={handleTaskComplete}
+        onTaskEdit={handleTaskEdit}
+        onTaskDelete={handleTaskDelete}
+        {...LIST_CARD_TASK_ROW_PRESET_TODAY}
+        showListRecurrenceRow
+        emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
+        loading={isLoading && todaysTasks.length === 0}
+        groupBy="dueDate" // group tasks by due date to separate overdue and today's tasks
+        lockTodayGroupExpanded // today's date section stays open; no collapse chevron on that group
+        sortBy="dueDate" // sort tasks by due date within each group
+        sortDirection="asc" // show overdue tasks first, then today's tasks (ascending = oldest first)
+        // enable bulk reschedule action specifically for the "Overdue" group on the Today screen
+        // when the user taps "Reschedule", we open the date picker and then update all overdue tasks
+        onOverdueReschedule={handleOverdueReschedulePress}
+        hideTodayHeader={false} // show today's date as group header in the task list
+        bigTodayHeader={true} // show big "Today" title at top of list
+        onRefresh={handleRefresh}
+        refreshing={isLoading}
+        scrollYSharedValue={scrollY}
+        showsVerticalScrollIndicator={true}
+        paddingTop={64}
+        paddingHorizontal={Paddings.screen}
+        scrollPastTopInset={true} // let content scroll up into status bar area without cutoff
+        // ios: uikit ties UITabBar minimize to scroll views that participate in content inset adjustment (pairs with NativeTabs minimizeBehavior)
+        contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
+      />
+      </ScreenContainer>
+      {screenBackdrop}
       {/* top section anchor - blur + opacity gradient + mini Today header that fades in on scroll */}
       <View style={[styles.topSectionAnchor, { height: insets.top + 64 }]}>
         <BlurView
@@ -401,10 +465,17 @@ export default function TodayScreen() {
           style={StyleSheet.absoluteFill}
         />
         <LinearGradient
-          colors={[
-            themeColors.background.primary(),
-            themeColors.withOpacity(themeColors.background.primary(), 0),
-          ]}
+          colors={
+            themeColors.isDark
+              ? [
+                  themeColors.withOpacity(themeColors.background.primary(), 0.55),
+                  themeColors.withOpacity(themeColors.background.primary(), 0),
+                ]
+              : [
+                  themeColors.background.primary(),
+                  themeColors.withOpacity(themeColors.background.primary(), 0),
+                ]
+          }
           locations={[0.4, 1]}
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
@@ -442,53 +513,12 @@ export default function TodayScreen() {
           )}
         </View>
       </View>
-      <ScreenContainer
-        scrollable={false}
-        paddingHorizontal={0}
-        paddingVertical={0}
-        safeAreaTop={false}
-        safeAreaBottom={false}
-      >
-      <ListCard
-        key="today-screen-listcard"
-        tasks={todaysTasks}
-        selectionMode={selection.isSelectionMode && selection.selectionType === 'tasks'}
-        selectedTaskIds={selection.selectedItems}
-        onToggleTaskSelection={selection.isSelectionMode ? toggleItemSelection : undefined}
-        hideCompletedTasks={true}
-        onTaskPress={handleTaskPress}
-        onTaskComplete={handleTaskComplete}
-        onTaskEdit={handleTaskEdit}
-        onTaskDelete={handleTaskDelete}
-        {...LIST_CARD_TASK_ROW_PRESET_TODAY}
-        emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
-        loading={isLoading && todaysTasks.length === 0}
-        groupBy="dueDate" // group tasks by due date to separate overdue and today's tasks
-        sortBy="dueDate" // sort tasks by due date within each group
-        sortDirection="asc" // show overdue tasks first, then today's tasks (ascending = oldest first)
-        // enable bulk reschedule action specifically for the "Overdue" group on the Today screen
-        // when the user taps "Reschedule", we open the date picker and then update all overdue tasks
-        onOverdueReschedule={handleOverdueReschedulePress}
-        hideTodayHeader={false} // show today's date as group header in the task list
-        bigTodayHeader={true} // show big "Today" title at top of list
-        onRefresh={handleRefresh}
-        refreshing={isLoading}
-        scrollYSharedValue={scrollY}
-        scrollEventThrottle={128}
-        showsVerticalScrollIndicator={true}
-        paddingTop={64}
-        paddingHorizontal={Paddings.screen}
-        scrollPastTopInset={true} // let content scroll up into status bar area without cutoff
-      />
-      </ScreenContainer>
       <AnimatedReanimated.View
         style={[fabAnimatedStyle, { position: 'absolute', bottom: 0, right: 0, left: 0, height: 120 }]}
         pointerEvents={selection.isSelectionMode && selection.selectionType === 'tasks' ? 'none' : 'box-none'}
       >
         <FloatingActionButton
           onPress={() => router.push('/task-create' as any)}
-          backgroundColor={themeColors.background.invertedPrimary()}
-          iconColor={themeColors.text.invertedPrimary()}
           accessibilityLabel="Add new task"
           accessibilityHint="Double tap to create a new task"
         />
