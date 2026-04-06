@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, DynamicColorIOS, Platform } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   NativeTabs,
   Label as NativeTabLabel,
   Icon as NativeTabIcon,
+  VectorIcon,
 } from 'expo-router/unstable-native-tabs';
 import { useSegments } from 'expo-router';
 
@@ -60,8 +62,8 @@ export default function TabLayout() {
       labelStyle={labelStyle}
       tintColor={tintColor}
       backgroundColor={tabBarBackgroundColor}
-      blurEffect="none"
-      {...(Platform.OS === 'ios' ? { minimizeBehavior: 'onScrollDown' as const } : {})}
+      blurEffect="onScrollUp"
+      {...(Platform.OS === 'ios' ? { minimizeBehavior: 'automatic ' as const } : {})}
     >
       <NativeTabs.Trigger name="today">
         <NativeTabLabel>Today</NativeTabLabel>
@@ -81,6 +83,15 @@ export default function TabLayout() {
       <NativeTabs.Trigger name="browse">
         <NativeTabLabel>Browse</NativeTabLabel>
         <NativeTabIcon src={require('@/assets/icons/Browse.png')} />
+      </NativeTabs.Trigger>
+
+      {/* scroll-only test tab: see minimizeTest/index.tsx — ScrollView, no FlatList, Slot layout */}
+      {/* expo-router matches Trigger name to the folder segment; hidden={false} keeps the tab in the bar (native-tabs filters tabs unless options.hidden === false) */}
+      <NativeTabs.Trigger name="minimizeTest" role="search">
+        <NativeTabLabel>Test</NativeTabLabel>
+        <NativeTabIcon
+          src={<VectorIcon family={MaterialCommunityIcons} name="flask-outline" />}
+        />
       </NativeTabs.Trigger>
     </NativeTabs>
     {/* selection actions bar overlays tab bar when user taps "Select Tasks" - liquid glass on iOS */}
