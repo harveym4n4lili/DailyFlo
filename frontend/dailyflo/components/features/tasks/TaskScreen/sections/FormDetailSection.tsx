@@ -176,7 +176,7 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
             {Platform.OS === 'ios' ? (
               <View style={styles.repeatingRecurrenceWrap}>
                 <Host matchContents={false} style={styles.repeatingHost}>
-                  <ContextMenu activationMethod="singlePress">
+                  <ContextMenu>
                     <ContextMenu.Trigger>
                       <View style={styles.repeatingTapAreaCompact}>
                         <View
@@ -200,9 +200,11 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
                     </ContextMenu.Trigger>
                     <ContextMenu.Items>
                       {ROUTINE_MENU_OPTIONS.map((opt) => (
-                        <Button key={opt.id} onPress={() => onRoutineTypeChange?.(opt.id)}>
-                          {opt.label}
-                        </Button>
+                        <Button
+                          key={opt.id}
+                          onPress={() => onRoutineTypeChange?.(opt.id)}
+                          label={opt.label}
+                        />
                       ))}
                     </ContextMenu.Items>
                   </ContextMenu>

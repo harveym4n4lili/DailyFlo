@@ -12,8 +12,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, useRef } from 'react';
 import { Platform, TextInput } from 'react-native';
 
-// set default cursor/selection color to white app-wide (overrides iOS blue tint on TextInputs)
-TextInput.defaultProps = { ...(TextInput.defaultProps || {}), selectionColor: '#FFFFFF', cursorColor: '#FFFFFF' };
+// set default cursor/selection color app-wide; RN 0.83 types omit defaultProps but the merge still works at runtime
+const TI = TextInput as typeof TextInput & { defaultProps?: Record<string, unknown> };
+TI.defaultProps = { ...(TI.defaultProps || {}), selectionColor: '#FFFFFF', cursorColor: '#FFFFFF' };
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
