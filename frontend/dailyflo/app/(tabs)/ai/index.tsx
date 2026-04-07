@@ -30,7 +30,7 @@ import { Paddings } from '@/constants/Paddings';
 import { getTextStyle } from '@/constants/Typography';
 import { useUI } from '@/store/hooks';
 
-// native tabs (expo-router unstable-native-tabs) don’t use react-navigation’s measured tab bar height — fallback so content clears the bar
+// native tabs (expo-router NativeTabs, sdk 55) don’t expose measured tab bar height like JS tabs — fallback so content clears the bar
 const TAB_BAR_HEIGHT_FALLBACK = Platform.select({ ios: 49, android: 56, default: 49 });
 // matches planner topSectionRow height — content starts below this + safe top
 const TOP_SECTION_ROW_HEIGHT = 48;

@@ -99,7 +99,8 @@ export function ActionContextMenu({
     return (
       <View style={style}>
         <Host matchContents={false} style={styles.host}>
-          <ContextMenu activationMethod="singlePress">
+          {/* sdk 55 @expo/ui: ContextMenu has no activationMethod prop — trigger uses system default (typically long-press) */}
+          <ContextMenu>
             <ContextMenu.Trigger>
               {noGlass ? (
                 triggerContent
@@ -121,9 +122,8 @@ export function ActionContextMenu({
                   onPress={() => item.onPress()}
                   role={item.destructive ? 'destructive' : undefined}
                   systemImage={item.systemImage as any}
-                >
-                  {item.label}
-                </Button>
+                  label={item.label}
+                />
               ))}
             </ContextMenu.Items>
           </ContextMenu>
