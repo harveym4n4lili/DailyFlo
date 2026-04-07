@@ -1609,3 +1609,31 @@ Updated User app, models, serializers, views and urls
 ### Notes
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [05/04/2026] - [Sunday]
+
+### Today's Goals
+- [x] Upgraded Color palettes
+- [x] Improved taskcard styling
+- [X] Begun research into possible usage for expo native liquid glass elements
+
+### Plans For Future
+- consider palettes and UI reconstruction
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [07/04/2026] - [Tuesday]
+
+### Today's Goals
+- [x] Upgraded deps and codebase to use SDK 55
+- [x] attempted to fix minimize behaviours for the native tab
+
+### Plans For Future
+- consider palettes and UI reconstruction
+- consider stack toolbar implementation and reconstruction of the action context menu and close/save buttons.
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
