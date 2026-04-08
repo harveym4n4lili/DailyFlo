@@ -1,8 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, DynamicColorIOS, Platform } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useSegments } from 'expo-router';
 
 // typography + ThemeColors: UITabBar needs DynamicColorIOS(light, dark) from palette — not one snapshot from useThemeColors (fixes wrong/black tints)
 import { ThemeColors } from '@/constants/ColorPalette';
@@ -11,10 +9,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { SelectionActionsBar } from '@/components/ui/SelectionActionsBar';
 import { useUI } from '@/store/hooks';
 import { getTodayTabIcon } from '@/utils/todayIcon';
-import {
-  MinimizeTestBottomAccessory,
-  shouldShowBottomAccessory,
-} from './MinimizeTestBottomAccessory';
+import { useSegments } from 'expo-router';
 
 export default function TabLayout() {
   const typography = useTypography();
@@ -22,16 +17,6 @@ export default function TabLayout() {
   const { selection } = useUI();
   const isSelectionMode = selection.isSelectionMode;
   const segments = useSegments() as string[];
-
-  // bottom accessory state must live here — NativeTabs.BottomAccessory renders two instances (inline + regular); see expo native tabs docs
-  const [minimizeTestAccessoryDismissed, setMinimizeTestAccessoryDismissed] = useState(false);
-  const isMinimizeTestTab = segments.includes('minimizeTest');
-
-  useEffect(() => {
-    if (!isMinimizeTestTab) {
-      setMinimizeTestAccessoryDismissed(false);
-    }
-  }, [isMinimizeTestTab]);
 
   // detect which tab is active for the selection overlay (NativeTabs can make pathname less reliable)
   const selectionScreen =
@@ -70,7 +55,6 @@ export default function TabLayout() {
 
   const tabBarBackgroundColor = themeColors.background.primary();
 
-  // minimizeBehavior: ios 18+ UITabBar minimize; scroll linkage still has limitations with FlatList (expo native-tabs docs)
   return (
     <View style={{ flex: 1 }}>
     <NativeTabs
@@ -85,17 +69,10 @@ export default function TabLayout() {
       tintColor={tabIconSelected}
       backgroundColor={tabBarBgIos ?? tabBarBackgroundColor}
       blurEffect="none"
+      // ios: documented on NativeTabs — https://docs.expo.dev/versions/latest/sdk/router/native-tabs/#minimizebehavior
+      // needs a real ScrollView on the focused screen (FlatList has known limitations per expo native-tabs docs)
       {...(Platform.OS === 'ios' ? { minimizeBehavior: 'onScrollDown' as const } : {})}
     >
-      {shouldShowBottomAccessory() && isMinimizeTestTab && (
-        <NativeTabs.BottomAccessory>
-          <MinimizeTestBottomAccessory
-            dismissed={minimizeTestAccessoryDismissed}
-            onDismiss={() => setMinimizeTestAccessoryDismissed(true)}
-          />
-        </NativeTabs.BottomAccessory>
-      )}
-
       <NativeTabs.Trigger name="today" hidden={false}>
         <NativeTabs.Trigger.Label>Today</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon src={getTodayTabIcon()} renderingMode="template" />
@@ -116,15 +93,10 @@ export default function TabLayout() {
         <NativeTabs.Trigger.Icon src={require('@/assets/icons/Browse.png')} renderingMode="template" />
       </NativeTabs.Trigger>
 
-      {/* scroll test route: minimizeTest/index.tsx — folder name must match Trigger name; hidden={false} keeps the item visible (expo-router native-tabs) */}
-      <NativeTabs.Trigger name="minimizeTest" hidden={false}>
+      {/* 5th tab: file route app/(tabs)/test/index.tsx — name must match folder; icon same pattern as other tabs (png + template) */}
+      <NativeTabs.Trigger name="test" hidden={false}>
         <NativeTabs.Trigger.Label>Test</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          selectedColor={tabIconSelected}
-          src={
-            <NativeTabs.Trigger.VectorIcon family={MaterialCommunityIcons} name="flask-outline" />
-          }
-        />
+        <NativeTabs.Trigger.Icon src={require('@/assets/icons/Today.png')} renderingMode="template" />
       </NativeTabs.Trigger>
     </NativeTabs>
     {isSelectionMode && <SelectionActionsBar screen={selectionScreen} />}

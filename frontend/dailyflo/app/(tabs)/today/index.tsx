@@ -412,7 +412,7 @@ export default function TodayScreen() {
   // render main content with today's tasks
   return (
     <View style={{ flex: 1 }}>
-      {/* list must be first child: ios tab minimize + rnscreens scroll inset walk first-subview-only; backdrop-as-first blocked the chain */}
+      {/* list before backdrop so the main scroll surface stays the first subview under the screen (layout / scroll coordination) */}
       <ScreenContainer
         scrollable={false}
         paddingHorizontal={0}
@@ -452,8 +452,6 @@ export default function TodayScreen() {
         paddingTop={64}
         paddingHorizontal={Paddings.screen}
         scrollPastTopInset={true} // let content scroll up into status bar area without cutoff
-        // ios: uikit ties UITabBar minimize to scroll views that participate in content inset adjustment (pairs with NativeTabs minimizeBehavior)
-        contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
       />
       </ScreenContainer>
       {screenBackdrop}
