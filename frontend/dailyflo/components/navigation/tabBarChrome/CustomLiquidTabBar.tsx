@@ -43,8 +43,11 @@ export function CustomLiquidTabBar() {
     }
   }, [segments, optimisticCustomTabKey]);
 
+  // starts from navbar token, then bumps size (global navbar is 10pt — see Typography TextStyles)
   const labelBase = {
     ...typography.getTextStyle('navbar'),
+    fontSize: TAB_BAR_CHROME_VISUAL.tabLabelFontSize,
+    lineHeight: TAB_BAR_CHROME_VISUAL.tabLabelLineHeight,
     ...(Platform.OS === 'ios' && { fontFamily: 'ui-rounded' as const }),
   };
 
@@ -61,8 +64,11 @@ export function CustomLiquidTabBar() {
       optimisticCustomTabKey !== null
         ? optimisticCustomTabKey === item.key
         : segments.includes(item.key);
-    const tint = selected ? themeColors.primaryButton.fill() : themeColors.text.secondary();
-    const labelColor = selected ? themeColors.primaryButton.fill() : themeColors.text.secondary();
+    // dark: unselected matches primary body text; light: keep softer secondary so tabs don’t compete with content
+    const unselectedTint =
+      themeColors.isDark ? themeColors.text.primary() : themeColors.text.secondary();
+    const tint = selected ? themeColors.primaryButton.fill() : unselectedTint;
+    const labelColor = selected ? themeColors.primaryButton.fill() : unselectedTint;
     return (
       <Pressable
         key={item.key}
@@ -87,7 +93,7 @@ export function CustomLiquidTabBar() {
             labelBase,
             {
               color: labelColor,
-              marginTop: 1,
+              marginTop: TAB_BAR_CHROME_VISUAL.iconLabelGap,
               maxWidth: TAB_BAR_CHROME_VISUAL.labelMaxWidth,
               textAlign: 'center',
             },
@@ -118,7 +124,7 @@ export function CustomLiquidTabBar() {
       {Platform.OS === 'ios' ? (
         <GlassView
           style={styles.customTabGlass}
-          glassEffectStyle={TAB_BAR_CHROME_VISUAL.glassEffectStyle}
+          glassEffectStyle="clear"
           tintColor={
             DynamicColorIOS({
               light: ThemeColors.light.background.primary,

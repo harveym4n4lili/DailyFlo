@@ -1,15 +1,22 @@
-import React from 'react';
-import { View } from 'react-native';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
-// slot instead of stack: today only has index — stack added an extra native navigator layer between
-// the tab screen and your FlatList, which breaks ios tab bar minimize / scroll coordination (first-subview chain + uikit)
+// stack with a single index screen — same pattern as ai/_layout (Slot + NativeTabs led to zero screens / navigator error)
 export default function TodayLayout() {
   const themeColors = useThemeColors();
   return (
-    <View style={{ flex: 1, backgroundColor: themeColors.background.primary() }}>
-      <Slot />
-    </View>
+    <Stack
+      screenOptions={{
+        contentStyle: { backgroundColor: themeColors.background.primary() },
+      }}
+    >
+      <Stack.Screen
+        name="index"
+        options={{
+          title: 'Today',
+          headerShown: false,
+        }}
+      />
+    </Stack>
   );
 }

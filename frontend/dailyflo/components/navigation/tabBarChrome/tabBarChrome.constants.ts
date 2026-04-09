@@ -22,13 +22,21 @@ export const TAB_BAR_CHROME_LAYOUT = {
 
 /** visual tokens for the glass strip + row (icons, radii, z-order) */
 export const TAB_BAR_CHROME_VISUAL = {
-  tabIconSize: 25,
-  glassBorderRadius: 28,
+  tabIconSize: 24,
+  glassBorderRadius: 32,
   fallbackBorderRadius: 26,
-  glassBleedPaddingV: 6,
-  glassBleedPaddingH: 8,
-  innerPaddingV: 4,
-  innerPaddingH: 4,
+  /**
+   * one value for: padding inside the glass on all four edges, and horizontal gap between tab columns.
+   * keeps edge-to-first-tab spacing equal to tab-to-tab spacing.
+   */
+  tabBarInset: 0,
+  /** vertical gap between icon and label inside each tab */
+  iconLabelGap: 4,
+  /** optional extra vertical padding inside each tab hit target (symmetric) */
+  tabItemPaddingV: 10,
+  /** label type uses navbar token (10pt) as base — these override one step larger */
+  tabLabelFontSize: 12,
+  tabLabelLineHeight: 14,
   labelMaxWidth: 72,
   /** expo-glass-effect style for the navbar pill */
   glassEffectStyle: 'regular' as const,
