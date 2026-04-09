@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Paddings } from '@/constants/Paddings';
 import { AddIcon } from '@/components/ui/icon';
 import * as Haptics from 'expo-haptics';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -193,14 +194,20 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
     </TouchableOpacity>
   );
 
+  // position from the screen bottom (safe area), not from an assumed tab bar height — we removed the old +48 tab offset.
+  // flow: parent sits with bottom:0 on the screen; insets.bottom clears the home indicator; edgeMargin is space from that inset.
+  // fabVisualNudge: outer fabContainer is bigger than the 64px circle; subtract so the visible disc lines up with edgeMargin.
+  const edgeMargin = Paddings.screenSmall;
+  const fabVisualNudge = 29;
+
   return (
     <View
       pointerEvents="box-none"
       style={[
         styles.fabContainer,
         {
-          bottom: 48 + 16 + insets.bottom - 29,
-          right: 16 + insets.right - 29,
+          bottom: edgeMargin + insets.bottom - fabVisualNudge,
+          right: edgeMargin + insets.right - fabVisualNudge,
         },
       ]}
     >
