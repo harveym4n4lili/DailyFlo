@@ -7,6 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 // import our custom layout components
 import { ScreenContainer } from '@/components';
 import { FloatingActionButton, SelectAllButton } from '@/components/ui/button';
+import { fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
 import { ScreenHeaderActions } from '@/components/ui';
 import { ClockIcon } from '@/components/ui/icon';
 import { WeekView } from '@/components/features/calendar/sections';
@@ -413,8 +414,11 @@ export default function PlannerScreen() {
 
         {/* Floating Action Button – fades out in selection mode */}
         <AnimatedReanimated.View
-          style={[fabAnimatedStyle, { position: 'absolute', bottom: 0, right: 0, left: 0, height: 120 }]}
-          pointerEvents={selection.isSelectionMode && selection.selectionType === 'tasks' ? 'none' : 'box-none'}
+          style={[
+            fabAnimatedStyle,
+            fabChromeZoneStyle,
+            selection.isSelectionMode && selection.selectionType === 'tasks' ? { pointerEvents: 'none' } : null,
+          ]}
         >
           <FloatingActionButton
             onPress={() => {
