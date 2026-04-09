@@ -22,6 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { ReduxProvider } from '@/store/Provider';
+import { CustomTabNavMetricsProvider } from '@/contexts/CustomTabNavMetricsContext';
 import { CreateTaskDraftProvider } from './task/CreateTaskDraftContext';
 import { DuplicateTaskProvider } from './task/DuplicateTaskContext';
 import { PlannerMonthSelectProvider } from './PlannerMonthSelectContext';
@@ -208,6 +209,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ReduxProvider>
+        <CustomTabNavMetricsProvider>
         <ThemeProvider value={navTheme}>
           {/* Task stack and sub-screens share draft via context; DuplicateTaskProvider for pre-filling create from Duplicate */}
           <CreateTaskDraftProvider>
@@ -320,6 +322,7 @@ export default function RootLayout() {
           </CreateTaskDraftProvider>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         </ThemeProvider>
+        </CustomTabNavMetricsProvider>
       </ReduxProvider>
     </GestureHandlerRootView>
   );

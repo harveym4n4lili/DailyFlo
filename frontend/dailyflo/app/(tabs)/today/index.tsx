@@ -13,6 +13,7 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 // import our new task components
 import { ListCard } from '@/components/ui/card';
 import { FloatingActionButton, SelectionCloseButton, SelectAllButton } from '@/components/ui/button';
+import { fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
 import { ScreenHeaderActions } from '@/components/ui';
 import { ClockIcon } from '@/components/ui/icon';
 import { ModalContainer } from '@/components/layout/ModalLayout';
@@ -512,8 +513,11 @@ export default function TodayScreen() {
         </View>
       </View>
       <AnimatedReanimated.View
-        style={[fabAnimatedStyle, { position: 'absolute', bottom: 0, right: 0, left: 0, height: 120 }]}
-        pointerEvents={selection.isSelectionMode && selection.selectionType === 'tasks' ? 'none' : 'box-none'}
+        style={[
+          fabAnimatedStyle,
+          fabChromeZoneStyle,
+          selection.isSelectionMode && selection.selectionType === 'tasks' ? { pointerEvents: 'none' } : null,
+        ]}
       >
         <FloatingActionButton
           onPress={() => router.push('/task-create' as any)}

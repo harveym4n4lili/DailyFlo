@@ -45,6 +45,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeaderActions } from '@/components/ui';
 import { FloatingActionButton, MainCloseButton, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
+import { fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
 import { SolidSeparator } from '@/components/ui/borders';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/list/GroupedList';
 import { SFSymbolIcon, TickIcon, BrowseIcon, LeafIcon, PencilIcon, ClockIcon } from '@/components/ui/icon';
@@ -1485,17 +1486,7 @@ export default function BrowseScreen() {
       ) : null}
 
       {showBrowseBodyContent ? (
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            right: 0,
-            left: 0,
-            height: 120,
-            zIndex: 20,
-          }}
-          pointerEvents="box-none"
-        >
+        <View style={[fabChromeZoneStyle, { zIndex: 20 }]}>
           <FloatingActionButton
             onPress={() =>
               router.push({

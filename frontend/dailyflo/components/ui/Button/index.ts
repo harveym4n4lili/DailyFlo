@@ -6,7 +6,7 @@
  */
 
 // Export FloatingActionButton component
-export { FloatingActionButton } from './FloatingActionButton';
+export { FloatingActionButton, FAB_SCREEN_INSET } from './FloatingActionButton';
 export type { FloatingActionButtonProps } from './FloatingActionButton';
 
 // Export FormPickerButton component and utilities
