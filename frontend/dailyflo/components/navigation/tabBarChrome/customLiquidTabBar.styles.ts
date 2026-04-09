@@ -17,8 +17,7 @@ export const customLiquidTabBarStyles = StyleSheet.create({
   customTabGlassBleed: {
     overflow: 'visible',
     width: '100%',
-    paddingVertical: v.glassBleedPaddingV,
-    paddingHorizontal: v.glassBleedPaddingH,
+    padding: v.tabBarInset,
   },
   customTabToolbarFallback: {
     borderRadius: v.fallbackBorderRadius,
@@ -32,15 +31,15 @@ export const customLiquidTabBarStyles = StyleSheet.create({
   customTabToolbarInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-evenly',
     width: '100%',
-    paddingVertical: v.innerPaddingV,
-    paddingHorizontal: v.innerPaddingH,
+    // same value as tabBarInset on the bleed — equal gutter at edges and between columns
+    gap: v.tabBarInset,
   },
   customTabItem: {
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-    minWidth: 48,
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: v.tabItemPaddingV,
+    paddingHorizontal: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
