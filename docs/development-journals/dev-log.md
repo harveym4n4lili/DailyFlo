@@ -1637,3 +1637,10 @@ Updated User app, models, serializers, views and urls
 ### Notes
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
+
+TODO:
+- ADD A NAVBAR CHROME FADE WITH BLUR.
+- FIX STACK SCREENS FOR TASK VIEW/CREATE
+- REFACTOR CLOSE BUTTONS/TOOLBARS WITH STACK TOOLBARS
+- LINK TOOLBARS WITH ZOOM TRANSITION (SEE SDK 55 YT VIDEO)
