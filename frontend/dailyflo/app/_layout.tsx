@@ -26,6 +26,7 @@ import { CustomTabNavMetricsProvider } from '@/contexts/CustomTabNavMetricsConte
 import { CreateTaskDraftProvider } from './task/CreateTaskDraftContext';
 import { DuplicateTaskProvider } from './task/DuplicateTaskContext';
 import { PlannerMonthSelectProvider } from './PlannerMonthSelectContext';
+import { TabChromeSuppressProvider } from '@/contexts/TabChromeSuppressContext';
 import { store } from '@/store';
 import { logout, checkAuthStatus } from '@/store/slices/auth/authSlice';
 
@@ -215,6 +216,8 @@ export default function RootLayout() {
           <CreateTaskDraftProvider>
           <DuplicateTaskProvider>
           <PlannerMonthSelectProvider>
+          {/* hide liquid tab chrome while root stack shows task/pickers — that overlay uses z-index ~1998 and can cover native formSheets */}
+          <TabChromeSuppressProvider>
           <Stack
             screenOptions={{
               animation: 'default', // native iOS slide-from-right for all stack transitions
@@ -229,7 +232,7 @@ export default function RootLayout() {
               name="task-create"
               options={{
                 headerShown: false,
-                presentation: 'formSheet',
+                presentation: 'modal',
                 gestureEnabled: false,
                 sheetGrabberVisible: false,
                 contentStyle: {
@@ -254,7 +257,7 @@ export default function RootLayout() {
               name="task"
               options={{
                 headerShown: false,
-                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+                presentation: 'formSheet',
                 gestureEnabled: true,
                 sheetAllowedDetents: [0.7, 1],
                 contentStyle: {
@@ -317,6 +320,7 @@ export default function RootLayout() {
             />
             <Stack.Screen name="+not-found" />
           </Stack>
+          </TabChromeSuppressProvider>
           </PlannerMonthSelectProvider>
           </DuplicateTaskProvider>
           </CreateTaskDraftProvider>

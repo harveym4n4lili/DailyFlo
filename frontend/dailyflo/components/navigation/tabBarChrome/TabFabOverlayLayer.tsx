@@ -11,8 +11,12 @@ import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 
 import { TAB_BAR_CHROME_VISUAL } from './tabBarChrome.constants';
 import { fabChromeZoneStyle } from './fabChromeZone';
+import { useTabChromeSuppressed } from '@/contexts/TabChromeSuppressContext';
 
 export function TabFabOverlayLayer() {
+  const suppressed = useTabChromeSuppressed();
+  if (suppressed) return null;
+
   const { registration } = useTabFabOverlay();
   if (!registration) return null;
 
