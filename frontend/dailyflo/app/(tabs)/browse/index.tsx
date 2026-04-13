@@ -45,7 +45,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeaderActions } from '@/components/ui';
 import { FloatingActionButton, MainCloseButton, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
-import { fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
+import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
+import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 import { SolidSeparator } from '@/components/ui/borders';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/list/GroupedList';
 import { SFSymbolIcon, TickIcon, BrowseIcon, LeafIcon, PencilIcon, ClockIcon } from '@/components/ui/icon';
@@ -446,6 +447,26 @@ export default function BrowseScreen() {
   const [exitingBrowseSearch, setExitingBrowseSearch] = useState(false);
   const isBrowseSearchMode = searchOpen;
   const showBrowseBodyContent = !searchOpen || exitingBrowseSearch;
+  const { setTabFabRegistration } = useTabFabOverlay();
+  useFocusEffect(
+    useCallback(() => {
+      if (!USE_CUSTOM_LIQUID_TAB_BAR) return undefined;
+      if (!showBrowseBodyContent) {
+        setTabFabRegistration(null);
+        return () => setTabFabRegistration(null);
+      }
+      setTabFabRegistration({
+        onPress: () =>
+          router.push({
+            pathname: '/(tabs)/browse/list-create' as any,
+            params: { openedFrom: LIST_CREATE_OPENED_FROM_BROWSE },
+          }),
+        accessibilityLabel: 'Create new list',
+        accessibilityHint: 'Opens the new list screen',
+      });
+      return () => setTabFabRegistration(null);
+    }, [showBrowseBodyContent, router, setTabFabRegistration]),
+  );
   const searchOpenRef = useRef(false);
   const closeAnimatingRef = useRef(false);
 
@@ -1485,7 +1506,7 @@ export default function BrowseScreen() {
         </Animated.View>
       ) : null}
 
-      {showBrowseBodyContent ? (
+      {!USE_CUSTOM_LIQUID_TAB_BAR && showBrowseBodyContent ? (
         <View style={[fabChromeZoneStyle, { zIndex: 20 }]}>
           <FloatingActionButton
             onPress={() =>

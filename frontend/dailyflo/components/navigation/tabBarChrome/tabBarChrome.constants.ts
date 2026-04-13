@@ -40,7 +40,18 @@ export const TAB_BAR_CHROME_VISUAL = {
   labelMaxWidth: 72,
   /** expo-glass-effect style for the navbar pill */
   glassEffectStyle: 'regular' as const,
-  wrapZIndex: 1998,
+  /** lifts the whole bottom chrome stack (fade + navbar) above tab screen content */
+  chromeOverlayStackZIndex: 1998,
+  /** FAB layer in (tabs)/_layout — must stay above chromeOverlayStack so the button isn’t covered by the fade */
+  tabFabAboveChromeZIndex: 2000,
+  /**
+   * inside chromeOverlayStack only: fade first (0), navbar second (1) so the pill always paints on top.
+   * do not reuse 1997/1998 on those inner views — sibling order + these values keep ordering stable on ios/android.
+   */
+  chromeFadeRelativeZIndex: 0,
+  chromeNavBarRelativeZIndex: 1,
+  /** sits under the pill; scroll content fades through this band (height excludes safe-area; insets added in component) */
+  bottomChromeFadeBaseHeight: 96,
 } as const;
 
 /**

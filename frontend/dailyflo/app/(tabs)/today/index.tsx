@@ -13,7 +13,8 @@ import { ScreenContainer, SafeAreaWrapper } from '@/components';
 // import our new task components
 import { ListCard } from '@/components/ui/card';
 import { FloatingActionButton, SelectionCloseButton, SelectAllButton } from '@/components/ui/button';
-import { fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
+import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
+import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 import { ScreenHeaderActions } from '@/components/ui';
 import { ClockIcon } from '@/components/ui/icon';
 import { ModalContainer } from '@/components/layout/ModalLayout';
@@ -95,6 +96,25 @@ export default function TodayScreen() {
     fabOpacity.value = withTiming(isSelectionMode ? 0 : 1, { duration: 400 });
   }, [selection.isSelectionMode, selection.selectionType, fabOpacity]);
   const fabAnimatedStyle = useAnimatedStyle(() => ({ opacity: fabOpacity.value }));
+  // ref keeps the latest animated style without putting it in useFocusEffect deps (unstable refs were clearing registration every render)
+  const fabStyleRef = useRef(fabAnimatedStyle);
+  fabStyleRef.current = fabAnimatedStyle;
+
+  const { setTabFabRegistration } = useTabFabOverlay();
+  // useFocusEffect: NativeTabs + expo-router often don’t report useIsFocused() true on first paint; this matches tab focus reliably
+  useFocusEffect(
+    useCallback(() => {
+      if (!USE_CUSTOM_LIQUID_TAB_BAR) return undefined;
+      setTabFabRegistration({
+        onPress: () => router.push('/task-create' as any),
+        accessibilityLabel: 'Add new task',
+        accessibilityHint: 'Double tap to create a new task',
+        wrapperStyle: fabStyleRef.current,
+        pointerEventsBlocked: selection.isSelectionMode && selection.selectionType === 'tasks',
+      });
+      return () => setTabFabRegistration(null);
+    }, [router, setTabFabRegistration, selection.isSelectionMode, selection.selectionType]),
+  );
 
   // close button: scale animation with Reanimated spring (works with glass; opacity can break it)
   const closeButtonScale = useSharedValue(0);
@@ -512,19 +532,21 @@ export default function TodayScreen() {
           )}
         </View>
       </View>
-      <AnimatedReanimated.View
-        style={[
-          fabAnimatedStyle,
-          fabChromeZoneStyle,
-          selection.isSelectionMode && selection.selectionType === 'tasks' ? { pointerEvents: 'none' } : null,
-        ]}
-      >
-        <FloatingActionButton
-          onPress={() => router.push('/task-create' as any)}
-          accessibilityLabel="Add new task"
-          accessibilityHint="Double tap to create a new task"
-        />
-      </AnimatedReanimated.View>
+      {!USE_CUSTOM_LIQUID_TAB_BAR ? (
+        <AnimatedReanimated.View
+          style={[
+            fabAnimatedStyle,
+            fabChromeZoneStyle,
+            selection.isSelectionMode && selection.selectionType === 'tasks' ? { pointerEvents: 'none' } : null,
+          ]}
+        >
+          <FloatingActionButton
+            onPress={() => router.push('/task-create' as any)}
+            accessibilityLabel="Add new task"
+            accessibilityHint="Double tap to create a new task"
+          />
+        </AnimatedReanimated.View>
+      ) : null}
     </View>
   );
 }

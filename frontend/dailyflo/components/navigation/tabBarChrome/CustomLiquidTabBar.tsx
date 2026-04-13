@@ -4,10 +4,12 @@
  */
 
 import React from 'react';
-import { View, DynamicColorIOS, Platform, Pressable, Text, Image } from 'react-native';
+import { View, DynamicColorIOS, Platform, Pressable, Text, Image, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import GlassView from 'expo-glass-effect/build/GlassView';
 import { useRouter, useSegments } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemeColors } from '@/constants/ColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -24,6 +26,7 @@ export function CustomLiquidTabBar() {
   const router = useRouter();
   const typography = useTypography();
   const themeColors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const segments = useSegments() as string[];
 
   const { measuredNavBarHeight, setMeasuredNavBarHeight } = useCustomTabNavMetrics();
@@ -105,53 +108,90 @@ export function CustomLiquidTabBar() {
     );
   });
 
+  // tall-enough band so the last rows of scroll views soften before they pass under the glass pill + fab
+  const bottomChromeFadeHeight =
+    TAB_BAR_CHROME_VISUAL.bottomChromeFadeBaseHeight + insets.bottom;
+
   return (
-    <View
-      pointerEvents="box-none"
-      onLayout={(e) => {
-        const h = e.nativeEvent.layout.height;
-        if (h > 0) setMeasuredNavBarHeight(h);
-      }}
-      style={[
-        styles.customTabToolbarWrap,
-        {
-          left: TAB_BAR_CHROME_LAYOUT.leftInset,
-          right: customTabBarRightInset,
-          bottom: customTabStripBottom,
-        },
-      ]}
-    >
-      {Platform.OS === 'ios' ? (
-        <GlassView
-          style={styles.customTabGlass}
-          glassEffectStyle="clear"
-          tintColor={
-            DynamicColorIOS({
-              light: ThemeColors.light.background.primary,
-              dark: ThemeColors.dark.background.primary,
-            }) as any
-          }
-          isInteractive
-        >
-          <View style={styles.customTabGlassBleed}>
-            <View style={styles.customTabToolbarInner}>{customTabBarItems}</View>
-          </View>
-        </GlassView>
-      ) : (
+    <>
+      {/*
+        chromeOverlayStack: single parent z-index above tab scenes; inside it, fade uses chromeFadeRelativeZIndex
+        and the toolbar uses chromeNavBarRelativeZIndex so the liquid pill is always above the fade (ios + android).
+      */}
+      <View style={styles.chromeOverlayStack} pointerEvents="box-none">
+        {/*
+        bottom chrome fade: full screen width (left/right from styles). gradient only — no BlurView (see earlier note).
+        pointerEvents="none" so taps pass through to the FAB and list underneath even where the gradient draws.
+      */}
         <View
+          pointerEvents="none"
+          style={[styles.bottomChromeFade, { height: bottomChromeFadeHeight }]}
+        >
+          <LinearGradient
+            pointerEvents="none"
+            colors={
+              themeColors.isDark
+                ? [
+                    themeColors.withOpacity(themeColors.background.primary(), 0),
+                    themeColors.withOpacity(themeColors.background.primary(), 0.7),
+                  ]
+                : [
+                    themeColors.withOpacity(themeColors.background.primary(), 0),
+                    themeColors.background.primary(),
+                  ]
+            }
+            locations={[0.25, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+        <View
+          pointerEvents="box-none"
+          onLayout={(e) => {
+            const h = e.nativeEvent.layout.height;
+            if (h > 0) setMeasuredNavBarHeight(h);
+          }}
           style={[
-            styles.customTabToolbarFallback,
+            styles.customTabToolbarWrap,
             {
-              backgroundColor: themeColors.background.elevated(),
-              borderColor: themeColors.border.primary(),
+              left: TAB_BAR_CHROME_LAYOUT.leftInset,
+              right: customTabBarRightInset,
+              bottom: customTabStripBottom,
             },
           ]}
         >
-          <View style={styles.customTabGlassBleed}>
-            <View style={styles.customTabToolbarInner}>{customTabBarItems}</View>
-          </View>
+          {Platform.OS === 'ios' ? (
+            <GlassView
+              style={styles.customTabGlass}
+              glassEffectStyle={TAB_BAR_CHROME_VISUAL.glassEffectStyle}
+              tintColor={
+                DynamicColorIOS({
+                  light: ThemeColors.light.background.primary,
+                  dark: ThemeColors.dark.background.primary,
+                }) as any
+              }
+              isInteractive
+            >
+              <View style={styles.customTabGlassBleed}>
+                <View style={styles.customTabToolbarInner}>{customTabBarItems}</View>
+              </View>
+            </GlassView>
+          ) : (
+            <View
+              style={[
+                styles.customTabToolbarFallback,
+                {
+                  backgroundColor: themeColors.background.elevated(),
+                  borderColor: themeColors.border.primary(),
+                },
+              ]}
+            >
+              <View style={styles.customTabGlassBleed}>
+                <View style={styles.customTabToolbarInner}>{customTabBarItems}</View>
+              </View>
+            </View>
+          )}
         </View>
-      )}
-    </View>
+      </View>
+    </>
   );
 }

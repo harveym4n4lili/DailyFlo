@@ -4,10 +4,35 @@ import { TAB_BAR_CHROME_VISUAL } from './tabBarChrome.constants';
 const v = TAB_BAR_CHROME_VISUAL;
 
 export const customLiquidTabBarStyles = StyleSheet.create({
+  // parent for fade + navbar: one stacking context so fade stays strictly under the pill
+  chromeOverlayStack: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: v.chromeOverlayStackZIndex,
+  },
+  // edge-to-edge band at screen bottom (same width as chromeOverlayStack, not the inset navbar pill)
+  bottomChromeFade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: v.chromeFadeRelativeZIndex,
+    ...Platform.select({
+      // android draw order follows elevation; keep fade under the nav strip
+      android: { elevation: 0 },
+      default: {},
+    }),
+  },
   customTabToolbarWrap: {
     position: 'absolute',
-    zIndex: v.wrapZIndex,
+    zIndex: v.chromeNavBarRelativeZIndex,
     overflow: 'visible',
+    ...Platform.select({
+      android: { elevation: 12 },
+      default: {},
+    }),
   },
   customTabGlass: {
     borderRadius: v.glassBorderRadius,
