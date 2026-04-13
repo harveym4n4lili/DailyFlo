@@ -373,7 +373,8 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   const screenBg = { backgroundColor: themeColors.background.primary() };
 
   return (
-    <View style={[styles.container, screenBg]}>
+    // collapsable: false keeps one native wrapper for formSheet (RNScreens scroll + header heuristic)
+    <View style={[styles.container, screenBg]} collapsable={false}>
       {/* ScrollView first so header overlays on top (header has zIndex) */}
       <ScrollView
         ref={scrollViewRef}

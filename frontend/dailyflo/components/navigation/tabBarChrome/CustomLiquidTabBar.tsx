@@ -21,8 +21,12 @@ import { buildCustomTabNavItems } from './customTabNavItems';
 import { computeTabBarChromeLayout } from './computeTabBarChromeLayout';
 import { TAB_BAR_CHROME_LAYOUT, TAB_BAR_CHROME_VISUAL } from './tabBarChrome.constants';
 import { customLiquidTabBarStyles as styles } from './customLiquidTabBar.styles';
+import { useTabChromeSuppressed } from '@/contexts/TabChromeSuppressContext';
 
 export function CustomLiquidTabBar() {
+  const suppressed = useTabChromeSuppressed();
+  if (suppressed) return null;
+
   const router = useRouter();
   const typography = useTypography();
   const themeColors = useThemeColors();
