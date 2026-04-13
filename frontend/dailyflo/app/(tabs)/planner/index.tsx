@@ -1,5 +1,5 @@
 
-import React, { useCallback, useMemo, useState, useEffect, useTransition } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useTransition, useRef } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,7 +7,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 // import our custom layout components
 import { ScreenContainer } from '@/components';
 import { FloatingActionButton, SelectAllButton } from '@/components/ui/button';
-import { fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
+import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
+import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 import { ScreenHeaderActions } from '@/components/ui';
 import { ClockIcon } from '@/components/ui/icon';
 import { WeekView } from '@/components/features/calendar/sections';
@@ -84,6 +85,32 @@ export default function PlannerScreen() {
     fabOpacity.value = withTiming(isSelectionMode ? 0 : 1, { duration: 200 });
   }, [selection.isSelectionMode, selection.selectionType, fabOpacity]);
   const fabAnimatedStyle = useAnimatedStyle(() => ({ opacity: fabOpacity.value }));
+  const fabStyleRef = useRef(fabAnimatedStyle);
+  fabStyleRef.current = fabAnimatedStyle;
+
+  const { setTabFabRegistration } = useTabFabOverlay();
+  useFocusEffect(
+    useCallback(() => {
+      if (!USE_CUSTOM_LIQUID_TAB_BAR) return undefined;
+      setTabFabRegistration({
+        onPress: () => {
+          router.push({ pathname: '/task-create' as any, params: { dueDate: selectedDate } });
+        },
+        accessibilityLabel: 'Add new task',
+        accessibilityHint: 'Double tap to create a new task',
+        wrapperStyle: fabStyleRef.current,
+        pointerEventsBlocked: selection.isSelectionMode && selection.selectionType === 'tasks',
+      });
+      return () => setTabFabRegistration(null);
+    }, [
+      router,
+      selectedDate,
+      setTabFabRegistration,
+      selection.isSelectionMode,
+      selection.selectionType,
+    ]),
+  );
+
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const { openMonthSelect } = usePlannerMonthSelect();
   
@@ -412,22 +439,23 @@ export default function PlannerScreen() {
           </>
         </View>
 
-        {/* Floating Action Button – fades out in selection mode */}
-        <AnimatedReanimated.View
-          style={[
-            fabAnimatedStyle,
-            fabChromeZoneStyle,
-            selection.isSelectionMode && selection.selectionType === 'tasks' ? { pointerEvents: 'none' } : null,
-          ]}
-        >
-          <FloatingActionButton
-            onPress={() => {
-              router.push({ pathname: '/task-create' as any, params: { dueDate: selectedDate } });
-            }}
-            accessibilityLabel="Add new task"
-            accessibilityHint="Double tap to create a new task"
-          />
-        </AnimatedReanimated.View>
+        {!USE_CUSTOM_LIQUID_TAB_BAR ? (
+          <AnimatedReanimated.View
+            style={[
+              fabAnimatedStyle,
+              fabChromeZoneStyle,
+              selection.isSelectionMode && selection.selectionType === 'tasks' ? { pointerEvents: 'none' } : null,
+            ]}
+          >
+            <FloatingActionButton
+              onPress={() => {
+                router.push({ pathname: '/task-create' as any, params: { dueDate: selectedDate } });
+              }}
+              accessibilityLabel="Add new task"
+              accessibilityHint="Double tap to create a new task"
+            />
+          </AnimatedReanimated.View>
+        ) : null}
       </ScreenContainer>
 
     </View>

@@ -10,6 +10,8 @@ import { useUI } from '@/store/hooks';
 import { getTodayTabIcon } from '@/utils/todayIcon';
 import { useSegments } from 'expo-router';
 import { CustomLiquidTabBar, USE_CUSTOM_LIQUID_TAB_BAR } from '@/components/navigation/tabBarChrome';
+import { TabFabOverlayLayer } from '@/components/navigation/tabBarChrome/TabFabOverlayLayer';
+import { TabFabOverlayProvider } from '@/contexts/TabFabOverlayContext';
 
 export default function TabLayout() {
   const typography = useTypography();
@@ -55,50 +57,53 @@ export default function TabLayout() {
     : 'other';
 
   return (
-    <View style={styles.root}>
-      <NativeTabs
-        labelStyle={{
-          default: { ...labelBase, color: tabIconUnselected },
-          selected: { ...labelBase, color: tabIconSelected },
-        }}
-        iconColor={{
-          default: tabIconUnselected,
-          selected: tabIconSelected,
-        }}
-        tintColor={tabIconSelected}
-        backgroundColor={tabBarBgIos ?? tabBarBackgroundColor}
-        blurEffect="none"
-        {...(Platform.OS === 'ios' ? { minimizeBehavior: 'onScrollDown' as const } : {})}
-        hidden={USE_CUSTOM_LIQUID_TAB_BAR}
-      >
-        <NativeTabs.Trigger name="today" hidden={false}>
-          <NativeTabs.Trigger.Label>Today</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon src={getTodayTabIcon()} renderingMode="template" />
-        </NativeTabs.Trigger>
+    <TabFabOverlayProvider>
+      <View style={styles.root}>
+        <NativeTabs
+          labelStyle={{
+            default: { ...labelBase, color: tabIconUnselected },
+            selected: { ...labelBase, color: tabIconSelected },
+          }}
+          iconColor={{
+            default: tabIconUnselected,
+            selected: tabIconSelected,
+          }}
+          tintColor={tabIconSelected}
+          backgroundColor={tabBarBgIos ?? tabBarBackgroundColor}
+          blurEffect="none"
+          {...(Platform.OS === 'ios' ? { minimizeBehavior: 'onScrollDown' as const } : {})}
+          hidden={USE_CUSTOM_LIQUID_TAB_BAR}
+        >
+          <NativeTabs.Trigger name="today" hidden={false}>
+            <NativeTabs.Trigger.Label>Today</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon src={getTodayTabIcon()} renderingMode="template" />
+          </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="planner" hidden={false}>
-          <NativeTabs.Trigger.Label>Planner</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon src={require('@/assets/icons/Timeline.png')} renderingMode="template" />
-        </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="planner" hidden={false}>
+            <NativeTabs.Trigger.Label>Planner</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon src={require('@/assets/icons/Timeline.png')} renderingMode="template" />
+          </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="ai" hidden={false}>
-          <NativeTabs.Trigger.Label>AI</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon src={require('@/assets/icons/Sparkles.png')} renderingMode="template" />
-        </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="ai" hidden={false}>
+            <NativeTabs.Trigger.Label>AI</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon src={require('@/assets/icons/Sparkles.png')} renderingMode="template" />
+          </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="browse" hidden={false}>
-          <NativeTabs.Trigger.Label>Browse</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon src={require('@/assets/icons/Browse.png')} renderingMode="template" />
-        </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="browse" hidden={false}>
+            <NativeTabs.Trigger.Label>Browse</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon src={require('@/assets/icons/Browse.png')} renderingMode="template" />
+          </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="test" hidden={false}>
-          <NativeTabs.Trigger.Label>Test</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon src={require('@/assets/icons/Today.png')} renderingMode="template" />
-        </NativeTabs.Trigger>
-      </NativeTabs>
-      {isSelectionMode && <SelectionActionsBar screen={selectionScreen} />}
-      {USE_CUSTOM_LIQUID_TAB_BAR ? <CustomLiquidTabBar /> : null}
-    </View>
+          <NativeTabs.Trigger name="test" hidden={false}>
+            <NativeTabs.Trigger.Label>Test</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon src={require('@/assets/icons/Today.png')} renderingMode="template" />
+          </NativeTabs.Trigger>
+        </NativeTabs>
+        {isSelectionMode && <SelectionActionsBar screen={selectionScreen} />}
+        {USE_CUSTOM_LIQUID_TAB_BAR ? <CustomLiquidTabBar /> : null}
+        {USE_CUSTOM_LIQUID_TAB_BAR ? <TabFabOverlayLayer /> : null}
+      </View>
+    </TabFabOverlayProvider>
   );
 }
 
