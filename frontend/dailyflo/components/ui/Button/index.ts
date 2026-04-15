@@ -73,9 +73,5 @@ export type { SelectionCloseButtonProps } from './SelectionCloseButton';
 export { SelectAllButton } from './SelectAllButton';
 export type { SelectAllButtonProps } from './SelectAllButton';
 
-// Export ActionsButton (ellipsis button with liquid glass context menu)
-export { ActionsButton } from './ActionsButton/index';
-export type { ActionsButtonProps, ActionsButtonItem } from './ActionsButton/index';
-
 // Default export for convenience (FloatingActionButton)
 export { FloatingActionButton as default } from './FloatingActionButton';

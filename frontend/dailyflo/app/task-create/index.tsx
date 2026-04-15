@@ -232,8 +232,6 @@ export default function TaskCreateScreen() {
         showDragIndicator={false}
         saveButtonBottomInsetWhenKeyboardHidden={44}
         pickerHandlers={pickerHandlers}
-        onActivityLog={() => {}}
-        onDeleteTask={handleClose}
       />
   );
 }

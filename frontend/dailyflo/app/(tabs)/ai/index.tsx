@@ -18,27 +18,22 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components';
 import { ScreenHeaderActions } from '@/components/ui';
-import { ClockIcon } from '@/components/ui/icon';
+import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 import { getTextStyle } from '@/constants/Typography';
-import { useUI } from '@/store/hooks';
-
 // native tabs (expo-router NativeTabs, sdk 55) don’t expose measured tab bar height like JS tabs — fallback so content clears the bar
 const TAB_BAR_HEIGHT_FALLBACK = Platform.select({ ios: 49, android: 56, default: 49 });
 // matches planner topSectionRow height — content starts below this + safe top
 const TOP_SECTION_ROW_HEIGHT = 48;
 
 export default function AITabScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { enterSelectionMode } = useUI();
   const tabBarHeightFromNav = useContext(BottomTabBarHeightContext);
   const tabBarHeight = tabBarHeightFromNav ?? TAB_BAR_HEIGHT_FALLBACK;
   // tab bar height + safe bottom + tabBarInputGap keeps the input section above the navbar
@@ -65,36 +60,19 @@ export default function AITabScreen() {
   }, [canSend]);
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* same pattern as planner: fixed top band for ellipsis menu; does not scroll */}
+    <>
+      <IosDashboardOverflowToolbar />
+      <View style={{ flex: 1 }}>
+      {/* android: glass dashboard chip; ios: icons only in Stack.Toolbar */}
       <View
         style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ROW_HEIGHT }]}
         pointerEvents="box-none"
       >
         <View style={styles.topSectionRow} pointerEvents="box-none">
           <View style={styles.topSectionCloseButton} pointerEvents="none" />
-          <ScreenHeaderActions
-            variant="dashboard"
-            contextMenuItems={[
-              {
-                id: 'activity-log',
-                label: 'Activity log',
-                iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />,
-                systemImage: 'clock.arrow.circlepath',
-                onPress: () => router.push('/activity-log' as any),
-              },
-              {
-                id: 'select-tasks',
-                label: 'Select Tasks',
-                systemImage: 'square.and.pencil',
-                onPress: () => enterSelectionMode('tasks'),
-              },
-            ]}
-            dropdownAnchorTopOffset={insets.top + TOP_SECTION_ROW_HEIGHT}
-            dropdownAnchorRightOffset={24}
-            style={styles.topSectionContextButton}
-            tint="primary"
-          />
+          {Platform.OS === 'android' ? (
+            <ScreenHeaderActions variant="dashboard" style={styles.topSectionContextButton} tint="primary" />
+          ) : null}
         </View>
       </View>
 
@@ -167,6 +145,7 @@ export default function AITabScreen() {
         </KeyboardAvoidingView>
       </ScreenContainer>
     </View>
+    </>
   );
 }
 

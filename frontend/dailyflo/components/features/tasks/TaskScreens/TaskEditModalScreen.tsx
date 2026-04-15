@@ -3,9 +3,9 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, View } from 'react-native';
 import { deleteTask } from '@/store/slices/tasks/tasksSlice';
-import { useRouter, useLocalSearchParams, usePathname } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams, usePathname } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -20,6 +20,12 @@ import { validateAll } from '@/components/forms/TaskForm/TaskValidation';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { useDuplicateTask } from '@/app/task/DuplicateTaskContext';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
+import {
+  STACK_TOOLBAR_ACTIVITY,
+  STACK_TOOLBAR_DUPLICATE,
+  STACK_TOOLBAR_OVERFLOW,
+  stackToolbarDashboardIcon,
+} from '@/constants/stackToolbarIcons';
 
 // map metadata subtasks to form rows; api may use is_completed while ts types use isCompleted
 function taskToFormSubtasks(
@@ -551,8 +557,44 @@ export default function TaskEditScreen() {
     );
   }
 
+  // ios: native stack toolbar overflow (replaces in-sheet ActionContextMenu); android: no overflow per product choice
   return (
-    <TaskScreenContent
+    <>
+      {Platform.OS === 'ios' && (
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button
+            icon={stackToolbarDashboardIcon()}
+            iconRenderingMode="template"
+            tintColor={themeColors.text.primary()}
+            onPress={() => {}}
+            accessibilityLabel="Dashboard"
+          />
+          <Stack.Toolbar.Menu
+            icon={STACK_TOOLBAR_OVERFLOW}
+            iconRenderingMode="template"
+            tintColor={themeColors.text.primary()}
+          >
+            <Stack.Toolbar.MenuAction
+              icon={STACK_TOOLBAR_ACTIVITY}
+              iconRenderingMode="template"
+              onPress={() => router.push('/activity-log' as any)}
+            >
+              Activity log
+            </Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction
+              icon={STACK_TOOLBAR_DUPLICATE}
+              iconRenderingMode="template"
+              onPress={handleDuplicateTask}
+            >
+              Duplicate
+            </Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction destructive onPress={handleDeleteTask}>
+              Delete task
+            </Stack.Toolbar.MenuAction>
+          </Stack.Toolbar.Menu>
+        </Stack.Toolbar>
+      )}
+      <TaskScreenContent
         visible={true}
         values={values}
         onChange={onChange}
@@ -577,12 +619,10 @@ export default function TaskEditScreen() {
         isEditMode={true}
         saveButtonBottomInsetWhenKeyboardHidden={44}
         pickerHandlers={pickerHandlers}
-        onActivityLog={() => router.push('/activity-log' as any)}
-        onDuplicateTask={handleDuplicateTask}
-        onDeleteTask={handleDeleteTask}
         titleCheckboxCompleted={task.isCompleted}
         onTitleCheckboxToggle={handleTitleCheckboxToggle}
       />
+    </>
   );
 }
 

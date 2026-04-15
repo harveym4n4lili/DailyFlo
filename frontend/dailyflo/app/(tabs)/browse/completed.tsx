@@ -22,6 +22,8 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { getFontFamilyWithWeight } from '@/constants/Typography';
 import { MainBackButton } from '@/components/ui/button';
+import { ScreenHeaderActions } from '@/components/ui';
+import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { Paddings } from '@/constants/Paddings';
 import { browseScrollPaddingTop } from '@/constants/browseScrollPaddingTop';
 import { ActivityLog } from '@/types/common/ActivityLog';
@@ -115,7 +117,9 @@ export default function CompletedScreen() {
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <>
+      <IosDashboardOverflowToolbar />
+      <View style={{ flex: 1 }}>
       <View
         style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}
       >
@@ -140,7 +144,11 @@ export default function CompletedScreen() {
               Completed
             </Text>
           </Animated.View>
-          <View style={styles.topSectionPlaceholder} pointerEvents="none" />
+          {Platform.OS === 'android' ? (
+            <ScreenHeaderActions variant="dashboard" style={styles.topSectionContextButton} tint="primary" />
+          ) : (
+            <View style={styles.topSectionPlaceholder} pointerEvents="none" />
+          )}
         </View>
       </View>
 
@@ -203,7 +211,8 @@ export default function CompletedScreen() {
 
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
@@ -247,6 +256,9 @@ const createStyles = (
     },
     miniHeaderText: {
       ...typography.getTextStyle('heading-3'),
+    },
+    topSectionContextButton: {
+      backgroundColor: 'primary',
     },
     backButtonContainer: {
       position: 'absolute',

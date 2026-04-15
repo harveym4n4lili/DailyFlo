@@ -44,6 +44,7 @@ import GlassView from 'expo-glass-effect/build/GlassView';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeaderActions } from '@/components/ui';
+import { IosBrowseHomeStackToolbar } from '@/components/navigation/IosBrowseHomeStackToolbar';
 import { FloatingActionButton, MainCloseButton, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
@@ -486,7 +487,7 @@ export default function BrowseScreen() {
   const topChromeSlideDistance = topChromeHeight;
   // first list row starts below the absolute pill + same gap as former searchAnchor marginBottom
   const browseListsPaddingTop =
-   FLOATING_SEARCH_BAR_ROW_HEIGHT + TOP_SECTION_ROW_HEIGHT + Paddings.screen + 12;
+    FLOATING_SEARCH_BAR_ROW_HEIGHT + TOP_SECTION_ROW_HEIGHT + Paddings.screen + 12;
   // search overlay scroll must not cover inbox row (same y as first grouped row) — full-screen overlay sat z-index above browse and blocked taps
   const searchScrollOverlayTop = browseListsPaddingTop + SEARCH_SCROLL_OVERLAY_TOP_INSET;
   // inner padding so first search line still clears docked bar + chips after overlay frame is pushed down
@@ -867,7 +868,9 @@ export default function BrowseScreen() {
   );
 
   return (
-    <View ref={rootRef} style={{ flex: 1 }}>
+    <>
+      <IosBrowseHomeStackToolbar />
+      <View ref={rootRef} style={{ flex: 1 }}>
       {/* box-none + blur none: tall chrome band must not steal taps meant for browse grouped list (inbox) behind it — only topSectionRow / settings stays interactive */}
       <Animated.View
         pointerEvents="box-none"
@@ -889,15 +892,17 @@ export default function BrowseScreen() {
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
-        <View style={styles.topSectionRow} pointerEvents="box-none">
-          <View style={styles.topSectionPlaceholder} pointerEvents="none" />
-          <ScreenHeaderActions
-            variant="browse"
-            onSettingsPress={() => router.push('/(tabs)/browse/settings')}
-            style={styles.topSectionContextButton}
-            tint="primary"
-          />
-        </View>
+        {Platform.OS === 'android' ? (
+          <View style={styles.topSectionRow} pointerEvents="box-none">
+            <View style={styles.topSectionPlaceholder} pointerEvents="none" />
+            <ScreenHeaderActions
+              variant="browse"
+              onSettingsPress={() => router.push('/(tabs)/browse/settings')}
+              style={styles.topSectionContextButton}
+              tint="primary"
+            />
+          </View>
+        ) : null}
       </Animated.View>
 
       {/* browse scroll stays mounted (opacity off during full search) so ios/android don’t remeasure a new scroll view — fixes pill→list gap differing cold vs after search */}
@@ -1521,6 +1526,7 @@ export default function BrowseScreen() {
         </View>
       ) : null}
     </View>
+    </>
   );
 }
 

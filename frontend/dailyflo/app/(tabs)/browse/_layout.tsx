@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
@@ -13,10 +14,21 @@ export default function BrowseLayout() {
     >
       <Stack.Screen
         name="index"
-        options={{
-          title: 'Browse',
-          headerShown: false,
-        }}
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+            : {
+                title: 'Browse',
+                headerShown: false,
+              }
+        }
       />
       {/* settings: same as activity-log – modal, close via MainCloseButton */}
       <Stack.Screen
@@ -33,31 +45,73 @@ export default function BrowseLayout() {
       {/* inbox, completed, tags: push + back + big/mini header */}
       <Stack.Screen
         name="inbox"
-        options={{
-          title: 'Inbox',
-          headerShown: false,
-        }}
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+            : {
+                title: 'Inbox',
+                headerShown: false,
+              }
+        }
       />
       <Stack.Screen
         name="completed"
-        options={{
-          title: 'Completed',
-          headerShown: false,
-        }}
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+            : {
+                title: 'Completed',
+                headerShown: false,
+              }
+        }
       />
       <Stack.Screen
         name="tags"
-        options={{
-          title: 'Tags',
-          headerShown: false,
-        }}
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+            : {
+                title: 'Tags',
+                headerShown: false,
+              }
+        }
       />
       {/* list/[listId]: push screen for a single list (same chrome pattern as inbox) */}
       <Stack.Screen
         name="list/[listId]"
-        options={{
-          headerShown: false,
-        }}
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+            : { headerShown: false }
+        }
       />
       {/* manage-lists: full-screen modal, no sheet detents — close via MainCloseButton (same as settings) */}
       <Stack.Screen

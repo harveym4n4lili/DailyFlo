@@ -23,6 +23,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainBackButton } from '@/components/ui/button';
+import { ScreenHeaderActions } from '@/components/ui';
+import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { Paddings } from '@/constants/Paddings';
 import { browseScrollPaddingTop } from '@/constants/browseScrollPaddingTop';
 
@@ -70,7 +72,9 @@ export default function TagsScreen() {
   const backButtonTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
 
   return (
-    <View style={{ flex: 1 }}>
+    <>
+      <IosDashboardOverflowToolbar />
+      <View style={{ flex: 1 }}>
       {/* top section – blur + gradient + mini header that fades in on scroll */}
       <View
         style={[
@@ -99,7 +103,11 @@ export default function TagsScreen() {
               Tags
             </Text>
           </Animated.View>
-          <View style={styles.topSectionPlaceholder} pointerEvents="none" />
+          {Platform.OS === 'android' ? (
+            <ScreenHeaderActions variant="dashboard" style={styles.topSectionContextButton} tint="primary" />
+          ) : (
+            <View style={styles.topSectionPlaceholder} pointerEvents="none" />
+          )}
         </View>
       </View>
 
@@ -144,7 +152,8 @@ export default function TagsScreen() {
         ))}
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
@@ -188,6 +197,9 @@ const createStyles = (
     },
     miniHeaderText: {
       ...typography.getTextStyle('heading-3'),
+    },
+    topSectionContextButton: {
+      backgroundColor: 'primary',
     },
     backButtonContainer: {
       position: 'absolute',

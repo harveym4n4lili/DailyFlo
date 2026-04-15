@@ -54,6 +54,11 @@ export interface WeekViewProps {
    * month-select stack screen so the user can pick a date from the full month view.
    */
   onOpenMonthSelect?: () => void;
+
+  /**
+   * when true, omit the month/chevron row (e.g. planner shows it in the native stack headerTitle on ios).
+   */
+  hideMonthHeader?: boolean;
 }
 
 /**
@@ -118,7 +123,8 @@ const DayCell: React.FC<DayCellProps> = ({
           style={[
             styles.dateCellBackground,
             {
-              backgroundColor: themeColors.text.primary(),
+              // match FAB / primary solid buttons so the week picker feels on-brand
+              backgroundColor: themeColors.primaryButton.fill(),
               opacity: selectionOpacity,
             }
           ]}
@@ -145,7 +151,7 @@ const DayCell: React.FC<DayCellProps> = ({
             styles.dateText,
             {
               color: isSelected
-                ? themeColors.background.primary()
+                ? themeColors.primaryButton.icon()
                 : themeColors.text.primary(),
             },
           ]}
@@ -171,6 +177,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
   selectedDate,
   onSelectDate,
   onOpenMonthSelect,
+  hideMonthHeader = false,
 }) => {
   // get theme-aware colors for styling (adapts to light/dark mode)
   const themeColors = useThemeColors();
@@ -398,38 +405,47 @@ export const WeekView: React.FC<WeekViewProps> = ({
   
   return (
     <View>
-      {/* 
-        HEADER: tap to open monthly selector stack screen.
-        Shows formatted date (e.g. "6 March 2026") and chevron; when tapped, pushes
-        the planner's month-select screen so the user can pick a date from the full month view.
-      */}
-      <TouchableOpacity
-        style={[styles.header, styles.headerContainer]}
-        onPress={onOpenMonthSelect}
-        activeOpacity={0.7}
-        disabled={!onOpenMonthSelect}
-        accessibilityRole="button"
-        accessibilityLabel={`${formattedDateText}. Opens monthly calendar`}
-        accessibilityHint="Double tap to open the monthly date picker"
-      >
-        <Text key={selectedDate} style={styles.headerTitle}>
-          {formattedDateText}
-        </Text>
-        <Ionicons
-          name="chevron-forward"
-          size={24}
-          color={themeColors.text.primary()}
-          style={styles.chevronIcon}
-        />
-      </TouchableOpacity>
-      
+      {!hideMonthHeader ? (
+        <>
+          {/* 
+            HEADER: tap to open monthly selector stack screen.
+            Shows formatted date (e.g. "6 March 2026") and chevron; when tapped, pushes
+            the planner's month-select screen so the user can pick a date from the full month view.
+          */}
+          <TouchableOpacity
+            style={[styles.header, styles.headerContainer]}
+            onPress={onOpenMonthSelect}
+            activeOpacity={0.7}
+            disabled={!onOpenMonthSelect}
+            accessibilityRole="button"
+            accessibilityLabel={`${formattedDateText}. Opens monthly calendar`}
+            accessibilityHint="Double tap to open the monthly date picker"
+          >
+            <Text key={selectedDate} style={styles.headerTitle}>
+              {formattedDateText}
+            </Text>
+            <Ionicons
+              name="chevron-forward"
+              size={24}
+              color={themeColors.text.primary()}
+              style={styles.chevronIcon}
+            />
+          </TouchableOpacity>
+        </>
+      ) : null}
+
       {/* 
         WEEK GRID SECTION
         Contains: 3 weeks (previous, current, next) in a horizontal FlatList with pagination
         Layout: Swipeable pages - one week per page
         listWrapper uses negative margin to break out of container padding so full pages are visible during swipe
       */}
-      <View style={styles.weekSectionContainer}>
+      <View
+        style={[
+          styles.weekSectionContainer,
+          hideMonthHeader ? { paddingTop: Paddings.card } : null,
+        ]}
+      >
       <View style={styles.listWrapper}>
       <FlatList
         ref={flatListRef}

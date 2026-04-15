@@ -27,7 +27,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainBackButton } from '@/components/ui/button';
 import { ScreenHeaderActions } from '@/components/ui';
-import { ClockIcon } from '@/components/ui/icon';
+import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { ListCard } from '@/components/ui/card';
 import { Paddings } from '@/constants/Paddings';
 import { browseScrollPaddingTop } from '@/constants/browseScrollPaddingTop';
@@ -49,7 +49,7 @@ export default function BrowseListDetailScreen() {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
-  const { enterSelectionMode, selection, toggleItemSelection } = useUI();
+  const { selection, toggleItemSelection } = useUI();
   const { lists, fetchLists } = useLists();
 
   useFocusEffect(
@@ -157,7 +157,9 @@ export default function BrowseListDetailScreen() {
   const isSelectionMode = selection.isSelectionMode && selection.selectionType === 'tasks';
 
   return (
-    <View style={{ flex: 1 }}>
+    <>
+      <IosDashboardOverflowToolbar hidden={isSelectionMode} />
+      <View style={{ flex: 1 }}>
       <View
         style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}
       >
@@ -185,28 +187,9 @@ export default function BrowseListDetailScreen() {
               {title}
             </Text>
           </Animated.View>
-          <ScreenHeaderActions
-            variant="dashboard"
-            contextMenuItems={[
-              {
-                id: 'activity-log',
-                label: 'Activity log',
-                iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />,
-                systemImage: 'clock.arrow.circlepath',
-                onPress: () => router.push('/activity-log' as any),
-              },
-              {
-                id: 'select-tasks',
-                label: 'Select Tasks',
-                systemImage: 'square.and.pencil',
-                onPress: () => enterSelectionMode('tasks'),
-              },
-            ]}
-            dropdownAnchorTopOffset={insets.top + TOP_SECTION_ROW_HEIGHT}
-            dropdownAnchorRightOffset={24}
-            style={styles.topSectionContextButton}
-            tint="primary"
-          />
+          {Platform.OS === 'android' ? (
+            <ScreenHeaderActions variant="dashboard" style={styles.topSectionContextButton} tint="primary" />
+          ) : null}
         </View>
       </View>
 
@@ -266,6 +249,7 @@ export default function BrowseListDetailScreen() {
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
     </View>
+    </>
   );
 }
 

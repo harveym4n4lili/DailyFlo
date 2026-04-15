@@ -1,16 +1,20 @@
 
-import React, { useCallback, useMemo, useState, useEffect, useTransition, useRef } from 'react';
-import { StyleSheet, View, Platform } from 'react-native';
+import React, { useCallback, useMemo, useState, useEffect, useLayoutEffect, useTransition, useRef } from 'react';
+import { StyleSheet, View, Platform, Text, TouchableOpacity } from 'react-native';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useFocusEffect, useNavigation } from 'expo-router';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { getTextStyle } from '@/constants/Typography';
 // import our custom layout components
 import { ScreenContainer } from '@/components';
 import { FloatingActionButton, SelectAllButton } from '@/components/ui/button';
 import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 import { ScreenHeaderActions } from '@/components/ui';
-import { ClockIcon } from '@/components/ui/icon';
+import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
+import { IosPlannerBulkSelectionToolbar } from '@/components/navigation/IosPlannerBulkSelectionToolbar';
 import { WeekView } from '@/components/features/calendar/sections';
 import { ListCard } from '@/components/ui/card';
 import { TimelineView } from '@/components/features/timeline';
@@ -41,6 +45,31 @@ import {
   getOccurrenceDateFromId,
 } from '@/utils/recurrenceUtils';
 
+// ios: month + chevron live in the native navigation headerTitle so touches use the bar’s own controls (no overlap fight)
+type PlannerIosNavMonthTitleProps = {
+  label: string;
+  onPress: () => void;
+  color: string;
+};
+
+function PlannerIosNavMonthTitle({ label, onPress, color }: PlannerIosNavMonthTitleProps) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={{ flexDirection: 'row', alignItems: 'center', maxWidth: 280 }}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}. Opens monthly calendar`}
+    >
+      <Text style={[getTextStyle('heading-2'), { color }]} numberOfLines={1}>
+        {label}
+      </Text>
+      <Ionicons name="chevron-forward" size={22} color={color} style={{ marginLeft: 6 }} />
+    </TouchableOpacity>
+  );
+}
+
 export default function PlannerScreen() {
   // the week selector ui should always feel instant.
   // we keep its selected state fully local to this screen and
@@ -63,6 +92,7 @@ export default function PlannerScreen() {
   
   // router: open task Stack screen from FAB (with optional dueDate from selected date)
   const router = useRouter();
+  const navigation = useNavigation();
 
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -72,11 +102,14 @@ export default function PlannerScreen() {
   
   // SAFE AREA INSETS - Get safe area insets for proper positioning
   const insets = useSafeAreaInsets();
-  
+  // ios: headerTransparent draws the stack under the bar — pad by full native header height so body starts below it
+  const nativeStackHeaderHeight = useHeaderHeight();
+  const weekViewPaddingTop = Platform.OS === 'ios' ? nativeStackHeaderHeight : insets.top;
+
   // REDUX STORE - Accessing task state from Redux store
   const dispatch = useAppDispatch();
   const { tasks, isLoading } = useTasks();
-  const { enterSelectionMode, selection, toggleItemSelection, exitSelectionMode, selectAllItems, clearSelection } = useUI();
+  const { selection, toggleItemSelection, selectAllItems, clearSelection } = useUI();
 
   // FAB fade: opacity 0 in selection mode, 1 otherwise
   const fabOpacity = useSharedValue(1);
@@ -113,6 +146,22 @@ export default function PlannerScreen() {
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const { openMonthSelect } = usePlannerMonthSelect();
+
+  // same formatting as WeekView’s in-content header (en-uk) so the nav title matches what users saw before
+  const plannerNavMonthLabel = useMemo(() => {
+    if (selectedDate) {
+      return new Date(selectedDate).toLocaleDateString('en-UK', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    }
+    return new Date().toLocaleDateString('en-US', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }, [selectedDate]);
   
   // calculate border radius based on iOS version to match modal styling
   // iOS 15+ (liquid glass UI): uses 26px border radius for liquid glass UI design
@@ -133,19 +182,32 @@ export default function PlannerScreen() {
   };
   
   const modalBorderRadius = getModalBorderRadius();
-  
-  // create dynamic styles using the color palette system and typography system
-  const styles = useMemo(() => createStyles(themeColors, typography, insets, modalBorderRadius), [themeColors, typography, insets, modalBorderRadius]);
+
+  const styles = useMemo(
+    () => createStyles(themeColors, typography, insets, modalBorderRadius, weekViewPaddingTop),
+    [themeColors, typography, insets, modalBorderRadius, weekViewPaddingTop],
+  );
 
   // flush pending checkbox syncs when leaving (tab switch)
   useFocusEffect(React.useCallback(() => () => flushAllPendingCheckboxSyncs(), []));
 
   // CALENDAR HANDLERS
   // open month-select stack screen – same pattern as task: set payload in context then router.push (like handleTaskPress -> router.push('/task/[taskId]'))
-  const handleOpenMonthSelect = () => {
+  const handleOpenMonthSelect = useCallback(() => {
     openMonthSelect(selectedDate, (date) => setSelectedDate(date));
     router.push('/(tabs)/planner/month-select');
-  };
+  }, [openMonthSelect, selectedDate, router]);
+
+  // ios: render month picker control in the native stack header (center title area) instead of under the bar
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    const primary = themeColors.text.primary();
+    navigation.setOptions({
+      headerTitle: () => (
+        <PlannerIosNavMonthTitle label={plannerNavMonthLabel} onPress={handleOpenMonthSelect} color={primary} />
+      ),
+    });
+  }, [navigation, plannerNavMonthLabel, handleOpenMonthSelect, themeColors]);
 
   // handle date selection from week view (when not using month-select modal)
   const handleDateSelect = (date: string) => {
@@ -324,9 +386,18 @@ export default function PlannerScreen() {
 
   // render main content
   return (
-    <View style={{ flex: 1 }}>
+    <>
+      <IosDashboardOverflowToolbar hidden={selection.isSelectionMode && selection.selectionType === 'tasks'} />
+      <IosPlannerBulkSelectionToolbar />
+      <View style={{ flex: 1 }}>
       {/* top section - 48px row for context ellipse button; pointerEvents box-none so taps pass through to WeekView header */}
-      <View style={[styles.topSectionAnchor, { height: insets.top + 48 }]} pointerEvents="box-none">
+      <View
+        style={[
+          styles.topSectionAnchor,
+          { height: Platform.OS === 'ios' ? nativeStackHeaderHeight : insets.top + 48 },
+        ]}
+        pointerEvents="box-none"
+      >
         <View style={styles.topSectionRow} pointerEvents="box-none">
           {/* planner: no main close button in selection mode; use placeholder for layout */}
           <View style={styles.topSectionCloseButton} pointerEvents="none" />
@@ -336,19 +407,9 @@ export default function PlannerScreen() {
               label={selectAllPlannerLabel}
               style={styles.topSectionSelectAllButton}
             />
-          ) : (
-            <ScreenHeaderActions
-              variant="dashboard"
-              contextMenuItems={[
-                { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => router.push('/activity-log' as any) },
-                { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
-              ]}
-              dropdownAnchorTopOffset={insets.top + 48}
-              dropdownAnchorRightOffset={24}
-              style={styles.topSectionContextButton}
-              tint="primary"
-            />
-          )}
+          ) : Platform.OS === 'android' ? (
+            <ScreenHeaderActions variant="dashboard" style={styles.topSectionContextButton} tint="primary" />
+          ) : null}
         </View>
       </View>
       <ScreenContainer 
@@ -363,7 +424,8 @@ export default function PlannerScreen() {
           <WeekView
             selectedDate={selectedDate}
             onSelectDate={handleDateSelect}
-            onOpenMonthSelect={handleOpenMonthSelect}
+            onOpenMonthSelect={Platform.OS === 'ios' ? undefined : handleOpenMonthSelect}
+            hideMonthHeader={Platform.OS === 'ios'}
           />
         </View>
         
@@ -459,14 +521,16 @@ export default function PlannerScreen() {
       </ScreenContainer>
 
     </View>
+    </>
   );
 }
 
 const createStyles = (
-  themeColors: ReturnType<typeof useThemeColors>, 
+  themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>,
-  modalBorderRadius: number // border radius value that matches modal styling
+  modalBorderRadius: number,
+  weekViewPaddingTop: number,
 ) => StyleSheet.create({
   // top section anchor - fixed row for context button, matches Today screen (insets.top + 48)
   topSectionAnchor: {
@@ -506,9 +570,9 @@ const createStyles = (
     alignSelf: 'center',
   },
 
-  // week view container - starts at inset top; top section overlays with context button (zIndex 10)
   weekViewContainer: {
-    paddingTop: insets.top,
+    // ios: full header height (transparent bar); android: no stack header, status bar only
+    paddingTop: weekViewPaddingTop,
     backgroundColor: themeColors.background.primary(),
   },
 
