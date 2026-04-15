@@ -100,8 +100,15 @@ export default function TabLayout() {
           </NativeTabs.Trigger>
         </NativeTabs>
         {isSelectionMode && <SelectionActionsBar screen={selectionScreen} />}
-        {USE_CUSTOM_LIQUID_TAB_BAR ? <CustomLiquidTabBar /> : null}
-        {USE_CUSTOM_LIQUID_TAB_BAR ? <TabFabOverlayLayer /> : null}
+        {/* fade + liquid navbar + overlay FAB: always mounted; invisible and non-interactive when NativeTabs is visible */}
+        <View
+          pointerEvents={USE_CUSTOM_LIQUID_TAB_BAR ? 'box-none' : 'none'}
+          style={[styles.liquidChromeMount, !USE_CUSTOM_LIQUID_TAB_BAR && styles.liquidChromeInactive]}
+        >
+          <CustomLiquidTabBar />
+          <TabFabOverlayLayer />
+        </View>
+
       </View>
     </TabFabOverlayProvider>
   );
@@ -109,4 +116,11 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  // positioning context for absolute bottom chrome + FAB so they stay mounted when USE_CUSTOM_LIQUID_TAB_BAR is false
+  liquidChromeMount: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  liquidChromeInactive: {
+    opacity: 0,
+  },
 });

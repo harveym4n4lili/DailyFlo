@@ -1,6 +1,6 @@
 /**
- * single place to tune bottom tab chrome (liquid navbar + shared FAB layout math).
- * revert: set USE_CUSTOM_LIQUID_TAB_BAR to false and NativeTabs hidden={false} in app/(tabs)/_layout.tsx
+ * bottom tab chrome: liquid navbar + fade + shared FAB layout math.
+ * USE_CUSTOM_LIQUID_TAB_BAR false = system NativeTabs visible; liquid chrome stays mounted but invisible (see (tabs)/_layout).
  */
 
 import { Paddings } from '@/constants/Paddings';
