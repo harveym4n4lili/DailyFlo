@@ -1,6 +1,6 @@
 /**
  * SelectionActionsBar - bottom bar that replaces the tab bar when in selection mode.
- * Shows 4 icon-only actions: Complete tasks, Change date, Move task, Delete task.
+ * Today: 4 icon-only actions. Planner: Cancel + count (ios bulk actions use Stack.Toolbar on planner).
  * Uses Redux selection state (selectedItems, selectionType) and dispatches actions.
  * On iOS: uses GlassView for liquid glass effect (matches Todoist-style translucent bar).
  */
@@ -13,7 +13,6 @@ import * as Haptics from 'expo-haptics';
 
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { ActionContextMenu } from '@/components/ui';
 import { useUI } from '@/store/hooks';
 import { useAppDispatch } from '@/store';
 import { deleteTask, updateTask } from '@/store/slices/tasks/tasksSlice';
@@ -173,14 +172,6 @@ export function SelectionActionsBar({ onMoveComplete, screen }: SelectionActions
   const iconColorDisabled = 'rgba(255,255,255,0.5)';
   const deleteIconColorActive = iconColorActive;
 
-  // planner: Cancel + counter + ellipsis context menu (original layout)
-  const plannerContextItems = [
-    { id: 'complete', label: 'Complete tasks', systemImage: 'checkmark.circle', onPress: handleComplete },
-    { id: 'change-date', label: 'Change date', systemImage: 'calendar', onPress: handleMove },
-    { id: 'move', label: 'Move task', systemImage: 'arrow.right', onPress: handleMove },
-    { id: 'delete', label: 'Delete tasks', systemImage: 'trash', destructive: true, onPress: handleDelete },
-  ];
-
   const barContent =
     screen === 'planner' ? (
       <View style={styles.contentPlanner}>
@@ -198,19 +189,9 @@ export function SelectionActionsBar({ onMoveComplete, screen }: SelectionActions
             {selectedCount} selected
           </Text>
         </View>
-        <View pointerEvents={hasSelection ? 'auto' : 'none'}>
-          <ActionContextMenu
-            items={plannerContextItems}
-            style={styles.ellipsisButton}
-            iconColor={hasSelection ? iconColorActive : iconColorDisabled}
-            accessibilityLabel="Selection actions"
-            dropdownAnchorTopOffset={0}
-            dropdownAnchorRightOffset={24}
-          />
-        </View>
+        <View style={styles.plannerToolbarSpacer} pointerEvents="none" />
       </View>
     ) : (
-      /* today: 4 icon-only actions */
       <View style={styles.content}>
         <TouchableOpacity
           style={[styles.actionButton, !hasSelection && styles.actionButtonDisabled]}
@@ -326,6 +307,18 @@ function createStyles(
       alignItems: 'center',
       justifyContent: 'space-between',
     },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    countText: {
+      ...typography.getTextStyle('body-medium'),
+    },
+    plannerToolbarSpacer: {
+      width: 60,
+      marginLeft: 'auto',
+    },
     cancelButton: {
       paddingVertical: 8,
       paddingHorizontal: 4,
@@ -335,18 +328,6 @@ function createStyles(
     cancelText: {
       ...typography.getTextStyle('body-large'),
       fontWeight: '500',
-    },
-    center: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    countText: {
-      ...typography.getTextStyle('body-medium'),
-    },
-    ellipsisButton: {
-      marginLeft: 'auto',
-      backgroundColor: 'transparent',
     },
     actionButton: {
       padding: 12,

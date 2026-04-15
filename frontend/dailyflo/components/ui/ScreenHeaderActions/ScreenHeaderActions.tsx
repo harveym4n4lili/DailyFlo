@@ -1,16 +1,13 @@
 /**
- * ScreenHeaderActions – two-icon header for Today, Planner, and Browse screens.
- * both icons wrapped in a single liquid glass container.
+ * ScreenHeaderActions – glass row for Today, Planner, and Browse screens.
  * variant determines which icons are shown:
- * - dashboard: dashboard icon (no action) + ellipsis (context menu)
- * - browse: bell icon + settings icon (both log to console for now)
+ * - dashboard: dashboard icon only (ios overflow lives in Stack.Toolbar via IosDashboardOverflowToolbar)
+ * - browse: bell icon + settings icon
  */
 
 import React from 'react';
 import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
 import GlassView from 'expo-glass-effect/build/GlassView';
-import { ActionContextMenu } from '@/components/ui/contextMenu';
-import type { ActionContextMenuItem } from '@/components/ui/contextMenu';
 import { HeaderIconButton } from './HeaderIconButton';
 import { GearIcon, DashboardIcon } from '@/components/ui/icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -20,11 +17,6 @@ export type ScreenHeaderActionsVariant = 'dashboard' | 'browse';
 export interface ScreenHeaderActionsProps {
   /** which icon set to show: dashboard (Today/Planner) or browse */
   variant: ScreenHeaderActionsVariant;
-  /** for dashboard variant: items shown when ellipsis is tapped */
-  contextMenuItems?: ActionContextMenuItem[];
-  /** for dashboard variant: dropdown anchor offsets */
-  dropdownAnchorTopOffset?: number;
-  dropdownAnchorRightOffset?: number;
   /** for browse variant: called when settings (cog) icon is tapped */
   onSettingsPress?: () => void;
   /** for browse variant: called when alerts (bell) icon is tapped */
@@ -42,9 +34,6 @@ const GLASS_BORDER_RADIUS = 24;
 
 export function ScreenHeaderActions({
   variant,
-  contextMenuItems = [],
-  dropdownAnchorTopOffset = 60,
-  dropdownAnchorRightOffset = 24,
   onSettingsPress,
   onAlertsPress,
   style,
@@ -73,23 +62,12 @@ export function ScreenHeaderActions({
         />
       </>
     ) : (
-      <>
-        <HeaderIconButton
-          iconComponent={<DashboardIcon size={24} color={themeColors.text.primary()} />}
-          tint={tint}
-          accessibilityLabel="Dashboard"
-          noWrapper
-        />
-        <View style={{ width: ICON_GAP }} />
-        <ActionContextMenu
-          items={contextMenuItems}
-          dropdownAnchorTopOffset={dropdownAnchorTopOffset}
-          dropdownAnchorRightOffset={dropdownAnchorRightOffset}
-          tint={tint}
-          accessibilityLabel="Open menu"
-          noGlass
-        />
-      </>
+      <HeaderIconButton
+        iconComponent={<DashboardIcon size={24} color={themeColors.text.primary()} />}
+        tint={tint}
+        accessibilityLabel="Dashboard"
+        noWrapper
+      />
     );
 
   const glassStyle = [

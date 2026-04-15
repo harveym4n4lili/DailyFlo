@@ -25,9 +25,7 @@ import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { useLists } from '@/store/hooks';
 import { getListDisplayName } from '@/utils/listDisplayName';
 import { FormDetailSection, SubtaskSection } from './sections';
-import { TrashIcon, ClockIcon, SFSymbolIcon } from '@/components/ui/icon';
 import { SaveButton, MainCloseButton } from '@/components/ui/button';
-import { ActionContextMenu } from '@/components/ui';
 import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisplay } from '@/components/ui/button';
 import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
@@ -174,12 +172,6 @@ export interface TaskCreationContentProps {
     onShowListPicker?: () => void;
   };
 
-  /** Optional: called when Activity log is selected from actions menu */
-  onActivityLog?: () => void;
-  /** Optional: called when Duplicate is selected from actions menu (edit mode only) */
-  onDuplicateTask?: () => void;
-  /** Optional: called when Delete task is selected from actions menu (edit mode only) */
-  onDeleteTask?: () => void;
 }
 
 export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
@@ -207,9 +199,6 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   isEditMode = false,
   saveButtonBottomInsetWhenKeyboardHidden,
   pickerHandlers,
-  onActivityLog,
-  onDuplicateTask,
-  onDeleteTask,
   showTitleCheckbox = true,
   titleCheckboxCompleted,
   onTitleCheckboxToggle,
@@ -359,15 +348,8 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   const pillHeight = isNewerIOS ? 5 : 6;
   const pillRadius = isNewerIOS ? 2 : 3;
 
-  // build actions menu items: Activity log, Delete task (red, with solid TrashIcon)
-  const actionsMenuItems = useMemo(() => {
-    const items: { id: string; label: string; onPress: () => void; destructive?: boolean; systemImage?: string; icon?: string; iconComponent?: (color: string) => React.ReactNode }[] = [
-      { id: 'activity', label: 'Activity log', systemImage: 'clock.arrow.circlepath', iconComponent: (color) => <ClockIcon size={20} color={color} isSolid />, onPress: onActivityLog ?? (() => {}) },
-      { id: 'duplicate', label: 'Duplicate', systemImage: 'doc.on.doc', icon: 'copy-outline', onPress: onDuplicateTask ?? (() => {}) },
-      { id: 'delete', label: 'Delete task', onPress: onDeleteTask ?? (() => {}), destructive: true, systemImage: 'trash.fill', iconComponent: (color) => <SFSymbolIcon name="trash.fill" size={20} color={color} fallback={<TrashIcon size={20} color={color} />} /> },
-    ];
-    return items;
-  }, [onActivityLog, onDuplicateTask, onDeleteTask]);
+  // edit: top inset for drag pill + chrome (native stack header lays out scene; avoid double-padding vs toolbar)
+  const scrollPaddingTop = showMainCloseButton ? 24 : isEditMode ? 60 : 48;
 
   // screen fill: ThemeColors.background.primary (from ColorPalette) — required when stack uses transparent formSheet (ios glass) so we still paint the app surface
   const screenBg = { backgroundColor: themeColors.background.primary() };
@@ -381,7 +363,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
         style={[styles.scroll, screenBg]}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: showMainCloseButton ? 24 : (isEditMode ? 60 : 48), paddingBottom: keyboardHeight > 0 ? keyboardHeight + 32 : 160 },
+          { paddingTop: scrollPaddingTop, paddingBottom: keyboardHeight > 0 ? keyboardHeight + 32 : 160 },
         ]}
         showsVerticalScrollIndicator
         keyboardShouldPersistTaps="handled"
@@ -500,18 +482,8 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
             left={20}
           />
         )}
-        {/* drag indicator + actions */}
+        {/* drag indicator (ios edit: overflow lives in Stack.Toolbar on native header) */}
         <View style={styles.headerWrap} pointerEvents="box-none">
-          {isEditMode && (
-            <View style={styles.actionsButtonWrap} pointerEvents="box-none">
-              <ActionContextMenu
-                items={actionsMenuItems}
-                style={styles.actionsButton}
-                accessibilityLabel="Task actions"
-                tint="elevated"
-              />
-            </View>
-          )}
           {showDragIndicator && (
             <View style={styles.dragIndicatorWrap} pointerEvents="none">
               <View
@@ -599,16 +571,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: 60,
     zIndex: 10,
-  },
-  // actions button: absolute top right, liquid glass on iOS
-  actionsButtonWrap: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    zIndex: 10,
-  },
-  actionsButton: {
-    backgroundColor: 'transparent',
   },
   // save overlay: full-screen wrapper for bottom save button
   saveOverlayWrap: {

@@ -16,7 +16,7 @@ import { FloatingActionButton, SelectionCloseButton, SelectAllButton } from '@/c
 import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 import { ScreenHeaderActions } from '@/components/ui';
-import { ClockIcon } from '@/components/ui/icon';
+import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { ModalContainer } from '@/components/layout/ModalLayout';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 
@@ -61,6 +61,7 @@ export default function TodayScreen() {
   // REFRESH STATE - Controls the pull-to-refresh indicator
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const router = useRouter();
 
   // scroll offset for Today header fade - updated on scroll, drives reanimated opacity (0→48px = fade out)
   const scrollY = useSharedValue(0);
@@ -87,7 +88,7 @@ export default function TodayScreen() {
   const { setDraft, registerOverdueReschedule, clearOverdueReschedule } = useCreateTaskDraft();
   
   // get UI state from Redux to check if createTask modal should be opened
-  const { modals, closeModal, enterSelectionMode, selection, toggleItemSelection, exitSelectionMode, selectAllItems, clearSelection } = useUI();
+  const { modals, closeModal, selection, toggleItemSelection, exitSelectionMode, selectAllItems, clearSelection } = useUI();
 
   // FAB fade: opacity 0 in selection mode, 1 otherwise
   const fabOpacity = useSharedValue(1);
@@ -157,8 +158,7 @@ export default function TodayScreen() {
   
   // SAFE AREA INSETS - Get safe area insets for proper positioning
   const insets = useSafeAreaInsets();
-  const router = useRouter();
-  
+
   // create dynamic styles using the color palette system and typography system
   // we pass typography and insets to the createStyles function so it can use typography styles and safe area
   const styles = useMemo(() => createStyles(themeColors, semanticColors, typography, insets), [themeColors, semanticColors, typography, insets]);
@@ -432,7 +432,9 @@ export default function TodayScreen() {
 
   // render main content with today's tasks
   return (
-    <View style={{ flex: 1 }}>
+    <>
+      <IosDashboardOverflowToolbar hidden={selection.isSelectionMode && selection.selectionType === 'tasks'} />
+      <View style={{ flex: 1 }}>
       {/* list before backdrop so the main scroll surface stays the first subview under the screen (layout / scroll coordination) */}
       <ScreenContainer
         scrollable={false}
@@ -517,19 +519,9 @@ export default function TodayScreen() {
               label={selectAllLabel}
               style={styles.topSectionSelectAllButton}
             />
-          ) : (
-            <ScreenHeaderActions
-              variant="dashboard"
-              contextMenuItems={[
-                { id: 'activity-log', label: 'Activity log', iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />, systemImage: 'clock.arrow.circlepath', onPress: () => router.push('/activity-log' as any) },
-                { id: 'select-tasks', label: 'Select Tasks', systemImage: 'square.and.pencil', onPress: () => enterSelectionMode('tasks') },
-              ]}
-              dropdownAnchorTopOffset={insets.top + 48}
-              dropdownAnchorRightOffset={24}
-              style={styles.topSectionContextButton}
-              tint="primary"
-            />
-          )}
+          ) : Platform.OS === 'android' ? (
+            <ScreenHeaderActions variant="dashboard" style={styles.topSectionContextButton} tint="primary" />
+          ) : null}
         </View>
       </View>
       {!USE_CUSTOM_LIQUID_TAB_BAR ? (
@@ -548,6 +540,7 @@ export default function TodayScreen() {
         </AnimatedReanimated.View>
       ) : null}
     </View>
+    </>
   );
 }
 
