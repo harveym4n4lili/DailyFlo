@@ -1,7 +1,6 @@
 /**
- * when the liquid tab chrome is enabled, the bottom fade sits in (tabs)/_layout above NativeTabs,
- * so FABs drawn inside a tab screen paint underneath. screens call setTabFabRegistration while focused;
- * TabFabOverlayLayer (same layout, higher z-index) renders the FAB above the fade.
+ * liquid tab strip + bottom fade sit above tab scenes; the overlay FAB must register here so it paints above that fade.
+ * focused screens call setTabFabRegistration; blur cleanup sets null (FAB stays mounted, just hidden).
  */
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';

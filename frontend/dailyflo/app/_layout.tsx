@@ -26,7 +26,6 @@ import { CustomTabNavMetricsProvider } from '@/contexts/CustomTabNavMetricsConte
 import { CreateTaskDraftProvider } from './task/CreateTaskDraftContext';
 import { DuplicateTaskProvider } from './task/DuplicateTaskContext';
 import { PlannerMonthSelectProvider } from './PlannerMonthSelectContext';
-import { TabChromeSuppressProvider } from '@/contexts/TabChromeSuppressContext';
 import { store } from '@/store';
 import { logout, checkAuthStatus } from '@/store/slices/auth/authSlice';
 
@@ -216,8 +215,6 @@ export default function RootLayout() {
           <CreateTaskDraftProvider>
           <DuplicateTaskProvider>
           <PlannerMonthSelectProvider>
-          {/* hide liquid tab chrome while root stack shows task/pickers — that overlay uses z-index ~1998 and can cover native formSheets */}
-          <TabChromeSuppressProvider>
           <Stack
             screenOptions={{
               animation: 'default', // native iOS slide-from-right for all stack transitions
@@ -320,7 +317,6 @@ export default function RootLayout() {
             />
             <Stack.Screen name="+not-found" />
           </Stack>
-          </TabChromeSuppressProvider>
           </PlannerMonthSelectProvider>
           </DuplicateTaskProvider>
           </CreateTaskDraftProvider>

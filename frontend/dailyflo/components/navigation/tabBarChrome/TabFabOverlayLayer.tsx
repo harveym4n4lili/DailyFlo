@@ -1,5 +1,6 @@
 /**
- * renders the registered tab FAB above CustomLiquidTabBar (see TabFabOverlayContext + tabFabAboveChromeZIndex).
+ * registered tab FAB above CustomLiquidTabBar (TabFabOverlayContext + tabFabAboveChromeZIndex).
+ * FAB stays mounted: no registration or blocked state → opacity 0 + disabled (no unmount).
  */
 
 import React from 'react';
@@ -11,24 +12,29 @@ import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 
 import { TAB_BAR_CHROME_VISUAL } from './tabBarChrome.constants';
 import { fabChromeZoneStyle } from './fabChromeZone';
-import { useTabChromeSuppressed } from '@/contexts/TabChromeSuppressContext';
 
 export function TabFabOverlayLayer() {
-  const suppressed = useTabChromeSuppressed();
-  if (suppressed) return null;
-
   const { registration } = useTabFabOverlay();
-  if (!registration) return null;
+
+  const inactive = registration == null;
+  const pointerBlocked = !!registration?.pointerEventsBlocked;
+  const pointerEvents = inactive || pointerBlocked ? ('none' as const) : ('box-none' as const);
 
   return (
     <AnimatedReanimated.View
-      pointerEvents={registration.pointerEventsBlocked ? 'none' : 'box-none'}
-      style={[fabChromeZoneStyle, styles.aboveChrome, registration.wrapperStyle]}
+      pointerEvents={pointerEvents}
+      style={[
+        fabChromeZoneStyle,
+        styles.aboveChrome,
+        registration?.wrapperStyle,
+        inactive ? styles.hidden : null,
+      ]}
     >
       <FloatingActionButton
-        onPress={registration.onPress}
-        accessibilityLabel={registration.accessibilityLabel}
-        accessibilityHint={registration.accessibilityHint}
+        onPress={registration?.onPress}
+        disabled={inactive || pointerBlocked}
+        accessibilityLabel={registration?.accessibilityLabel ?? 'Add new task'}
+        accessibilityHint={registration?.accessibilityHint ?? 'Double tap to create a new task'}
       />
     </AnimatedReanimated.View>
   );
@@ -42,4 +48,5 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+  hidden: { opacity: 0 },
 });

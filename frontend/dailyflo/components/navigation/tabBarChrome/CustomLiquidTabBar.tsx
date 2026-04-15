@@ -21,12 +21,19 @@ import { buildCustomTabNavItems } from './customTabNavItems';
 import { computeTabBarChromeLayout } from './computeTabBarChromeLayout';
 import { TAB_BAR_CHROME_LAYOUT, TAB_BAR_CHROME_VISUAL } from './tabBarChrome.constants';
 import { customLiquidTabBarStyles as styles } from './customLiquidTabBar.styles';
-import { useTabChromeSuppressed } from '@/contexts/TabChromeSuppressContext';
+
+/** planner stack screens (expo-router segment names) that should keep the Planner tab selected */
+const PLANNER_NESTED_TAB_SEGMENTS = new Set(['month-select']);
+
+// map current segments to which main tab is active — handles nested planner routes where "planner" may be absent from segments
+function tabKeyFromSegments(segments: string[], tabKeys: string[]): string | undefined {
+  const direct = tabKeys.find((k) => segments.includes(k));
+  if (direct) return direct;
+  if (segments.some((s) => PLANNER_NESTED_TAB_SEGMENTS.has(s))) return 'planner';
+  return undefined;
+}
 
 export function CustomLiquidTabBar() {
-  const suppressed = useTabChromeSuppressed();
-  if (suppressed) return null;
-
   const router = useRouter();
   const typography = useTypography();
   const themeColors = useThemeColors();
@@ -45,10 +52,27 @@ export function CustomLiquidTabBar() {
   const [optimisticCustomTabKey, setOptimisticCustomTabKey] = React.useState<string | null>(null);
   React.useEffect(() => {
     if (optimisticCustomTabKey === null) return;
-    if (segments.includes(optimisticCustomTabKey)) {
-      setOptimisticCustomTabKey(null);
-    }
+    // segment match or nested planner screen counts as "arrived" for that tab
+    const arrived =
+      segments.includes(optimisticCustomTabKey) ||
+      (optimisticCustomTabKey === 'planner' &&
+        segments.some((s) => PLANNER_NESTED_TAB_SEGMENTS.has(s)));
+    if (arrived) setOptimisticCustomTabKey(null);
   }, [segments, optimisticCustomTabKey]);
+
+  // root stack modals (e.g. /task/[id]) drop tab keys from segments; planner/month-select can list month-select without planner.
+  // keep last resolved tab so the bar stays highlighted.
+  const tabKeys = React.useMemo(() => buildCustomTabNavItems().map((i) => i.key), []);
+  const lastTabKeyWhenInTabsRef = React.useRef<string>(tabKeys[0] ?? 'today');
+  React.useEffect(() => {
+    const found = tabKeyFromSegments(segments, tabKeys);
+    if (found) lastTabKeyWhenInTabsRef.current = found;
+  }, [segments, tabKeys]);
+  const activeTabKeyFromSegments = tabKeyFromSegments(segments, tabKeys);
+  const resolvedSelectedTabKey =
+    optimisticCustomTabKey !== null
+      ? optimisticCustomTabKey
+      : (activeTabKeyFromSegments ?? lastTabKeyWhenInTabsRef.current);
 
   // starts from navbar token, then bumps size (global navbar is 10pt — see Typography TextStyles)
   const labelBase = {
@@ -67,10 +91,7 @@ export function CustomLiquidTabBar() {
   const customTabItems = buildCustomTabNavItems();
 
   const customTabBarItems = customTabItems.map((item) => {
-    const selected =
-      optimisticCustomTabKey !== null
-        ? optimisticCustomTabKey === item.key
-        : segments.includes(item.key);
+    const selected = resolvedSelectedTabKey === item.key;
     // dark: unselected matches primary body text; light: keep softer secondary so tabs don’t compete with content
     const unselectedTint =
       themeColors.isDark ? themeColors.text.primary() : themeColors.text.secondary();
