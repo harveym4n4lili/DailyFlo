@@ -1,23 +1,30 @@
 /**
  * image sources for ios Stack.Toolbar header items — native bar buttons need bundled
  * rasters (require), not the svg icon components used elsewhere in the app.
- * we only ship today / timeline / browse / sparkles families under assets/icons.
+ * we ship today / timeline / browse / sparkles / ellipses rasters under assets/icons.
  */
 
 import type { ImageSourcePropType } from 'react-native';
 
-import { getTodayTabIcon } from '@/utils/todayIcon';
-
-/** decorative dashboard chip: same day-based icon as the Today tab */
+/** ios Stack.Toolbar left chip: timeline outline (filled Timeline.png used elsewhere in this file) */
 export function stackToolbarDashboardIcon(): ImageSourcePropType {
-  return getTodayTabIcon();
+  return require('@/assets/icons/TimelineOutline.png');
 }
+
+/**
+ * ios dashboard overflow toolbar draws leading + overflow triggers with RN Image (not UIBarButtonItem icons)
+ * so both glyphs share the same logical size; tweak here if the pair feels small/large vs the nav bar.
+ */
+export const STACK_TOOLBAR_HEADER_GLYPH_PX = 22;
 
 /** planner-only chrome (bulk selection) — matches the Planner tab icon */
 export const STACK_TOOLBAR_PLANNER_DASHBOARD: ImageSourcePropType = require('@/assets/icons/Timeline.png');
 
-/** overflow trigger: no ellipsis png exists; browse icon reads as “more / lists” in this app */
+/** overflow trigger for native bar items that still use bundled pngs (e.g. planner bulk toolbar) */
 export const STACK_TOOLBAR_OVERFLOW: ImageSourcePropType = require('@/assets/icons/Browse.png');
+
+/** horizontal ellipses raster — dashboard overflow menu trigger (custom Image in IosDashboardOverflowToolbar) */
+export const STACK_TOOLBAR_OVERFLOW_ELLIPSES: ImageSourcePropType = require('@/assets/icons/Ellipses.png');
 
 /** activity log — history / timeline */
 export const STACK_TOOLBAR_ACTIVITY: ImageSourcePropType = require('@/assets/icons/Timeline.png');
