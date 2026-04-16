@@ -4,13 +4,14 @@
  */
 
 import React from 'react';
-import { Platform } from 'react-native';
+import { Image, Platform, Pressable, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { Host, Menu, Button } from '@expo/ui/swift-ui';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { headerChromeActionMenuTriggerSizePx } from '@/constants/headerChromeIconScale';
 import {
-  STACK_TOOLBAR_ACTIVITY,
-  STACK_TOOLBAR_OVERFLOW,
-  STACK_TOOLBAR_SELECT_TASKS,
+  STACK_TOOLBAR_HEADER_GLYPH_PX,
+  STACK_TOOLBAR_OVERFLOW_ELLIPSES,
   stackToolbarDashboardIcon,
 } from '@/constants/stackToolbarIcons';
 import { useUI } from '@/store/hooks';
@@ -30,36 +31,67 @@ export function IosDashboardOverflowToolbar({ hidden = false }: IosDashboardOver
     return null;
   }
 
-  // matches old glass row: layout/dashboard chip (was non-interactive) + overflow menu — pngs for native bar items
+  const toolbarHitPx = headerChromeActionMenuTriggerSizePx();
+  // both slots use Stack.Toolbar.View + RN Image at STACK_TOOLBAR_HEADER_GLYPH_PX; overflow uses swift-ui Menu like ActionContextMenu
   return (
     <Stack.Toolbar placement="right">
-      <Stack.Toolbar.Button
-        icon={stackToolbarDashboardIcon()}
-        iconRenderingMode="template"
-        tintColor={toolbarTint}
-        onPress={() => {}}
-        accessibilityLabel="Dashboard"
-      />
-      <Stack.Toolbar.Menu
-        icon={STACK_TOOLBAR_OVERFLOW}
-        iconRenderingMode="template"
-        tintColor={toolbarTint}
-      >
-        <Stack.Toolbar.MenuAction
-          icon={STACK_TOOLBAR_ACTIVITY}
-          iconRenderingMode="template"
-          onPress={() => router.push('/activity-log' as any)}
+      <Stack.Toolbar.View>
+        <Pressable
+          onPress={() => {}}
+          accessibilityLabel="Timeline"
+          accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{ minWidth: toolbarHitPx, minHeight: toolbarHitPx, justifyContent: 'center', alignItems: 'center' }}
         >
-          Activity log
-        </Stack.Toolbar.MenuAction>
-        <Stack.Toolbar.MenuAction
-          icon={STACK_TOOLBAR_SELECT_TASKS}
-          iconRenderingMode="template"
-          onPress={() => enterSelectionMode('tasks')}
+          <Image
+            source={stackToolbarDashboardIcon()}
+            resizeMode="contain"
+            style={{
+              width: STACK_TOOLBAR_HEADER_GLYPH_PX,
+              height: STACK_TOOLBAR_HEADER_GLYPH_PX,
+              tintColor: toolbarTint,
+            }}
+          />
+        </Pressable>
+      </Stack.Toolbar.View>
+      <Stack.Toolbar.View>
+        <Host
+          matchContents={false}
+          style={{
+            width: toolbarHitPx,
+            height: toolbarHitPx,
+            alignSelf: 'flex-start',
+            overflow: 'visible',
+          }}
         >
-          Select Tasks
-        </Stack.Toolbar.MenuAction>
-      </Stack.Toolbar.Menu>
+          <Menu
+            label={
+              <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                <Image
+                  source={STACK_TOOLBAR_OVERFLOW_ELLIPSES}
+                  resizeMode="contain"
+                  style={{
+                    width: STACK_TOOLBAR_HEADER_GLYPH_PX,
+                    height: STACK_TOOLBAR_HEADER_GLYPH_PX,
+                    tintColor: toolbarTint,
+                  }}
+                />
+              </View>
+            }
+          >
+            <Button
+              label="Activity log"
+              systemImage={'clock.arrow.circlepath' as any}
+              onPress={() => router.push('/activity-log' as any)}
+            />
+            <Button
+              label="Select Tasks"
+              systemImage={'checkmark.circle' as any}
+              onPress={() => enterSelectionMode('tasks')}
+            />
+          </Menu>
+        </Host>
+      </Stack.Toolbar.View>
     </Stack.Toolbar>
   );
 }

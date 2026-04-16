@@ -1,6 +1,6 @@
 /**
  * ActionContextMenu — ellipsis that opens a native (ios) or dropdown (android) action menu.
- * same 20px icon as grouped-list task rows (FormDetailButton); ios uses GlassView + swift-ui Menu.
+ * ios: GlassView + swift-ui Menu. icon + trigger sizes come from @/constants/headerChromeIconScale (shared header chrome).
  */
 
 import React, { useState } from 'react';
@@ -16,6 +16,11 @@ import { EllipsisIcon } from '@/components/ui/icon';
 import { Host, Menu, Button } from '@expo/ui/swift-ui';
 import { DropdownList } from '@/components/ui/list';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import {
+  headerChromeActionMenuTriggerSizePx,
+  headerChromeIconOnlyBoxPx,
+  headerChromeIconSizePx,
+} from '@/constants/headerChromeIconScale';
 
 export interface ActionContextMenuItem {
   id: string;
@@ -37,6 +42,10 @@ export interface ActionContextMenuProps {
   /** primary = theme background.primary; elevated = primarySecondaryBlend (softer sheet-style surface) */
   tint?: 'primary' | 'elevated';
   noGlass?: boolean;
+  /** optional: override headerChromeIconScale sizes (e.g. Stack.Toolbar slot uses a smaller host than sheet chrome) */
+  ellipsisGlyphPx?: number;
+  menuHostSizePx?: number;
+  menuHitMinPx?: number;
 }
 
 export function ActionContextMenu({
@@ -48,6 +57,9 @@ export function ActionContextMenu({
   iconColor: iconColorProp,
   tint = 'primary',
   noGlass = false,
+  ellipsisGlyphPx,
+  menuHostSizePx,
+  menuHitMinPx,
 }: ActionContextMenuProps) {
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const themeColors = useThemeColors();
@@ -56,6 +68,9 @@ export function ActionContextMenu({
       ? themeColors.background.primarySecondaryBlend()
       : themeColors.background.primary();
   const iconColor = iconColorProp ?? themeColors.text.primary();
+  const ellipsisPx = ellipsisGlyphPx ?? headerChromeIconSizePx();
+  const triggerSize = menuHostSizePx ?? headerChromeActionMenuTriggerSizePx();
+  const triggerOnlyMin = menuHitMinPx ?? headerChromeIconOnlyBoxPx();
 
   const handleItemPress = (item: ActionContextMenuItem) => {
     item.onPress();
@@ -65,25 +80,31 @@ export function ActionContextMenu({
   if (Platform.OS === 'ios') {
     // menu label is only visuals — Menu owns the tap target (single tap opens; ContextMenu would require long-press)
     const iconOnly = (
-      <View style={[styles.pressable, noGlass && styles.triggerOnly]}>
-        <EllipsisIcon size={20} color={iconColor} />
+      <View style={[styles.pressable, noGlass && { minWidth: triggerOnlyMin, minHeight: triggerOnlyMin }]}>
+        <EllipsisIcon size={ellipsisPx} color={iconColor} />
       </View>
     );
+    const glassCircleStyle = {
+      width: triggerSize,
+      height: triggerSize,
+      borderRadius: triggerSize / 2,
+      overflow: 'visible' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    };
     const menuLabel = noGlass ? (
       iconOnly
     ) : (
-      <GlassView
-        style={styles.iosGlassCircle}
-        glassEffectStyle="clear"
-        tintColor={tintColor as any}
-        isInteractive
-      >
+      <GlassView style={glassCircleStyle} glassEffectStyle="clear" tintColor={tintColor as any} isInteractive>
         {iconOnly}
       </GlassView>
     );
     return (
       // host merges parent style here so we do not wrap in an extra rn view (one layout root + swift tree)
-      <Host matchContents={false} style={[styles.host, style]}>
+      <Host
+        matchContents={false}
+        style={[{ width: triggerSize, height: triggerSize, alignSelf: 'flex-start', overflow: 'visible' }, style]}
+      >
         <Menu label={menuLabel}>
           {items.map((item) => (
             <Button
@@ -106,16 +127,20 @@ export function ActionContextMenu({
         onPress={() => setIsDropdownVisible(true)}
         style={[
           styles.touchable,
-          !noGlass && styles.circleChrome,
+          {
+            width: triggerSize,
+            height: triggerSize,
+            borderRadius: noGlass ? 0 : triggerSize / 2,
+          },
           !noGlass && { backgroundColor: tintColor as string },
-          noGlass && styles.triggerOnly,
+          noGlass && { minWidth: triggerOnlyMin, minHeight: triggerOnlyMin },
           style,
         ]}
         activeOpacity={0.7}
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
       >
-        <EllipsisIcon size={20} color={iconColor} />
+        <EllipsisIcon size={ellipsisPx} color={iconColor} />
       </TouchableOpacity>
       <DropdownList
         visible={isDropdownVisible}
@@ -136,27 +161,7 @@ export function ActionContextMenu({
   );
 }
 
-// equal width/height + half borderRadius = circular glass / android chip (was 60×44 capsule)
-const ACTION_MENU_TRIGGER_SIZE = 48;
 const styles = StyleSheet.create({
-  // shared circle geometry for ios glass + android tinted fallback
-  circleChrome: {
-    width: ACTION_MENU_TRIGGER_SIZE,
-    height: ACTION_MENU_TRIGGER_SIZE,
-    borderRadius: ACTION_MENU_TRIGGER_SIZE / 2,
-  },
-  iosGlassCircle: {
-    width: ACTION_MENU_TRIGGER_SIZE,
-    height: ACTION_MENU_TRIGGER_SIZE,
-    borderRadius: ACTION_MENU_TRIGGER_SIZE / 2,
-    overflow: 'visible',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  host: {
-    alignSelf: 'flex-start',
-    overflow: 'visible',
-  },
   pressable: {
     width: '100%',
     height: '100%',
@@ -164,14 +169,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   touchable: {
-    width: ACTION_MENU_TRIGGER_SIZE,
-    height: ACTION_MENU_TRIGGER_SIZE,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
-  },
-  triggerOnly: {
-    minWidth: 28,
-    minHeight: 28,
   },
 });
