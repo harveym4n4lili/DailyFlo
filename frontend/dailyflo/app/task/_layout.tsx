@@ -3,11 +3,10 @@
  * use Stack (not Slot): Slot can leave multiple child natives mounted; RNScreens formSheet
  * then warns "expects at most 2 subviews" on RNSSafeAreaView and layout/content breaks.
  *
- * ios edit route: native header on so Stack.Toolbar can attach (alpha api, ios only).
+ * task edit uses no native header; drag pill + overflow sit in TaskScreenContent.
  */
 
 import React from 'react';
-import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
@@ -24,21 +23,13 @@ export default function TaskLayout() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen
         name="[taskId]"
-        options={
-          Platform.OS === 'ios'
-            ? {
-                headerShown: true,
-                headerTransparent: true,
-                headerTitle: '',
-                headerShadowVisible: false,
-                headerBackVisible: false,
-                contentStyle: {
-                  flex: 1,
-                  backgroundColor: themeColors.background.primary(),
-                },
-              }
-            : { headerShown: false }
-        }
+        options={{
+          headerShown: false,
+          contentStyle: {
+            flex: 1,
+            backgroundColor: themeColors.background.primary(),
+          },
+        }}
       />
     </Stack>
   );
