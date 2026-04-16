@@ -40,6 +40,7 @@ import { useAppDispatch, useAppSelector, store } from '@/store';
 // It's typed to ensure we can only dispatch valid actions
 
 import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
+import { fetchLists } from '@/store/slices/lists/listsSlice';
 // fetchTasks: Async thunk action creator for fetching tasks from the API
 // This is an async action that handles the API call and updates the store
 // It's defined in the tasks slice (store/slices/tasks/tasksSlice.ts)
@@ -191,6 +192,11 @@ export default function TodayScreen() {
   // Only fetch tasks if user is authenticated
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
+  // lists must be loaded for TaskCardListRecurrenceRow (getListDisplayName); browse used to load them first — fetch with tasks on cold start
+  const listsLastFetched = useAppSelector((state) => state.lists.lastFetched);
+  const listsLoading = useAppSelector((state) => state.lists.isLoading);
+  const listsError = useAppSelector((state) => state.lists.error);
+
   // expand and filter tasks: one-off + recurring occurrences for today and overdue (last 14 days)
   // recurring tasks generate virtual occurrences per date; completion tracked per-occurrence in metadata.recurrence_completions
   const todaysTasks = useMemo(() => {
@@ -286,7 +292,19 @@ export default function TodayScreen() {
       // The thunk will make an API call and update the store with the results
       dispatch(fetchTasks());
     }
-  }, [isAuthenticated, lastFetched, isLoading, error, dispatch]);
+    if (isAuthenticated && listsLastFetched === null && !listsLoading && !listsError) {
+      dispatch(fetchLists());
+    }
+  }, [
+    isAuthenticated,
+    lastFetched,
+    isLoading,
+    error,
+    listsLastFetched,
+    listsLoading,
+    listsError,
+    dispatch,
+  ]);
   
   // when Redux says open createTask (e.g. onboarding completion), push task Stack screen
   useEffect(() => {
@@ -302,7 +320,7 @@ export default function TodayScreen() {
     setIsRefreshing(true);
     // dispatch(fetchTasks()): Triggers a fresh fetch of tasks from the API
     // This is called when the user pulls down to refresh the screen
-    await dispatch(fetchTasks());
+    await Promise.all([dispatch(fetchTasks()), dispatch(fetchLists())]);
     setIsRefreshing(false);
   };
 

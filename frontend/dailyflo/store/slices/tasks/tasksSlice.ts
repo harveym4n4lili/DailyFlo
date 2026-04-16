@@ -70,6 +70,9 @@ interface TasksState {
   // Cache management
   lastFetched: number | null;       // Timestamp of last successful fetch
   cacheExpiry: number;              // How long cache is valid (in milliseconds)
+
+  /** latest in-flight fetchTasks request id — ignore fulfilled/rejected from older requests so out-of-order responses cannot overwrite fresh data */
+  latestFetchTasksRequestId: string | null;
 }
 
 /**
@@ -115,6 +118,7 @@ const initialState: TasksState = {
   // Cache settings
   lastFetched: null,
   cacheExpiry: 5 * 60 * 1000, // 5 minutes
+  latestFetchTasksRequestId: null,
 };
 
 /**
@@ -991,6 +995,7 @@ const tasksSlice = createSlice({
       state.hasNextPage = false;
       state.hasPreviousPage = false;
       state.lastFetched = null;
+      state.latestFetchTasksRequestId = null;
     },
     
     // Update pagination
@@ -1028,17 +1033,24 @@ const tasksSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Handle fetchTasks actions
-      .addCase(fetchTasks.pending, (state) => {
+      .addCase(fetchTasks.pending, (state, action) => {
+        state.latestFetchTasksRequestId = action.meta.requestId;
         state.isLoading = true;
         state.error = null;
       })
       .addCase(fetchTasks.fulfilled, (state, action) => {
+        if (state.latestFetchTasksRequestId !== action.meta.requestId) {
+          return;
+        }
         state.isLoading = false;
         state.tasks = action.payload;
         state.filteredTasks = applyFilters(action.payload, state.filters);
         state.lastFetched = Date.now();
       })
       .addCase(fetchTasks.rejected, (state, action) => {
+        if (state.latestFetchTasksRequestId !== action.meta.requestId) {
+          return;
+        }
         state.isLoading = false;
         state.error = action.payload as string;
       })
