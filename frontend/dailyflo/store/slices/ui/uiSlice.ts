@@ -91,6 +91,12 @@ interface UIState {
     emailAuthFirstName: string;      // First name value for email auth registration
     emailAuthLastName: string;       // Last name value for email auth registration
   };
+
+  /**
+   * planner index keeps this in sync with the visible week anchor so "select tasks" from the
+   * ios overflow can push planner/select with the same day the user was viewing (overflow has no local date state).
+   */
+  plannerSelectionAnchorDate: string | null;
 }
 
 /**
@@ -170,6 +176,8 @@ const initialState: UIState = {
     emailAuthFirstName: '',          // Empty first name initially
     emailAuthLastName: '',           // Empty last name initially
   },
+
+  plannerSelectionAnchorDate: null,
 };
 
 /**
@@ -443,6 +451,11 @@ const uiSlice = createSlice({
     setEmailAuthLastName: (state, action: PayloadAction<string>) => {
       state.onboarding.emailAuthLastName = action.payload;
     },
+
+    // planner: mirror the main planner tab’s selected day for route-based task selection entry
+    setPlannerSelectionAnchorDate: (state, action: PayloadAction<string | null>) => {
+      state.plannerSelectionAnchorDate = action.payload;
+    },
     
     /**
      * Utility actions
@@ -491,6 +504,7 @@ export const {
   setEmailAuthPassword,
   setEmailAuthFirstName,
   setEmailAuthLastName,
+  setPlannerSelectionAnchorDate,
   selectAllItems,
   clearSelection,
   

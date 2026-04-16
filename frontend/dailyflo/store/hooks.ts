@@ -172,6 +172,10 @@ export const useUI = () => {
     setEmailAuthPassword: useCallback((password: string) => dispatch({ type: 'ui/setEmailAuthPassword', payload: password }), [dispatch]),
     setEmailAuthFirstName: useCallback((firstName: string) => dispatch({ type: 'ui/setEmailAuthFirstName', payload: firstName }), [dispatch]),
     setEmailAuthLastName: useCallback((lastName: string) => dispatch({ type: 'ui/setEmailAuthLastName', payload: lastName }), [dispatch]),
+    setPlannerSelectionAnchorDate: useCallback(
+      (iso: string | null) => dispatch({ type: 'ui/setPlannerSelectionAnchorDate', payload: iso }),
+      [dispatch],
+    ),
     resetUIState: useCallback(() => dispatch({ type: 'ui/resetUIState' }), [dispatch]),
   };
 };

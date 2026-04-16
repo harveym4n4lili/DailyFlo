@@ -1,6 +1,7 @@
 /**
- * ios-only: native header Stack.Toolbar for planner bulk selection (complete / date / move / delete).
- * mounts only when planner has task selection so the stack screen picks up unstable_headerRightItems.
+ * ios-only: native header Stack.Toolbar for planner task selection.
+ * first slot: select-all / deselect-all (when plannerSelectAll is passed).
+ * when something is selected: dashboard + overflow menu (complete / date / move / delete).
  */
 
 import React, { useMemo } from 'react';
@@ -23,7 +24,22 @@ import {
   STACK_TOOLBAR_SCHEDULE,
 } from '@/constants/stackToolbarIcons';
 
-export function IosPlannerBulkSelectionToolbar() {
+export type PlannerSelectAllToolbarConfig = {
+  onPress: () => void;
+  allEligibleSelected: boolean;
+};
+
+export type IosPlannerBulkSelectionToolbarProps = {
+  /** first right bar item: select all visible eligible tasks on the planner day */
+  plannerSelectAll?: PlannerSelectAllToolbarConfig;
+  /** route-based planner/select: pop stack; blur cleanup clears redux (same pattern as close toolbar) */
+  dismissWithRouterBack?: boolean;
+};
+
+export function IosPlannerBulkSelectionToolbar({
+  plannerSelectAll,
+  dismissWithRouterBack = false,
+}: IosPlannerBulkSelectionToolbarProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const themeColors = useThemeColors();
@@ -38,6 +54,14 @@ export function IosPlannerBulkSelectionToolbar() {
     return Array.from(ids);
   }, [selectedItems]);
   const hasSelection = selectedItems.length > 0;
+
+  const leaveBulkSelection = () => {
+    if (dismissWithRouterBack) {
+      router.back();
+    } else {
+      exitSelectionMode();
+    }
+  };
 
   const handleComplete = async () => {
     if (!hasSelection) return;
@@ -73,7 +97,7 @@ export function IosPlannerBulkSelectionToolbar() {
           ).unwrap();
         }
       }
-      exitSelectionMode();
+      leaveBulkSelection();
     } catch (err) {
       console.error('Failed to bulk complete tasks:', err);
     }
@@ -94,7 +118,7 @@ export function IosPlannerBulkSelectionToolbar() {
         onPress: () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           baseTaskIds.forEach((id) => dispatch(deleteTask(id)));
-          exitSelectionMode();
+          leaveBulkSelection();
         },
       },
     ]);
@@ -116,7 +140,7 @@ export function IosPlannerBulkSelectionToolbar() {
             baseTaskIds.map((id) => dispatch(updateTask({ id, updates: { id, dueDate: date } }))),
           );
           clearOverdueReschedule();
-          exitSelectionMode();
+          leaveBulkSelection();
         } catch (err) {
           console.error('Failed to bulk move tasks:', err);
         }
@@ -125,54 +149,71 @@ export function IosPlannerBulkSelectionToolbar() {
     router.push('/date-select');
   };
 
-  if (
-    Platform.OS !== 'ios' ||
-    !isSelectionMode ||
-    selectionType !== 'tasks' ||
-    !hasSelection
-  ) {
+  if (Platform.OS !== 'ios' || !isSelectionMode || selectionType !== 'tasks') {
     return null;
   }
 
+  const showSelectAll = plannerSelectAll != null;
+  if (!showSelectAll && !hasSelection) {
+    return null;
+  }
+
+  const selectAllIcon = plannerSelectAll?.allEligibleSelected ? 'circle' : 'checkmark.circle';
+  const selectAllA11y = plannerSelectAll?.allEligibleSelected
+    ? 'Deselect all tasks'
+    : 'Select all tasks';
+
   return (
     <Stack.Toolbar placement="right">
-      <Stack.Toolbar.Button
-        icon={STACK_TOOLBAR_PLANNER_DASHBOARD}
-        iconRenderingMode="template"
-        tintColor={toolbarTint}
-        onPress={() => {}}
-        accessibilityLabel="Dashboard"
-      />
-      <Stack.Toolbar.Menu
-        icon={STACK_TOOLBAR_OVERFLOW}
-        iconRenderingMode="template"
-        tintColor={toolbarTint}
-      >
-        <Stack.Toolbar.MenuAction
-          icon={STACK_TOOLBAR_COMPLETE}
-          iconRenderingMode="template"
-          onPress={() => void handleComplete()}
-        >
-          Complete tasks
-        </Stack.Toolbar.MenuAction>
-        <Stack.Toolbar.MenuAction
-          icon={STACK_TOOLBAR_SCHEDULE}
-          iconRenderingMode="template"
-          onPress={handleMove}
-        >
-          Change date
-        </Stack.Toolbar.MenuAction>
-        <Stack.Toolbar.MenuAction
-          icon={STACK_TOOLBAR_MOVE}
-          iconRenderingMode="template"
-          onPress={handleMove}
-        >
-          Move task
-        </Stack.Toolbar.MenuAction>
-        <Stack.Toolbar.MenuAction destructive onPress={handleDelete}>
-          Delete tasks
-        </Stack.Toolbar.MenuAction>
-      </Stack.Toolbar.Menu>
+      {plannerSelectAll ? (
+        <Stack.Toolbar.Button
+          icon={selectAllIcon}
+          onPress={plannerSelectAll.onPress}
+          accessibilityLabel={selectAllA11y}
+          tintColor={toolbarTint}
+        />
+      ) : null}
+      {hasSelection ? (
+        <>
+          <Stack.Toolbar.Button
+            icon={STACK_TOOLBAR_PLANNER_DASHBOARD}
+            iconRenderingMode="template"
+            tintColor={toolbarTint}
+            onPress={() => {}}
+            accessibilityLabel="Dashboard"
+          />
+          <Stack.Toolbar.Menu
+            icon={STACK_TOOLBAR_OVERFLOW}
+            iconRenderingMode="template"
+            tintColor={toolbarTint}
+          >
+            <Stack.Toolbar.MenuAction
+              icon={STACK_TOOLBAR_COMPLETE}
+              iconRenderingMode="template"
+              onPress={() => void handleComplete()}
+            >
+              Complete tasks
+            </Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction
+              icon={STACK_TOOLBAR_SCHEDULE}
+              iconRenderingMode="template"
+              onPress={handleMove}
+            >
+              Change date
+            </Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction
+              icon={STACK_TOOLBAR_MOVE}
+              iconRenderingMode="template"
+              onPress={handleMove}
+            >
+              Move task
+            </Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction destructive onPress={handleDelete}>
+              Delete tasks
+            </Stack.Toolbar.MenuAction>
+          </Stack.Toolbar.Menu>
+        </>
+      ) : null}
     </Stack.Toolbar>
   );
 }

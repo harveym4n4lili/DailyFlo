@@ -4,7 +4,7 @@
  * Complete/delete dispatch Redux thunks then refetch inbox so the list stays aligned with the server.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -51,7 +51,7 @@ export default function InboxScreen() {
   const insets = useSafeAreaInsets();
   const styles = createStyles(typography, insets);
   const dispatch = useAppDispatch();
-  const { selection, toggleItemSelection } = useUI();
+  const { selection, toggleItemSelection, selectAllItems, clearSelection } = useUI();
 
   const [inboxTasks, setInboxTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -198,12 +198,37 @@ export default function InboxScreen() {
     [dispatch, loadInbox]
   );
 
+  // ios: selection ui lives on browse/task-select (pushed). android: still toggles checkboxes in-place on this screen.
   const isSelectionMode = selection.isSelectionMode && selection.selectionType === 'tasks';
+  const listSelectionMode = Platform.OS === 'android' && isSelectionMode;
+
+  const eligibleInboxTaskIds = useMemo(
+    () => inboxTasks.filter((t) => !t.isCompleted && !t.softDeleted).map((t) => t.id),
+    [inboxTasks]
+  );
+  const allEligibleInboxSelected =
+    eligibleInboxTaskIds.length > 0 &&
+    eligibleInboxTaskIds.every((id) => selection.selectedItems.includes(id));
+
+  const handleSelectAllInbox = useCallback(() => {
+    if (!isSelectionMode) return;
+    if (allEligibleInboxSelected) {
+      clearSelection();
+    } else {
+      selectAllItems(eligibleInboxTaskIds);
+    }
+  }, [
+    isSelectionMode,
+    allEligibleInboxSelected,
+    eligibleInboxTaskIds,
+    selectAllItems,
+    clearSelection,
+  ]);
 
   return (
     <>
-      <IosBrowseBackStackToolbar />
-      <IosDashboardOverflowToolbar hidden={isSelectionMode} />
+      {Platform.OS === 'ios' ? <IosBrowseBackStackToolbar /> : null}
+      <IosDashboardOverflowToolbar hidden={listSelectionMode} />
       <View style={{ flex: 1 }}>
       <View
         style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}
@@ -276,9 +301,9 @@ export default function InboxScreen() {
             groupBy="routine"
             sortBy="createdAt"
             sortDirection="desc"
-            selectionMode={isSelectionMode}
+            selectionMode={listSelectionMode}
             selectedTaskIds={selection.selectedItems}
-            onToggleTaskSelection={isSelectionMode ? toggleItemSelection : undefined}
+            onToggleTaskSelection={listSelectionMode ? toggleItemSelection : undefined}
             hideCompletedTasks
             onTaskPress={handleTaskPress}
             onTaskComplete={handleTaskComplete}

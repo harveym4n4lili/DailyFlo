@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { TASK_SELECTION_STACK_ANIMATION } from '@/constants/nativeStackTransition';
 
 const useLiquidGlass = Platform.OS === 'ios' && !Platform.isPad;
 
@@ -39,6 +40,33 @@ export default function PlannerLayout() {
               }
             : {
                 title: 'Planner',
+                headerShown: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+        }
+      />
+      <Stack.Screen
+        name="select"
+        options={
+          Platform.OS === 'ios'
+            ? {
+                animation: TASK_SELECTION_STACK_ANIMATION,
+                headerShown: true,
+                headerTransparent: true,
+                headerBlurEffect: 'none',
+                headerStyle: { backgroundColor: 'transparent' },
+                headerBackground: () => (
+                  <View
+                    pointerEvents="none"
+                    style={[StyleSheet.absoluteFill, { backgroundColor: 'transparent' }]}
+                  />
+                ),
+                headerTitle: 'Select tasks',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+            : {
                 headerShown: false,
                 contentStyle: { backgroundColor: themeColors.background.primary() },
               }

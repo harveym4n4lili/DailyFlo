@@ -51,6 +51,7 @@ export default function TabLayout() {
 
   const tabBarBackgroundColor = themeColors.background.primary();
 
+  // child routes like today/select still report the parent tab segment, so SelectionActionsBar keeps today vs planner actions
   const selectionScreen =
     segments.includes('planner') ? 'planner'
     : segments.includes('today') ? 'today'
