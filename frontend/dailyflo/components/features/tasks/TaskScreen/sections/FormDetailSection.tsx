@@ -3,7 +3,7 @@
  *
  * Renders date picker action using GroupedList + FormDetailButton.
  * Shows date, time/duration, and alerts rows in the GroupedList when a date is selected.
- * Repeating is in a separate container below the GroupedList (same padding, border radius, primarySecondaryBlend).
+ * Repeating + list-destination pills sit below the GroupedList (same chrome); pills render even when no date is set yet so recurrence is tappable on create.
  */
 
 import React, { useState } from 'react';
@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CalendarIcon, ClockIcon, BellIcon, RepeatIcon, SFSymbolIcon } from '@/components/ui/icon';
 import { getTimeDurationDisplayLabels } from '@/components/ui/button';
 import type { RoutineType } from '@/types';
-import { Host, ContextMenu, Button } from '@expo/ui/swift-ui';
+import { Host, Menu, Button } from '@expo/ui/swift-ui';
 
 // string returned by formPickerUtils when field has no value
 const NO_DATE = 'No Date';
@@ -170,90 +170,58 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
               showChevron
             />
           </GroupedList>
+        </View>
+      )}
 
-          {/* recurrence + inbox: one row, same pill chrome as recurrence (padding, radius, type) */}
-          <View style={styles.repeatingRow}>
-            {Platform.OS === 'ios' ? (
-              <View style={styles.repeatingRecurrenceWrap}>
-                <Host matchContents={false} style={styles.repeatingHost}>
-                  <ContextMenu>
-                    <ContextMenu.Trigger>
-                      <View style={styles.repeatingTapAreaCompact}>
-                        <View
-                          style={[
-                            styles.repeatingPill,
-                            { backgroundColor: themeColors.background.primarySecondaryBlend() },
-                          ]}
-                        >
-                          <SFSymbolIcon
-                            name="repeat"
-                            size={18}
-                            color={themeColors.text.primary()}
-                            fallback={<RepeatIcon size={18} color={themeColors.text.primary()} style={styles.repeatingIcon} />}
-                            style={styles.repeatingIcon}
-                          />
-                          <Text style={[styles.repeatingText, { color: themeColors.text.primary() }]}>
-                            {ROUTINE_TYPE_LABELS[routineType]}
-                          </Text>
-                        </View>
-                      </View>
-                    </ContextMenu.Trigger>
-                    <ContextMenu.Items>
-                      {ROUTINE_MENU_OPTIONS.map((opt) => (
-                        <Button
-                          key={opt.id}
-                          onPress={() => onRoutineTypeChange?.(opt.id)}
-                          label={opt.label}
-                        />
-                      ))}
-                    </ContextMenu.Items>
-                  </ContextMenu>
-                </Host>
-              </View>
-            ) : (
-              <>
-                <Pressable
-                  style={styles.repeatingTapAreaCompact}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setIsRepeatingMenuVisible(true);
-                  }}
-                >
-                  <View
-                    style={[
-                      styles.repeatingPill,
-                      { backgroundColor: themeColors.background.primarySecondaryBlend() },
-                    ]}
-                  >
-                    <RepeatIcon size={18} color={themeColors.text.primary()} style={styles.repeatingIcon} />
-                    <Text style={[styles.repeatingText, { color: themeColors.text.primary() }]}>
-                      {ROUTINE_TYPE_LABELS[routineType]}
-                    </Text>
+      {/* recurrence + inbox: always shown so create/edit can change routine before picking a date; ios uses tap Menu like ActionContextMenu */}
+      <View style={styles.repeatingRow}>
+        {Platform.OS === 'ios' ? (
+          <View style={styles.repeatingRecurrenceWrap} collapsable={false}>
+            <Host matchContents={false} style={styles.repeatingHost}>
+              <Menu
+                label={
+                  <View style={styles.repeatingTapAreaCompact}>
+                    <View
+                      style={[
+                        styles.repeatingPill,
+                        { backgroundColor: themeColors.background.primarySecondaryBlend() },
+                      ]}
+                    >
+                      <SFSymbolIcon
+                        name="repeat"
+                        size={18}
+                        color={themeColors.text.primary()}
+                        fallback={<RepeatIcon size={18} color={themeColors.text.primary()} style={styles.repeatingIcon} />}
+                        style={styles.repeatingIcon}
+                      />
+                      <Text style={[styles.repeatingText, { color: themeColors.text.primary() }]}>
+                        {ROUTINE_TYPE_LABELS[routineType]}
+                      </Text>
+                    </View>
                   </View>
-                </Pressable>
-                <DropdownList
-                  visible={isRepeatingMenuVisible}
-                  onClose={() => setIsRepeatingMenuVisible(false)}
-                  items={ROUTINE_MENU_OPTIONS.map((opt) => ({
-                    id: opt.id,
-                    label: opt.label,
-                    onPress: () => {
+                }
+              >
+                {ROUTINE_MENU_OPTIONS.map((opt) => (
+                  <Button
+                    key={opt.id}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       onRoutineTypeChange?.(opt.id);
-                      setIsRepeatingMenuVisible(false);
-                    },
-                  }))}
-                  anchorPosition="top-left"
-                  topOffset={120}
-                  leftOffset={20}
-                />
-              </>
-            )}
-
+                    }}
+                    label={opt.label}
+                  />
+                ))}
+              </Menu>
+            </Host>
+          </View>
+        ) : (
+          <>
             <Pressable
               style={styles.repeatingTapAreaCompact}
+              hitSlop={{ top: Paddings.touchTarget, bottom: Paddings.touchTarget, left: Paddings.touchTarget, right: Paddings.touchTarget }}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onOpenListPicker?.();
+                setIsRepeatingMenuVisible(true);
               }}
             >
               <View
@@ -262,31 +230,67 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
                   { backgroundColor: themeColors.background.primarySecondaryBlend() },
                 ]}
               >
-                <SFSymbolIcon
-                  name="tray.fill"
-                  size={18}
-                  color={themeColors.text.primary()}
-                  fallback={
-                    <Ionicons
-                      name="file-tray"
-                      size={18}
-                      color={themeColors.text.primary()}
-                      style={styles.repeatingIcon}
-                    />
-                  }
-                  style={styles.repeatingIcon}
-                />
-                <Text
-                  style={[styles.repeatingText, { color: themeColors.text.primary() }]}
-                  numberOfLines={1}
-                >
-                  {listDestinationLabel}
+                <RepeatIcon size={18} color={themeColors.text.primary()} style={styles.repeatingIcon} />
+                <Text style={[styles.repeatingText, { color: themeColors.text.primary() }]}>
+                  {ROUTINE_TYPE_LABELS[routineType]}
                 </Text>
               </View>
             </Pressable>
+            <DropdownList
+              visible={isRepeatingMenuVisible}
+              onClose={() => setIsRepeatingMenuVisible(false)}
+              items={ROUTINE_MENU_OPTIONS.map((opt) => ({
+                id: opt.id,
+                label: opt.label,
+                onPress: () => {
+                  onRoutineTypeChange?.(opt.id);
+                  setIsRepeatingMenuVisible(false);
+                },
+              }))}
+              anchorPosition="top-left"
+              topOffset={120}
+              leftOffset={20}
+            />
+          </>
+        )}
+
+        <Pressable
+          style={styles.repeatingTapAreaCompact}
+          hitSlop={{ top: Paddings.touchTarget, bottom: Paddings.touchTarget, left: Paddings.touchTarget, right: Paddings.touchTarget }}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onOpenListPicker?.();
+          }}
+        >
+          <View
+            style={[
+              styles.repeatingPill,
+              { backgroundColor: themeColors.background.primarySecondaryBlend() },
+            ]}
+          >
+            <SFSymbolIcon
+              name="tray.fill"
+              size={18}
+              color={themeColors.text.primary()}
+              fallback={
+                <Ionicons
+                  name="file-tray"
+                  size={18}
+                  color={themeColors.text.primary()}
+                  style={styles.repeatingIcon}
+                />
+              }
+              style={styles.repeatingIcon}
+            />
+            <Text
+              style={[styles.repeatingText, { color: themeColors.text.primary() }]}
+              numberOfLines={1}
+            >
+              {listDestinationLabel}
+            </Text>
           </View>
-        </View>
-      )}
+        </Pressable>
+      </View>
     </View>
   );
 };
@@ -314,6 +318,7 @@ const styles = StyleSheet.create({
   },
   repeatingHost: {
     alignSelf: 'flex-start' as const,
+    overflow: 'visible' as const,
   },
   // tap area for each pill (recurrence + inbox) — same vertical touch target as before
   repeatingTapAreaCompact: {
