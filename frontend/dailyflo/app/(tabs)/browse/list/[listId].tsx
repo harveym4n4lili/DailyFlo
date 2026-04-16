@@ -50,7 +50,7 @@ export default function BrowseListDetailScreen() {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
-  const { selection, toggleItemSelection } = useUI();
+  const { selection, toggleItemSelection, selectAllItems, clearSelection } = useUI();
   const { lists, fetchLists } = useLists();
 
   useFocusEffect(
@@ -157,11 +157,35 @@ export default function BrowseListDetailScreen() {
   }, []);
 
   const isSelectionMode = selection.isSelectionMode && selection.selectionType === 'tasks';
+  const listSelectionMode = Platform.OS === 'android' && isSelectionMode;
+
+  const eligibleListTaskIds = useMemo(
+    () => listTasks.filter((t) => !t.isCompleted && !t.softDeleted).map((t) => t.id),
+    [listTasks]
+  );
+  const allEligibleListSelected =
+    eligibleListTaskIds.length > 0 &&
+    eligibleListTaskIds.every((id) => selection.selectedItems.includes(id));
+
+  const handleSelectAllList = useCallback(() => {
+    if (!isSelectionMode) return;
+    if (allEligibleListSelected) {
+      clearSelection();
+    } else {
+      selectAllItems(eligibleListTaskIds);
+    }
+  }, [
+    isSelectionMode,
+    allEligibleListSelected,
+    eligibleListTaskIds,
+    selectAllItems,
+    clearSelection,
+  ]);
 
   return (
     <>
-      <IosBrowseBackStackToolbar />
-      <IosDashboardOverflowToolbar hidden={isSelectionMode} />
+      {Platform.OS === 'ios' ? <IosBrowseBackStackToolbar /> : null}
+      <IosDashboardOverflowToolbar hidden={listSelectionMode} />
       <View style={{ flex: 1 }}>
       <View
         style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}
@@ -235,9 +259,9 @@ export default function BrowseListDetailScreen() {
             groupBy="routine"
             sortBy="createdAt"
             sortDirection="desc"
-            selectionMode={isSelectionMode}
+            selectionMode={listSelectionMode}
             selectedTaskIds={selection.selectedItems}
-            onToggleTaskSelection={isSelectionMode ? toggleItemSelection : undefined}
+            onToggleTaskSelection={listSelectionMode ? toggleItemSelection : undefined}
             hideCompletedTasks
             onTaskPress={handleTaskPress}
             onTaskComplete={handleTaskComplete}

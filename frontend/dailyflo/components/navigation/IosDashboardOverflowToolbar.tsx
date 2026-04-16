@@ -1,11 +1,12 @@
 /**
  * ios-only: native Stack.Toolbar overflow for screens that used dashboard ScreenHeaderActions + ActionContextMenu.
- * android has no overflow (product choice); same actions are unavailable there until a fallback exists.
+ * android has no overflow (product choice). task multi-select on android stays in-place where wired (e.g. today list);
+ * browse inbox/list still use listSelectionMode on the main screen because there is no ios-style overflow entry yet.
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Image, Platform, Pressable, View } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { Host, Menu, Button } from '@expo/ui/swift-ui';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { headerChromeActionMenuTriggerSizePx } from '@/constants/headerChromeIconScale';
@@ -23,9 +24,40 @@ export type IosDashboardOverflowToolbarProps = {
 
 export function IosDashboardOverflowToolbar({ hidden = false }: IosDashboardOverflowToolbarProps) {
   const router = useRouter();
+  const segments = useSegments() as string[];
+  const { listId: listIdParam } = useLocalSearchParams<{ listId?: string | string[] }>();
+  const listId = Array.isArray(listIdParam) ? listIdParam[0] : listIdParam;
   const themeColors = useThemeColors();
   const { enterSelectionMode } = useUI();
   const toolbarTint = themeColors.text.primary();
+
+  // ios-only component: task multi-select uses pushed routes (today/select, planner/select, browse/task-select).
+  const onSelectTasks = useCallback(() => {
+    if (segments.includes('select') || segments.includes('task-select')) {
+      return;
+    }
+    if (segments.includes('today')) {
+      router.push('/(tabs)/today/select' as any);
+      return;
+    }
+    if (segments.includes('planner')) {
+      router.push('/(tabs)/planner/select' as any);
+      return;
+    }
+    if (segments.includes('inbox')) {
+      router.push({ pathname: '/(tabs)/browse/task-select' as any, params: { source: 'inbox' } });
+      return;
+    }
+    if (segments.includes('list') && listId) {
+      router.push({
+        pathname: '/(tabs)/browse/task-select' as any,
+        params: { source: 'list', listId },
+      });
+      return;
+    }
+    // browse home / tags / etc.: no ios select route yet — toggle redux only
+    enterSelectionMode('tasks');
+  }, [enterSelectionMode, listId, router, segments]);
 
   if (hidden || Platform.OS !== 'ios') {
     return null;
@@ -87,7 +119,7 @@ export function IosDashboardOverflowToolbar({ hidden = false }: IosDashboardOver
             <Button
               label="Select Tasks"
               systemImage={'checkmark.circle' as any}
-              onPress={() => enterSelectionMode('tasks')}
+              onPress={onSelectTasks}
             />
           </Menu>
         </Host>

@@ -14,6 +14,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import GlassView from 'expo-glass-effect/build/GlassView';
 import * as Haptics from 'expo-haptics';
+import { Link } from 'expo-router';
 
 // TYPES FOLDER IMPORTS - TypeScript type definitions
 import { Task } from '@/types';
@@ -38,6 +39,7 @@ import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 // import border components
 import { DashedSeparator, SolidSeparator } from '@/components/ui/borders';
 import { taskDisplayEquals } from '@/utils/taskDisplayEquals';
+import { taskDetailHref } from '@/utils/taskDetailHref';
 
 /**
  * Props interface for TaskCard component
@@ -86,6 +88,9 @@ export interface TaskCardProps {
   selectionMode?: boolean;
   isSelected?: boolean;
   onSelect?: (task: Task, selected: boolean) => void;
+
+  /** ios 18+: open task via Link + Apple zoom when true (fluid transition; needs Link.AppleZoomTarget on task screen) */
+  useIosZoomTransition?: boolean;
 }
 
 /**
@@ -132,7 +137,8 @@ function taskCardPropsAreEqual(prev: TaskCardProps, next: TaskCardProps) {
     prev.showListRecurrenceRow === next.showListRecurrenceRow &&
     prev.selectionMode === next.selectionMode &&
     prev.isSelected === next.isSelected &&
-    prev.onSelect === next.onSelect
+    prev.onSelect === next.onSelect &&
+    prev.useIosZoomTransition === next.useIosZoomTransition
   );
 }
 
@@ -164,6 +170,7 @@ const TaskCard = React.memo<TaskCardProps>(function TaskCard({
   selectionMode = false,
   isSelected = false,
   onSelect,
+  useIosZoomTransition = false,
 }: TaskCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -207,6 +214,48 @@ const TaskCard = React.memo<TaskCardProps>(function TaskCard({
     }
   };
 
+  // ios: Link + AppleZoom drives navigation; haptic only on press (link handles route).
+  const useIosZoomLink =
+    Platform.OS === 'ios' && useIosZoomTransition && !selectionMode && !!onPress;
+  const iosZoomHref = useIosZoomLink ? taskDetailHref(task) : null;
+
+  const cardContentTouchableInner = (
+    <>
+      {showIcon && task.icon && (
+        <View style={styles.iconWrapper}>
+          <TaskIcon icon={task.icon} color={taskColor} />
+        </View>
+      )}
+
+      <View style={styles.contentColumn}>
+        <TaskCardContent
+          task={{ ...task, isCompleted: displayCompleted }}
+          taskColor={taskColor}
+          compact={compact}
+          titleRightLabel={titleRightLabel}
+          titleRightShowLeaf={titleRightShowLeaf}
+          onFirstLineHeightChange={handleTitleFirstLineHeight}
+        />
+
+        {showListRecurrenceRow && (
+          <TaskCardListRecurrenceRow task={task} isCompleted={displayCompleted} />
+        )}
+
+        {showMetadata && (
+          <TaskMetadata
+            dueDate={task.dueDate}
+            time={task.time}
+            duration={task.duration}
+            isCompleted={displayCompleted}
+            showCategory={showCategory}
+            listId={task.listId}
+            metadataVariant={metadataVariant}
+          />
+        )}
+      </View>
+    </>
+  );
+
   const cardSurfaceStyle = [
     styles.card,
     compact && styles.compactCard,
@@ -238,47 +287,29 @@ const TaskCard = React.memo<TaskCardProps>(function TaskCard({
               />
             </View>
 
-            {/* rest of card - touchable, opens task or toggles selection */}
-            <TouchableOpacity
-              style={styles.cardContentTouchable}
-              onPress={handlePress}
-              activeOpacity={0.7}
-            >
-              {showIcon && task.icon && (
-                <View style={styles.iconWrapper}>
-                  <TaskIcon icon={task.icon} color={taskColor} />
-                </View>
-              )}
-
-              <View style={styles.contentColumn}>
-                {/* main content area - title */}
-                <TaskCardContent
-                  task={{ ...task, isCompleted: displayCompleted }}
-                  taskColor={taskColor}
-                  compact={compact}
-                  titleRightLabel={titleRightLabel}
-                  titleRightShowLeaf={titleRightShowLeaf}
-                  onFirstLineHeightChange={handleTitleFirstLineHeight}
-                />
-
-                {showListRecurrenceRow && (
-                  <TaskCardListRecurrenceRow task={task} isCompleted={displayCompleted} />
-                )}
-
-              {/* task metadata - date, time, duration (hidden when showMetadata is false) */}
-              {showMetadata && (
-                <TaskMetadata
-                  dueDate={task.dueDate}
-                  time={task.time}
-                  duration={task.duration}
-                  isCompleted={displayCompleted}
-                  showCategory={showCategory}
-                  listId={task.listId}
-                  metadataVariant={metadataVariant}
-                />
-              )}
-              </View>
-            </TouchableOpacity>
+            {/* rest of card - touchable; ios may use Link.AppleZoom for fluid transition to task screen */}
+            {useIosZoomLink && iosZoomHref ? (
+              <Link href={iosZoomHref} asChild>
+                <TouchableOpacity
+                  style={styles.cardContentTouchable}
+                  onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft)}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                >
+                  <Link.AppleZoom>
+                    <View style={styles.appleZoomInner}>{cardContentTouchableInner}</View>
+                  </Link.AppleZoom>
+                </TouchableOpacity>
+              </Link>
+            ) : (
+              <TouchableOpacity
+                style={styles.cardContentTouchable}
+                onPress={handlePress}
+                activeOpacity={0.7}
+              >
+                {cardContentTouchableInner}
+              </TouchableOpacity>
+            )}
           </View>
     </View>
   );
@@ -397,6 +428,13 @@ const createStyles = (
 
     // touchable area for icon + content - opens task (checkbox has separate touch)
     cardContentTouchable: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+
+    // single child for Link.AppleZoom — mirrors row layout inside the touchable
+    appleZoomInner: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'flex-start',

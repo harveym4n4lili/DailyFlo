@@ -18,7 +18,7 @@ import { useAppDispatch } from '@/store';
 import { deleteTask, updateTask } from '@/store/slices/tasks/tasksSlice';
 import { getBaseTaskId, isExpandedRecurrenceId, getOccurrenceDateFromId } from '@/utils/recurrenceUtils';
 import { store } from '@/store';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 
 export interface SelectionActionsBarProps {
@@ -34,6 +34,7 @@ export function SelectionActionsBar({ onMoveComplete, screen }: SelectionActions
   const typography = useTypography();
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const pathname = usePathname() ?? '';
   const { setDraft, registerOverdueReschedule, clearOverdueReschedule } = useCreateTaskDraft();
 
   // selection state from Redux - drives visibility and action availability
@@ -55,10 +56,23 @@ export function SelectionActionsBar({ onMoveComplete, screen }: SelectionActions
   const selectedCount = selectedItems.length;
   const hasSelection = selectedCount > 0;
 
+  const onRouteSelectScreen =
+    pathname.includes('/today/select') ||
+    pathname.includes('/planner/select') ||
+    pathname.includes('/browse/task-select');
+
+  const dismissSelectionFlow = () => {
+    if (onRouteSelectScreen) {
+      router.back();
+    } else {
+      exitSelectionMode();
+    }
+  };
+
   const handleCancel = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     clearOverdueReschedule();
-    exitSelectionMode();
+    dismissSelectionFlow();
   };
 
   // complete all selected tasks - marks as done; handles recurring occurrences via recurrence_completions
@@ -98,7 +112,7 @@ export function SelectionActionsBar({ onMoveComplete, screen }: SelectionActions
           ).unwrap();
         }
       }
-      exitSelectionMode();
+      dismissSelectionFlow();
     } catch (err) {
       console.error('Failed to bulk complete tasks:', err);
     }
@@ -121,7 +135,7 @@ export function SelectionActionsBar({ onMoveComplete, screen }: SelectionActions
         onPress: () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           baseTaskIds.forEach((id) => dispatch(deleteTask(id)));
-          exitSelectionMode();
+          dismissSelectionFlow();
         },
       },
     ]);
@@ -150,7 +164,7 @@ export function SelectionActionsBar({ onMoveComplete, screen }: SelectionActions
             )
           );
           clearOverdueReschedule();
-          exitSelectionMode();
+          dismissSelectionFlow();
         } catch (err) {
           console.error('Failed to bulk move tasks:', err);
         }

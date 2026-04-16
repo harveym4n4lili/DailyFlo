@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { TASK_SELECTION_STACK_ANIMATION } from '@/constants/nativeStackTransition';
 
 export default function BrowseLayout() {
   const themeColors = useThemeColors();
@@ -72,6 +73,25 @@ export default function BrowseLayout() {
               }
             : {
                 title: 'Inbox',
+                headerShown: false,
+              }
+        }
+      />
+      <Stack.Screen
+        name="task-select"
+        options={
+          Platform.OS === 'ios'
+            ? {
+                animation: TASK_SELECTION_STACK_ANIMATION,
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+            : {
+                title: 'Select tasks',
                 headerShown: false,
               }
         }
