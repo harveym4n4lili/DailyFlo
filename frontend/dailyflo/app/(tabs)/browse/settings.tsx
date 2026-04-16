@@ -2,14 +2,15 @@
  * Browse Settings Screen
  *
  * Settings screen accessible from the cog icon in the browse screen header.
- * Layout matches Activity Log: content first (behind), header overlay on top with
- * MainCloseButton left + centered "Settings" title. Blur + gradient.
+ * ios: native Stack.Toolbar close (xmark) + centered title in blur overlay below the nav bar.
+ * android: same overlay + MainCloseButton (stack header hidden).
  * Sections: Account/Calendar, Productivity, Personalization, Support, Logout.
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -24,6 +25,7 @@ import {
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainCloseButton } from '@/components/ui/button';
+import { IosBrowseModalCloseStackToolbar } from '@/components/navigation/IosBrowseModalStackToolbars';
 import { Paddings } from '@/constants/Paddings';
 
 // header row height matches close button (42) – same as Activity Log
@@ -38,11 +40,11 @@ export default function BrowseSettingsScreen() {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const styles = createStyles(themeColors, typography);
-
-  const contentTopPadding = HEADER_TOP + HEADER_ROW_HEIGHT;
-  const topSectionHeight = TOP_SECTION_HEIGHT;
-  // reduced top spacing so content sits closer to header
-  const contentPaddingTop = contentTopPadding;
+  // ios modal uses a real navigation bar so Stack.Toolbar can mount; offset blur/title/scroll by its height.
+  const headerHeight = useHeaderHeight();
+  const iosNavOffset = Platform.OS === 'ios' ? headerHeight : 0;
+  const topSectionHeight = iosNavOffset + TOP_SECTION_HEIGHT;
+  const scrollPaddingTop = iosNavOffset + HEADER_ROW_HEIGHT + 40;
 
   const listStyle = {
     backgroundColor: themeColors.background.primarySecondaryBlend(),
@@ -57,13 +59,14 @@ export default function BrowseSettingsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
+      <IosBrowseModalCloseStackToolbar />
       {/* content first (behind) – scrollable settings sections */}
       <View style={styles.contentArea}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: HEADER_ROW_HEIGHT + 40 },
+            { paddingTop: scrollPaddingTop },
           ]}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
@@ -354,7 +357,7 @@ export default function BrowseSettingsScreen() {
           />
         </View>
         <View
-          style={[styles.headerRow, { top: HEADER_TOP }]}
+          style={[styles.headerRow, { top: iosNavOffset + HEADER_TOP }]}
           pointerEvents="box-none"
         >
           <View style={styles.headerPlaceholder} pointerEvents="none" />
@@ -363,13 +366,15 @@ export default function BrowseSettingsScreen() {
           </View>
           <View style={styles.headerPlaceholder} pointerEvents="none" />
         </View>
-        <View style={styles.closeButtonContainer} pointerEvents="box-none">
-          <MainCloseButton
-            onPress={() => router.back()}
-            top={Paddings.screen}
-            left={Paddings.screen}
-          />
-        </View>
+        {Platform.OS === 'android' ? (
+          <View style={styles.closeButtonContainer} pointerEvents="box-none">
+            <MainCloseButton
+              onPress={() => router.back()}
+              top={Paddings.screen}
+              left={Paddings.screen}
+            />
+          </View>
+        ) : null}
       </View>
     </View>
   );

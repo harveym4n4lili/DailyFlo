@@ -101,6 +101,10 @@ export function CustomLiquidTabBar() {
       <Pressable
         key={item.key}
         onPress={() => {
+          // already on this tab (or nested under it, e.g. planner/month-select) — skip push so expo-router doesn’t replay the stack transition
+          if (resolvedSelectedTabKey === item.key) {
+            return;
+          }
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
           setOptimisticCustomTabKey(item.key);
           router.push(item.href as any);
