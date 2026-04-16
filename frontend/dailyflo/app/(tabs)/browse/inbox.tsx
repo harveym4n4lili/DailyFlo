@@ -23,6 +23,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainBackButton } from '@/components/ui/button';
 import { ScreenHeaderActions } from '@/components/ui';
+import { IosBrowseBackStackToolbar } from '@/components/navigation/IosBrowseBackStackToolbar';
 import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { ListCard } from '@/components/ui/card';
 import { Paddings } from '@/constants/Paddings';
@@ -101,6 +102,7 @@ export default function InboxScreen() {
     opacity: interpolate(scrollY.value, [0, SCROLL_THRESHOLD], [1, 0], Extrapolation.CLAMP),
   }));
 
+  // android: glass back sits in the blur band; ios uses native Stack.Toolbar (chevron.left).
   const backButtonTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
 
   const handleTaskPress = useCallback(
@@ -200,6 +202,7 @@ export default function InboxScreen() {
 
   return (
     <>
+      <IosBrowseBackStackToolbar />
       <IosDashboardOverflowToolbar hidden={isSelectionMode} />
       <View style={{ flex: 1 }}>
       <View
@@ -232,13 +235,15 @@ export default function InboxScreen() {
         </View>
       </View>
 
-      <View style={styles.backButtonContainer} pointerEvents="box-none">
-        <MainBackButton
-          onPress={() => router.back()}
-          top={backButtonTop}
-          left={Paddings.screen}
-        />
-      </View>
+      {Platform.OS === 'android' ? (
+        <View style={styles.backButtonContainer} pointerEvents="box-none">
+          <MainBackButton
+            onPress={() => router.back()}
+            top={backButtonTop}
+            left={Paddings.screen}
+          />
+        </View>
+      ) : null}
 
       <Animated.ScrollView
         style={styles.scrollView}

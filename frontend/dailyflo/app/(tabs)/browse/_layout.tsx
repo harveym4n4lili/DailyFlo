@@ -30,17 +30,32 @@ export default function BrowseLayout() {
               }
         }
       />
-      {/* settings: same as activity-log – modal, close via MainCloseButton */}
+      {/* settings: modal — ios native header + Stack.Toolbar close; android glass MainCloseButton in-screen */}
       <Stack.Screen
         name="settings"
-        options={{
-          headerShown: false,
-          presentation: 'modal',
-          gestureEnabled: false,
-          contentStyle: {
-            backgroundColor: themeColors.background.primary(),
-          },
-        }}
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: {
+                  backgroundColor: themeColors.background.primary(),
+                },
+              }
+            : {
+                headerShown: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: {
+                  backgroundColor: themeColors.background.primary(),
+                },
+              }
+        }
       />
       {/* inbox, completed, tags: push + back + big/mini header */}
       <Stack.Screen
@@ -113,31 +128,61 @@ export default function BrowseLayout() {
             : { headerShown: false }
         }
       />
-      {/* manage-lists: full-screen modal, no sheet detents — close via MainCloseButton (same as settings) */}
+      {/* manage-lists: modal — ios Stack.Toolbar close + create; android glass buttons in-screen */}
       <Stack.Screen
         name="manage-lists"
-        options={{
-          title: 'Manage Lists',
-          headerShown: false,
-          presentation: 'modal',
-          gestureEnabled: false,
-          contentStyle: {
-            backgroundColor: themeColors.background.primary(),
-          },
-        }}
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: {
+                  backgroundColor: themeColors.background.primary(),
+                },
+              }
+            : {
+                title: 'Manage Lists',
+                headerShown: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: {
+                  backgroundColor: themeColors.background.primary(),
+                },
+              }
+        }
       />
-      {/* list-create: full-screen modal from FAB — close via MainCloseButton (same as manage-lists) */}
+      {/* list-create: modal — ios Stack.Toolbar close + checkmark; android glass in-screen */}
       <Stack.Screen
         name="list-create"
-        options={{
-          title: 'New List',
-          headerShown: false,
-          presentation: 'modal',
-          gestureEnabled: false,
-          contentStyle: {
-            backgroundColor: themeColors.background.primary(),
-          },
-        }}
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: {
+                  backgroundColor: themeColors.background.primary(),
+                },
+              }
+            : {
+                title: 'New List',
+                headerShown: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: {
+                  backgroundColor: themeColors.background.primary(),
+                },
+              }
+        }
       />
     </Stack>
   );

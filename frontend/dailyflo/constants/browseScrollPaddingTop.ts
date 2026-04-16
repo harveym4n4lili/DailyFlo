@@ -1,5 +1,6 @@
 /**
- * Browse stack screens (inbox, tags, completed, list detail) use a fixed blur header + MainBackButton.
+ * Browse stack screens (inbox, tags, completed, list detail) use a fixed blur header + big title.
+ * ios: back is native Stack.Toolbar (chevron.left) in the nav bar; android still uses in-content MainBackButton.
  * scrollContent used to use paddingTop: 64 only — that ignores safeAreaTop, so on a notch the button
  * sits around y ≈ safeAreaTop…safeAreaTop+45 while the big title still started at y=64 and drew *under* the button.
  * this helper keeps 64 on small/zero safe areas (same as before on Android) and grows on notched iPhones.
