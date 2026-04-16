@@ -33,6 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTasks, useUI } from '@/store/hooks';
 import { useAppDispatch, useAppSelector, store } from '@/store';
 import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
+import { fetchLists } from '@/store/slices/lists/listsSlice';
 import { usePlannerMonthSelect } from '@/app/PlannerMonthSelectContext';
 
 // types for tasks
@@ -43,6 +44,7 @@ import {
   isExpandedRecurrenceId,
   getBaseTaskId,
   getOccurrenceDateFromId,
+  toLocalCalendarDayString,
 } from '@/utils/recurrenceUtils';
 
 // ios: month + chevron live in the native navigation headerTitle so touches use the bar’s own controls (no overlap fight)
@@ -188,8 +190,19 @@ export default function PlannerScreen() {
     [themeColors, typography, insets, modalBorderRadius, weekViewPaddingTop],
   );
 
-  // flush pending checkbox syncs when leaving (tab switch)
-  useFocusEffect(React.useCallback(() => () => flushAllPendingCheckboxSyncs(), []));
+  // every time planner is shown: reload tasks from api so edits from today (e.g. bulk overdue reschedule) are not replaced by a stale in-flight fetch or an old tab mount; flush checkbox sync when leaving
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        void dispatch(fetchTasks());
+        const { lastFetched, isLoading, error } = store.getState().lists;
+        if (lastFetched === null && !isLoading && !error) {
+          void dispatch(fetchLists());
+        }
+      }
+      return () => flushAllPendingCheckboxSyncs();
+    }, [isAuthenticated, dispatch]),
+  );
 
   // CALENDAR HANDLERS
   // open month-select stack screen – same pattern as task: set payload in context then router.push (like handleTaskPress -> router.push('/task/[taskId]'))
@@ -239,7 +252,7 @@ export default function PlannerScreen() {
     for (let i = 0; i < 7; i++) {
       const d = new Date(baseMidnight);
       d.setDate(d.getDate() - mondayOffset + i);
-      dates.push(d.toISOString().slice(0, 10));
+      dates.push(toLocalCalendarDayString(d));
     }
     return dates;
   }, [timelineDate, selectedDate]);
@@ -259,8 +272,14 @@ export default function PlannerScreen() {
   const selectedDateTasks = useMemo(() => {
     const sourceDate = timelineDate || selectedDate;
     if (!sourceDate) return [];
-    const selectedDateStr = new Date(sourceDate).toISOString().slice(0, 10);
-    return weekExpandedTasks.filter((task) => task.dueDate?.slice(0, 10) === selectedDateStr);
+    const selectedDay = toLocalCalendarDayString(new Date(sourceDate));
+    return weekExpandedTasks.filter((task) => {
+      if (isExpandedRecurrenceId(task.id)) {
+        return getOccurrenceDateFromId(task.id) === selectedDay;
+      }
+      if (!task.dueDate) return false;
+      return toLocalCalendarDayString(new Date(task.dueDate)) === selectedDay;
+    });
   }, [weekExpandedTasks, selectedDate, timelineDate]);
 
   // all-day tasks: selected day's tasks with no time set (not shown on timeline)
@@ -268,13 +287,6 @@ export default function PlannerScreen() {
   const allDayTasks = useMemo(() => {
     return selectedDateTasks.filter((task) => !task.time || task.time === '');
   }, [selectedDateTasks]);
-  
-  // fetch tasks when component mounts or when authentication state changes
-  useEffect(() => {
-    if (isAuthenticated) {
-      dispatch(fetchTasks());
-    }
-  }, [isAuthenticated, dispatch]);
   
   // TASK HANDLERS - Functions to handle task interactions
   // handle when user taps on a task card - opens task screen in edit mode
@@ -342,7 +354,7 @@ export default function PlannerScreen() {
   // handle refresh - reload tasks from server
   const handleRefresh = async () => {
     if (isAuthenticated) {
-      await dispatch(fetchTasks());
+      await Promise.all([dispatch(fetchTasks()), dispatch(fetchLists())]);
     }
   };
 
@@ -448,7 +460,7 @@ export default function PlannerScreen() {
               // this resets layout state per day so the timeline + all-day footer
               // appear directly in their correct positions instead of sliding from
               // the previous day's layout
-              key={timelineDate ? new Date(timelineDate).toISOString().slice(0, 10) : 'planner-timeline'}
+              key={timelineDate ? toLocalCalendarDayString(new Date(timelineDate)) : 'planner-timeline'}
               tasks={selectedDateTasks}
               onTaskTimeChange={handleTaskTimeChange}
               onTaskPress={handleTaskPress}
