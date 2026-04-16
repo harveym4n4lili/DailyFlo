@@ -58,7 +58,7 @@ export const Paddings = {
   // indicator/tag padding
   // used by: TaskIndicators
   indicatorHorizontal: 6,
-  // used by: TaskIndicators, ActionContextMenu, ScreenContextButton
+  // used by: TaskIndicators, ActionContextMenu (compact tags — not the header ellipsis chip)
   indicatorVertical: 2,
 
   // content padding - for scroll content, empty states
@@ -111,9 +111,15 @@ export const Paddings = {
 
   // context menu / small button padding
   // used by: ModalContainer, ActionContextMenu, ScreenContextButton, MainBackButton, MainCloseButton, SaveButton, TimeDurationSelectScreen
-  contextMenuHorizontal:16,
-  // used by: ModalContainer, ModalHeader, MainBackButton, MainCloseButton, SaveButton, FormPickerButton
+  contextMenuHorizontal: 16,
+  // used by: ModalContainer, ModalHeader, MainBackButton, MainCloseButton, SaveButton, FormPickerButton, ScreenContextButton, ActionContextMenu
   contextMenuVertical: 14,
+  /** corner radius for header ellipsis glass chip (ScreenContextButton, TaskEditOverflowMenu) */
+  screenContextButtonRadius: 20,
+  /** DropdownList anchor: extra top offset below header when opened from task overflow */
+  overflowDropdownTopOffset: 12,
+  /** DropdownList anchor: task edit ActionContextMenu (android) — ~Paddings.screen + 48px trigger + small gap */
+  taskEditActionsDropdownTopOffset: 72,
 
   // TaskCard - right padding to avoid overlap with completion indicator
   // used by: TaskCard

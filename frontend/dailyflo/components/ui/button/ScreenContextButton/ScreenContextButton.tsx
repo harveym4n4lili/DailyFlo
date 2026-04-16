@@ -49,11 +49,16 @@ export function ScreenContextButton({
         <Pressable
           onPress={onPress}
           style={styles.pressable}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          hitSlop={{
+            top: Paddings.touchTarget,
+            bottom: Paddings.touchTarget,
+            left: Paddings.touchTarget,
+            right: Paddings.touchTarget,
+          }}
           accessibilityLabel={accessibilityLabel}
           accessibilityRole="button"
         >
-          <EllipsisIcon size={24} color={themeColors.text.primary()} />
+          <EllipsisIcon size={20} color={themeColors.text.primary()} />
         </Pressable>
       </GlassView>
     );
@@ -68,16 +73,16 @@ export function ScreenContextButton({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
     >
-      <EllipsisIcon size={24} color={themeColors.text.primary()} />
+      <EllipsisIcon size={20} color={themeColors.text.primary()} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   glassContainer: {
-    paddingVertical: Paddings.indicatorVertical,
+    paddingVertical: Paddings.contextMenuVertical,
     paddingHorizontal: Paddings.contextMenuHorizontal,
-    borderRadius: 20,
+    borderRadius: Paddings.screenContextButtonRadius,
     backgroundColor: 'transparent',
     overflow: 'visible',
   },
@@ -86,8 +91,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   touchable: {
-    width: 40,
-    height: 40,
+    paddingVertical: Paddings.contextMenuVertical,
+    paddingHorizontal: Paddings.contextMenuHorizontal,
+    borderRadius: Paddings.screenContextButtonRadius,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -18,6 +18,12 @@ export type { TaskOptionButtonProps } from './button';
 export { ScreenContextButton } from './button';
 export type { ScreenContextButtonProps } from './button';
 
+export { ActionContextMenu } from './contextMenu/actionContextMenu/ActionContextMenu';
+export type {
+  ActionContextMenuProps,
+  ActionContextMenuItem,
+} from './contextMenu/actionContextMenu/ActionContextMenu';
+
 export { ScreenHeaderActions } from './ScreenHeaderActions';
 export type { ScreenHeaderActionsProps, ScreenHeaderActionsVariant } from './ScreenHeaderActions';
 

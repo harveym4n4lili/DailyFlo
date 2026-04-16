@@ -256,9 +256,14 @@ export default function RootLayout() {
                 headerShown: false,
                 presentation: 'formSheet',
                 gestureEnabled: true,
+                sheetGrabberVisible: false,
                 sheetAllowedDetents: [0.7, 1],
+                // ios 26+ scroll edge “hard” style can show a line at the sheet header; hide edges on the presented route
+                ...(Platform.OS === 'ios'
+                  ? { scrollEdgeEffects: { top: 'hidden' as const, bottom: 'hidden' as const } }
+                  : {}),
                 contentStyle: {
-                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.primary(),
+                  backgroundColor: useLiquidGlass ? 'transparent' : 'transparent',
                 },
               }}
             />

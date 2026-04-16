@@ -791,7 +791,7 @@ export default function ListCard({
                 activeOpacity={0.7}
               >
                 <EllipsisIcon
-                  size={24}
+                  size={20}
                   color={themeColors.text.primary()}
                 />
               </TouchableOpacity>

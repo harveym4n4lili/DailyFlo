@@ -32,6 +32,8 @@ import { Paddings } from '@/constants/Paddings';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { DashedSeparator } from '@/components/ui/borders';
+import { ActionContextMenu, type ActionContextMenuItem } from '@/components/ui';
+import { TrashIcon, ClockIcon, SFSymbolIcon } from '@/components/ui/icon';
 import { Checkbox, CHECKBOX_SIZE_TASK_VIEW } from '@/components/ui/button';
 import type { TaskColor, RoutineType } from '@/types';
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
@@ -172,6 +174,13 @@ export interface TaskCreationContentProps {
     onShowListPicker?: () => void;
   };
 
+  /** edit mode: activity log from overflow menu */
+  onActivityLog?: () => void;
+  /** edit mode: duplicate from overflow menu */
+  onDuplicateTask?: () => void;
+  /** edit mode: delete from overflow menu (parent usually confirms) */
+  onDeleteTask?: () => void;
+
 }
 
 export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
@@ -204,6 +213,9 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   onTitleCheckboxToggle,
   showMainCloseButton = false,
   showDragIndicator = true,
+  onActivityLog,
+  onDuplicateTask,
+  onDeleteTask,
 }) => {
   const router = useRouter();
   const { setDraft } = useCreateTaskDraft();
@@ -220,7 +232,6 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   const buttonColor = (values?.color as TaskColor) || themeColor;
   const titleInputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
-
   // only icon/color still uses an in-screen DraggableModal (no stack route for it yet)
   const [isColorPickerVisible, setIsColorPickerVisible] = useState(false);
   useEffect(() => {
@@ -348,8 +359,46 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   const pillHeight = isNewerIOS ? 5 : 6;
   const pillRadius = isNewerIOS ? 2 : 3;
 
-  // edit: top inset for drag pill + chrome (native stack header lays out scene; avoid double-padding vs toolbar)
-  const scrollPaddingTop = showMainCloseButton ? 24 : isEditMode ? 60 : 48;
+  // edit: drag pill + trailing slot sit in a short overlay — keep scroll top padding just below that strip (avoid stacking insets.top in pill, strip height, and padding)
+  const headerStripHeight = showDragIndicator && isEditMode ? 48 : 60;
+  const scrollPaddingTop = showMainCloseButton
+    ? 24
+    : isEditMode
+      ? headerStripHeight + 8
+      : 48;
+
+  // small fixed offset from the top of the sheet — extra insets.top was doubling gap below status bar / sheet chrome
+  const dragIndicatorTop = showDragIndicator && isEditMode ? 6 : 2;
+
+  // edit mode: liquid glass ActionContextMenu (activity / duplicate / delete) — same pattern as pre–stack-toolbar task screen
+  const actionsMenuItems = useMemo((): ActionContextMenuItem[] => {
+    return [
+      {
+        id: 'activity',
+        label: 'Activity log',
+        systemImage: 'clock.arrow.circlepath',
+        iconComponent: (color) => <ClockIcon size={20} color={color} isSolid />,
+        onPress: onActivityLog ?? (() => {}),
+      },
+      {
+        id: 'duplicate',
+        label: 'Duplicate',
+        systemImage: 'doc.on.doc',
+        icon: 'copy-outline',
+        onPress: onDuplicateTask ?? (() => {}),
+      },
+      {
+        id: 'delete',
+        label: 'Delete task',
+        onPress: onDeleteTask ?? (() => {}),
+        destructive: true,
+        systemImage: 'trash.fill',
+        iconComponent: (color) => (
+          <SFSymbolIcon name="trash.fill" size={20} color={color} fallback={<TrashIcon size={20} color={color} />} />
+        ),
+      },
+    ];
+  }, [onActivityLog, onDuplicateTask, onDeleteTask]);
 
   // screen fill: ThemeColors.background.primary (from ColorPalette) — required when stack uses transparent formSheet (ios glass) so we still paint the app surface
   const screenBg = { backgroundColor: themeColors.background.primary() };
@@ -482,10 +531,22 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
             left={20}
           />
         )}
-        {/* drag indicator (ios edit: overflow lives in Stack.Toolbar on native header) */}
-        <View style={styles.headerWrap} pointerEvents="box-none">
+        {/* drag indicator + edit overflow (ActionContextMenu top-right) */}
+        <View style={[styles.headerWrap, { height: headerStripHeight }]} pointerEvents="box-none">
+          {isEditMode && (
+            <View style={styles.actionsButtonWrap} pointerEvents="box-none">
+              <ActionContextMenu
+                items={actionsMenuItems}
+                style={styles.actionsButton}
+                accessibilityLabel="Task actions"
+                tint="primary"
+                dropdownAnchorTopOffset={Paddings.taskEditActionsDropdownTopOffset}
+                dropdownAnchorRightOffset={Paddings.screen}
+              />
+            </View>
+          )}
           {showDragIndicator && (
-            <View style={styles.dragIndicatorWrap} pointerEvents="none">
+            <View style={[styles.dragIndicatorWrap, { top: dragIndicatorTop }]} pointerEvents="none">
               <View
                 style={[
                   styles.dragIndicatorPill,
@@ -563,7 +624,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 1,
   },
-  // header wrapper: drag indicator + actions
+  // header wrapper: drag indicator strip (height set inline on ios edit so tall safe area does not clip the pill)
   headerWrap: {
     position: 'absolute',
     top: 0,
@@ -572,16 +633,24 @@ const styles = StyleSheet.create({
     height: 60,
     zIndex: 10,
   },
+  actionsButtonWrap: {
+    position: 'absolute',
+    top: Paddings.screen,
+    right: Paddings.screen,
+    zIndex: 11,
+  },
+  actionsButton: {
+    backgroundColor: 'transparent',
+  },
   // save overlay: full-screen wrapper for bottom save button
   saveOverlayWrap: {
     position: 'absolute',
     top: 0,
     left: 0,
   },
-  // drag indicator: centered pill at top (matches ModalHeader style)
+  // drag indicator: horizontal center; vertical offset from top set inline (ios: below status bar)
   dragIndicatorWrap: {
     position: 'absolute',
-    top: 10,
     left: 0,
     right: 0,
     alignItems: 'center',
