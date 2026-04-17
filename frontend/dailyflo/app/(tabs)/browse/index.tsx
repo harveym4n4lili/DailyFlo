@@ -487,7 +487,7 @@ export default function BrowseScreen() {
   const topChromeSlideDistance = topChromeHeight;
   // first list row starts below the absolute pill + same gap as former searchAnchor marginBottom
   const browseListsPaddingTop =
-    FLOATING_SEARCH_BAR_ROW_HEIGHT + TOP_SECTION_ROW_HEIGHT + Paddings.screen + 12;
+    FLOATING_SEARCH_BAR_ROW_HEIGHT + Paddings.screen;
   // search overlay scroll must not cover inbox row (same y as first grouped row) — full-screen overlay sat z-index above browse and blocked taps
   const searchScrollOverlayTop = browseListsPaddingTop + SEARCH_SCROLL_OVERLAY_TOP_INSET;
   // inner padding so first search line still clears docked bar + chips after overlay frame is pushed down
