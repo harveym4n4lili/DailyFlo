@@ -1,13 +1,12 @@
 /**
- * ios task multi-select: native right bar button for select-all / deselect-all (sf symbols).
- * replaces the in-header SelectAllButton text on today + browse; planner uses the same control
- * inside IosPlannerBulkSelectionToolbar so one Stack.Toolbar holds select-all + bulk menu.
+ * ios task multi-select: native right Stack.Toolbar slot with Select all / Deselect all text.
+ * Stack.Toolbar.Button is icon-only; Stack.Toolbar.View wraps SelectAllButton with variant nativeToolbar (no glass pill).
  */
 
 import React from 'react';
 import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { SelectAllButton } from '@/components/ui/button';
 import { useUI } from '@/store/hooks';
 
 export type IosTaskSelectionSelectAllStackToolbarProps = {
@@ -20,9 +19,8 @@ export function IosTaskSelectionSelectAllStackToolbar({
   onPress,
   allEligibleSelected,
 }: IosTaskSelectionSelectAllStackToolbarProps) {
-  const themeColors = useThemeColors();
   const { selection } = useUI();
-  const tint = themeColors.text.primary();
+  // only mount when redux says we are in task selection (same guard the old icon button used)
   const active =
     Platform.OS === 'ios' && selection.isSelectionMode && selection.selectionType === 'tasks';
 
@@ -30,17 +28,13 @@ export function IosTaskSelectionSelectAllStackToolbar({
     return null;
   }
 
-  const icon = allEligibleSelected ? 'circle' : 'checkmark.circle';
-  const a11y = allEligibleSelected ? 'Deselect all tasks' : 'Select all tasks';
+  const label = allEligibleSelected ? 'Deselect all' : 'Select all';
 
   return (
     <Stack.Toolbar placement="right">
-      <Stack.Toolbar.Button
-        icon={icon}
-        onPress={onPress}
-        accessibilityLabel={a11y}
-        tintColor={tint}
-      />
+      <Stack.Toolbar.View>
+        <SelectAllButton variant="nativeToolbar" onPress={onPress} label={label} />
+      </Stack.Toolbar.View>
     </Stack.Toolbar>
   );
 }

@@ -1,12 +1,11 @@
 /**
  * SelectAllButton - "Select all" text button for selection mode.
- * On iOS: uses expo-glass-effect GlassView for native liquid glass styling (matches ActionContextMenu).
- * On Android: uses TouchableOpacity with theme background.
+ * default: iOS GlassView pill (blur headers); Android solid TouchableOpacity.
+ * nativeToolbar: plain text + Pressable for Stack.Toolbar.View — avoids glass pill inside native toolbar chrome (double box glitch).
  */
 
 import React from 'react';
-import { Pressable, TouchableOpacity, Platform, StyleSheet, ViewStyle } from 'react-native';
-import { Text } from 'react-native';
+import { Pressable, Text, TouchableOpacity, Platform, StyleSheet, ViewStyle } from 'react-native';
 import GlassView from 'expo-glass-effect/build/GlassView';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -18,6 +17,8 @@ export interface SelectAllButtonProps {
   label?: 'Select all' | 'Deselect all';
   style?: ViewStyle;
   accessibilityLabel?: string;
+  /** use inside expo-router Stack.Toolbar.View on ios — no GlassView wrapper */
+  variant?: 'default' | 'nativeToolbar';
 }
 
 export function SelectAllButton({
@@ -25,6 +26,7 @@ export function SelectAllButton({
   label = 'Select all',
   style,
   accessibilityLabel,
+  variant = 'default',
 }: SelectAllButtonProps) {
   const a11yLabel = accessibilityLabel ?? (label === 'Deselect all' ? 'Deselect all tasks' : 'Select all tasks');
   const themeColors = useThemeColors();
@@ -35,7 +37,22 @@ export function SelectAllButton({
     color: themeColors.text.primary(),
   };
 
-  // on iOS: wrap in GlassView for native liquid glass effect (matches ActionContextMenu)
+  // ios toolbar slot: one touch target only — GlassView here stacks on Stack.Toolbar.View and looks like nested chips
+  if (Platform.OS === 'ios' && variant === 'nativeToolbar') {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={[styles.nativeToolbarPressable, style]}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityLabel={a11yLabel}
+        accessibilityRole="button"
+      >
+        <Text style={textStyle}>{label}</Text>
+      </Pressable>
+    );
+  }
+
+  // on iOS (default): wrap in GlassView for native liquid glass effect (matches ActionContextMenu)
   if (Platform.OS === 'ios') {
     return (
       <GlassView
@@ -74,6 +91,14 @@ export function SelectAllButton({
 // vertical padding: match close button (44px height, 24px icon = 10px each side)
 const CLOSE_BUTTON_V_PADDING = (44 - 24) / 2; // 10
 const styles = StyleSheet.create({
+  // bar-button style: same horizontal inset as glass/android pill so label width changes do not change edge rhythm
+  nativeToolbarPressable: {
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    paddingHorizontal: Paddings.contextMenuHorizontal,
+  },
   glassContainer: {
     minHeight: 44,
     paddingVertical: CLOSE_BUTTON_V_PADDING,
