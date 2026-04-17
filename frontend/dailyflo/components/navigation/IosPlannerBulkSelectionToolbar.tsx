@@ -1,6 +1,6 @@
 /**
  * ios-only: native header Stack.Toolbar for planner task selection.
- * first slot: select-all / deselect-all (when plannerSelectAll is passed).
+ * first slot: Select all / Deselect all text (when plannerSelectAll is passed), via Stack.Toolbar.View + SelectAllButton nativeToolbar.
  * when something is selected: dashboard + overflow menu (complete / date / move / delete).
  */
 
@@ -9,8 +9,8 @@ import { Alert, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
-import { useAppDispatch } from '@/store';
-import { store } from '@/store';
+import { SelectAllButton } from '@/components/ui/button';
+import { store, useAppDispatch } from '@/store';
 import { useUI } from '@/store/hooks';
 import { deleteTask, updateTask } from '@/store/slices/tasks/tasksSlice';
 import { getBaseTaskId, getOccurrenceDateFromId, isExpandedRecurrenceId } from '@/utils/recurrenceUtils';
@@ -158,20 +158,14 @@ export function IosPlannerBulkSelectionToolbar({
     return null;
   }
 
-  const selectAllIcon = plannerSelectAll?.allEligibleSelected ? 'circle' : 'checkmark.circle';
-  const selectAllA11y = plannerSelectAll?.allEligibleSelected
-    ? 'Deselect all tasks'
-    : 'Select all tasks';
+  const selectAllLabel = plannerSelectAll?.allEligibleSelected ? 'Deselect all' : 'Select all';
 
   return (
     <Stack.Toolbar placement="right">
       {plannerSelectAll ? (
-        <Stack.Toolbar.Button
-          icon={selectAllIcon}
-          onPress={plannerSelectAll.onPress}
-          accessibilityLabel={selectAllA11y}
-          tintColor={toolbarTint}
-        />
+        <Stack.Toolbar.View>
+          <SelectAllButton variant="nativeToolbar" onPress={plannerSelectAll.onPress} label={selectAllLabel} />
+        </Stack.Toolbar.View>
       ) : null}
       {hasSelection ? (
         <>

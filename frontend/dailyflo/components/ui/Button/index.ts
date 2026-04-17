@@ -69,7 +69,7 @@ export type { ScreenContextButtonProps } from './ScreenContextButton';
 export { SelectionCloseButton } from './SelectionCloseButton';
 export type { SelectionCloseButtonProps } from './SelectionCloseButton';
 
-// Export SelectAllButton ("Select all" text button with liquid glass for selection mode)
+// Export SelectAllButton ("Select all" text; default glass on ios, nativeToolbar for Stack.Toolbar.View)
 export { SelectAllButton } from './SelectAllButton';
 export type { SelectAllButtonProps } from './SelectAllButton';
 
