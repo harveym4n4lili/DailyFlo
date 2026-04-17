@@ -25,7 +25,7 @@ export default function TodaySelectScreen() {
 
   return (
     <>
-      <IosTaskSelectionBottomToolbar variant="today" />
+      <IosTaskSelectionBottomToolbar />
       <TodayScreenContent mode="select" />
     </>
   );

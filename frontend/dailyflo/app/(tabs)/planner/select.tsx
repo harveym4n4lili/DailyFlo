@@ -33,7 +33,7 @@ export default function PlannerSelectScreen() {
 
   return (
     <>
-      <IosTaskSelectionBottomToolbar variant="planner" />
+      <IosTaskSelectionBottomToolbar />
       <PlannerTabContent mode="select" />
     </>
   );
