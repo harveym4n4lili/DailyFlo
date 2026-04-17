@@ -31,7 +31,6 @@ import { browseScrollPaddingTop } from '@/constants/browseScrollPaddingTop';
 
 const TOP_SECTION_ROW_HEIGHT = 48;
 const TOP_SECTION_ANCHOR_HEIGHT = 64;
-// mini header appears earlier (lower threshold) since padding excludes insets.top
 const SCROLL_THRESHOLD = 16;
 
 export default function TagsScreen() {
@@ -127,6 +126,7 @@ export default function TagsScreen() {
       <Animated.ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
