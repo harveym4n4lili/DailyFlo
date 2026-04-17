@@ -337,6 +337,7 @@ export default function BrowseTaskSelectScreen() {
         <Animated.ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
+          contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
