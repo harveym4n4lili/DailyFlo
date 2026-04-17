@@ -1,14 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, DynamicColorIOS, Platform, StyleSheet } from 'react-native';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { useSegments } from 'expo-router';
 
 import { ThemeColors } from '@/constants/ColorPalette';
+import { IOS_LIQUID_CHROME_TRANSITION_MS } from '@/constants/nativeStackTransition';
 import { useTypography } from '@/hooks/useTypography';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { SelectionActionsBar } from '@/components/ui/SelectionActionsBar';
 import { useUI } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { getTodayTabIcon } from '@/utils/todayIcon';
-import { useSegments } from 'expo-router';
 import { CustomLiquidTabBar, USE_CUSTOM_LIQUID_TAB_BAR } from '@/components/navigation/tabBarChrome';
 import { TabFabOverlayLayer } from '@/components/navigation/tabBarChrome/TabFabOverlayLayer';
 import { TabFabOverlayProvider } from '@/contexts/TabFabOverlayContext';
@@ -16,9 +24,11 @@ import { TabFabOverlayProvider } from '@/contexts/TabFabOverlayContext';
 export default function TabLayout() {
   const typography = useTypography();
   const themeColors = useThemeColors();
+  const dispatch = useAppDispatch();
   const { selection } = useUI();
   const isSelectionMode = selection.isSelectionMode;
   const segments = useSegments() as string[];
+  const iosLiquidChromePreSelectFade = useAppSelector((s) => s.ui.iosLiquidChromePreSelectFade);
 
   const tabIconUnselected =
     Platform.OS === 'ios'
@@ -51,11 +61,45 @@ export default function TabLayout() {
 
   const tabBarBackgroundColor = themeColors.background.primary();
 
-  // child routes like today/select still report the parent tab segment, so SelectionActionsBar keeps today vs planner actions
   const selectionScreen =
     segments.includes('planner') ? 'planner'
     : segments.includes('today') ? 'today'
     : 'other';
+
+  const onIosTaskSelectRoute =
+    Platform.OS === 'ios' &&
+    (segments.includes('select') || segments.includes('task-select'));
+
+  // root routes (e.g. /date-select) drop "select" from segments while redux task selection stays on — keep chrome hidden
+  const iosTaskMultiSelectActive =
+    Platform.OS === 'ios' && selection.isSelectionMode && selection.selectionType === 'tasks';
+
+  const shouldHideLiquidChromeIos =
+    USE_CUSTOM_LIQUID_TAB_BAR &&
+    Platform.OS === 'ios' &&
+    (onIosTaskSelectRoute || iosLiquidChromePreSelectFade || iosTaskMultiSelectActive);
+
+  const liquidChromeInactive = !USE_CUSTOM_LIQUID_TAB_BAR || shouldHideLiquidChromeIos;
+
+  // 1 = visible pill + fab; 0 = hidden — eased to feel like chrome travels into the native selection toolbar
+  const chromeProgress = useSharedValue(shouldHideLiquidChromeIos ? 0 : 1);
+
+  useEffect(() => {
+    chromeProgress.value = withTiming(shouldHideLiquidChromeIos ? 0 : 1, {
+      duration: IOS_LIQUID_CHROME_TRANSITION_MS,
+    });
+  }, [shouldHideLiquidChromeIos, chromeProgress]);
+
+  useEffect(() => {
+    if (onIosTaskSelectRoute && iosLiquidChromePreSelectFade) {
+      dispatch({ type: 'ui/clearIosLiquidChromePreSelectFade' });
+    }
+  }, [dispatch, onIosTaskSelectRoute, iosLiquidChromePreSelectFade]);
+
+  const liquidChromeAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: chromeProgress.value,
+    transform: [{ translateY: interpolate(chromeProgress.value, [0, 1], [22, 0]) }],
+  }));
 
   return (
     <TabFabOverlayProvider>
@@ -101,15 +145,23 @@ export default function TabLayout() {
           </NativeTabs.Trigger>
         </NativeTabs>
         {isSelectionMode && <SelectionActionsBar screen={selectionScreen} />}
-        {/* fade + liquid navbar + overlay FAB: always mounted; invisible and non-interactive when NativeTabs is visible */}
-        <View
-          pointerEvents={USE_CUSTOM_LIQUID_TAB_BAR ? 'box-none' : 'none'}
-          style={[styles.liquidChromeMount, !USE_CUSTOM_LIQUID_TAB_BAR && styles.liquidChromeInactive]}
-        >
-          <CustomLiquidTabBar />
-          <TabFabOverlayLayer />
-        </View>
-
+        {USE_CUSTOM_LIQUID_TAB_BAR ? (
+          <Animated.View
+            pointerEvents={liquidChromeInactive ? 'none' : 'box-none'}
+            style={[styles.liquidChromeMount, liquidChromeAnimatedStyle]}
+          >
+            <CustomLiquidTabBar />
+            <TabFabOverlayLayer />
+          </Animated.View>
+        ) : (
+          <View
+            pointerEvents="none"
+            style={[styles.liquidChromeMount, styles.liquidChromeInactive]}
+          >
+            <CustomLiquidTabBar />
+            <TabFabOverlayLayer />
+          </View>
+        )}
       </View>
     </TabFabOverlayProvider>
   );
@@ -117,7 +169,6 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  // positioning context for absolute bottom chrome + FAB so they stay mounted when USE_CUSTOM_LIQUID_TAB_BAR is false
   liquidChromeMount: {
     ...StyleSheet.absoluteFillObject,
   },

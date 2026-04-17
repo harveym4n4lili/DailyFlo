@@ -1,25 +1,24 @@
 /**
  * ios: pushed planner sibling — native stack animates selection Stack.Toolbar items.
- * redux enter/exit is tied to focus so popping clears checkboxes (same contract as today/select).
+ * redux enter/exit is tied to mount so auxiliary routes (e.g. date-select) do not clear selection (same as today/select).
  */
 
-import React, { useCallback, useLayoutEffect } from 'react';
+import React, { useEffect, useLayoutEffect } from 'react';
 import { Platform } from 'react-native';
-import { useFocusEffect, useNavigation } from 'expo-router';
+import { useNavigation } from 'expo-router';
 import { useUI } from '@/store/hooks';
+import { IosTaskSelectionBottomToolbar } from '@/components/navigation/IosTaskSelectionBottomToolbar';
 import { PlannerTabContent } from './PlannerTabContent';
 
 export default function PlannerSelectScreen() {
   const navigation = useNavigation();
   const { enterSelectionMode, exitSelectionMode } = useUI();
 
-  useFocusEffect(
-    useCallback(() => {
-      if (Platform.OS !== 'ios') return undefined;
-      enterSelectionMode('tasks');
-      return () => exitSelectionMode();
-    }, [enterSelectionMode, exitSelectionMode]),
-  );
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return undefined;
+    enterSelectionMode('tasks');
+    return () => exitSelectionMode();
+  }, [enterSelectionMode, exitSelectionMode]);
 
   useLayoutEffect(() => {
     if (Platform.OS !== 'ios') return;
@@ -32,5 +31,10 @@ export default function PlannerSelectScreen() {
     return null;
   }
 
-  return <PlannerTabContent mode="select" />;
+  return (
+    <>
+      <IosTaskSelectionBottomToolbar variant="planner" />
+      <PlannerTabContent mode="select" />
+    </>
+  );
 }
