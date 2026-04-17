@@ -311,7 +311,7 @@ export default function BrowseTaskSelectScreen() {
         onPress={handleSelectAll}
         allEligibleSelected={allEligibleSelected}
       />
-      <IosTaskSelectionBottomToolbar variant="today" />
+      <IosTaskSelectionBottomToolbar />
       <View style={{ flex: 1 }}>
         <View style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}>
           <BlurView tint={themeColors.isDark ? 'dark' : 'light'} intensity={1} style={StyleSheet.absoluteFill} />
