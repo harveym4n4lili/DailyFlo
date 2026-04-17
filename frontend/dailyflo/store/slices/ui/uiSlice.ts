@@ -97,6 +97,12 @@ interface UIState {
    * ios overflow can push planner/select with the same day the user was viewing (overflow has no local date state).
    */
   plannerSelectionAnchorDate: string | null;
+
+  /**
+   * ios: set true immediately before pushing today/select, planner/select, or task-select so tab layout
+   * can start fading the liquid pill before segments update (avoids a hard cut then toolbar blur).
+   */
+  iosLiquidChromePreSelectFade: boolean;
 }
 
 /**
@@ -178,6 +184,8 @@ const initialState: UIState = {
   },
 
   plannerSelectionAnchorDate: null,
+
+  iosLiquidChromePreSelectFade: false,
 };
 
 /**
@@ -456,6 +464,14 @@ const uiSlice = createSlice({
     setPlannerSelectionAnchorDate: (state, action: PayloadAction<string | null>) => {
       state.plannerSelectionAnchorDate = action.payload;
     },
+
+    beginIosLiquidChromePreSelectFade: (state) => {
+      state.iosLiquidChromePreSelectFade = true;
+    },
+
+    clearIosLiquidChromePreSelectFade: (state) => {
+      state.iosLiquidChromePreSelectFade = false;
+    },
     
     /**
      * Utility actions
@@ -504,8 +520,10 @@ export const {
   setEmailAuthPassword,
   setEmailAuthFirstName,
   setEmailAuthLastName,
-  setPlannerSelectionAnchorDate,
-  selectAllItems,
+    setPlannerSelectionAnchorDate,
+    beginIosLiquidChromePreSelectFade,
+    clearIosLiquidChromePreSelectFade,
+    selectAllItems,
   clearSelection,
   
   // Search actions

@@ -62,6 +62,8 @@ interface TimelineViewProps {
   footerComponent?: React.ReactNode;
   // optional override for top padding when footer is first (e.g. reduced spacing above list)
   scrollContentPaddingTop?: number;
+  /** optional extra bottom inset (e.g. ios native bottom selection toolbar) */
+  scrollContentPaddingBottom?: number;
   // selection mode - when true, tap toggles selection instead of opening task
   selectionMode?: boolean;
   selectedTaskIds?: string[];
@@ -83,6 +85,7 @@ export default function TimelineView({
   startHour = 6,
   footerComponent,
   scrollContentPaddingTop,
+  scrollContentPaddingBottom,
   endHour = 23,
   timeInterval = 60,
   selectionMode = false,
@@ -1750,6 +1753,9 @@ export default function TimelineView({
           // when no footer: minHeight ensures timeline is scrollable
           ...(footerComponent ? [] : [{ minHeight: timelineHeight + 220 }]),
           ...(scrollContentPaddingTop !== undefined ? [{ paddingTop: scrollContentPaddingTop }] : []),
+          ...(scrollContentPaddingBottom !== undefined
+            ? [{ paddingBottom: Paddings.timelineScrollBottom + scrollContentPaddingBottom }]
+            : []),
         ]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={true}

@@ -21,6 +21,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { IosTaskSelectionBottomToolbar } from '@/components/navigation/IosTaskSelectionBottomToolbar';
 import { IosTaskSelectionCloseStackToolbar } from '@/components/navigation/IosTaskSelectionCloseStackToolbar';
 import { IosTaskSelectionSelectAllStackToolbar } from '@/components/navigation/IosTaskSelectionSelectAllStackToolbar';
 import { ListCard } from '@/components/ui/card';
@@ -133,13 +134,11 @@ export default function BrowseTaskSelectScreen() {
     }, [source, loadInbox]),
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      if (Platform.OS !== 'ios') return undefined;
-      enterSelectionMode('tasks');
-      return () => exitSelectionMode();
-    }, [enterSelectionMode, exitSelectionMode]),
-  );
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return undefined;
+    enterSelectionMode('tasks');
+    return () => exitSelectionMode();
+  }, [enterSelectionMode, exitSelectionMode]);
 
   const scrollY = useSharedValue(0);
   const miniHeaderOpacity = useSharedValue(0);
@@ -312,6 +311,7 @@ export default function BrowseTaskSelectScreen() {
         onPress={handleSelectAll}
         allEligibleSelected={allEligibleSelected}
       />
+      <IosTaskSelectionBottomToolbar variant="today" />
       <View style={{ flex: 1 }}>
         <View style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}>
           <BlurView tint={themeColors.isDark ? 'dark' : 'light'} intensity={1} style={StyleSheet.absoluteFill} />
@@ -461,6 +461,7 @@ const createStyles = (typography: ReturnType<typeof useTypography>, insets: Retu
       alignItems: 'center',
     },
     bottomSpacer: {
-      height: 200,
+      // extra space above native bottom Stack.Toolbar on ios task-select
+      height: 280,
     },
   });

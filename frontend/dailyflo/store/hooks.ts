@@ -176,6 +176,14 @@ export const useUI = () => {
       (iso: string | null) => dispatch({ type: 'ui/setPlannerSelectionAnchorDate', payload: iso }),
       [dispatch],
     ),
+    beginIosLiquidChromePreSelectFade: useCallback(
+      () => dispatch({ type: 'ui/beginIosLiquidChromePreSelectFade' }),
+      [dispatch],
+    ),
+    clearIosLiquidChromePreSelectFade: useCallback(
+      () => dispatch({ type: 'ui/clearIosLiquidChromePreSelectFade' }),
+      [dispatch],
+    ),
     resetUIState: useCallback(() => dispatch({ type: 'ui/resetUIState' }), [dispatch]),
   };
 };

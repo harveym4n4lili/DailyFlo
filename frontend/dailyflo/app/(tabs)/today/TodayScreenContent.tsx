@@ -405,6 +405,9 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
             paddingTop={64}
             paddingHorizontal={Paddings.screen}
             scrollPastTopInset={true}
+            paddingBottom={
+              isSelectRoute && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
+            }
           />
         </ScreenContainer>
         {screenBackdrop}

@@ -353,7 +353,6 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
         <>
           <IosTaskSelectionCloseStackToolbar dismissWithRouterBack />
           <IosPlannerBulkSelectionToolbar
-            dismissWithRouterBack
             plannerSelectAll={{
               onPress: handleSelectAllPlanner,
               allEligibleSelected: allEligiblePlannerSelected,
@@ -430,6 +429,9 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                 endHour={23}
                 timeInterval={60}
                 scrollContentPaddingTop={16}
+                scrollContentPaddingBottom={
+                  mode === 'select' && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
+                }
                 footerComponent={
                   <View style={styles.allDayFooter}>
                     <ListCard

@@ -28,8 +28,17 @@ export function IosDashboardOverflowToolbar({ hidden = false }: IosDashboardOver
   const { listId: listIdParam } = useLocalSearchParams<{ listId?: string | string[] }>();
   const listId = Array.isArray(listIdParam) ? listIdParam[0] : listIdParam;
   const themeColors = useThemeColors();
-  const { enterSelectionMode } = useUI();
+  const { enterSelectionMode, beginIosLiquidChromePreSelectFade } = useUI();
   const toolbarTint = themeColors.text.primary();
+
+  // start liquid tab chrome fade before push so it eases with the stack instead of popping off after
+  const pushSelectAfterChromeFade = useCallback(
+    (fn: () => void) => {
+      beginIosLiquidChromePreSelectFade();
+      queueMicrotask(fn);
+    },
+    [beginIosLiquidChromePreSelectFade],
+  );
 
   // ios-only component: task multi-select uses pushed routes (today/select, planner/select, browse/task-select).
   const onSelectTasks = useCallback(() => {
@@ -37,27 +46,31 @@ export function IosDashboardOverflowToolbar({ hidden = false }: IosDashboardOver
       return;
     }
     if (segments.includes('today')) {
-      router.push('/(tabs)/today/select' as any);
+      pushSelectAfterChromeFade(() => router.push('/(tabs)/today/select' as any));
       return;
     }
     if (segments.includes('planner')) {
-      router.push('/(tabs)/planner/select' as any);
+      pushSelectAfterChromeFade(() => router.push('/(tabs)/planner/select' as any));
       return;
     }
     if (segments.includes('inbox')) {
-      router.push({ pathname: '/(tabs)/browse/task-select' as any, params: { source: 'inbox' } });
+      pushSelectAfterChromeFade(() =>
+        router.push({ pathname: '/(tabs)/browse/task-select' as any, params: { source: 'inbox' } }),
+      );
       return;
     }
     if (segments.includes('list') && listId) {
-      router.push({
-        pathname: '/(tabs)/browse/task-select' as any,
-        params: { source: 'list', listId },
-      });
+      pushSelectAfterChromeFade(() =>
+        router.push({
+          pathname: '/(tabs)/browse/task-select' as any,
+          params: { source: 'list', listId },
+        }),
+      );
       return;
     }
     // browse home / tags / etc.: no ios select route yet — toggle redux only
     enterSelectionMode('tasks');
-  }, [enterSelectionMode, listId, router, segments]);
+  }, [enterSelectionMode, listId, pushSelectAfterChromeFade, router, segments]);
 
   if (hidden || Platform.OS !== 'ios') {
     return null;
