@@ -7,7 +7,9 @@
 import { useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { usePathname, useRouter } from 'expo-router';
+import { usePathname } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { store, useAppDispatch } from '@/store';
@@ -17,7 +19,7 @@ import { getBaseTaskId, getOccurrenceDateFromId, isExpandedRecurrenceId } from '
 
 export function useTaskBulkSelectionActions() {
   const pathname = usePathname() ?? '';
-  const router = useRouter();
+  const router = useGuardedRouter();
   const dispatch = useAppDispatch();
   const { selection, exitSelectionMode } = useUI();
   const { setDraft, registerOverdueReschedule, clearOverdueReschedule } = useCreateTaskDraft();

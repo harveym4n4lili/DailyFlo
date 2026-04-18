@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -34,7 +34,7 @@ const TOP_SECTION_ANCHOR_HEIGHT = 64;
 const SCROLL_THRESHOLD = 16;
 
 export default function TagsScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();

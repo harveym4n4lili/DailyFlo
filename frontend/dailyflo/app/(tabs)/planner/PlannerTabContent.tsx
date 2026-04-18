@@ -4,7 +4,9 @@ import { StyleSheet, View, Platform, Text, TouchableOpacity } from 'react-native
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect, useNavigation } from 'expo-router';
+import { useFocusEffect, useNavigation } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { getTextStyle } from '@/constants/Typography';
 import { ScreenContainer } from '@/components';
@@ -73,7 +75,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
   const [timelineDate, setTimelineDate] = useState<string>(() => new Date().toISOString());
   const [, startTimelineTransition] = useTransition();
 
-  const router = useRouter();
+  const router = useGuardedRouter();
   const navigation = useNavigation();
 
   const themeColors = useThemeColors();

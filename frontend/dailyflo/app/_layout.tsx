@@ -7,7 +7,9 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, useRef } from 'react';
 import { Platform, TextInput } from 'react-native';
@@ -35,7 +37,7 @@ const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const router = useRouter();
+  const router = useGuardedRouter();
   const segments = useSegments();
   // theme background used when liquid glass is not available (android or older ios)
   const themeColors = useThemeColors();

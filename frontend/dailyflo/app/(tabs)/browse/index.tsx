@@ -26,7 +26,9 @@ import {
   useWindowDimensions,
   type TextStyle,
 } from 'react-native';
-import { useRouter, useFocusEffect, type Router } from 'expo-router';
+import { useFocusEffect, type Router } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import Animated, {
   FadeInUp,
   FadeOutUp,
@@ -426,7 +428,7 @@ function BrowseListsColumn({
 }
 
 export default function BrowseScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const dispatch = useAppDispatch();
   const themeColors = useThemeColors();
   const typography = useTypography();

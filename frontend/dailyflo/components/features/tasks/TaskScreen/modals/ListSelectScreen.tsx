@@ -7,7 +7,9 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
-import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -22,7 +24,7 @@ import { DashedSeparator } from '@/components/ui/borders';
 export type ListSelectRow = { id: string | null; name: string };
 
 export function ListSelectScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const params = useLocalSearchParams<{ taskId?: string }>();
   const taskIdForPersist =
     typeof params.taskId === 'string' && params.taskId.length > 0 ? params.taskId : undefined;

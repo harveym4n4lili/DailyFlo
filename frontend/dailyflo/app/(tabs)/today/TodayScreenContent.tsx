@@ -16,7 +16,9 @@ import AnimatedReanimated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 
 import { ScreenContainer } from '@/components';
 import { ListCard } from '@/components/ui/card';
@@ -55,7 +57,7 @@ export type TodayScreenContentProps = {
 
 export function TodayScreenContent({ mode }: TodayScreenContentProps) {
   const isSelectRoute = mode === 'select';
-  const router = useRouter();
+  const router = useGuardedRouter();
   const scrollY = useSharedValue(0);
 
   const miniHeaderOpacity = useSharedValue(0);

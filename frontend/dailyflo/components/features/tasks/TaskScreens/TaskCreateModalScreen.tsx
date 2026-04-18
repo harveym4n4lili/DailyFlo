@@ -3,7 +3,9 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import * as Haptics from 'expo-haptics';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useAppDispatch } from '@/store';
@@ -30,7 +32,7 @@ const getDefaults = (themeColor: TaskColor = 'red'): TaskFormValues => ({
 });
 
 export default function TaskCreateScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const params = useLocalSearchParams<{ dueDate?: string }>();
   const { themeColor } = useThemeColor();
   const dispatch = useAppDispatch();

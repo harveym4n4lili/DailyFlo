@@ -7,7 +7,9 @@
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,7 +46,7 @@ const DELETE_HIT_WIDTH = 44;
 const LIST_CARD_RADIUS = 24;
 
 export default function ManageListsScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
   const semanticColors = useSemanticColors();

@@ -19,7 +19,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { IconColorModal } from './modals';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { useLists } from '@/store/hooks';
@@ -217,7 +217,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   onDuplicateTask,
   onDeleteTask,
 }) => {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const { setDraft } = useCreateTaskDraft();
   const { lists: reduxLists } = useLists();
 

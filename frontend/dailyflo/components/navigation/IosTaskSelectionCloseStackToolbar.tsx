@@ -7,7 +7,9 @@
 import React, { useCallback } from 'react';
 import { Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useUI } from '@/store/hooks';
 
@@ -22,7 +24,7 @@ export type IosTaskSelectionCloseStackToolbarProps = {
 export function IosTaskSelectionCloseStackToolbar({
   dismissWithRouterBack = false,
 }: IosTaskSelectionCloseStackToolbarProps) {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const { selection, exitSelectionMode } = useUI();
   const tint = themeColors.text.primary();

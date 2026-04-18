@@ -10,7 +10,9 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -43,7 +45,7 @@ const TOP_SECTION_ANCHOR_HEIGHT = 64;
 const SCROLL_THRESHOLD = 16;
 
 export default function BrowseListDetailScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const params = useLocalSearchParams<{ listId: string | string[] }>();
   const listId = Array.isArray(params.listId) ? params.listId[0] : params.listId;
 

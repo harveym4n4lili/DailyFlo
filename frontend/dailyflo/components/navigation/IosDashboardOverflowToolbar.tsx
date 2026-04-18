@@ -6,7 +6,9 @@
 
 import React, { useCallback } from 'react';
 import { Image, Platform, Pressable, View } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
+import { Stack, useLocalSearchParams, useSegments } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { Host, Menu, Button } from '@expo/ui/swift-ui';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { headerChromeActionMenuTriggerSizePx } from '@/constants/headerChromeIconScale';
@@ -23,7 +25,7 @@ export type IosDashboardOverflowToolbarProps = {
 };
 
 export function IosDashboardOverflowToolbar({ hidden = false }: IosDashboardOverflowToolbarProps) {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const segments = useSegments() as string[];
   const { listId: listIdParam } = useLocalSearchParams<{ listId?: string | string[] }>();
   const listId = Array.isArray(listIdParam) ? listIdParam[0] : listIdParam;

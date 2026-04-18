@@ -13,7 +13,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, Animated, Easing } from 'react-native';
-import { useRouter, useSegments } from 'expo-router';
+import { useSegments } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -35,7 +37,7 @@ type OnboardingScreen = typeof ONBOARDING_SCREENS[number];
 const SEQUENTIAL_FADE_DELAY = 200; // time between each element fading in
 
 export function OnboardingActions() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const segments = useSegments();
   const themeColors = useThemeColors();
   const typography = useTypography();
