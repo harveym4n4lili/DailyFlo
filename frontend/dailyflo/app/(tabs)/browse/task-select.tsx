@@ -6,7 +6,9 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -50,7 +52,7 @@ function normParam(v: string | string[] | undefined): string | undefined {
 }
 
 export default function BrowseTaskSelectScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const raw = useLocalSearchParams<{ source?: string | string[]; listId?: string | string[] }>();
   const source = normParam(raw.source);
   const listId = normParam(raw.listId);

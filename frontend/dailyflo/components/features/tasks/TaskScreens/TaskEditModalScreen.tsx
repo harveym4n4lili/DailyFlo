@@ -5,7 +5,9 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, View } from 'react-native';
 import { deleteTask } from '@/store/slices/tasks/tasksSlice';
-import { useRouter, useLocalSearchParams, usePathname } from 'expo-router';
+import { useLocalSearchParams, usePathname } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import * as Haptics from 'expo-haptics';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -61,7 +63,7 @@ function taskIdFromTaskPath(pathname: string | undefined): string | undefined {
 }
 
 export default function TaskEditScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const pathname = usePathname();
   const params = useLocalSearchParams<{ taskId: string; occurrenceDate?: string }>();
   const { themeColor } = useThemeColor();

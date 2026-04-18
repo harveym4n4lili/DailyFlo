@@ -14,7 +14,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { useRouter } from 'expo-router';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -40,7 +40,7 @@ const HEADER_ROW_HEIGHT = 42;
 export default function ActivityLogScreen() {
   const themeColors = useThemeColors();
   const typography = useTypography();
-  const router = useRouter();
+  const router = useGuardedRouter();
 
   const { logs, isLoading, error, fetchLogs } = useActivityLogs();
 

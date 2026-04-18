@@ -13,7 +13,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { View, ScrollView, StyleSheet, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
@@ -21,7 +21,7 @@ import { usePlannerMonthSelect } from '@/app/PlannerMonthSelectContext';
 import { CalendarView } from '@/components/features/calendar/sections';
 
 export function MonthSelectScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
   const { consumeMonthSelect } = usePlannerMonthSelect();

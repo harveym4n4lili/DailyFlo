@@ -8,7 +8,9 @@ import { View, DynamicColorIOS, Platform, Pressable, Text, Image, StyleSheet } f
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import GlassView from 'expo-glass-effect/build/GlassView';
-import { useRouter, useSegments } from 'expo-router';
+import { useSegments } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemeColors } from '@/constants/ColorPalette';
@@ -34,7 +36,7 @@ function tabKeyFromSegments(segments: string[], tabKeys: string[]): string | und
 }
 
 export function CustomLiquidTabBar() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const typography = useTypography();
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();

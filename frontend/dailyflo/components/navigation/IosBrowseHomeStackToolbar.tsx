@@ -5,7 +5,9 @@
 
 import React from 'react';
 import { Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
 export type IosBrowseHomeStackToolbarProps = {
@@ -14,7 +16,7 @@ export type IosBrowseHomeStackToolbarProps = {
 };
 
 export function IosBrowseHomeStackToolbar({ onAlertsPress }: IosBrowseHomeStackToolbarProps) {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const tint = themeColors.text.primary();
 

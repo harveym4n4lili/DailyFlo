@@ -2,7 +2,9 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { View, Platform } from 'react-native';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 
 import { FloatingActionButton } from '@/components/ui/button';
 import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
@@ -13,7 +15,7 @@ import { TodayScreenContent } from './TodayScreenContent';
 import { useUI } from '@/store/hooks';
 
 export default function TodayScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const { modals, closeModal, selection } = useUI();
 
   const androidInPlaceSelection =

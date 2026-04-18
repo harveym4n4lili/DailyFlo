@@ -7,7 +7,9 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, Switch, ScrollView, Platform, Alert } from 'react-native';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
@@ -36,7 +38,7 @@ const TOP_SECTION_HEIGHT = HEADER_TOP + HEADER_ROW_HEIGHT + FADE_OVERFLOW;
 const DEFAULT_LIST_COLOR: ListColor = 'blue';
 
 export default function ListCreateScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const semantic = useSemanticColors();
   const typography = useTypography();
