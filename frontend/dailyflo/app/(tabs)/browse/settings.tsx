@@ -2,15 +2,16 @@
  * Browse Settings Screen
  *
  * Settings screen accessible from the cog icon in the browse screen header.
- * ios: native Stack.Toolbar close (xmark) + centered title in blur overlay below the nav bar.
- * android: same overlay + MainCloseButton (stack header hidden).
+ * ios: native Stack.Toolbar close (xmark) + headerTitle "Settings" (same pattern as list-create).
+ * android: glass MainCloseButton + in-screen title row in overlay (stack header hidden).
  * Sections: Account/Calendar, Productivity, Personalization, Support, Logout.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useHeaderHeight } from '@react-navigation/elements';
+import { Stack } from 'expo-router';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -40,11 +41,19 @@ export default function BrowseSettingsScreen() {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const styles = createStyles(themeColors, typography);
-  // ios modal uses a real navigation bar so Stack.Toolbar can mount; offset blur/title/scroll by its height.
   const headerHeight = useHeaderHeight();
-  const iosNavOffset = Platform.OS === 'ios' ? headerHeight : 0;
-  const topSectionHeight = iosNavOffset + TOP_SECTION_HEIGHT;
-  const scrollPaddingTop = iosNavOffset + HEADER_ROW_HEIGHT + 40;
+  // same as list-create: one style object for ios native headerTitle + android overlay <Text>
+  const headerTitleStyle = useMemo(
+    () => ({
+      ...typography.getTextStyle('heading-4'),
+      color: themeColors.text.primary(),
+    }),
+    [typography, themeColors]
+  );
+  const topSectionHeight =
+    Platform.OS === 'ios' ? headerHeight + FADE_OVERFLOW : TOP_SECTION_HEIGHT;
+  const scrollPaddingTop =
+    Platform.OS === 'ios' ? headerHeight + 24 : HEADER_TOP + HEADER_ROW_HEIGHT + 24;
 
   const listStyle = {
     backgroundColor: themeColors.background.primarySecondaryBlend(),
@@ -52,13 +61,18 @@ export default function BrowseSettingsScreen() {
     containerStyle: styles.listContainer,
   };
 
-  const headerTitleStyle = {
-    ...typography.getTextStyle('heading-3'),
-    color: themeColors.text.primary(),
-  };
-
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
+      {/* ios: native title next to Stack.Toolbar xmark — style matches list-create (heading-4) */}
+      {Platform.OS === 'ios' ? (
+        <Stack.Screen
+          options={{
+            headerTitle: 'Settings',
+            headerTitleStyle,
+            headerLargeTitle: false,
+          }}
+        />
+      ) : null}
       <IosBrowseModalCloseStackToolbar />
       {/* content first (behind) – scrollable settings sections */}
       <View style={styles.contentArea}>
@@ -66,6 +80,7 @@ export default function BrowseSettingsScreen() {
           style={styles.scroll}
           contentContainerStyle={[
             styles.scrollContent,
+            // ios: below native modal header; android: below glass close + title row
             { paddingTop: scrollPaddingTop },
           ]}
           showsVerticalScrollIndicator={false}
@@ -356,24 +371,23 @@ export default function BrowseSettingsScreen() {
             pointerEvents="none"
           />
         </View>
-        <View
-          style={[styles.headerRow, { top: iosNavOffset + HEADER_TOP }]}
-          pointerEvents="box-none"
-        >
-          <View style={styles.headerPlaceholder} pointerEvents="none" />
-          <View style={styles.headerCenter} pointerEvents="none">
-            <Text style={headerTitleStyle}>Settings</Text>
-          </View>
-          <View style={styles.headerPlaceholder} pointerEvents="none" />
-        </View>
         {Platform.OS === 'android' ? (
-          <View style={styles.closeButtonContainer} pointerEvents="box-none">
-            <MainCloseButton
-              onPress={() => router.back()}
-              top={Paddings.screen}
-              left={Paddings.screen}
-            />
-          </View>
+          <>
+            <View style={[styles.headerRow, { top: HEADER_TOP }]} pointerEvents="box-none">
+              <View style={styles.headerPlaceholder} pointerEvents="none" />
+              <View style={styles.headerCenter} pointerEvents="none">
+                <Text style={headerTitleStyle}>Settings</Text>
+              </View>
+              <View style={styles.headerPlaceholder} pointerEvents="none" />
+            </View>
+            <View style={styles.closeButtonContainer} pointerEvents="box-none">
+              <MainCloseButton
+                onPress={() => router.back()}
+                top={Paddings.screen}
+                left={Paddings.screen}
+              />
+            </View>
+          </>
         ) : null}
       </View>
     </View>
@@ -390,6 +404,7 @@ const createStyles = (
     },
     contentArea: {
       flex: 1,
+      zIndex: 0,
     },
     headerOverlay: {
       position: 'absolute',
