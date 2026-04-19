@@ -4,10 +4,10 @@
  * ios: Stack.Toolbar xmark + checkmark; android: glass MainCloseButton + MainSubmitButton in overlay.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, Switch, ScrollView, Platform, Alert } from 'react-native';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -77,13 +77,18 @@ export default function ListCreateScreen() {
   const canSubmit = listTitle.trim().length > 0 && !isCreating;
 
   const headerHeight = useHeaderHeight();
-  const iosNavOffset = Platform.OS === 'ios' ? headerHeight : 0;
-  const topSectionHeight = iosNavOffset + TOP_SECTION_HEIGHT;
-  const scrollTopPadding = iosNavOffset + HEADER_TOP + HEADER_ROW_HEIGHT + 24;
-  const headerTitleStyle = {
-    ...typography.getTextStyle('heading-3'),
-    color: themeColors.text.primary(),
-  };
+  // one object for android overlay <Text> and ios native headerTitleStyle — edit here and both update
+  const headerTitleStyle = useMemo(
+    () => ({
+      ...typography.getTextStyle('heading-4'),
+      color: themeColors.text.primary(),
+    }),
+    [typography, themeColors]
+  );
+  const topSectionHeight =
+    Platform.OS === 'ios' ? headerHeight + FADE_OVERFLOW : TOP_SECTION_HEIGHT;
+  const scrollTopPadding =
+    Platform.OS === 'ios' ? headerHeight + 24 : HEADER_TOP + HEADER_ROW_HEIGHT + 24;
 
   const listGroupProps = {
     backgroundColor: themeColors.background.primarySecondaryBlend(),
@@ -105,6 +110,16 @@ export default function ListCreateScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
+      {/* ios: merges with browse stack — native title sits between Stack.Toolbar buttons; style must live here not _layout */}
+      {Platform.OS === 'ios' ? (
+        <Stack.Screen
+          options={{
+            headerTitle: 'New List',
+            headerTitleStyle,
+            headerLargeTitle: false,
+          }}
+        />
+      ) : null}
       <IosBrowseModalCloseStackToolbar />
       <IosBrowseModalTrailingStackToolbar
         icon="checkmark"
@@ -117,7 +132,7 @@ export default function ListCreateScreen() {
           style={styles.scroll}
           contentContainerStyle={[
             styles.scrollContent,
-            // below native toolbar (ios) or glass header (android) + gap above first group
+            // ios: below native modal header; android: below glass close/save + in-screen title row
             { paddingTop: scrollTopPadding },
           ]}
           showsVerticalScrollIndicator={false}
@@ -227,24 +242,26 @@ export default function ListCreateScreen() {
             pointerEvents="none"
           />
         </View>
-        <View style={[styles.headerRow, { top: iosNavOffset + HEADER_TOP }]} pointerEvents="box-none">
-          <View style={styles.headerPlaceholder} pointerEvents="none" />
-          <View style={styles.headerCenter} pointerEvents="none">
-            <Text style={headerTitleStyle}>New List</Text>
-          </View>
-          <View style={styles.headerPlaceholder} pointerEvents="none" />
-        </View>
         {Platform.OS === 'android' ? (
-          <View style={styles.headerActionsContainer} pointerEvents="box-none">
-            <MainCloseButton onPress={() => router.back()} top={Paddings.screen} left={Paddings.screen} />
-            <MainSubmitButton
-              onPress={handleSubmit}
-              disabled={!canSubmit}
-              top={Paddings.screen}
-              right={Paddings.screen}
-              accessibilityLabel="Create list"
-            />
-          </View>
+          <>
+            <View style={[styles.headerRow, { top: HEADER_TOP }]} pointerEvents="box-none">
+              <View style={styles.headerPlaceholder} pointerEvents="none" />
+              <View style={styles.headerCenter} pointerEvents="none">
+                <Text style={headerTitleStyle}>New List</Text>
+              </View>
+              <View style={styles.headerPlaceholder} pointerEvents="none" />
+            </View>
+            <View style={styles.headerActionsContainer} pointerEvents="box-none">
+              <MainCloseButton onPress={() => router.back()} top={Paddings.screen} left={Paddings.screen} />
+              <MainSubmitButton
+                onPress={handleSubmit}
+                disabled={!canSubmit}
+                top={Paddings.screen}
+                right={Paddings.screen}
+                accessibilityLabel="Create list"
+              />
+            </View>
+          </>
         ) : null}
       </View>
     </View>
