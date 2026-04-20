@@ -273,14 +273,14 @@ export default function RootLayout() {
                 contentStyle: { backgroundColor: 'transparent' },
               }}
             />
-            {/* task-quick-add: full-screen transparent modal — blurred backdrop + keyboard-anchored glass composer (app/task-quick-add.tsx) */}
+            {/* task-quick-add: transparentModal + animation none — fade + sheet motion are both driven in TaskQuickAddOverlay (native pop fade was cutting the slide short) */}
             <Stack.Screen
               name="task-quick-add"
               options={{
                 headerShown: false,
                 presentation: 'transparentModal',
                 gestureEnabled: false,
-                animation: 'fade',
+                animation: 'none',
                 contentStyle: { backgroundColor: 'transparent' },
               }}
             />

@@ -14,8 +14,8 @@ const SHEET_TOP_RADIUS = 22;
 export interface QuickAddGlassPanelProps {
   children: React.ReactNode;
   /**
-   * space reserved above the keyboard / home indicator, applied as padding inside this shell
-   * so the glass material still draws through that band (no visible seam above the keyboard).
+   * height of the band above the keyboard / home indicator — a real view (same veil color),
+   * not shell padding, so the tint matches the content area (padding is outside glassInner, so a fill there never covered it).
    */
   bottomInset: number;
 }
@@ -23,7 +23,7 @@ export interface QuickAddGlassPanelProps {
 export function QuickAddGlassPanel({ children, bottomInset }: QuickAddGlassPanelProps) {
   const themeColors = useThemeColors();
   const glassVeil = themeColors.withOpacity(themeColors.background.primary(), 0.4);
-  const glassTint = themeColors.withOpacity(themeColors.background.primary(), 0.7);
+  const glassTint = themeColors.withOpacity(themeColors.background.primary(), 0.8);
 
   const inner = (
     <View style={styles.glassInner}>
@@ -32,7 +32,11 @@ export function QuickAddGlassPanel({ children, bottomInset }: QuickAddGlassPanel
     </View>
   );
 
-  const shellBottomPad = { paddingBottom: bottomInset };
+  // same rgba as content veil — keyboard strip was only glass + primary tint before (padding is not inside glassInner)
+  const keyboardBand =
+    bottomInset > 0 ? (
+      <View style={{ height: bottomInset, backgroundColor: glassVeil }} pointerEvents="none" />
+    ) : null;
 
   if (Platform.OS === 'ios') {
     return (
@@ -40,13 +44,13 @@ export function QuickAddGlassPanel({ children, bottomInset }: QuickAddGlassPanel
         style={[
           styles.glassShell,
           { borderTopLeftRadius: SHEET_TOP_RADIUS, borderTopRightRadius: SHEET_TOP_RADIUS },
-          shellBottomPad,
         ]}
         glassEffectStyle="clear"
         tintColor={glassTint as any}
         isInteractive
       >
         {inner}
+        {keyboardBand}
       </GlassView>
     );
   }
@@ -62,10 +66,10 @@ export function QuickAddGlassPanel({ children, bottomInset }: QuickAddGlassPanel
           backgroundColor: themeColors.background.elevated(),
           borderColor: themeColors.border.secondary(),
         },
-        shellBottomPad,
       ]}
     >
       {inner}
+      {keyboardBand}
     </View>
   );
 }
