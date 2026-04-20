@@ -16,6 +16,7 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -181,6 +182,11 @@ export interface TaskCreationContentProps {
   /** edit mode: delete from overflow menu (parent usually confirms) */
   onDeleteTask?: () => void;
 
+  /**
+   * create mode on ios: root stack shows native modal header + Stack.Toolbar; scroll starts below measured header
+   * (same idea as list-create). android keeps inset close + floating save — leave false.
+   */
+  useNativeStackHeader?: boolean;
 }
 
 export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
@@ -216,6 +222,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   onActivityLog,
   onDuplicateTask,
   onDeleteTask,
+  useNativeStackHeader = false,
 }) => {
   const router = useGuardedRouter();
   const { setDraft } = useCreateTaskDraft();
@@ -361,11 +368,14 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
 
   // edit: drag pill + trailing slot sit in a short overlay — keep scroll top padding just below that strip (avoid stacking insets.top in pill, strip height, and padding)
   const headerStripHeight = showDragIndicator && isEditMode ? 48 : 60;
-  const scrollPaddingTop = showMainCloseButton
-    ? 24
-    : isEditMode
-      ? headerStripHeight + 8
-      : 48;
+  const stackHeaderHeight = useHeaderHeight();
+  const scrollPaddingTop = useNativeStackHeader
+    ? stackHeaderHeight + 24
+    : showMainCloseButton
+      ? 24
+      : isEditMode
+        ? headerStripHeight + 8
+        : 48;
 
   // small fixed offset from the top of the sheet — extra insets.top was doubling gap below status bar / sheet chrome
   const dragIndicatorTop = showDragIndicator && isEditMode ? 6 : 2;
@@ -419,7 +429,13 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       >
         {/* task title input + optional checkbox row (checkbox on left when showTitleCheckbox) */}
         {/* create variant: extra left padding so title has 20px gap from MainCloseButton (16 + 42 + 20 - screen padding) */}
-        <View style={[styles.titleRow, showMainCloseButton && { paddingLeft: 16 + 42 + 20 - Paddings.screen }]}>
+        <View
+          style={[
+            styles.titleRow,
+            showMainCloseButton &&
+              !useNativeStackHeader && { paddingLeft: 16 + 42 + 20 - Paddings.screen },
+          ]}
+        >
           {showTitleCheckbox && (
             <View style={styles.checkboxWrap}>
               <Checkbox

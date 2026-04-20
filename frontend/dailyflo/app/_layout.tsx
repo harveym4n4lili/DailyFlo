@@ -226,17 +226,62 @@ export default function RootLayout() {
           >
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            {/* task-create: full screen, no indent, not draggable, close via MainCloseButton */}
+            {/* task-create: ios native header + Stack.Toolbar (app/task-create.tsx); android full-screen + glass close */}
             <Stack.Screen
               name="task-create"
+              options={
+                Platform.OS === 'ios'
+                  ? {
+                      headerShown: true,
+                      headerTransparent: true,
+                      headerTitle: '',
+                      headerShadowVisible: false,
+                      headerBackVisible: false,
+                      presentation: 'modal',
+                      gestureEnabled: false,
+                      sheetGrabberVisible: false,
+                      contentStyle: {
+                        backgroundColor: themeColors.background.primary(),
+                      },
+                    }
+                  : {
+                      headerShown: false,
+                      presentation: 'modal',
+                      gestureEnabled: false,
+                      sheetGrabberVisible: false,
+                      contentStyle: {
+                        backgroundColor: themeColors.background.primary(),
+                      },
+                    }
+              }
+            />
+            {/* task-create-test: form sheet — fitToContents sizes native sheet to RN layout (see task-create-test.tsx, no flex:1) */}
+            <Stack.Screen
+              name="task-create-test"
               options={{
                 headerShown: false,
-                presentation: 'modal',
+                presentation: 'formSheet',
                 gestureEnabled: false,
                 sheetGrabberVisible: false,
-                contentStyle: {
-                  backgroundColor: themeColors.background.primary(),
-                },
+                sheetInitialDetentIndex: 0,
+                sheetAllowedDetents: 'fitToContents',
+                sheetExpandsWhenScrolledToEdge: false,
+                ...(Platform.OS === 'ios'
+                  ? { scrollEdgeEffects: { top: 'hidden' as const, bottom: 'hidden' as const } }
+                  : {}),
+                // transparent like task formSheet — opaque here fills the whole window behind the sheet card
+                contentStyle: { backgroundColor: 'transparent' },
+              }}
+            />
+            {/* task-quick-add: full-screen transparent modal — blurred backdrop + keyboard-anchored glass composer (app/task-quick-add.tsx) */}
+            <Stack.Screen
+              name="task-quick-add"
+              options={{
+                headerShown: false,
+                presentation: 'transparentModal',
+                gestureEnabled: false,
+                animation: 'fade',
+                contentStyle: { backgroundColor: 'transparent' },
               }}
             />
             {/* activity-log: use modal (not formSheet) so ScrollView scrolls properly – formSheet has known scroll conflicts */}

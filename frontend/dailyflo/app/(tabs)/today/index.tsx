@@ -34,7 +34,7 @@ export default function TodayScreen() {
     useCallback(() => {
       if (!USE_CUSTOM_LIQUID_TAB_BAR) return undefined;
       setTabFabRegistration({
-        onPress: () => router.push('/task-create' as any),
+        onPress: () => router.push('/task-quick-add' as any),
         accessibilityLabel: 'Add new task',
         accessibilityHint: 'Double tap to create a new task',
         wrapperStyle: fabStyleRef.current,
@@ -47,7 +47,7 @@ export default function TodayScreen() {
   useEffect(() => {
     if (modals.createTask) {
       closeModal('createTask');
-      router.push('/task-create' as any);
+      router.push('/task-quick-add' as any);
     }
   }, [modals.createTask, closeModal, router]);
 
@@ -65,7 +65,7 @@ export default function TodayScreen() {
             ]}
           >
             <FloatingActionButton
-              onPress={() => router.push('/task-create' as any)}
+              onPress={() => router.push('/task-quick-add' as any)}
               accessibilityLabel="Add new task"
               accessibilityHint="Double tap to create a new task"
             />
