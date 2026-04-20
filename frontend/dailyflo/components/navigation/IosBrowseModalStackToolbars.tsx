@@ -1,7 +1,7 @@
 /**
- * ios browse modals: close (xmark) in the native left bar; optional trailing action on the right.
- * Stack.Toolbar attaches only when browse/_layout gives the screen headerShown on ios — glass
- * MainCloseButton / MainCreateButton / MainSubmitButton stay on android with headerShown false.
+ * ios modals: close (xmark) in the native left bar; optional trailing action on the right.
+ * Stack.Toolbar attaches when the stack screen uses headerShown on ios (browse modals, task-create, etc.).
+ * android: glass MainCloseButton in-screen where the screen sets headerShown false.
  */
 
 import React from 'react';
@@ -11,7 +11,12 @@ import { Stack } from 'expo-router';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
-export function IosBrowseModalCloseStackToolbar() {
+export type IosBrowseModalCloseStackToolbarProps = {
+  /** optional — e.g. task-create debounced close; defaults to router.back() */
+  onPress?: () => void;
+};
+
+export function IosBrowseModalCloseStackToolbar({ onPress }: IosBrowseModalCloseStackToolbarProps = {}) {
   const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const tint = themeColors.text.primary();
@@ -20,11 +25,13 @@ export function IosBrowseModalCloseStackToolbar() {
     return null;
   }
 
+  const handlePress = onPress ?? (() => router.back());
+
   return (
     <Stack.Toolbar placement="left">
       <Stack.Toolbar.Button
         icon="xmark"
-        onPress={() => router.back()}
+        onPress={handlePress}
         accessibilityLabel="Close"
         tintColor={tint}
       />

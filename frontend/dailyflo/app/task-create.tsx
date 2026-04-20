@@ -1,14 +1,26 @@
 /**
- * Task create – full-screen create task form (no indent, drag to close only).
- * Presentation is fullScreenModal set on root Stack in app/_layout.tsx.
+ * Task create – full-screen create task form.
+ * ios: native modal header (no centered title) + Stack.Toolbar close/check; title field + checkbox below.
+ * android: glass close + floating Create button; same form body.
  */
 
+// keep this as app/task-create.tsx (flat route), not task-create/index inside a layout with <Slot />:
+// Slot adds an inner stack so useRoute() in the leaf screen is a *nested* route key. Stack.Toolbar registers
+// header items under that key, but the root stack only merges composition for the *modal* route key — so the
+// close/save items never appeared. list-create avoids a nested navigator, so its toolbars work; match that here.
+
 import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { View, Platform } from 'react-native';
+import { Stack, useLocalSearchParams } from 'expo-router';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
+import {
+  IosBrowseModalCloseStackToolbar,
+  IosBrowseModalTrailingStackToolbar,
+} from '@/components/navigation/IosBrowseModalStackToolbars';
 import * as Haptics from 'expo-haptics';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeColors } from '@/hooks/useColorPalette';
 import { useAppDispatch } from '@/store';
 import { createTask } from '@/store/slices/tasks/tasksSlice';
 import { useTasks } from '@/store/hooks';
@@ -36,6 +48,7 @@ export default function TaskCreateScreen() {
   const router = useGuardedRouter();
   const params = useLocalSearchParams<{ dueDate?: string }>();
   const { themeColor } = useThemeColor();
+  const themeColors = useThemeColors();
   const dispatch = useAppDispatch();
   const { isCreating, createError } = useTasks();
   const { draft, setDraft, setDueDate, setTime, setDuration, setAlerts } = useCreateTaskDraft();
@@ -46,6 +59,7 @@ export default function TaskCreateScreen() {
     ...(params.dueDate ? { dueDate: params.dueDate } : {}),
   }));
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [createAsCompleted, setCreateAsCompleted] = useState(false);
 
   // on mount: if we came from Duplicate, consume the pre-filled data and apply it (runs once)
   const hasConsumedDuplicateRef = useRef(false);
@@ -76,6 +90,7 @@ export default function TaskCreateScreen() {
     setDraft({ dueDate: initialDueDate, time: undefined, duration: undefined, alerts: [], pickedListId: undefined });
     if (params.dueDate) setLocalValues((prev) => ({ ...prev, dueDate: params.dueDate }));
     setSubtasks([]);
+    setCreateAsCompleted(false);
   }, [params.dueDate, setDraft]);
 
   const values: Partial<TaskFormValues> = useMemo(
@@ -166,6 +181,7 @@ export default function TaskCreateScreen() {
       color: values.color || themeColor,
       routineType: values.routineType || 'once',
       listId: values.listId || undefined,
+      ...(createAsCompleted ? { isCompleted: true } : {}),
       metadata: {
         subtasks: taskSubtasks,
         reminders: [],
@@ -181,6 +197,7 @@ export default function TaskCreateScreen() {
         setLocalValues({ ...getDefaults(themeColor) });
         setDraft({ dueDate: undefined, time: undefined, duration: undefined, alerts: [], pickedListId: undefined });
         setSubtasks([]);
+        setCreateAsCompleted(false);
         router.back();
       }
     } catch (e) {
@@ -205,13 +222,39 @@ export default function TaskCreateScreen() {
     [router],
   );
 
+  const useNativeHeader = Platform.OS === 'ios';
+
   return (
-    <TaskScreenContent
+    <View style={{ flex: 1, backgroundColor: themeColors.background.primary() }}>
+      {useNativeHeader ? (
+        <Stack.Screen
+          options={{
+            // empty title: only show leading/trailing toolbar items (matches root stack headerTitle: '')
+            headerTitle: '',
+            headerLargeTitle: false,
+          }}
+        />
+      ) : null}
+      <IosBrowseModalCloseStackToolbar onPress={handleClose} />
+      <IosBrowseModalTrailingStackToolbar
+        icon="checkmark"
+        onPress={handleSave}
+        disabled={!isSaveButtonVisible || isCreating}
+        accessibilityLabel="Create task"
+      />
+      <TaskScreenContent
         visible={true}
         values={values}
         onChange={onChange}
         onClose={handleClose}
-        hasChanges={!!(values.title?.trim() || values.description?.trim() || subtasks.length > 0)}
+        hasChanges={
+          !!(
+            values.title?.trim() ||
+            values.description?.trim() ||
+            subtasks.length > 0 ||
+            createAsCompleted
+          )
+        }
         isSaveButtonVisible={isSaveButtonVisible}
         onCreate={handleSave}
         saveButtonText="Create"
@@ -227,13 +270,17 @@ export default function TaskCreateScreen() {
         onCreateSubtask={handleCreateSubtask}
         pendingFocusSubtaskId={pendingFocusSubtaskId}
         onClearPendingFocus={() => setPendingFocusSubtaskId(null)}
-        embedHeaderButtons={true}
+        embedHeaderButtons={!useNativeHeader}
         isEditMode={false}
-        showTitleCheckbox={false}
-        showMainCloseButton={true}
+        showTitleCheckbox
+        titleCheckboxCompleted={createAsCompleted}
+        onTitleCheckboxToggle={() => setCreateAsCompleted((c) => !c)}
+        showMainCloseButton={!useNativeHeader}
         showDragIndicator={false}
         saveButtonBottomInsetWhenKeyboardHidden={44}
         pickerHandlers={pickerHandlers}
+        useNativeStackHeader={useNativeHeader}
       />
+    </View>
   );
 }
