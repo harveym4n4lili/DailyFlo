@@ -1637,10 +1637,180 @@ Updated User app, models, serializers, views and urls
 ### Notes
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [08/04/2026] - [Wednesday]
 
+### Today's Goals
+- [x] got liquid tab minimize-on-scroll behaviour working more reliably
+
+### Plans For Future
+- keep iterating custom liquid tab chrome and native stack headers
+- consider palettes and UI reconstruction
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [09/04/2026] - [Thursday]
+
+### Today's Goals
+- [x] positioned the FAB from the screen safe-bottom edge instead of reserving space for the native tab bar
+- [x] aligned FAB margins with Paddings.screenSmall
+
+### Plans For Future
+- keep iterating custom liquid tab chrome and native stack headers
+- consider palettes and UI reconstruction
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [10/04/2026] - [Friday]
+
+### Today's Goals
+- [x] created a custom navbar and extracted bottom tab chrome into a reusable tabBarChrome module (layout constants, FAB metrics context, feature flag for the liquid bar)
+- [x] refined liquid tab bar spacing, typography, and dark-mode unselected colors
+- [x] replaced Today’s slot layout with a single-screen Stack to fix the empty navigator error under NativeTabs
+
+### Plans For Future
+- keep iterating custom liquid tab chrome and native stack headers
+- consider palettes and UI reconstruction
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [11/04/2026] - [Saturday]
+
+### Today's Goals
+- [x] updated the devlog and forward planning notes
+
+### Plans For Future
+- ship liquid-glass bottom chrome and overlay FAB layer
+- consider palettes and UI reconstruction
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [13/04/2026] - [Monday]
+
+### Today's Goals
+- [x] added liquid-glass bottom chrome with full-width gradient fade, stable overlay stack, and a tab-level FAB layer on Today/Planner/Browse so the FAB stays above the fade
+
+### Plans For Future
+- harden sheets and task edit against RNScreens layout edge cases
+- consider palettes and UI reconstruction
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [14/04/2026] - [Tuesday]
+
+### Today's Goals
+- [x] fixed task detail formSheet so content shows (removed duplicate route, suppressed tab chrome over sheets, inner Stack for /task, hardened task edit layout for RNScreens)
+
+### Plans For Future
+- adopt native stack toolbars more broadly and stabilize tab chrome across modals
+- consider palettes and UI reconstruction
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [15/04/2026] - [Wednesday]
+
+### Today's Goals
+- [x] stabilized liquid tab chrome and FAB (always mount chrome stack, keep overlay FAB in tree, correct selected tab through planner month-select and root modals)
+- [x] adopted native iOS Stack.Toolbar across main flows with slimmer selection chrome
+- [x] polished planner week strip (nav-bar month title, padding, FAB-aligned selected day)
+
+### Plans For Future
+- refine task edit sheet chrome and recurrence controls
+- consider palettes and UI reconstruction
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [16/04/2026] - [Thursday]
+
+### Today's Goals
+- [x] refocused task edit sheet on in-content chrome (hid native stack header, reusable ActionContextMenu with glass circle / Android dropdown, tighter sheet and ellipsis styling)
+- [x] fixed task recurrence pills (open on tap with native menu, usable before due date, larger tap targets on Android)
+- [x] added header chrome scale constants, resized iOS dashboard toolbar glyphs (custom Image + SwiftUI menu, Ellipses.png overflow)
+- [x] fixed fetch races and planner local-calendar day handling so Today and Planner stay consistent on first open
+- [x] refactored Browse stack so iOS uses native Stack.Toolbar for back and modal actions while Android keeps glass header buttons
+
+### Plans For Future
+- ship route-based multi-select and bulk actions on iOS
+- consider palettes and UI reconstruction
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [17/04/2026] - [Friday]
+
+### Today's Goals
+- [x] implemented route-based iOS task selection (pushed stack screens, Redux lifecycle, browse/planner shared bodies, bottom-bar dismiss, optional fade transitions, TaskCard detail links)
+- [x] added iOS native bottom selection toolbar with shared bulk actions, liquid tab chrome sync with selection/date flow, and dimmed actions when nothing is selected
+- [x] replaced select-all toolbar icons with text and a toolbar-safe button variant
+- [x] unified planner/today/browse selection toolbars (four icon actions; dropped extra planner cancel/count row)
+- [x] small spacing passes on selection chrome
+
+### Plans For Future
+- guard navigation against duplicate pushes and keep polishing selection UX
+- consider palettes and UI reconstruction
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [18/04/2026] - [Saturday]
+
+### Today's Goals
+- [x] added app-wide navigation deduping (`useGuardedRouter`) so rapid double taps on the same route no longer open duplicate stack screens
+
+### Plans For Future
+- align remaining browse modals with native stack presentation
+- consider palettes and UI reconstruction
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [19/04/2026] - [Sunday]
+
+### Today's Goals
+- [x] aligned Browse modal headers (New List + Settings) with native iOS stack titles and shared heading-4 styling
+- [x] matched scroll/blur insets to list-create
+- [x] minor repo hygiene (`.gitignore`, dev-log)
+
+### Plans For Future
+- ship full-screen quick-add flow from the FAB
+- consider palettes and UI reconstruction
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+---
+## [20/04/2026] - [Monday]
+
+### Today's Goals
+- [x] added full-screen transparent task quick-add modal with keyboard-anchored liquid-glass composer (backdrop + glass panel) and wired the Today tab FAB to the new route
+- [x] polished quick-add open/close transitions
+
+### Plans For Future
+- iterate quick-add UX (validation, list routing, dismiss gestures)
+- consider palettes and UI reconstruction
+
+### Notes
+- Decided with paid LLM integration for app, need to decide which LLM model and pricing
+- need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
 
 TODO:
-- ADD A NAVBAR CHROME FADE WITH BLUR.
-- FIX STACK SCREENS FOR TASK VIEW/CREATE
-- REFACTOR CLOSE BUTTONS/TOOLBARS WITH STACK TOOLBARS
-- LINK TOOLBARS WITH ZOOM TRANSITION (SEE SDK 55 YT VIDEO)
+- Fix new list header -
+- restyle create screen 
+- restyle search bar
