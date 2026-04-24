@@ -31,6 +31,24 @@ export default function BrowseLayout() {
               }
         }
       />
+      <Stack.Screen
+        name="search"
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+            : {
+                headerShown: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+        }
+      />
       {/* settings: modal — ios native header + Stack.Toolbar close; android glass MainCloseButton in-screen */}
       <Stack.Screen
         name="settings"
