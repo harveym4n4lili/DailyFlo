@@ -4,8 +4,8 @@
  */
 
 import React from 'react';
-import { Text, Pressable, StyleSheet, View } from 'react-native';
-import { getTextStyle } from '@/constants/Typography';
+import { Text, Pressable, StyleSheet, View, Platform } from 'react-native';
+import { getTypographyStyle } from '@/constants/Typography';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
@@ -24,6 +24,7 @@ export const SubtaskCreateButton: React.FC<SubtaskCreateButtonProps> = ({
   onPress,
   disabled = false,
 }) => {
+  const typographyPlatform = Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
   const themeColors = useThemeColors();
   const tertiaryColor = themeColors.text.tertiary();
 
@@ -40,7 +41,7 @@ export const SubtaskCreateButton: React.FC<SubtaskCreateButtonProps> = ({
       <View style={styles.checkboxContainer}>
         <Checkbox checked={false} disabled />
       </View>
-      <Text style={[getTextStyle('body-large'), styles.label, { color: tertiaryColor }]}>
+      <Text style={[getTypographyStyle('body-large', typographyPlatform), styles.label, { color: tertiaryColor }]}>
         Add subtask
       </Text>
     </Pressable>

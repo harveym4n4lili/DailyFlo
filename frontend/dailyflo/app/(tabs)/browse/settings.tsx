@@ -476,15 +476,15 @@ const createStyles = (
     logoutButton: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: Paddings.groupedListContentHorizontal,
-      paddingVertical: Paddings.pillVertical,
-      borderRadius: 24,
+      paddingHorizontal: Paddings.formDataPillHorizontal,
+      paddingVertical: Paddings.formDataPillVertical,
+      borderRadius: Paddings.formDataPillRadius,
       marginTop: 24,
       minHeight: 44,
     },
     logoutButtonText: {
       ...typography.getTextStyle('body-large'),
-      marginLeft: Paddings.groupedListIconTextSpacing,
+      marginLeft: Paddings.formDataPillIconGap,
     },
     bottomSpacer: {
       height: 200,

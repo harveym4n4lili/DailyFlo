@@ -51,9 +51,16 @@ export const Paddings = {
   // used by: GroupHeader, ModalHeader, TaskForm, +not-found
   touchTargetSmall: 4,
 
-  // pill/chip padding - matches FormDetailSection routine pill, used by browse list pills
-  pillHorizontal: 14, // not yet used (recurrence pill uses groupedListContentHorizontal)
-  pillVertical: 12, // used by: FormDetailSection (repeating pill), browse list pills
+  // legacy browse/settings pill rhythm before formDataPill* — prefer formDataPill* for new pill UI
+  pillHorizontal: 14,
+  pillVertical: 12,
+
+  // form data pills — TaskQuickAddForm, FormDetailSection, browse listPill, settings logout, FormPickerButton, TaskOptionButton
+  formDataPillVertical: 12,
+  formDataPillHorizontal: 14,
+  formDataPillRadius: 20,
+  // space between leading icon and label inside those pills (separate from GroupedList row icon column)
+  formDataPillIconGap: 8,
 
   // indicator/tag padding
   // used by: TaskIndicators
@@ -67,12 +74,12 @@ export const Paddings = {
   contentVertical: 64,
 
   // GroupedList padding - content padding inside each list item wrapper
-  // used by: GroupedList, TaskForm, CustomTextInput, IconColorModal, TaskScreenContent, FormDetailSection (recurrence pill)
+  // used by: GroupedList, TaskForm, CustomTextInput, IconColorModal, TaskScreenContent
   groupedListContentHorizontal: 16,
   // used by: GroupedList
   groupedListContentVertical: 16,
-  // icon-to-text spacing in GroupedList rows (FormDetailButton, recurrence pill)
-  // used by: FormDetailButton, CustomFormDetailButton, FormDetailSection (recurrence)
+  // icon-to-text spacing in GroupedList rows (FormDetailButton, etc.)
+  // used by: FormDetailButton, CustomFormDetailButton
   groupedListIconTextSpacing: 12,
   // gap between GroupedListHeader and content below (grouped list or pills)
   // used by: browse screen (groupedListSection, listsPillsContainer)

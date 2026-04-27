@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   repeatingIcon: {
-    marginRight: Paddings.groupedListIconTextSpacing,
+    marginRight: Paddings.formDataPillIconGap,
   },
 
   // --- PADDING STYLES ---
@@ -336,9 +336,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     alignSelf: 'flex-start' as const,
-    paddingVertical: Paddings.pillVertical,
-    paddingHorizontal: Paddings.groupedListContentHorizontal,
-    borderRadius: 24,
+    paddingVertical: Paddings.formDataPillVertical,
+    paddingHorizontal: Paddings.formDataPillHorizontal,
+    borderRadius: Paddings.formDataPillRadius,
     overflow: 'hidden',
   },
 

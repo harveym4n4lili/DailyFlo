@@ -146,6 +146,7 @@ export default function TaskEditScreen() {
       duration: t.duration,
       alerts: (t.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
       pickedListId: undefined,
+      routineType: t.routineType,
     });
     setLocalValues({
       title: t.title,
@@ -489,7 +490,8 @@ export default function TaskEditScreen() {
     );
   }, [taskId, task?.title, dispatch, router]);
 
-  // duplicate: stash snapshot in DuplicateTaskContext, then replace with root /task-create (same stack as this modal — no tab-prefixed route)
+  // duplicate: stash snapshot in DuplicateTaskContext, then replace with root /task-quick-add.
+  // task-quick-add is now the canonical create flow used across the app.
   const handleDuplicateTask = useCallback(() => {
     setDuplicateData({
       values: {
@@ -512,7 +514,7 @@ export default function TaskEditScreen() {
         isEditing: false,
       })),
     });
-    router.replace('/task-create' as any);
+    router.replace('/task-quick-add' as any);
   }, [values, subtasks, setDuplicateData, router]);
 
   const pickerHandlers = useMemo(

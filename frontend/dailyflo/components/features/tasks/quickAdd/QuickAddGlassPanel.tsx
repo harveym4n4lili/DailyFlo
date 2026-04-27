@@ -9,7 +9,7 @@ import GlassView from 'expo-glass-effect/build/GlassView';
 
 import { useThemeColors } from '@/hooks/useColorPalette';
 
-const SHEET_TOP_RADIUS = 22;
+const SHEET_TOP_RADIUS = 32;
 
 export interface QuickAddGlassPanelProps {
   children: React.ReactNode;
@@ -22,8 +22,8 @@ export interface QuickAddGlassPanelProps {
 
 export function QuickAddGlassPanel({ children, bottomInset }: QuickAddGlassPanelProps) {
   const themeColors = useThemeColors();
-  const glassVeil = themeColors.withOpacity(themeColors.background.primary(), 0.4);
-  const glassTint = themeColors.withOpacity(themeColors.background.primary(), 0.8);
+  const glassVeil = themeColors.withOpacity(themeColors.background.primary(), 0.6);
+  const glassTint = themeColors.withOpacity(themeColors.background.primary(), 0.9);
 
   const inner = (
     <View style={styles.glassInner}>
@@ -47,7 +47,7 @@ export function QuickAddGlassPanel({ children, bottomInset }: QuickAddGlassPanel
         ]}
         glassEffectStyle="clear"
         tintColor={glassTint as any}
-        isInteractive
+        isInteractive={false}
       >
         {inner}
         {keyboardBand}
