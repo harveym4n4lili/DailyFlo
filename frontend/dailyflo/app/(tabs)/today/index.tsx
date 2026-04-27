@@ -14,6 +14,14 @@ import { TodayScreenContent } from './TodayScreenContent';
 
 import { useUI } from '@/store/hooks';
 
+// same shape as planner quick-add — ISO dueDate seeds CreateTaskDraft so Date pill shows Today
+function pushQuickAddWithTodayDue(router: ReturnType<typeof useGuardedRouter>) {
+  router.push({
+    pathname: '/task-quick-add' as any,
+    params: { dueDate: new Date().toISOString() },
+  });
+}
+
 export default function TodayScreen() {
   const router = useGuardedRouter();
   const { modals, closeModal, selection } = useUI();
@@ -34,7 +42,7 @@ export default function TodayScreen() {
     useCallback(() => {
       if (!USE_CUSTOM_LIQUID_TAB_BAR) return undefined;
       setTabFabRegistration({
-        onPress: () => router.push('/task-quick-add' as any),
+        onPress: () => pushQuickAddWithTodayDue(router),
         accessibilityLabel: 'Add new task',
         accessibilityHint: 'Double tap to create a new task',
         wrapperStyle: fabStyleRef.current,
@@ -47,7 +55,7 @@ export default function TodayScreen() {
   useEffect(() => {
     if (modals.createTask) {
       closeModal('createTask');
-      router.push('/task-quick-add' as any);
+      pushQuickAddWithTodayDue(router);
     }
   }, [modals.createTask, closeModal, router]);
 
@@ -65,7 +73,7 @@ export default function TodayScreen() {
             ]}
           >
             <FloatingActionButton
-              onPress={() => router.push('/task-quick-add' as any)}
+              onPress={() => pushQuickAddWithTodayDue(router)}
               accessibilityLabel="Add new task"
               accessibilityHint="Double tap to create a new task"
             />

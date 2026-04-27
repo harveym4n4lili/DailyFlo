@@ -8,13 +8,14 @@ import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { getTextStyle } from '@/constants/Typography';
+import { getTypographyStyle } from '@/constants/Typography';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { DashedSeparator } from '@/components/ui/borders';
 import { Paddings } from '@/constants/Paddings';
 import { ALERT_OPTIONS } from './alertOptions';
 
 export function AlertSelectScreen() {
+  const typographyPlatform = Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
   const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
   const { draft, setAlerts } = useCreateTaskDraft();
@@ -77,7 +78,7 @@ export function AlertSelectScreen() {
                   </View>
                   <Text
                     style={[
-                      getTextStyle('body-large'),
+                      getTypographyStyle('body-large', typographyPlatform),
                       {
                         color: themeColors.text.primary(),
                       },

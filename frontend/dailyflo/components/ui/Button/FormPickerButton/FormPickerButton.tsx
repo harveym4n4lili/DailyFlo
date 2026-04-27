@@ -190,11 +190,11 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   // the highlight is a separate overlay that fades in/out smoothly
   const animatedStyle = (highlightOpacity && hasValue) ? {
     backgroundColor: 'transparent', // static background color
-    borderRadius: 16,
+    borderRadius: Paddings.formDataPillRadius,
     // lock in a consistent pill height for all picker buttons with values
     minHeight: 32,
     paddingVertical: Paddings.none,
-    paddingHorizontal: Paddings.formPickerIconPadding,
+    paddingHorizontal: Paddings.formDataPillHorizontal,
     // border removed - no border on picker buttons
     borderWidth: 1,
     borderColor: themeColors.border.primary(),
@@ -206,7 +206,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
   // static styles when no animation is needed or no value is set
   const staticStyle = !highlightOpacity || !hasValue ? {
     backgroundColor: 'transparent',
-    borderRadius: hasValue ? 16 : 0,
+    borderRadius: hasValue ? Paddings.formDataPillRadius : 0,
     // ensure buttons without values use the same base height
     // so the date picker doesn't appear taller than its siblings
     minHeight: 32,
@@ -266,15 +266,15 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
           justifyContent: 'center',
           // keep a consistent fixed gap between icon and text whenever text is shown
           // when there is no text (icon-only pill), gap is 0
-          gap: shouldShowText ? 4 : 0,
+          gap: shouldShowText ? Paddings.formDataPillIconGap : 0,
           // when there is no value, add a subtle border so the pill is still clearly visible
           // when there is a value, keep the existing styling (no extra border here)
           borderWidth: hasValue ? 0 : 1,
           borderColor: hasValue ? 'transparent' : themeColors.border.primary(),
-          borderRadius: hasValue ? 0 : 16,
+          borderRadius: hasValue ? 0 : Paddings.formDataPillRadius,
           // uniform vertical padding so icon-only and text pills have identical height
-          paddingVertical: Paddings.contextMenuVertical,
-          paddingHorizontal: hasValue ? Paddings.none : Paddings.formPickerIconPadding,
+          paddingVertical: Paddings.formDataPillVertical,
+          paddingHorizontal: hasValue ? Paddings.none : Paddings.formDataPillHorizontal,
           // add right-side padding so text does not touch the pill border **only**
           // when there is no value (when InnerButton owns the border).
           // when there IS a value, the outer animated container already supplies horizontal padding,
@@ -291,10 +291,8 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
             // no extra vertical padding here; we center the whole row via InnerButton
             alignItems: 'center',
             justifyContent: 'center',
-            // add consistent horizontal padding around the icon so the visual
-            // space between the icon and the text is the same for ALL picker buttons
-            // regardless of whether they currently have a value or not
-            marginRight: 2,
+            // row gap + formDataPillIconGap handle icon–label spacing (empty state)
+            marginRight: 0,
           }}
         >
           {hasValue ? (
@@ -332,7 +330,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
           <View style={{
             alignItems: 'center',
             justifyContent: 'center',
-            marginLeft: 8, // spacing from the main icon
+            marginLeft: Paddings.formDataPillIconGap,
           }}>
             {rightContainer}
           </View>
@@ -399,7 +397,7 @@ export const FormPickerButton: React.FC<FormPickerButtonProps> = ({
     return (
       <GlassView
         style={{
-          borderRadius: 16,
+          borderRadius: Paddings.formDataPillRadius,
           // keep background transparent so we rely on the system glass effect only
           backgroundColor: 'transparent',
           // add a subtle border only when we actually have a value selected

@@ -119,7 +119,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
       if (mode !== 'index' || !USE_CUSTOM_LIQUID_TAB_BAR) return undefined;
       setTabFabRegistration({
         onPress: () => {
-          router.push({ pathname: '/task-create-test' as any, params: { dueDate: selectedDate } });
+          router.push({ pathname: '/task-quick-add' as any, params: { dueDate: selectedDate } });
         },
         accessibilityLabel: 'Add new task',
         accessibilityHint: 'Double tap to create a new task',
@@ -485,7 +485,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
             >
               <FloatingActionButton
                 onPress={() => {
-                  router.push({ pathname: '/task-create-test' as any, params: { dueDate: selectedDate } });
+                  router.push({ pathname: '/task-quick-add' as any, params: { dueDate: selectedDate } });
                 }}
                 accessibilityLabel="Add new task"
                 accessibilityHint="Double tap to create a new task"

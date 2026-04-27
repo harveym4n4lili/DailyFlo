@@ -6,7 +6,17 @@
  */
 
 import React, { useCallback, useMemo, useRef } from 'react';
-import { BackHandler, Keyboard, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import {
+  Alert,
+  BackHandler,
+  InteractionManager,
+  Keyboard,
+  Platform,
+  StyleSheet,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -49,12 +59,25 @@ function sheetEnterOffset(windowHeight: number) {
 export interface TaskQuickAddOverlayProps {
   /** router.back() after exit timing completes */
   onRequestClose: () => void;
+  /**
+   * pass through to TaskQuickAddForm — show subtasks + description GroupedList (default false).
+   * task-quick-add can set via ?showSubtasks=1
+   */
+  showSubtasksAndDescription?: boolean;
 }
 
-export function TaskQuickAddOverlay({ onRequestClose }: TaskQuickAddOverlayProps) {
+export function TaskQuickAddOverlay({
+  onRequestClose,
+  showSubtasksAndDescription = false,
+}: TaskQuickAddOverlayProps) {
   const keyboardHeight = useKeyboardHeight();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+
+  // title ref lives here so useFocusEffect runs in the same module as the quick-add route tree — refocus after popping /date-select etc.
+  const titleInputRef = useRef<TextInput>(null);
+  // false while closing: native Alert.dismiss can restore first responder to the title field and pop the keyboard over the exit animation
+  const titleFocusAllowedRef = useRef(true);
 
   const bottomInset = useMemo(
     () => Math.max(0, keyboardHeight), // DONT CHANGE THIS
@@ -68,13 +91,22 @@ export function TaskQuickAddOverlay({ onRequestClose }: TaskQuickAddOverlayProps
   const onRequestCloseRef = useRef(onRequestClose);
   onRequestCloseRef.current = onRequestClose;
 
+  // form pushes edits here so backdrop + android back read latest without stale closures
+  const hasUnsavedWorkRef = useRef(false);
+  const onHasUnsavedWorkChange = useCallback((hasUnsaved: boolean) => {
+    hasUnsavedWorkRef.current = hasUnsaved;
+  }, []);
+
   const finishClose = useCallback(() => {
     onRequestCloseRef.current();
   }, []);
 
-  const handleClose = useCallback(() => {
+  // runs the sheet exit animation then router.back — used after optional discard confirm
+  const performClose = useCallback(() => {
     if (isExitingRef.current) return;
     isExitingRef.current = true;
+    titleFocusAllowedRef.current = false;
+    titleInputRef.current?.blur();
     Keyboard.dismiss();
     const slide = sheetEnterOffset(windowHeight);
     const exitConfig = { duration: EXIT_OVERLAY_MS, easing: IOS_STANDARD_EASING };
@@ -86,8 +118,30 @@ export function TaskQuickAddOverlay({ onRequestClose }: TaskQuickAddOverlayProps
     });
   }, [backdropOpacity, sheetTranslateY, finishClose, windowHeight]);
 
-  const handleCloseRef = useRef(handleClose);
-  handleCloseRef.current = handleClose;
+  // native alert when closing with any quick-add edits; tap outside or back uses this path
+  const confirmCloseIfNeeded = useCallback(() => {
+    if (!hasUnsavedWorkRef.current) {
+      performClose();
+      return;
+    }
+    Alert.alert('Discard changes?', 'You will lose what you entered.', [
+      { text: 'Keep editing', style: 'cancel' },
+      {
+        text: 'Discard',
+        style: 'destructive',
+        // defer close until after the alert tears down — otherwise ios restores focus to the text field and the keyboard flashes
+        onPress: () => {
+          titleFocusAllowedRef.current = false;
+          titleInputRef.current?.blur();
+          Keyboard.dismiss();
+          setTimeout(() => performClose(), 60);
+        },
+      },
+    ]);
+  }, [performClose]);
+
+  const handleCloseRef = useRef(confirmCloseIfNeeded);
+  handleCloseRef.current = confirmCloseIfNeeded;
 
   useFocusEffect(
     useCallback(() => {
@@ -104,13 +158,38 @@ export function TaskQuickAddOverlay({ onRequestClose }: TaskQuickAddOverlayProps
       let sub: { remove: () => void } | undefined;
       if (Platform.OS === 'android') {
         sub = BackHandler.addEventListener('hardwareBackPress', () => {
-          handleCloseRef.current();
+          handleCloseRef.current(); // may show discard alert if form has edits
           return true;
         });
       }
       return () => sub?.remove();
       // eslint-disable-next-line react-hooks/exhaustive-deps -- shared values are stable reanimated refs; only re-run enter when height changes
     }, [windowHeight]),
+  );
+
+  // keyboard: reopen whenever the quick-add modal route is focused again (return from picker stack screens).
+  // interactionmanager + delayed retries beat ios sheet transition stealing focus on first call.
+  useFocusEffect(
+    useCallback(() => {
+      titleFocusAllowedRef.current = true;
+      let cancelled = false;
+      const timeouts: ReturnType<typeof setTimeout>[] = [];
+      const focusTitle = () => {
+        if (cancelled || !titleFocusAllowedRef.current) return;
+        titleInputRef.current?.focus();
+      };
+      const task = InteractionManager.runAfterInteractions(() => {
+        focusTitle();
+        timeouts.push(setTimeout(focusTitle, 120));
+        timeouts.push(setTimeout(focusTitle, 300));
+      });
+      return () => {
+        cancelled = true;
+        timeouts.forEach(clearTimeout);
+        const cancel = (task as { cancel?: () => void } | undefined)?.cancel;
+        cancel?.();
+      };
+    }, []),
   );
 
   const backdropAnimatedStyle = useAnimatedStyle(() => ({
@@ -124,12 +203,17 @@ export function TaskQuickAddOverlay({ onRequestClose }: TaskQuickAddOverlayProps
   return (
     <View style={styles.root} pointerEvents="box-none">
       <Animated.View style={[styles.backdropWrap, backdropAnimatedStyle]} pointerEvents="box-none">
-        <QuickAddModalBackdrop onRequestClose={handleClose} />
+        <QuickAddModalBackdrop onRequestClose={confirmCloseIfNeeded} />
       </Animated.View>
 
       <Animated.View style={[styles.keyboardAnchor, sheetAnimatedStyle]} pointerEvents="box-none">
         <QuickAddGlassPanel bottomInset={bottomInset}>
-          <TaskQuickAddForm />
+          <TaskQuickAddForm
+            titleInputRef={titleInputRef}
+            titleFocusAllowedRef={titleFocusAllowedRef}
+            showSubtasksAndDescription={showSubtasksAndDescription}
+            onHasUnsavedWorkChange={onHasUnsavedWorkChange}
+          />
         </QuickAddGlassPanel>
       </Animated.View>
     </View>

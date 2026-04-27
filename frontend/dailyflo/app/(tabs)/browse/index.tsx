@@ -292,20 +292,20 @@ const createStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       alignSelf: 'flex-start',
-      paddingHorizontal: Paddings.groupedListContentHorizontal,
-      paddingVertical: Paddings.pillVertical,
-      borderRadius: 24,
+      paddingHorizontal: Paddings.formDataPillHorizontal,
+      paddingVertical: Paddings.formDataPillVertical,
+      borderRadius: Paddings.formDataPillRadius,
       minHeight: 44,
     },
     listPillName: {
       ...typography.getTextStyle('body-large'),
-      marginLeft: Paddings.groupedListIconTextSpacing,
+      marginLeft: Paddings.formDataPillIconGap,
     },
     listPillNameBold: {
       fontWeight: '700',
     },
     listPillCountGap: {
-      width: 12,
+      width: Paddings.formDataPillIconGap,
     },
     listPillCount: {
       ...typography.getTextStyle('body-large'),

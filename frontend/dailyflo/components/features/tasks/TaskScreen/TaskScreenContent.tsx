@@ -28,7 +28,7 @@ import { getListDisplayName } from '@/utils/listDisplayName';
 import { FormDetailSection, SubtaskSection } from './sections';
 import { SaveButton, MainCloseButton } from '@/components/ui/button';
 import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisplay } from '@/components/ui/button';
-import { getTextStyle } from '@/constants/Typography';
+import { getTypographyStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
@@ -223,7 +223,12 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   onDuplicateTask,
   onDeleteTask,
   useNativeStackHeader = false,
+  subtaskListBackgroundColor,
+  subtaskListBorderRadius,
+  subtaskListBorderWidth,
+  subtaskListBorderColor,
 }) => {
+  const typographyPlatform = Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
   const router = useGuardedRouter();
   const { setDraft } = useCreateTaskDraft();
   const { lists: reduxLists } = useLists();
@@ -268,6 +273,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       time: values.time,
       duration: values.duration,
       alerts: values.alerts ?? [],
+      routineType: (values.routineType as RoutineType) || 'once',
     });
     router.push('/date-select');
   };
@@ -294,6 +300,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       time: values.time,
       duration: values.duration,
       alerts: values.alerts ?? [],
+      routineType: (values.routineType as RoutineType) || 'once',
     });
     router.push('/time-duration-select');
   };
@@ -309,6 +316,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       time: values.time,
       duration: values.duration,
       alerts: values.alerts ?? [],
+      routineType: (values.routineType as RoutineType) || 'once',
     });
     router.push('/alert-select');
   };
@@ -462,13 +470,14 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
               selectionColor="#FFFFFF"
               cursorColor="#FFFFFF"
               style={[
-                getTextStyle('heading-2'),
+                getTypographyStyle('heading-2', typographyPlatform),
                 {
                   color: themeColors.text.primary(),
                   paddingBottom: Paddings.none,
                   paddingHorizontal: Paddings.none,
                   maxHeight: 68, // 2 lines max (fontSize 26 * ~1.3 line height)
-                  caretColor: '#FFFFFF', // iOS: style-based cursor color fallback
+                  // @ts-expect-error caretColor works on RN TextInput; @types/react-native TextStyle is incomplete
+                  caretColor: '#FFFFFF',
                 },
               ]}
               multiline
@@ -514,6 +523,10 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
           onDescriptionChange={(description) => onChange('description', description)}
           taskColor={buttonColor}
           scrollViewRef={scrollViewRef}
+          listBackgroundColor={subtaskListBackgroundColor}
+          listBorderRadius={subtaskListBorderRadius}
+          listBorderWidth={subtaskListBorderWidth}
+          listBorderColor={subtaskListBorderColor}
         />
 
         {(createError ?? updateError ?? validationError) && (
@@ -528,7 +541,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
               borderColor: colors.getSemanticColor('error', 500),
             }}
           >
-            <Text style={[getTextStyle('body-small'), { color: colors.getSemanticColor('error', 500) }]}>
+            <Text style={[getTypographyStyle('body-small', typographyPlatform), { color: colors.getSemanticColor('error', 500) }]}>
               {createError ?? updateError ?? validationError}
             </Text>
           </View>
