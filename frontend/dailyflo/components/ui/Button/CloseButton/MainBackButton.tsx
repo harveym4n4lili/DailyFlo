@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 // CUSTOM ICON IMPORTS
 // SFSymbolIcon: SF Symbols on iOS (chevron.left = back arrow)
-import { SFSymbolIcon } from '@/components/ui/icon';
+import { SFSymbolIcon } from '@/components/ui/Icon';
 
 // CONSTANTS IMPORTS
 import { getTextStyle } from '@/constants/Typography';

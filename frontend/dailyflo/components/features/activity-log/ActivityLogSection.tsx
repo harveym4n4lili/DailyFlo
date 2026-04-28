@@ -9,7 +9,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { ActivityLog } from '@/types/common/ActivityLog';
-import { LogCard } from '@/components/ui/card';
+import { LogCard } from '@/components/ui/Card';
 import { ActivityLogSectionHeader } from './ActivityLogSectionHeader';
 
 export interface ActivityLogSectionProps {

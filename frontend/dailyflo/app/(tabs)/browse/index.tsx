@@ -14,9 +14,9 @@ import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
 import { IosBrowseHomeStackToolbar } from '@/components/navigation/IosBrowseHomeStackToolbar';
 import { ScreenHeaderActions } from '@/components/ui';
-import { FloatingActionButton } from '@/components/ui/button';
-import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/list/GroupedList';
-import { SFSymbolIcon, TickIcon, BrowseIcon, LeafIcon, PencilIcon } from '@/components/ui/icon';
+import { FloatingActionButton } from '@/components/ui/Button';
+import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
+import { SFSymbolIcon, TickIcon, BrowseIcon, LeafIcon, PencilIcon } from '@/components/ui/Icon';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CREATE_OPENED_FROM_BROWSE } from './navigationParams';
 

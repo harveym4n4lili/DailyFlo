@@ -17,7 +17,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import GlassView from 'expo-glass-effect/build/GlassView';
-import { EllipsisIcon } from '@/components/ui/icon';
+import { EllipsisIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 

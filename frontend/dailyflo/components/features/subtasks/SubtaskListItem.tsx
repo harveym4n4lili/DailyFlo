@@ -18,7 +18,7 @@ import { TouchableOpacity, TextInput, View, Keyboard, Text, Pressable } from 're
 import { Ionicons } from '@expo/vector-icons';
 
 // UI COMPONENTS
-import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
+import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/Button';
 import * as Haptics from 'expo-haptics';
 
 // CUSTOM HOOKS IMPORTS

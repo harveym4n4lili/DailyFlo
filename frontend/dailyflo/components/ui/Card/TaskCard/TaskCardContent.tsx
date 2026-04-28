@@ -17,7 +17,7 @@ type TextLineLayout = { x: number; y: number; width: number; height: number };
 
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { LeafIcon } from '@/components/ui/icon';
+import { LeafIcon } from '@/components/ui/Icon';
 import { formatTimeRange } from '@/utils/taskFormatters';
 import { getStrikethroughDuration, STRIKETHROUGH_MIN_MS } from '@/constants/Checkbox';
 

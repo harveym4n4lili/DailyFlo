@@ -6,7 +6,7 @@
 import React from 'react';
 import { Pressable, Text, Platform, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SFSymbolIcon } from '@/components/ui/icon';
+import { SFSymbolIcon } from '@/components/ui/Icon';
 import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';

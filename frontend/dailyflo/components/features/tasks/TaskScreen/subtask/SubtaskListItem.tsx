@@ -14,8 +14,8 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTypographyStyle } from '@/constants/Typography';
-import { TrashIcon, SFSymbolIcon } from '@/components/ui/icon';
-import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
+import { TrashIcon, SFSymbolIcon } from '@/components/ui/Icon';
+import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/Button';
 import { Paddings } from '@/constants/Paddings';
 // spacing between checkbox (icon) and text input — matches SubtaskCreateButton icon–text gap
 const ICON_TEXT_GAP = 10;

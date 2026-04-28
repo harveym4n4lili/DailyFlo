@@ -3,7 +3,7 @@ import type { ViewStyle } from 'react-native';
 
 /**
  * shared absolute wrapper for FloatingActionButton on tab screens — same footprint as the old inline styles.
- * pair with FloatingActionButton from @/components/ui/button (metrics context syncs FAB size to navbar).
+ * pair with FloatingActionButton from @/components/ui/Button (metrics context syncs FAB size to navbar).
  */
 export const fabChromeZoneStyle: ViewStyle = {
   position: 'absolute',

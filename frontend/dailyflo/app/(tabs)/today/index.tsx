@@ -6,7 +6,7 @@ import { useFocusEffect } from 'expo-router';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 
-import { FloatingActionButton } from '@/components/ui/button';
+import { FloatingActionButton } from '@/components/ui/Button';
 import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';

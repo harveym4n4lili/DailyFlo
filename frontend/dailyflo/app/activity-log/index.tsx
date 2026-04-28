@@ -21,7 +21,7 @@ import { BlurView } from 'expo-blur';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 import { useTypography } from '@/hooks/useTypography';
-import { MainCloseButton } from '@/components/ui/button';
+import { MainCloseButton } from '@/components/ui/Button';
 import { useActivityLogs } from '@/store/hooks';
 import { ActivityLog } from '@/types/common/ActivityLog';
 import {

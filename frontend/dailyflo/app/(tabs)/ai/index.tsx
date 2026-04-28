@@ -20,7 +20,8 @@ import {
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '@/components';
+// metro resolves @/components/ui etc., but the root barrel must use /index so the bundler finds components/index.ts
+import { ScreenContainer } from '@/components/index';
 import { ScreenHeaderActions } from '@/components/ui';
 import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { useThemeColors } from '@/hooks/useColorPalette';

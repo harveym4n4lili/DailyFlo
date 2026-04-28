@@ -12,7 +12,7 @@ import AnimatedReanimated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { SFSymbolIcon } from '@/components/ui/icon';
+import { SFSymbolIcon } from '@/components/ui/Icon';
 import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -20,7 +20,7 @@ import GlassView from 'expo-glass-effect/build/GlassView';
 import {
   SAVE_BUTTON_SPRING_SHOW,
   SAVE_BUTTON_SPRING_HIDE,
-} from '@/components/ui/button/SaveButton/SaveButton';
+} from '@/components/ui/Button/SaveButton/SaveButton';
 
 export interface MainSubmitButtonProps {
   onPress: () => void;

@@ -5,7 +5,7 @@
  * organized by category. This makes imports cleaner and more organized.
  * 
  * Usage:
- * import { ScreenContainer, SafeAreaWrapper, TaskCreationModal } from '@/components';
+ * import { ScreenContainer, SafeAreaWrapper, TaskCreationModal } from '@/components/index';
  */
 
 // layout components - screen and modal layout components

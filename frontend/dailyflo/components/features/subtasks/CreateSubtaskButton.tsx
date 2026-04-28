@@ -6,8 +6,8 @@
  */
 
 import React from 'react';
-import { FormDetailButton } from '@/components/ui/list/GroupedList';
-import { ClockIcon } from '@/components/ui/icon';
+import { FormDetailButton } from '@/components/ui/List/GroupedList';
+import { ClockIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 

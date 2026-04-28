@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { GroupedList } from '@/components/ui/list/GroupedList';
+import { GroupedList } from '@/components/ui/List/GroupedList';
 import { Paddings } from '@/constants/Paddings';
 import { SubtaskCreateButton, SubtaskListItem } from '../subtask';
 import { Description } from './Description';

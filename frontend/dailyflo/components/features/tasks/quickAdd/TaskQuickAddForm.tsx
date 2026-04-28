@@ -29,10 +29,10 @@ import {
   getDatePickerDisplay,
   getTimeDurationPickerDisplay,
   getAlertsPickerDisplay,
-} from '@/components/ui/button';
+} from '@/components/ui/Button';
 import { DashedSeparator } from '@/components/ui/borders';
-import { DropdownList } from '@/components/ui/list';
-import { GroupedList } from '@/components/ui/list/GroupedList';
+import { DropdownList } from '@/components/ui/List';
+import { GroupedList } from '@/components/ui/List/GroupedList';
 import { Description } from '@/components/features/tasks/TaskScreen/sections/Description';
 import { SubtaskCreateButton, SubtaskListItem } from '@/components/features/tasks/TaskScreen/subtask';
 import {
@@ -43,7 +43,7 @@ import {
   SaveIcon,
   SFSymbolIcon,
   SparklesIcon,
-} from '@/components/ui/icon';
+} from '@/components/ui/Icon';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';

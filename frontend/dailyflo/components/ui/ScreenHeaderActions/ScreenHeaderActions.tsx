@@ -9,7 +9,7 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
 import GlassView from 'expo-glass-effect/build/GlassView';
 import { HeaderIconButton } from './HeaderIconButton';
-import { GearIcon, DashboardIcon } from '@/components/ui/icon';
+import { GearIcon, DashboardIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
 export type ScreenHeaderActionsVariant = 'dashboard' | 'browse';

@@ -8,7 +8,7 @@ import { Text, Pressable, StyleSheet, View, Platform } from 'react-native';
 import { getTypographyStyle } from '@/constants/Typography';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
-import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
+import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/Button';
 
 // match SubtaskListItem checkbox so the add row lines up visually (16px matches TaskCard)
 const ICON_TEXT_GAP = 10;

@@ -5,11 +5,11 @@ import GlassView from 'expo-glass-effect/build/GlassView';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { GroupedListHeader } from '@/components/ui/list/GroupedList';
-import { SFSymbolIcon, ClockIcon } from '@/components/ui/icon';
-import { TaskCard, BrowseDescriptionSearchCard, BrowseListSearchCard } from '@/components/ui/card';
+import { GroupedListHeader } from '@/components/ui/List/GroupedList';
+import { SFSymbolIcon, ClockIcon } from '@/components/ui/Icon';
+import { TaskCard, BrowseDescriptionSearchCard, BrowseListSearchCard } from '@/components/ui/Card';
 import { SolidSeparator } from '@/components/ui/borders';
-import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
+import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/Button';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
 import { useThemeColors } from '@/hooks/useColorPalette';

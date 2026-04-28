@@ -12,9 +12,9 @@ import {
   ViewStyle,
 } from 'react-native';
 import GlassView from 'expo-glass-effect/build/GlassView';
-import { EllipsisIcon } from '@/components/ui/icon';
+import { EllipsisIcon } from '@/components/ui/Icon';
 import { Host, Menu, Button } from '@expo/ui/swift-ui';
-import { DropdownList } from '@/components/ui/list';
+import { DropdownList } from '@/components/ui/List';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import {
   headerChromeActionMenuTriggerSizePx,

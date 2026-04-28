@@ -16,8 +16,8 @@ import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 import { Task } from '@/types';
 import { getTaskColorValue } from '@/utils/taskColors';
-import TaskIcon from '@/components/ui/card/TaskCard/TaskIcon';
-import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
+import TaskIcon from '@/components/ui/Card/TaskCard/TaskIcon';
+import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/Button';
 import { formatTimeRange, getTaskCardHeight } from './timelineUtils';
 
 interface DragOverlayProps {

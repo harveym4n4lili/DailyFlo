@@ -7,7 +7,7 @@ import React from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import AnimatedReanimated from 'react-native-reanimated';
 
-import { FloatingActionButton } from '@/components/ui/button';
+import { FloatingActionButton } from '@/components/ui/Button';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 
 import { TAB_BAR_CHROME_VISUAL } from './tabBarChrome.constants';

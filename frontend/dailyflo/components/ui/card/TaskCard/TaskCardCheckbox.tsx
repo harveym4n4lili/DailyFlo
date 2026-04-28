@@ -8,7 +8,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Task } from '@/types';
-import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
+import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/Button';
 import { CHECKBOX_SYNC_DELAY_MS } from '@/constants/Checkbox';
 import { registerPendingCheckboxSync, unregisterPendingCheckboxSync } from '@/utils/pendingCheckboxSyncRegistry';
 
