@@ -3,7 +3,7 @@
  *
  * Holds task data when user taps "Duplicate" from the task view.
  * We store the current task's form values and subtasks here, then navigate to
- * task-create. The create screen reads this on mount, pre-fills the form, and clears it.
+ * task-quick-add. The create screen reads this on mount, pre-fills the form, and clears it.
  *
  * This avoids creating the task on the backend first - user sees a pre-filled create
  * form and can edit before saving.
@@ -19,11 +19,11 @@ export interface DuplicateTaskData {
 }
 
 interface DuplicateTaskContextValue {
-  /** Data to pre-fill when opening task-create from Duplicate (null when not duplicating) */
+  /** Data to pre-fill when opening task-quick-add from Duplicate (null when not duplicating) */
   duplicateData: DuplicateTaskData | null;
-  /** Set duplicate data before navigating to task-create (called from task view) */
+  /** Set duplicate data before navigating to task-quick-add (called from task view) */
   setDuplicateData: (data: DuplicateTaskData | null) => void;
-  /** Consume and clear duplicate data (called by task-create on mount) */
+  /** Consume and clear duplicate data (called by task-quick-add on mount) */
   consumeDuplicateData: () => DuplicateTaskData | null;
 }
 
@@ -36,7 +36,7 @@ export function DuplicateTaskProvider({ children }: { children: ReactNode }) {
     setDuplicateDataState(data);
   }, []);
 
-  // consumeDuplicateData: returns current data and clears it (task-create calls this on mount)
+  // consumeDuplicateData: returns current data and clears it (task-quick-add calls this on mount)
   const consumeDuplicateData = useCallback(() => {
     const data = duplicateData;
     setDuplicateDataState(null);

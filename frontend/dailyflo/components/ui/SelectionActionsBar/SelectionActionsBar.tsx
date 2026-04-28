@@ -1,185 +1,58 @@
 /**
  * SelectionActionsBar - bottom bar that replaces the tab bar when in selection mode.
- * Shows 4 icon-only actions: Complete tasks, Change date, Move task, Delete task.
- * Uses Redux selection state (selectedItems, selectionType) and dispatches actions.
- * On iOS: uses GlassView for liquid glass effect (matches Todoist-style translucent bar).
+ * Today: 4 icon-only actions. Planner: Cancel + count (ios uses native bottom Stack.Toolbar on select routes).
+ * Uses useTaskBulkSelectionActions for redux + navigation side effects.
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import GlassView from 'expo-glass-effect/build/GlassView';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { usePathname } from 'expo-router';
 
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { ActionContextMenu } from '@/components/ui';
+import { useTaskBulkSelectionActions } from '@/hooks/useTaskBulkSelectionActions';
 import { useUI } from '@/store/hooks';
-import { useAppDispatch } from '@/store';
-import { deleteTask, updateTask } from '@/store/slices/tasks/tasksSlice';
-import { getBaseTaskId, isExpandedRecurrenceId, getOccurrenceDateFromId } from '@/utils/recurrenceUtils';
-import { store } from '@/store';
-import { useRouter } from 'expo-router';
-import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 
 export interface SelectionActionsBarProps {
-  /** optional: when provided, Move opens date-select and applies to all selected tasks */
   onMoveComplete?: (date: string) => void;
-  /** which tab screen is currently active - allows tweaking behavior for Today vs Planner */
   screen?: 'today' | 'planner' | 'other';
 }
 
-export function SelectionActionsBar({ onMoveComplete, screen }: SelectionActionsBarProps) {
+export function SelectionActionsBar(props: SelectionActionsBarProps) {
+  const { screen } = props;
   const themeColors = useThemeColors();
   const semanticColors = useSemanticColors();
   const typography = useTypography();
-  const dispatch = useAppDispatch();
-  const router = useRouter();
-  const { setDraft, registerOverdueReschedule, clearOverdueReschedule } = useCreateTaskDraft();
-
-  // selection state from Redux - drives visibility and action availability
-  const { selection, exitSelectionMode } = useUI();
-  const { isSelectionMode, selectedItems, selectionType } = selection;
+  const pathname = usePathname() ?? '';
+  const { selection } = useUI();
+  const { isSelectionMode, selectionType } = selection;
+  const { hasSelection, selectedCount, handleCancel, handleComplete, handleDelete, handleMove } =
+    useTaskBulkSelectionActions();
 
   const styles = React.useMemo(
     () => createStyles(themeColors, semanticColors, typography),
-    [themeColors, semanticColors, typography]
+    [themeColors, semanticColors, typography],
   );
-
-  // get unique base task ids for delete/move (recurring occurrences share base id)
-  const baseTaskIds = React.useMemo(() => {
-    const ids = new Set<string>();
-    selectedItems.forEach((id) => ids.add(getBaseTaskId(id)));
-    return Array.from(ids);
-  }, [selectedItems]);
-
-  const selectedCount = selectedItems.length;
-  const hasSelection = selectedCount > 0;
-
-  const handleCancel = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    clearOverdueReschedule();
-    exitSelectionMode();
-  };
-
-  // complete all selected tasks - marks as done; handles recurring occurrences via recurrence_completions
-  const handleComplete = async () => {
-    if (!hasSelection) return;
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    const tasksFromStore = store.getState().tasks.tasks;
-    try {
-      for (const itemId of selectedItems) {
-        if (isExpandedRecurrenceId(itemId)) {
-          const baseId = getBaseTaskId(itemId);
-          const occurrenceDate = getOccurrenceDateFromId(itemId);
-          if (!occurrenceDate) continue;
-          const baseTask = tasksFromStore.find((t: any) => t.id === baseId);
-          if (!baseTask) continue;
-          const completions = baseTask.metadata?.recurrence_completions ?? [];
-          const newCompletions = completions.includes(occurrenceDate)
-            ? completions
-            : [...completions, occurrenceDate];
-          await dispatch(
-            updateTask({
-              id: baseId,
-              updates: {
-                id: baseId,
-                metadata: { ...baseTask.metadata, recurrence_completions: newCompletions },
-              },
-            })
-          ).unwrap();
-        } else {
-          await dispatch(
-            updateTask({
-              id: itemId,
-              updates: { id: itemId, isCompleted: true },
-            })
-          ).unwrap();
-        }
-      }
-      exitSelectionMode();
-    } catch (err) {
-      console.error('Failed to bulk complete tasks:', err);
-    }
-  };
-
-  const handleDelete = () => {
-    if (!hasSelection) return;
-
-    const count = baseTaskIds.length;
-    const message =
-      count === 1
-        ? 'Delete this task? This cannot be undone.'
-        : `Delete ${count} tasks? This cannot be undone.`;
-
-    Alert.alert('Delete Tasks', message, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          baseTaskIds.forEach((id) => dispatch(deleteTask(id)));
-          exitSelectionMode();
-        },
-      },
-    ]);
-  };
-
-  const handleMove = () => {
-    if (!hasSelection) return;
-
-    // use first task's due date as initial, or today
-    const firstId = selectedItems[0];
-    const tasksFromStore = store.getState().tasks.tasks;
-    const firstTask = tasksFromStore.find(
-      (t: any) => t.id === getBaseTaskId(firstId) || t.id === firstId
-    );
-    const initialDate = firstTask?.dueDate ?? new Date().toISOString();
-
-    setDraft({ dueDate: initialDate, time: undefined, duration: undefined, alerts: [] });
-
-    // register callback - date-select will invoke this when user picks a date
-    registerOverdueReschedule((date) => {
-      (async () => {
-        try {
-          await Promise.all(
-            baseTaskIds.map((id) =>
-              dispatch(updateTask({ id, updates: { id, dueDate: date } }))
-            )
-          );
-          clearOverdueReschedule();
-          exitSelectionMode();
-        } catch (err) {
-          console.error('Failed to bulk move tasks:', err);
-        }
-      })();
-    });
-
-    router.push('/date-select');
-  };
 
   if (!isSelectionMode || selectionType !== 'tasks') return null;
 
-  // on iOS: wrap in GlassView for liquid glass (translucent bar overlaying content)
-  // on Android: use solid background
-  const tintColor = themeColors.background.primary();
+  // ios: native bottom Stack.Toolbar on select routes; date-select is root stack so segments lose "select" — still no overlay
+  if (
+    Platform.OS === 'ios' &&
+    (pathname.includes('/today/select') ||
+      pathname.includes('/planner/select') ||
+      pathname.includes('/browse/task-select') ||
+      pathname.includes('/date-select'))
+  ) {
+    return null;
+  }
 
-  // icon colors for both Today and Planner selection bar
-  // active: solid white; disabled: semi-transparent white
+  const tintColor = themeColors.background.primary();
   const iconColorActive = '#FFFFFF';
   const iconColorDisabled = 'rgba(255,255,255,0.5)';
   const deleteIconColorActive = iconColorActive;
-
-  // planner: Cancel + counter + ellipsis context menu (original layout)
-  const plannerContextItems = [
-    { id: 'complete', label: 'Complete tasks', systemImage: 'checkmark.circle', onPress: handleComplete },
-    { id: 'change-date', label: 'Change date', systemImage: 'calendar', onPress: handleMove },
-    { id: 'move', label: 'Move task', systemImage: 'arrow.right', onPress: handleMove },
-    { id: 'delete', label: 'Delete tasks', systemImage: 'trash', destructive: true, onPress: handleDelete },
-  ];
 
   const barContent =
     screen === 'planner' ? (
@@ -198,23 +71,13 @@ export function SelectionActionsBar({ onMoveComplete, screen }: SelectionActions
             {selectedCount} selected
           </Text>
         </View>
-        <View pointerEvents={hasSelection ? 'auto' : 'none'}>
-          <ActionContextMenu
-            items={plannerContextItems}
-            style={styles.ellipsisButton}
-            iconColor={hasSelection ? iconColorActive : iconColorDisabled}
-            accessibilityLabel="Selection actions"
-            dropdownAnchorTopOffset={0}
-            dropdownAnchorRightOffset={24}
-          />
-        </View>
+        <View style={styles.plannerToolbarSpacer} pointerEvents="none" />
       </View>
     ) : (
-      /* today: 4 icon-only actions */
       <View style={styles.content}>
         <TouchableOpacity
           style={[styles.actionButton, !hasSelection && styles.actionButtonDisabled]}
-          onPress={handleComplete}
+          onPress={() => void handleComplete()}
           disabled={!hasSelection}
           activeOpacity={0.7}
           accessibilityLabel="Complete selected tasks"
@@ -272,7 +135,7 @@ export function SelectionActionsBar({ onMoveComplete, screen }: SelectionActions
     );
 
   return (
-    <View style={[styles.container, { bottom: 20}]}>
+    <View style={[styles.container, { bottom: 20 }]}>
       {Platform.OS === 'ios' ? (
         <GlassView
           style={styles.glassWrapper}
@@ -292,7 +155,7 @@ export function SelectionActionsBar({ onMoveComplete, screen }: SelectionActions
 function createStyles(
   themeColors: ReturnType<typeof useThemeColors>,
   semanticColors: ReturnType<typeof useSemanticColors>,
-  typography: ReturnType<typeof useTypography>
+  typography: ReturnType<typeof useTypography>,
 ) {
   return StyleSheet.create({
     container: {
@@ -326,6 +189,18 @@ function createStyles(
       alignItems: 'center',
       justifyContent: 'space-between',
     },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    countText: {
+      ...typography.getTextStyle('body-medium'),
+    },
+    plannerToolbarSpacer: {
+      width: 60,
+      marginLeft: 'auto',
+    },
     cancelButton: {
       paddingVertical: 8,
       paddingHorizontal: 4,
@@ -335,18 +210,6 @@ function createStyles(
     cancelText: {
       ...typography.getTextStyle('body-large'),
       fontWeight: '500',
-    },
-    center: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    countText: {
-      ...typography.getTextStyle('body-medium'),
-    },
-    ellipsisButton: {
-      marginLeft: 'auto',
-      backgroundColor: 'transparent',
     },
     actionButton: {
       padding: 12,

@@ -18,8 +18,11 @@ export type { TaskOptionButtonProps } from './button';
 export { ScreenContextButton } from './button';
 export type { ScreenContextButtonProps } from './button';
 
-export { ActionContextMenu } from './contextMenu';
-export type { ActionContextMenuProps, ActionContextMenuItem } from './contextMenu';
+export { ActionContextMenu } from './contextMenu/actionContextMenu/ActionContextMenu';
+export type {
+  ActionContextMenuProps,
+  ActionContextMenuItem,
+} from './contextMenu/actionContextMenu/ActionContextMenu';
 
 export { ScreenHeaderActions } from './ScreenHeaderActions';
 export type { ScreenHeaderActionsProps, ScreenHeaderActionsVariant } from './ScreenHeaderActions';
@@ -62,6 +65,13 @@ export {
   BellIcon,
   BrowseIcon,
 } from './icon';
+
+// blurred mesh gradient backgrounds (full-screen; use behind transparent screens)
+export { MeshGradientBackground } from './background';
+export type {
+  MeshGradientBackgroundProps,
+  MeshGradientPresetName,
+} from './background';
 
 // export message components (dynamic today message, etc.)
 export { TaskSummary } from './message';

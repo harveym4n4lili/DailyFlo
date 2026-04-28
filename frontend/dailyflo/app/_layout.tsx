@@ -7,13 +7,16 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, useRef } from 'react';
 import { Platform, TextInput } from 'react-native';
 
-// set default cursor/selection color to white app-wide (overrides iOS blue tint on TextInputs)
-TextInput.defaultProps = { ...(TextInput.defaultProps || {}), selectionColor: '#FFFFFF', cursorColor: '#FFFFFF' };
+// set default cursor/selection color app-wide; RN 0.83 types omit defaultProps but the merge still works at runtime
+const TI = TextInput as typeof TextInput & { defaultProps?: Record<string, unknown> };
+TI.defaultProps = { ...(TI.defaultProps || {}), selectionColor: '#FFFFFF', cursorColor: '#FFFFFF' };
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,6 +24,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { ReduxProvider } from '@/store/Provider';
+import { CustomTabNavMetricsProvider } from '@/contexts/CustomTabNavMetricsContext';
 import { CreateTaskDraftProvider } from './task/CreateTaskDraftContext';
 import { DuplicateTaskProvider } from './task/DuplicateTaskContext';
 import { PlannerMonthSelectProvider } from './PlannerMonthSelectContext';
@@ -33,7 +37,7 @@ const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const router = useRouter();
+  const router = useGuardedRouter();
   const segments = useSegments();
   // theme background used when liquid glass is not available (android or older ios)
   const themeColors = useThemeColors();
@@ -207,6 +211,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ReduxProvider>
+        <CustomTabNavMetricsProvider>
         <ThemeProvider value={navTheme}>
           {/* Task stack and sub-screens share draft via context; DuplicateTaskProvider for pre-filling create from Duplicate */}
           <CreateTaskDraftProvider>
@@ -221,17 +226,36 @@ export default function RootLayout() {
           >
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            {/* task-create: full screen, no indent, not draggable, close via MainCloseButton */}
+            {/* legacy create routes now mount the same quick-add overlay flow as Today */}
             <Stack.Screen
               name="task-create"
               options={{
                 headerShown: false,
-                presentation: 'formSheet',
+                presentation: 'transparentModal',
                 gestureEnabled: false,
-                sheetGrabberVisible: false,
-                contentStyle: {
-                  backgroundColor: themeColors.background.primary(),
-                },
+                animation: 'none',
+                contentStyle: { backgroundColor: 'transparent' },
+              }}
+            />
+            <Stack.Screen
+              name="task-create-test"
+              options={{
+                headerShown: false,
+                presentation: 'transparentModal',
+                gestureEnabled: false,
+                animation: 'none',
+                contentStyle: { backgroundColor: 'transparent' },
+              }}
+            />
+            {/* task-quick-add: transparentModal + animation none — fade + sheet motion are both driven in TaskQuickAddOverlay (native pop fade was cutting the slide short) */}
+            <Stack.Screen
+              name="task-quick-add"
+              options={{
+                headerShown: false,
+                presentation: 'transparentModal',
+                gestureEnabled: false,
+                animation: 'none',
+                contentStyle: { backgroundColor: 'transparent' },
               }}
             />
             {/* activity-log: use modal (not formSheet) so ScrollView scrolls properly – formSheet has known scroll conflicts */}
@@ -251,11 +275,16 @@ export default function RootLayout() {
               name="task"
               options={{
                 headerShown: false,
-                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+                presentation: 'formSheet',
                 gestureEnabled: true,
+                sheetGrabberVisible: false,
                 sheetAllowedDetents: [0.7, 1],
+                // ios 26+ scroll edge “hard” style can show a line at the sheet header; hide edges on the presented route
+                ...(Platform.OS === 'ios'
+                  ? { scrollEdgeEffects: { top: 'hidden' as const, bottom: 'hidden' as const } }
+                  : {}),
                 contentStyle: {
-                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.primary(),
+                  backgroundColor: useLiquidGlass ? 'transparent' : 'transparent',
                 },
               }}
             />
@@ -319,6 +348,7 @@ export default function RootLayout() {
           </CreateTaskDraftProvider>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         </ThemeProvider>
+        </CustomTabNavMetricsProvider>
       </ReduxProvider>
     </GestureHandlerRootView>
   );

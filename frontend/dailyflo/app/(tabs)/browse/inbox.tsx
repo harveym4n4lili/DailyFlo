@@ -4,9 +4,11 @@
  * Complete/delete dispatch Redux thunks then refetch inbox so the list stays aligned with the server.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -23,7 +25,8 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainBackButton } from '@/components/ui/button';
 import { ScreenHeaderActions } from '@/components/ui';
-import { ClockIcon } from '@/components/ui/icon';
+import { IosBrowseBackStackToolbar } from '@/components/navigation/IosBrowseBackStackToolbar';
+import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { ListCard } from '@/components/ui/card';
 import { Paddings } from '@/constants/Paddings';
 import { browseScrollPaddingTop } from '@/constants/browseScrollPaddingTop';
@@ -44,13 +47,13 @@ const TOP_SECTION_ANCHOR_HEIGHT = 64;
 const SCROLL_THRESHOLD = 16;
 
 export default function InboxScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
   const styles = createStyles(typography, insets);
   const dispatch = useAppDispatch();
-  const { enterSelectionMode, selection, toggleItemSelection } = useUI();
+  const { selection, toggleItemSelection, selectAllItems, clearSelection } = useUI();
 
   const [inboxTasks, setInboxTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +104,7 @@ export default function InboxScreen() {
     opacity: interpolate(scrollY.value, [0, SCROLL_THRESHOLD], [1, 0], Extrapolation.CLAMP),
   }));
 
+  // android: glass back sits in the blur band; ios uses native Stack.Toolbar (chevron.left).
   const backButtonTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
 
   const handleTaskPress = useCallback(
@@ -196,10 +200,38 @@ export default function InboxScreen() {
     [dispatch, loadInbox]
   );
 
+  // ios: selection ui lives on browse/task-select (pushed). android: still toggles checkboxes in-place on this screen.
   const isSelectionMode = selection.isSelectionMode && selection.selectionType === 'tasks';
+  const listSelectionMode = Platform.OS === 'android' && isSelectionMode;
+
+  const eligibleInboxTaskIds = useMemo(
+    () => inboxTasks.filter((t) => !t.isCompleted && !t.softDeleted).map((t) => t.id),
+    [inboxTasks]
+  );
+  const allEligibleInboxSelected =
+    eligibleInboxTaskIds.length > 0 &&
+    eligibleInboxTaskIds.every((id) => selection.selectedItems.includes(id));
+
+  const handleSelectAllInbox = useCallback(() => {
+    if (!isSelectionMode) return;
+    if (allEligibleInboxSelected) {
+      clearSelection();
+    } else {
+      selectAllItems(eligibleInboxTaskIds);
+    }
+  }, [
+    isSelectionMode,
+    allEligibleInboxSelected,
+    eligibleInboxTaskIds,
+    selectAllItems,
+    clearSelection,
+  ]);
 
   return (
-    <View style={{ flex: 1 }}>
+    <>
+      {Platform.OS === 'ios' ? <IosBrowseBackStackToolbar /> : null}
+      <IosDashboardOverflowToolbar hidden={listSelectionMode} />
+      <View style={{ flex: 1 }}>
       <View
         style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}
       >
@@ -224,42 +256,26 @@ export default function InboxScreen() {
               Inbox
             </Text>
           </Animated.View>
-          <ScreenHeaderActions
-            variant="dashboard"
-            contextMenuItems={[
-              {
-                id: 'activity-log',
-                label: 'Activity log',
-                iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />,
-                systemImage: 'clock.arrow.circlepath',
-                onPress: () => router.push('/activity-log' as any),
-              },
-              {
-                id: 'select-tasks',
-                label: 'Select Tasks',
-                systemImage: 'square.and.pencil',
-                onPress: () => enterSelectionMode('tasks'),
-              },
-            ]}
-            dropdownAnchorTopOffset={insets.top + TOP_SECTION_ROW_HEIGHT}
-            dropdownAnchorRightOffset={24}
-            style={styles.topSectionContextButton}
-            tint="primary"
-          />
+          {Platform.OS === 'android' ? (
+            <ScreenHeaderActions variant="dashboard" style={styles.topSectionContextButton} tint="primary" />
+          ) : null}
         </View>
       </View>
 
-      <View style={styles.backButtonContainer} pointerEvents="box-none">
-        <MainBackButton
-          onPress={() => router.back()}
-          top={backButtonTop}
-          left={Paddings.screen}
-        />
-      </View>
+      {Platform.OS === 'android' ? (
+        <View style={styles.backButtonContainer} pointerEvents="box-none">
+          <MainBackButton
+            onPress={() => router.back()}
+            top={backButtonTop}
+            left={Paddings.screen}
+          />
+        </View>
+      ) : null}
 
       <Animated.ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
@@ -288,9 +304,9 @@ export default function InboxScreen() {
             groupBy="routine"
             sortBy="createdAt"
             sortDirection="desc"
-            selectionMode={isSelectionMode}
+            selectionMode={listSelectionMode}
             selectedTaskIds={selection.selectedItems}
-            onToggleTaskSelection={isSelectionMode ? toggleItemSelection : undefined}
+            onToggleTaskSelection={listSelectionMode ? toggleItemSelection : undefined}
             hideCompletedTasks
             onTaskPress={handleTaskPress}
             onTaskComplete={handleTaskComplete}
@@ -307,6 +323,7 @@ export default function InboxScreen() {
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
     </View>
+    </>
   );
 }
 

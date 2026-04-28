@@ -1,12 +1,12 @@
 /**
- * browse search result row for a user list — mirrors TaskCard chrome (same padding, row structure, dashed rule)
+ * browse search result row for a user list — mirrors TaskCard chrome (same padding, row structure, solid rule)
  * leaf sits in the same box as TaskCardCheckbox; title row matches TaskCardContent with “List” instead of time range.
  */
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { LeafIcon } from '@/components/ui/icon';
-import { DashedSeparator } from '@/components/ui/borders';
+import { SolidSeparator } from '@/components/ui/borders';
 import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -79,9 +79,9 @@ export function BrowseListSearchCard({
       </View>
 
       {!isLastItem ? (
-        <DashedSeparator
+        <SolidSeparator
           paddingLeft={CHECKBOX_SIZE_DEFAULT + 12}
-          paddingRight={separatorPaddingHorizontal}
+          paddingRight={0}
         />
       ) : null}
     </View>

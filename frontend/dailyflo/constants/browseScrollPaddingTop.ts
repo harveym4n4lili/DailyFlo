@@ -1,15 +1,11 @@
 /**
- * Browse stack screens (inbox, tags, completed, list detail) use a fixed blur header + MainBackButton.
- * scrollContent used to use paddingTop: 64 only — that ignores safeAreaTop, so on a notch the button
- * sits around y ≈ safeAreaTop…safeAreaTop+45 while the big title still started at y=64 and drew *under* the button.
- * this helper keeps 64 on small/zero safe areas (same as before on Android) and grows on notched iPhones.
+ * browse stack scroll content top padding: matches today’s list — listcard uses paddingTop 64 + scrollPastTopInset,
+ * so flatlist content gets safeAreaTop + 64 (same as blur strip height insets.top + 64).
+ *
+ * ios: pair with scrollview contentInsetAdjustmentBehavior="never" or uikit adds safe area again and the big title drops too far.
  */
-const TOP_SECTION_ROW_HEIGHT = 0;
-const TOP_SECTION_ANCHOR_HEIGHT = 64;
+const BELOW_TOP_CHROME = 64;
 
 export function browseScrollPaddingTop(safeAreaTop: number): number {
-  return Math.max(
-    TOP_SECTION_ANCHOR_HEIGHT,
-    safeAreaTop + TOP_SECTION_ROW_HEIGHT
-  );
+  return safeAreaTop - BELOW_TOP_CHROME;
 }

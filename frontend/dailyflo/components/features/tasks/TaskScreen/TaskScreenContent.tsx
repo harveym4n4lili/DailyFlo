@@ -16,24 +16,25 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { IconColorModal } from './modals';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { useLists } from '@/store/hooks';
 import { getListDisplayName } from '@/utils/listDisplayName';
 import { FormDetailSection, SubtaskSection } from './sections';
-import { TrashIcon, ClockIcon, SFSymbolIcon } from '@/components/ui/icon';
 import { SaveButton, MainCloseButton } from '@/components/ui/button';
-import { ActionContextMenu } from '@/components/ui';
 import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisplay } from '@/components/ui/button';
-import { getTextStyle } from '@/constants/Typography';
+import { getTypographyStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { DashedSeparator } from '@/components/ui/borders';
+import { ActionContextMenu, type ActionContextMenuItem } from '@/components/ui';
+import { TrashIcon, ClockIcon, SFSymbolIcon } from '@/components/ui/icon';
 import { Checkbox, CHECKBOX_SIZE_TASK_VIEW } from '@/components/ui/button';
 import type { TaskColor, RoutineType } from '@/types';
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
@@ -174,12 +175,18 @@ export interface TaskCreationContentProps {
     onShowListPicker?: () => void;
   };
 
-  /** Optional: called when Activity log is selected from actions menu */
+  /** edit mode: activity log from overflow menu */
   onActivityLog?: () => void;
-  /** Optional: called when Duplicate is selected from actions menu (edit mode only) */
+  /** edit mode: duplicate from overflow menu */
   onDuplicateTask?: () => void;
-  /** Optional: called when Delete task is selected from actions menu (edit mode only) */
+  /** edit mode: delete from overflow menu (parent usually confirms) */
   onDeleteTask?: () => void;
+
+  /**
+   * create mode on ios: root stack shows native modal header + Stack.Toolbar; scroll starts below measured header
+   * (same idea as list-create). android keeps inset close + floating save — leave false.
+   */
+  useNativeStackHeader?: boolean;
 }
 
 export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
@@ -207,16 +214,22 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   isEditMode = false,
   saveButtonBottomInsetWhenKeyboardHidden,
   pickerHandlers,
-  onActivityLog,
-  onDuplicateTask,
-  onDeleteTask,
   showTitleCheckbox = true,
   titleCheckboxCompleted,
   onTitleCheckboxToggle,
   showMainCloseButton = false,
   showDragIndicator = true,
+  onActivityLog,
+  onDuplicateTask,
+  onDeleteTask,
+  useNativeStackHeader = false,
+  subtaskListBackgroundColor,
+  subtaskListBorderRadius,
+  subtaskListBorderWidth,
+  subtaskListBorderColor,
 }) => {
-  const router = useRouter();
+  const typographyPlatform = Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
+  const router = useGuardedRouter();
   const { setDraft } = useCreateTaskDraft();
   const { lists: reduxLists } = useLists();
 
@@ -231,7 +244,6 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   const buttonColor = (values?.color as TaskColor) || themeColor;
   const titleInputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
-
   // only icon/color still uses an in-screen DraggableModal (no stack route for it yet)
   const [isColorPickerVisible, setIsColorPickerVisible] = useState(false);
   useEffect(() => {
@@ -261,6 +273,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       time: values.time,
       duration: values.duration,
       alerts: values.alerts ?? [],
+      routineType: (values.routineType as RoutineType) || 'once',
     });
     router.push('/date-select');
   };
@@ -287,6 +300,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       time: values.time,
       duration: values.duration,
       alerts: values.alerts ?? [],
+      routineType: (values.routineType as RoutineType) || 'once',
     });
     router.push('/time-duration-select');
   };
@@ -302,6 +316,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       time: values.time,
       duration: values.duration,
       alerts: values.alerts ?? [],
+      routineType: (values.routineType as RoutineType) || 'once',
     });
     router.push('/alert-select');
   };
@@ -359,32 +374,76 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   const pillHeight = isNewerIOS ? 5 : 6;
   const pillRadius = isNewerIOS ? 2 : 3;
 
-  // build actions menu items: Activity log, Delete task (red, with solid TrashIcon)
-  const actionsMenuItems = useMemo(() => {
-    const items: { id: string; label: string; onPress: () => void; destructive?: boolean; systemImage?: string; icon?: string; iconComponent?: (color: string) => React.ReactNode }[] = [
-      { id: 'activity', label: 'Activity log', systemImage: 'clock.arrow.circlepath', iconComponent: (color) => <ClockIcon size={20} color={color} isSolid />, onPress: onActivityLog ?? (() => {}) },
-      { id: 'duplicate', label: 'Duplicate', systemImage: 'doc.on.doc', icon: 'copy-outline', onPress: onDuplicateTask ?? (() => {}) },
-      { id: 'delete', label: 'Delete task', onPress: onDeleteTask ?? (() => {}), destructive: true, systemImage: 'trash.fill', iconComponent: (color) => <SFSymbolIcon name="trash.fill" size={20} color={color} fallback={<TrashIcon size={20} color={color} />} /> },
+  // edit: drag pill + trailing slot sit in a short overlay — keep scroll top padding just below that strip (avoid stacking insets.top in pill, strip height, and padding)
+  const headerStripHeight = showDragIndicator && isEditMode ? 48 : 60;
+  const stackHeaderHeight = useHeaderHeight();
+  const scrollPaddingTop = useNativeStackHeader
+    ? stackHeaderHeight + 24
+    : showMainCloseButton
+      ? 24
+      : isEditMode
+        ? headerStripHeight + 8
+        : 48;
+
+  // small fixed offset from the top of the sheet — extra insets.top was doubling gap below status bar / sheet chrome
+  const dragIndicatorTop = showDragIndicator && isEditMode ? 6 : 2;
+
+  // edit mode: liquid glass ActionContextMenu (activity / duplicate / delete) — same pattern as pre–stack-toolbar task screen
+  const actionsMenuItems = useMemo((): ActionContextMenuItem[] => {
+    return [
+      {
+        id: 'activity',
+        label: 'Activity log',
+        systemImage: 'clock.arrow.circlepath',
+        iconComponent: (color) => <ClockIcon size={20} color={color} isSolid />,
+        onPress: onActivityLog ?? (() => {}),
+      },
+      {
+        id: 'duplicate',
+        label: 'Duplicate',
+        systemImage: 'doc.on.doc',
+        icon: 'copy-outline',
+        onPress: onDuplicateTask ?? (() => {}),
+      },
+      {
+        id: 'delete',
+        label: 'Delete task',
+        onPress: onDeleteTask ?? (() => {}),
+        destructive: true,
+        systemImage: 'trash.fill',
+        iconComponent: (color) => (
+          <SFSymbolIcon name="trash.fill" size={20} color={color} fallback={<TrashIcon size={20} color={color} />} />
+        ),
+      },
     ];
-    return items;
   }, [onActivityLog, onDuplicateTask, onDeleteTask]);
 
+  // screen fill: ThemeColors.background.primary (from ColorPalette) — required when stack uses transparent formSheet (ios glass) so we still paint the app surface
+  const screenBg = { backgroundColor: themeColors.background.primary() };
+
   return (
-    <View style={styles.container}>
+    // collapsable: false keeps one native wrapper for formSheet (RNScreens scroll + header heuristic)
+    <View style={[styles.container, screenBg]} collapsable={false}>
       {/* ScrollView first so header overlays on top (header has zIndex) */}
       <ScrollView
         ref={scrollViewRef}
-        style={[styles.scroll]}
+        style={[styles.scroll, screenBg]}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: showMainCloseButton ? 24 : (isEditMode ? 60 : 48), paddingBottom: keyboardHeight > 0 ? keyboardHeight + 32 : 160 },
+          { paddingTop: scrollPaddingTop, paddingBottom: keyboardHeight > 0 ? keyboardHeight + 32 : 160 },
         ]}
         showsVerticalScrollIndicator
         keyboardShouldPersistTaps="handled"
       >
         {/* task title input + optional checkbox row (checkbox on left when showTitleCheckbox) */}
         {/* create variant: extra left padding so title has 20px gap from MainCloseButton (16 + 42 + 20 - screen padding) */}
-        <View style={[styles.titleRow, showMainCloseButton && { paddingLeft: 16 + 42 + 20 - Paddings.screen }]}>
+        <View
+          style={[
+            styles.titleRow,
+            showMainCloseButton &&
+              !useNativeStackHeader && { paddingLeft: 16 + 42 + 20 - Paddings.screen },
+          ]}
+        >
           {showTitleCheckbox && (
             <View style={styles.checkboxWrap}>
               <Checkbox
@@ -411,13 +470,14 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
               selectionColor="#FFFFFF"
               cursorColor="#FFFFFF"
               style={[
-                getTextStyle('heading-2'),
+                getTypographyStyle('heading-2', typographyPlatform),
                 {
                   color: themeColors.text.primary(),
                   paddingBottom: Paddings.none,
                   paddingHorizontal: Paddings.none,
                   maxHeight: 68, // 2 lines max (fontSize 26 * ~1.3 line height)
-                  caretColor: '#FFFFFF', // iOS: style-based cursor color fallback
+                  // @ts-expect-error caretColor works on RN TextInput; @types/react-native TextStyle is incomplete
+                  caretColor: '#FFFFFF',
                 },
               ]}
               multiline
@@ -432,7 +492,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
           </View>
         </View>
 
-        {/* picker section: date picker (if date selected) + time/alert display row */}
+        {/* picker section: date + time + list in GroupedList when date set; recurrence + list or alerts pills below */}
         <View style={styles.pickerSectionWrap}>
           <FormDetailSection
             onShowDatePicker={handleShowDatePicker}
@@ -463,6 +523,10 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
           onDescriptionChange={(description) => onChange('description', description)}
           taskColor={buttonColor}
           scrollViewRef={scrollViewRef}
+          listBackgroundColor={subtaskListBackgroundColor}
+          listBorderRadius={subtaskListBorderRadius}
+          listBorderWidth={subtaskListBorderWidth}
+          listBorderColor={subtaskListBorderColor}
         />
 
         {(createError ?? updateError ?? validationError) && (
@@ -477,7 +541,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
               borderColor: colors.getSemanticColor('error', 500),
             }}
           >
-            <Text style={[getTextStyle('body-small'), { color: colors.getSemanticColor('error', 500) }]}>
+            <Text style={[getTypographyStyle('body-small', typographyPlatform), { color: colors.getSemanticColor('error', 500) }]}>
               {createError ?? updateError ?? validationError}
             </Text>
           </View>
@@ -496,20 +560,22 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
             left={20}
           />
         )}
-        {/* drag indicator + actions */}
-        <View style={styles.headerWrap} pointerEvents="box-none">
+        {/* drag indicator + edit overflow (ActionContextMenu top-right) */}
+        <View style={[styles.headerWrap, { height: headerStripHeight }]} pointerEvents="box-none">
           {isEditMode && (
             <View style={styles.actionsButtonWrap} pointerEvents="box-none">
               <ActionContextMenu
                 items={actionsMenuItems}
                 style={styles.actionsButton}
                 accessibilityLabel="Task actions"
-                tint="elevated"
+                tint="primary"
+                dropdownAnchorTopOffset={Paddings.taskEditActionsDropdownTopOffset}
+                dropdownAnchorRightOffset={Paddings.screen}
               />
             </View>
           )}
           {showDragIndicator && (
-            <View style={styles.dragIndicatorWrap} pointerEvents="none">
+            <View style={[styles.dragIndicatorWrap, { top: dragIndicatorTop }]} pointerEvents="none">
               <View
                 style={[
                   styles.dragIndicatorPill,
@@ -587,7 +653,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 1,
   },
-  // header wrapper: drag indicator + actions
+  // header wrapper: drag indicator strip (height set inline on ios edit so tall safe area does not clip the pill)
   headerWrap: {
     position: 'absolute',
     top: 0,
@@ -596,12 +662,11 @@ const styles = StyleSheet.create({
     height: 60,
     zIndex: 10,
   },
-  // actions button: absolute top right, liquid glass on iOS
   actionsButtonWrap: {
     position: 'absolute',
-    top: 20,
-    right: 20,
-    zIndex: 10,
+    top: Paddings.screen,
+    right: Paddings.screen,
+    zIndex: 11,
   },
   actionsButton: {
     backgroundColor: 'transparent',
@@ -612,10 +677,9 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
   },
-  // drag indicator: centered pill at top (matches ModalHeader style)
+  // drag indicator: horizontal center; vertical offset from top set inline (ios: below status bar)
   dragIndicatorWrap: {
     position: 'absolute',
-    top: 10,
     left: 0,
     right: 0,
     alignItems: 'center',

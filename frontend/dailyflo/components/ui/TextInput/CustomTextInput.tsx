@@ -64,6 +64,11 @@ export interface CustomTextInputProps {
    * When false (task description default), uses taller minimum + padding so the field feels like a notes area.
    */
   compactInitialHeight?: boolean;
+  /**
+   * when set with compactInitialHeight false, empty height is at least this many lines (lineHeight 20 + vertical padding).
+   * used by task Description so the notes area shows ~5 lines before the user types.
+   */
+  minimumLineCount?: number;
 }
 
 /**
@@ -85,6 +90,7 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   onFocus: onFocusProp,
   onBlur: onBlurProp,
   compactInitialHeight = false,
+  minimumLineCount,
 }) => {
   // get current color scheme (light/dark mode)
   const colorScheme = useColorScheme() || 'dark';
@@ -261,9 +267,11 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   const minHeight = compactInitialHeight ? lineHeight : 40;
   const paddingVertical = compactInitialHeight ? 0 : 24; // task form uses 12+12; compact matches Description row padding cleared via inputStyle
   
-  // calculate content height based on number of lines (with safety check)
+  // calculate content height — optional minimumLineCount reserves empty space for n lines (task description)
   const linesCount = lines?.length || 1;
-  const contentHeight = Math.max(linesCount * lineHeight + paddingVertical, minHeight);
+  const effectiveLineCount =
+    minimumLineCount != null ? Math.max(linesCount, minimumLineCount) : linesCount;
+  const contentHeight = Math.max(effectiveLineCount * lineHeight + paddingVertical, minHeight);
   
   // removed maxHeight constraint to allow infinite expansion
   // the parent ScrollView in TaskCreationContent will handle scrolling

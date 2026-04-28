@@ -15,38 +15,62 @@
 
 /**
  * Primary Color Palette
- * 
- * Neutral grays that form the foundation of the design system.
- * These colors adapt between light and dark themes.
+ *
+ * Neutral scale for backgrounds, typography, buttons, borders, and the FAB. App code
+ * uses `useThemeColors()` — not these hex values directly.
+ *
+ * **Light column** = colors for light mode (and for “light paper” panels when dark mode
+ * needs a bright surface). **Dark column** = colors for dark mode (and for dark bars /
+ * strips when light mode uses an inverted header-style block).
  */
 export const PrimaryColors = {
   light: {
-    // light mode primary colors (from design system specs)
-    25: '#FFFFFF',   // pure white - light backgrounds, modal surfaces
-    50: '#FAFCFE',   // between 25 and 100 - very light background
-    100: '#F5F7FA',  // subtle off-white - page backgrounds, settings panels
-    200: '#ECF0F5',  // light neutral - secondary backgrounds
-    300: '#959BA5',  // medium neutral - secondary buttons, inactive elements
-    400: '#374151',  // dark neutral - secondary text, labels
-    500: '#262E3B',  // base brand color - primary text, headings
-    600: '#111827',  // darker brand - primary buttons, active states
-    700: '#0F172A',  // deep neutral - navigation headers
-    800: '#0C1320',  // strong base for text in dark mode
-    900: '#111827',  // near-black - dark mode backgrounds, overlays
+    // white: cards, modals, elevated sheets; FAB tint; hairline borders; label text on dark buttons/bars
+    25: '#FFFFFF',
+    // barely tinted screen wash between stacked sections
+    50: '#FAFCFE',
+    // default page / list background; soft secondary buttons; “paper” surfaces in dark mode
+    100: '#F5F7FA',
+    // grouped rows, tertiary panels, disabled button fills
+    200: '#ECF0F5',
+    // hints, placeholders, disabled + tertiary text, muted controls
+    300: '#959BA5',
+    // lowest-emphasis control styling
+    400: '#374151',
+    // subtitles, metadata, secondary line text (not main title)
+    500: '#262E3B',
+    // primary solid buttons; focus ring / focus border on inputs
+    600: '#111827',
+    // hover on primary buttons (light mode)
+    700: '#0F172A',
+    // pressed primary buttons (light mode)
+    800: '#0C1320',
+    // main titles, task titles, body text (light mode); dark text on light popovers in dark mode
+    900: '#111827',
   },
   dark: {
-    // dark mode primary colors (from design system specs)
-    25: '#171718',   // pure white - light backgrounds, modal surfaces
-    50: '#222226',   // between 25 and 100 - very dark background
-    100: '#2B2B31',  // subtle off-white - page backgrounds, settings panels
-    200: '#393942',  // light neutral - secondary backgrounds
-    300: '#4F4F5B',  // medium neutral - secondary buttons, inactive elements
-    400: '#9BA2B1',  // dark neutral - secondary text, labels
-    500: '#ADBBD5',  // base brand color - primary text, headings
-    600: '#BFCBE3',  // darker brand - primary buttons, active states
-    700: '#E1E9F9',  // deep neutral - navigation headers
-    800: '#ECF1FB',  // strong base for text in dark mode
-    900: '#f5f8ff',  // near-black - dark mode backgrounds, overlays
+    // root dark canvas; FAB icon color; inverted dark header/toolbar bands in light mode
+    25: '#16171A',
+    // subtle blend between two dark regions
+    50: '#1E1E24',
+    // cards, sheets, secondary dark surfaces; ghost controls on dark
+    100: '#23232C',
+    // nested panels, dividers, disabled fills; dark strips behind inverted light UI
+    200: '#30313C',
+    // tertiary labels, disabled text, muted chips on dark
+    300: '#3C3E4B',
+    // secondary text, helper copy; secondary / outline buttons on dark
+    400: '#4E5164',
+    // not wired into the theme yet (reserved)
+    500: '#ADBBD5',
+    // focus outline on dark UI; focus on light-on-dark strips
+    600: '#BFCBE3',
+    // hover on interactive controls (dark mode)
+    700: '#E1E9F9',
+    // pressed interactive controls (dark mode)
+    800: '#C3C4CA',
+    // primary readable text on dark; primary buttons on dark; light “primary” actions on inverted dark bars
+    900: '#CCCFE0',
   },
 } as const;
 
@@ -173,6 +197,24 @@ export const TaskCategoryColors = {
 } as const;
 
 /**
+ * Primary button palette — solid fills and icon color for main CTAs (FAB, primary actions).
+ * `fill` / `icon` are mapped into ThemeColors.primaryButton; tweak here to keep buttons consistent.
+ */
+export const PrimaryButtonColors = {
+  light: {
+    /** main solid fill — matches tab bar selected tint + FAB */
+    fill: '#DE584E',
+    /** label / icon on fill — same role as text.inverse on this surface */
+    icon: PrimaryColors.dark[25],
+  },
+  dark: {
+    fill: '#DE584E',
+    /** readable on dark primary fills (matches theme text.inverse intent) */
+    icon: PrimaryColors.light[25],
+  },
+} as const;
+
+/**
  * Theme-Aware Color Mappings
  * 
  * Semantic color mappings that automatically adapt to light/dark themes.
@@ -180,6 +222,11 @@ export const TaskCategoryColors = {
  */
 export const ThemeColors = {
   light: {
+    // primary buttons — FAB, solid primary actions (see PrimaryButtonColors)
+    primaryButton: {
+      fill: PrimaryButtonColors.light.fill,
+      icon: PrimaryButtonColors.light.icon,
+    },
     // background colors - surfaces and containers
     background: {
       primary: PrimaryColors.light[100],      // white - main backgrounds
@@ -248,6 +295,10 @@ export const ThemeColors = {
   },
   
   dark: {
+    primaryButton: {
+      fill: PrimaryButtonColors.dark.fill,
+      icon: PrimaryButtonColors.dark.icon,
+    },
     // background colors - surfaces and containers
     background: {
       primary: PrimaryColors.dark[25],       // dark - main backgrounds
@@ -318,14 +369,14 @@ export const ThemeColors = {
 } as const;
 
 /**
- * FAB (Floating Action Button) Colors
+ * FAB (Floating Action Button) — legacy constants
  *
- * Constant colors for the FAB. Tint uses task-category red; icon uses primary white.
- * glassBorder: semi-transparent white for glass-like border ring (Android fallback).
+ * Prefer `ThemeColors[theme].primaryButton.*` / `useThemeColors().primaryButton` for tint + icon.
+ * `glassBorder`: semi-transparent white for glass-like border ring (Android fallback).
  */
 export const FABColors = {
-  tint: PrimaryColors.light[25],
-  icon: PrimaryColors.dark[25],
+  tint: PrimaryButtonColors.light.fill,
+  icon: PrimaryButtonColors.light.icon,
   glassBorder: 'rgba(255, 255, 255, 0.5)',
 } as const;
 
@@ -506,6 +557,7 @@ export default {
   PrimaryColors,
   SemanticColors,
   TaskCategoryColors,
+  PrimaryButtonColors,
   ThemeColors,
   getColorValue,
   getSemanticColor,

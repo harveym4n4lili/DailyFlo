@@ -14,7 +14,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Animated, Easing, Platform, ScrollView, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -51,7 +51,7 @@ export function SignInModal() {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const router = useGuardedRouter();
   const dispatch = useAppDispatch(); // get dispatch function to call Redux actions
   
   /**

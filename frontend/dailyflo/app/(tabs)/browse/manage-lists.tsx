@@ -5,8 +5,11 @@
  */
 
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator, Platform } from 'react-native';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { useFocusEffect } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +18,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainCloseButton, MainCreateButton } from '@/components/ui/button';
+import {
+  IosBrowseModalCloseStackToolbar,
+  IosBrowseModalTrailingStackToolbar,
+} from '@/components/navigation/IosBrowseModalStackToolbars';
 import { LIST_CREATE_OPENED_FROM_BROWSE } from './navigationParams';
 import { Paddings } from '@/constants/Paddings';
 import { getFontFamilyWithWeight } from '@/constants/Typography';
@@ -39,7 +46,7 @@ const DELETE_HIT_WIDTH = 44;
 const LIST_CARD_RADIUS = 24;
 
 export default function ManageListsScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
   const semanticColors = useSemanticColors();
@@ -202,7 +209,11 @@ export default function ManageListsScreen() {
 
   const keyExtractor = useCallback((item: List) => item.id, []);
 
-  const topSectionHeight = TOP_SECTION_HEIGHT;
+  // ios: native nav bar holds Stack.Toolbar close + add; offset in-content chrome to sit below it.
+  const headerHeight = useHeaderHeight();
+  const iosNavOffset = Platform.OS === 'ios' ? headerHeight : 0;
+  const topSectionHeight = iosNavOffset + TOP_SECTION_HEIGHT;
+  const contentTopInset = iosNavOffset + HEADER_ROW_HEIGHT;
   const headerTitleStyle = {
     ...typography.getTextStyle('heading-3'),
     color: themeColors.text.primary(),
@@ -220,13 +231,19 @@ export default function ManageListsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
+      <IosBrowseModalCloseStackToolbar />
+      <IosBrowseModalTrailingStackToolbar
+        icon="plus"
+        onPress={openListCreate}
+        accessibilityLabel="Create new list"
+      />
       <View style={styles.contentArea}>
         {isLoading && orderedLists.length === 0 ? (
-          <View style={[styles.centered, { paddingTop: HEADER_ROW_HEIGHT + 48 }]}>
+          <View style={[styles.centered, { paddingTop: contentTopInset + 48 }]}>
             <ActivityIndicator color={themeColors.text.tertiary()} />
           </View>
         ) : listEmpty ? (
-          <View style={[styles.emptyWrap, { paddingTop: HEADER_ROW_HEIGHT + 40 }]}>
+          <View style={[styles.emptyWrap, { paddingTop: contentTopInset + 40 }]}>
             <Text style={[styles.emptyText, { color: themeColors.text.secondary() }]}>
               No lists yet. Create one from the browse tab.
             </Text>
@@ -242,7 +259,7 @@ export default function ManageListsScreen() {
             contentContainerStyle={[
               styles.listContent,
               {
-                paddingTop: HEADER_ROW_HEIGHT + 40,
+                paddingTop: contentTopInset + 40,
                 paddingBottom: 200 + insets.bottom,
               },
             ]}
@@ -273,26 +290,28 @@ export default function ManageListsScreen() {
             pointerEvents="none"
           />
         </View>
-        <View style={[styles.headerRow, { top: HEADER_TOP }]} pointerEvents="box-none">
+        <View style={[styles.headerRow, { top: iosNavOffset + HEADER_TOP }]} pointerEvents="box-none">
           <View style={styles.headerPlaceholder} pointerEvents="none" />
           <View style={styles.headerCenter} pointerEvents="none">
             <Text style={headerTitleStyle}>Manage Lists</Text>
           </View>
           <View style={styles.headerPlaceholder} pointerEvents="none" />
         </View>
-        <View style={styles.headerActionsContainer} pointerEvents="box-none">
-          <MainCloseButton
-            onPress={() => router.back()}
-            top={Paddings.screen}
-            left={Paddings.screen}
-          />
-          <MainCreateButton
-            onPress={openListCreate}
-            top={Paddings.screen}
-            right={Paddings.screen}
-            accessibilityLabel="Create new list"
-          />
-        </View>
+        {Platform.OS === 'android' ? (
+          <View style={styles.headerActionsContainer} pointerEvents="box-none">
+            <MainCloseButton
+              onPress={() => router.back()}
+              top={Paddings.screen}
+              left={Paddings.screen}
+            />
+            <MainCreateButton
+              onPress={openListCreate}
+              top={Paddings.screen}
+              right={Paddings.screen}
+              accessibilityLabel="Create new list"
+            />
+          </View>
+        ) : null}
       </View>
     </View>
   );

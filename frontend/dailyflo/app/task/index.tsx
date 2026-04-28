@@ -1,13 +1,15 @@
 /**
- * Task index – redirects to task-create (create) or task/[taskId] (view/edit).
+ * Task index – redirects to task-quick-add (create) or task/[taskId] (view/edit).
  * Keeps old /task and /task?taskId= links working.
  */
 
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useEffect } from 'react';
 
 export default function TaskIndexRedirect() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const params = useLocalSearchParams<{ dueDate?: string; taskId?: string; occurrenceDate?: string }>();
 
   useEffect(() => {
@@ -18,7 +20,7 @@ export default function TaskIndexRedirect() {
       });
     } else {
       router.replace({
-        pathname: '/task-create',
+        pathname: '/task-quick-add',
         params: params.dueDate ? { dueDate: params.dueDate } : {},
       });
     }

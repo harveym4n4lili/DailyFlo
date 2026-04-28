@@ -15,7 +15,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -44,7 +44,7 @@ export function EmailAuthRegisterModal({ variant = 'register' }: { variant?: 're
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const router = useGuardedRouter();
   const dispatch = useAppDispatch(); // get dispatch function to call Redux actions
   
   // determine if this is sign in variant (no name fields, different button text)

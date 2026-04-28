@@ -31,10 +31,17 @@ export interface DescriptionProps {
   onFocus?: () => void;
   onBlur?: () => void;
   /**
-   * When true (task create/edit): keeps the tall empty state (~120pt) like TaskScreen.
-   * When false (e.g. list create): no reserved min height; field starts ~one line and grows with each newline inside CustomTextInput.
+   * When true (task create/edit): description uses notes-area padding + minVisibleLines empty height in CustomTextInput.
+   * When false (e.g. quick add): compact — one line tall until content grows.
    */
   useInitialMinHeight?: boolean;
+  /**
+   * only when useInitialMinHeight: minimum logical lines of empty space (default 5 for task view).
+   * quick add passes useInitialMinHeight false so this is ignored there.
+   */
+  minVisibleLines?: number;
+  /** when false, hides the paragraph icon but keeps the same left gutter so grouped-list separators still line up */
+  showIcon?: boolean;
 }
 
 export const Description: React.FC<DescriptionProps> = ({
@@ -45,6 +52,8 @@ export const Description: React.FC<DescriptionProps> = ({
   onFocus,
   onBlur,
   useInitialMinHeight = true,
+  minVisibleLines,
+  showIcon = true,
 }) => {
   const [localDescription, setLocalDescription] = useState(description);
   const themeColors = useThemeColors();
@@ -54,23 +63,23 @@ export const Description: React.FC<DescriptionProps> = ({
     onDescriptionChange?.(text);
   };
 
-  // icon component for description - SF Symbol on iOS, ParagraphIcon fallback on Android
-  const icon = (
-    <SFSymbolIcon
-      name="doc.text.fill"
-      size={ICON_SIZE}
-      color={themeColors.text.primary()}
-      fallback={<ParagraphIcon size={ICON_SIZE} color={themeColors.text.primary()} />}
-    />
-  );
+  // task screen: at least minVisibleLines (default 5) of empty height inside CustomTextInput; quick add uses compactInitialHeight
+  const notesMinLines = useInitialMinHeight ? (minVisibleLines ?? 5) : undefined;
 
   return (
-    <View style={useInitialMinHeight ? styles.wrapper : styles.wrapperCompact}>
+    <View style={styles.wrapper}>
       <View style={styles.container}>
         {/* icon + content layout: icon on left, text input on right */}
         <View style={styles.iconContentRow}>
           <View style={styles.iconWrap}>
-            {icon}
+            {showIcon ? (
+              <SFSymbolIcon
+                name="doc.text.fill"
+                size={ICON_SIZE}
+                color={themeColors.text.primary()}
+                fallback={<ParagraphIcon size={ICON_SIZE} color={themeColors.text.primary()} />}
+              />
+            ) : null}
           </View>
           <View style={styles.content}>
             <CustomTextInput
@@ -82,6 +91,7 @@ export const Description: React.FC<DescriptionProps> = ({
               taskColor={taskColor}
               multiline={true}
               compactInitialHeight={!useInitialMinHeight}
+              minimumLineCount={notesMinLines}
               containerStyle={styles.textInputContainer}
               inputStyle={styles.descriptionInputPadding}
               onFocus={onFocus}
@@ -95,12 +105,8 @@ export const Description: React.FC<DescriptionProps> = ({
 };
 
 const styles = StyleSheet.create({
-  // task screen: empty description still shows a generous tap target / notes area
+  // height comes from CustomTextInput (minVisibleLines when useInitialMinHeight) — no fixed 120pt box
   wrapper: {
-    minHeight: 120,
-  },
-  // list create: height follows content from first line upward
-  wrapperCompact: {
     minHeight: 0,
     alignSelf: 'stretch',
   },

@@ -53,6 +53,8 @@ import LoadingState from './LoadingState';
 
 // import utility functions for task grouping and sorting
 import { groupTasks, sortTasks, sortGroupEntries, formatDateForGroup } from '@/utils/taskGrouping';
+import { getListDisplayName } from '@/utils/listDisplayName';
+import { useLists } from '@/store/hooks';
 
 /**
  * Props interface for ListCard component
@@ -79,9 +81,17 @@ export interface ListCardProps {
   metadataVariant?: 'default' | 'today'; // 'today' = time as "09:00 - 09:30", no "Today" text
   cardSpacing?: number; // spacing between task cards (default 20)
   showDashedSeparator?: boolean; // whether to show dashed separator below each card (default false)
+  /** passed to TaskCard: solid rules on today / search, dashed elsewhere by default */
+  taskRowSeparatorVariant?: 'dashed' | 'solid';
   separatorPaddingHorizontal?: number; // horizontal padding for separators to match list padding (defaults to paddingHorizontal)
   hideBackground?: boolean; // whether to hide task card backgrounds (default false)
   removeInnerPadding?: boolean; // whether to remove horizontal padding inside task cards (default false)
+  /** today-style row: leaf + list / recurrence under title (passed to TaskCard) */
+  showListRecurrenceRow?: boolean;
+  /** when true with groupBy dueDate: today’s group (formatted date key) cannot collapse — no chevron, always expanded */
+  lockTodayGroupExpanded?: boolean;
+  /** ios: expo-glass-effect; android: rounded elevated fallback — rounded rows instead of flat + dashed rules */
+  liquidGlass?: boolean;
   emptyMessage?: string; // message to show when no tasks are available
   loading?: boolean; // whether the list is currently loading
 
@@ -148,6 +158,9 @@ export interface ListCardProps {
   // when true, shows vertical scroll indicator on the right (default false)
   showsVerticalScrollIndicator?: boolean;
 
+  // ios: forwarded to FlatList — 'automatic' lets uikit link scroll + safe area (needed for native tab bar minimize with NativeTabs)
+  contentInsetAdjustmentBehavior?: 'automatic' | 'scrollableAxes' | 'never';
+
   // when true, completed tasks are hidden from the list - they disappear when checked (iOS-style)
   hideCompletedTasks?: boolean;
 
@@ -189,9 +202,13 @@ export default function ListCard({
   metadataVariant,
   cardSpacing = 20,
   showDashedSeparator = false,
+  taskRowSeparatorVariant = 'solid',
   separatorPaddingHorizontal,
   hideBackground = false,
   removeInnerPadding = false,
+  showListRecurrenceRow = false,
+  lockTodayGroupExpanded = false,
+  liquidGlass = false,
   emptyMessage = 'No tasks available',
   loading = false,
   groupBy = 'none',
@@ -467,9 +484,19 @@ export default function ListCard({
     return sortGroupEntries(entries);
   }, [groupedTasks, groupBy]);
 
-  const handleGroupToggle = (groupTitle: string) => {
-    toggleGroupCollapse(groupTitle);
-  };
+  // matches group key for “today” when grouping by due date — used to hide collapse UI and keep section open
+  const todayGroupKeyForLock = useMemo(() => {
+    if (!lockTodayGroupExpanded || groupBy !== 'dueDate') return null;
+    return formatDateForGroup(new Date());
+  }, [lockTodayGroupExpanded, groupBy]);
+
+  const handleGroupToggle = useCallback(
+    (groupTitle: string) => {
+      if (todayGroupKeyForLock && groupTitle === todayGroupKeyForLock) return;
+      toggleGroupCollapse(groupTitle);
+    },
+    [todayGroupKeyForLock, toggleGroupCollapse],
+  );
 
   // memoized render - stable ref so FlatList doesn't re-render all items when parent updates
   const renderTaskCard = useCallback<ListRenderItem<Task>>(
@@ -493,9 +520,12 @@ export default function ListCard({
             metadataVariant={metadataVariant}
             cardSpacing={cardSpacing}
             showDashedSeparator={showDashedSeparator}
+            taskRowSeparatorVariant={taskRowSeparatorVariant}
             separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
             hideBackground={hideBackground}
             removeInnerPadding={removeInnerPadding}
+            showListRecurrenceRow={showListRecurrenceRow}
+            liquidGlass={liquidGlass}
             isLastItem={isLastItem}
             isFirstItem={isFirstItem}
             selectionMode={selectionMode}
@@ -527,9 +557,12 @@ export default function ListCard({
       metadataVariant,
       cardSpacing,
       showDashedSeparator,
+      taskRowSeparatorVariant,
       finalSeparatorPaddingHorizontal,
       hideBackground,
       removeInnerPadding,
+      showListRecurrenceRow,
+      liquidGlass,
       layoutTransitionEnabled,
       selectionMode,
       selectedTaskIds,
@@ -550,6 +583,8 @@ export default function ListCard({
     }
 
     const isCollapsed = isGroupCollapsed(title);
+    const isTodayGroupLocked = Boolean(todayGroupKeyForLock && title === todayGroupKeyForLock);
+    const headerCollapsed = isTodayGroupLocked ? false : isCollapsed;
     const animatedValuesForGroup = getAnimatedValuesForGroup(title);
 
     // calculate arrow rotation animation - smoothly rotate arrow between down (expanded) and right (collapsed)
@@ -567,9 +602,10 @@ export default function ListCard({
       <GroupHeader
         title={title}
         count={count}
-        isCollapsed={isCollapsed}
+        isCollapsed={headerCollapsed}
         arrowRotation={arrowRotation}
         showSecondaryAction={showSecondaryAction}
+        collapsible={!isTodayGroupLocked}
         onSecondaryActionPress={
           showSecondaryAction && onOverdueReschedule
             ? () => onOverdueReschedule(groupTasks)
@@ -594,19 +630,12 @@ export default function ListCard({
     scrollOffsetRef.current = y;
   }, []);
 
-  // throttle runOnJS to every 4th scroll event - reduces bridge traffic for smoother scroll
-  const scrollEventCounter = useSharedValue(0);
-
-  // when scrollYSharedValue provided: use animated scroll handler (runs on UI thread) to avoid JS thread work during scroll
-  // scrollY is updated on UI thread; updateScrollOffsetRef throttled to every 4th event
+  // when scrollYSharedValue provided: animated scroll handler runs on UI thread; scrollY updates every event for smooth header fade
   const animatedScrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
       const y = e.contentOffset.y;
       scrollY.value = y;
-      scrollEventCounter.value = scrollEventCounter.value + 1;
-      if (scrollEventCounter.value % 4 === 0) {
-        runOnJS(updateScrollOffsetRef)(y);
-      }
+      runOnJS(updateScrollOffsetRef)(y);
       if (onScroll) runOnJS(onScroll)({ nativeEvent: e });
     },
     onEndDrag: (e) => {
@@ -762,7 +791,7 @@ export default function ListCard({
                 activeOpacity={0.7}
               >
                 <EllipsisIcon
-                  size={24}
+                  size={20}
                   color={themeColors.text.primary()}
                 />
               </TouchableOpacity>
@@ -872,7 +901,10 @@ export default function ListCard({
             }
           }}
           renderItem={({ item: [groupTitle, groupTasks] }) => {
-            const isCollapsed = isGroupCollapsed(groupTitle);
+            const groupCollapsed = isGroupCollapsed(groupTitle);
+            const isTodayGroupLocked =
+              Boolean(todayGroupKeyForLock && groupTitle === todayGroupKeyForLock);
+            const isCollapsed = isTodayGroupLocked ? false : groupCollapsed;
             return (
               <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION_SPRING : undefined} style={styles.group}>
                 {renderGroupHeader(groupTitle, groupTasks.length, groupTasks as Task[])}
@@ -896,32 +928,42 @@ export default function ListCard({
                         const isSelected = selectionMode && selectedTaskIds.includes(task.id);
                         const card = (
                           <TaskCard
-                          task={task}
-                          onPress={selectionMode && onToggleTaskSelection ? undefined : onTaskPress}
-                          onComplete={selectionMode ? undefined : handleTaskComplete}
-                          onCompleteImmediate={selectionMode ? undefined : handleTaskCompleteImmediate}
-                          onEdit={onTaskEdit}
-                          onDelete={onTaskDelete}
-                          showCategory={showCategory}
-                          compact={compact}
-                          showIcon={showIcon}
-                          showIndicators={showIndicators}
-                          showMetadata={showMetadata}
-                          metadataVariant={metadataVariant}
-                          cardSpacing={cardSpacing}
-                          showDashedSeparator={showDashedSeparator}
-                          separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
-                          hideBackground={hideBackground}
-                          removeInnerPadding={removeInnerPadding}
-                          isLastItem={isLastItem}
-                          isFirstItem={isFirstItem}
-                          selectionMode={selectionMode}
-                          isSelected={isSelected}
-                          onSelect={selectionMode && onToggleTaskSelection ? (t: Task, _selected?: boolean) => onToggleTaskSelection(t.id) : undefined}
+                            task={task}
+                            onPress={selectionMode && onToggleTaskSelection ? undefined : onTaskPress}
+                            onComplete={selectionMode ? undefined : handleTaskComplete}
+                            onCompleteImmediate={selectionMode ? undefined : handleTaskCompleteImmediate}
+                            onEdit={onTaskEdit}
+                            onDelete={onTaskDelete}
+                            showCategory={showCategory}
+                            compact={compact}
+                            showIcon={showIcon}
+                            showIndicators={showIndicators}
+                            showMetadata={showMetadata}
+                            metadataVariant={metadataVariant}
+                            cardSpacing={cardSpacing}
+                            showDashedSeparator={showDashedSeparator}
+                            taskRowSeparatorVariant={taskRowSeparatorVariant}
+                            separatorPaddingHorizontal={finalSeparatorPaddingHorizontal}
+                            hideBackground={hideBackground}
+                            removeInnerPadding={removeInnerPadding}
+                            showListRecurrenceRow={showListRecurrenceRow}
+                            liquidGlass={liquidGlass}
+                            isLastItem={isLastItem}
+                            isFirstItem={isFirstItem}
+                            selectionMode={selectionMode}
+                            isSelected={isSelected}
+                            onSelect={
+                              selectionMode && onToggleTaskSelection
+                                ? (t: Task, _selected?: boolean) => onToggleTaskSelection(t.id)
+                                : undefined
+                            }
                           />
                         );
                         return hideCompletedTasks ? (
-                          <AnimatedReanimated.View layout={layoutTransitionEnabled ? LAYOUT_TRANSITION_SPRING : undefined} exiting={FadeOut.duration(200)}>
+                          <AnimatedReanimated.View
+                            layout={layoutTransitionEnabled ? LAYOUT_TRANSITION_SPRING : undefined}
+                            exiting={FadeOut.duration(200)}
+                          >
                             {card}
                           </AnimatedReanimated.View>
                         ) : (

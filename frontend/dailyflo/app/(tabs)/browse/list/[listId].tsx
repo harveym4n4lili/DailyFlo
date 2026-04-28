@@ -10,7 +10,9 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -27,7 +29,8 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainBackButton } from '@/components/ui/button';
 import { ScreenHeaderActions } from '@/components/ui';
-import { ClockIcon } from '@/components/ui/icon';
+import { IosBrowseBackStackToolbar } from '@/components/navigation/IosBrowseBackStackToolbar';
+import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { ListCard } from '@/components/ui/card';
 import { Paddings } from '@/constants/Paddings';
 import { browseScrollPaddingTop } from '@/constants/browseScrollPaddingTop';
@@ -42,14 +45,14 @@ const TOP_SECTION_ANCHOR_HEIGHT = 64;
 const SCROLL_THRESHOLD = 16;
 
 export default function BrowseListDetailScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const params = useLocalSearchParams<{ listId: string | string[] }>();
   const listId = Array.isArray(params.listId) ? params.listId[0] : params.listId;
 
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
-  const { enterSelectionMode, selection, toggleItemSelection } = useUI();
+  const { selection, toggleItemSelection, selectAllItems, clearSelection } = useUI();
   const { lists, fetchLists } = useLists();
 
   useFocusEffect(
@@ -117,6 +120,7 @@ export default function BrowseListDetailScreen() {
     opacity: interpolate(scrollY.value, [0, SCROLL_THRESHOLD], [1, 0], Extrapolation.CLAMP),
   }));
 
+  // android: glass back in blur band; ios uses Stack.Toolbar chevron.left.
   const backButtonTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
 
   const handleTaskPress = useCallback(
@@ -155,9 +159,36 @@ export default function BrowseListDetailScreen() {
   }, []);
 
   const isSelectionMode = selection.isSelectionMode && selection.selectionType === 'tasks';
+  const listSelectionMode = Platform.OS === 'android' && isSelectionMode;
+
+  const eligibleListTaskIds = useMemo(
+    () => listTasks.filter((t) => !t.isCompleted && !t.softDeleted).map((t) => t.id),
+    [listTasks]
+  );
+  const allEligibleListSelected =
+    eligibleListTaskIds.length > 0 &&
+    eligibleListTaskIds.every((id) => selection.selectedItems.includes(id));
+
+  const handleSelectAllList = useCallback(() => {
+    if (!isSelectionMode) return;
+    if (allEligibleListSelected) {
+      clearSelection();
+    } else {
+      selectAllItems(eligibleListTaskIds);
+    }
+  }, [
+    isSelectionMode,
+    allEligibleListSelected,
+    eligibleListTaskIds,
+    selectAllItems,
+    clearSelection,
+  ]);
 
   return (
-    <View style={{ flex: 1 }}>
+    <>
+      {Platform.OS === 'ios' ? <IosBrowseBackStackToolbar /> : null}
+      <IosDashboardOverflowToolbar hidden={listSelectionMode} />
+      <View style={{ flex: 1 }}>
       <View
         style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}
       >
@@ -185,38 +216,22 @@ export default function BrowseListDetailScreen() {
               {title}
             </Text>
           </Animated.View>
-          <ScreenHeaderActions
-            variant="dashboard"
-            contextMenuItems={[
-              {
-                id: 'activity-log',
-                label: 'Activity log',
-                iconComponent: (color: string) => <ClockIcon size={20} color={color} isSolid />,
-                systemImage: 'clock.arrow.circlepath',
-                onPress: () => router.push('/activity-log' as any),
-              },
-              {
-                id: 'select-tasks',
-                label: 'Select Tasks',
-                systemImage: 'square.and.pencil',
-                onPress: () => enterSelectionMode('tasks'),
-              },
-            ]}
-            dropdownAnchorTopOffset={insets.top + TOP_SECTION_ROW_HEIGHT}
-            dropdownAnchorRightOffset={24}
-            style={styles.topSectionContextButton}
-            tint="primary"
-          />
+          {Platform.OS === 'android' ? (
+            <ScreenHeaderActions variant="dashboard" style={styles.topSectionContextButton} tint="primary" />
+          ) : null}
         </View>
       </View>
 
-      <View style={styles.backButtonContainer} pointerEvents="box-none">
-        <MainBackButton onPress={() => router.back()} top={backButtonTop} left={Paddings.screen} />
-      </View>
+      {Platform.OS === 'android' ? (
+        <View style={styles.backButtonContainer} pointerEvents="box-none">
+          <MainBackButton onPress={() => router.back()} top={backButtonTop} left={Paddings.screen} />
+        </View>
+      ) : null}
 
       <Animated.ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
@@ -247,9 +262,9 @@ export default function BrowseListDetailScreen() {
             groupBy="routine"
             sortBy="createdAt"
             sortDirection="desc"
-            selectionMode={isSelectionMode}
+            selectionMode={listSelectionMode}
             selectedTaskIds={selection.selectedItems}
-            onToggleTaskSelection={isSelectionMode ? toggleItemSelection : undefined}
+            onToggleTaskSelection={listSelectionMode ? toggleItemSelection : undefined}
             hideCompletedTasks
             onTaskPress={handleTaskPress}
             onTaskComplete={handleTaskComplete}
@@ -266,6 +281,7 @@ export default function BrowseListDetailScreen() {
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
     </View>
+    </>
   );
 }
 

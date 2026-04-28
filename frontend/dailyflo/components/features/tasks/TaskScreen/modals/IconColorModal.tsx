@@ -6,12 +6,12 @@
  * Uses DraggableModal component for drag-to-dismiss and snap point functionality.
  */
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, Pressable, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
-import { getTextStyle } from '@/constants/Typography';
+import { getTypographyStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
@@ -89,6 +89,7 @@ export function IconColorModal({
   onSelectIcon,
   taskCategoryColor,
 }: IconColorModalProps) {
+  const typographyPlatform = Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
   // CONSOLE DEBUGGING
   // console.log('🎨 IconColorModal - visible:', visible);
   
@@ -222,7 +223,7 @@ export function IconColorModal({
                 {/* icon selection section */}
                 <View style={{ gap: 12 }}>
                   <Text style={[
-                    getTextStyle('heading-4'),
+                    getTypographyStyle('heading-4', typographyPlatform),
                     { color: themeColors.text.primary(), paddingHorizontal: Paddings.groupedListContentHorizontal }
                   ]}>
                     Icon
