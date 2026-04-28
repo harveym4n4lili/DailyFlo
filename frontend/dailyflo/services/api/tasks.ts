@@ -151,6 +151,9 @@ class TasksApiService {
       if (taskData.metadata !== undefined && taskData.metadata !== null) {
         apiData.metadata = taskData.metadata;
       }
+      if (taskData.isCompleted === true) {
+        apiData.is_completed = true;
+      }
       
       // DEBUG: Log the data being sent to Django
       console.log('📤 Sending task data to API:', JSON.stringify(apiData, null, 2));

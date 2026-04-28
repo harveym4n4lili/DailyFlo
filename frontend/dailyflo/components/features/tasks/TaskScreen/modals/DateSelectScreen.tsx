@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, ScrollView, StyleSheet, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
@@ -13,7 +13,7 @@ import { Paddings } from '@/constants/Paddings';
 import { QuickDateOptions, CalendarView } from '@/components/features/calendar/sections';
 
 export function DateSelectScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
   const { draft, setDueDate } = useCreateTaskDraft();

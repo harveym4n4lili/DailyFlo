@@ -1,6 +1,6 @@
 /**
  * EllipsisIcon – three horizontal dots (outline/stroke style).
- * used for context menu trigger in ActionContextMenu, ListCard, ScreenContextButton.
+ * default size 20 matches grouped-list row icons (FormDetailButton / SFSymbolIcon in task form).
  */
 
 import React from 'react';
@@ -11,7 +11,7 @@ export type EllipsisIconProps = {
   color?: string;
 };
 
-export function EllipsisIcon({ size = 24, color = '#000' }: EllipsisIconProps) {
+export function EllipsisIcon({ size = 20, color = '#000' }: EllipsisIconProps) {
   return (
     <Svg
       width={size}

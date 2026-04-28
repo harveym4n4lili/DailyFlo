@@ -12,7 +12,9 @@
 
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
-import { useRouter, useSegments } from 'expo-router';
+import { useSegments } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -30,7 +32,7 @@ const DOT_ACTIVE_WIDTH = 24;
 const DOT_HEIGHT = 8;
 
 export function OnboardingNavigation() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const segments = useSegments();
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();

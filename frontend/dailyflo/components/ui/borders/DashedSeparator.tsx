@@ -19,6 +19,8 @@ import { View, StyleSheet, Dimensions, ViewStyle } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
 interface DashedSeparatorProps {
+  /** dash color; defaults to border.secondary (one step darker than hairline primary) */
+  color?: string;
   // horizontal padding on both left and right sides when symmetric (default 0)
   paddingHorizontal?: number;
   // optional asymmetric padding - when set, overrides paddingHorizontal for that side
@@ -38,6 +40,7 @@ interface DashedSeparatorProps {
  * The dashes are calculated dynamically based on available screen width.
  */
 export default function DashedSeparator({ 
+  color,
   paddingHorizontal = 0,
   paddingLeft: paddingLeftProp,
   paddingRight: paddingRightProp,
@@ -46,6 +49,7 @@ export default function DashedSeparator({
 }: DashedSeparatorProps) {
   // get theme colors internally so component is self-contained
   const themeColors = useThemeColors();
+  const dashColor = color ?? themeColors.border.secondary();
 
   // use asymmetric padding when provided, else fall back to symmetric paddingHorizontal
   const paddingLeft = paddingLeftProp ?? paddingHorizontal;
@@ -74,7 +78,7 @@ export default function DashedSeparator({
             key={index}
             style={[
               styles.dash,
-              { backgroundColor: themeColors.border.primary() },
+              { backgroundColor: dashColor },
             ]}
           />
         ))}

@@ -56,7 +56,7 @@ export const KeyboardAnchoredContainer: React.FC<KeyboardAnchoredContainerProps>
   // Calculate padding: keyboard height + safe area - offset
   // This positions the container content above the keyboard
   // Ensure padding is never negative
-  const paddingBottom = Math.max(0, keyboardHeight + insets.bottom - offset);
+  const paddingBottom = Math.max(0, keyboardHeight);
 
   return (
     <View

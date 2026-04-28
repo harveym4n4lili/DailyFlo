@@ -14,7 +14,7 @@ export const Paddings = {
   // used by: today/index, planner/index, welcome, reminders, signup, completion, OnboardingActions, OnboardingNavigation, SignInModal, EmailAuthModal, EmailAuth, EmailAuthInputs, SocialAuthActions, TaskForm, ScreenContainer
   screen: 20,
   // used by: ListCard, ModalContainer, settings/index, TaskForm, TaskSummary, TimeDurationSelectScreen, AlertSelectScreen
-  screenSmall: 20,
+  screenSmall: 16,
   // used by: reminders, completion (description/instruction padding)
   screenLarge: 32,
 
@@ -32,9 +32,10 @@ export const Paddings = {
   // list/item padding
   // used by: DropdownList
   listItemHorizontal: 16,
-  // used by: FormDetailSection, TimelineItem, DragOverlay, OnboardingActions, settings/index, QuickDateOptions, SignInModal, AlertSelectScreen, EmailAuthModal, CustomTextInput, TimeDurationSelectScreen, +not-found
+  // used by: FormDetailSection, TimelineItem, DragOverlay, OnboardingActions, settings/index, QuickDateOptions, SignInModal, AlertSelectScreen, EmailAuthModal, CustomTextInput, TimeDurationSelectScreen, GroupHeader, +not-found
   listItemVertical: 12,
-  listItemTight: 8, // not yet used
+  /** gap under the group title row before the first task (GroupHeader) */
+  groupHeaderPaddingBottom: 0,
 
   // button padding
   // used by: OnboardingActions, SignInModal, EmailAuthModal
@@ -50,14 +51,23 @@ export const Paddings = {
   // used by: GroupHeader, ModalHeader, TaskForm, +not-found
   touchTargetSmall: 4,
 
-  // pill/chip padding - matches FormDetailSection routine pill, used by browse list pills
-  pillHorizontal: 14, // not yet used (recurrence pill uses groupedListContentHorizontal)
-  pillVertical: 12, // used by: FormDetailSection (repeating pill), browse list pills
+  // legacy browse/settings pill rhythm before formDataPill* — prefer formDataPill* for new pill UI
+  pillHorizontal: 14,
+  pillVertical: 12,
+
+  // form data pills — TaskQuickAddForm, FormDetailSection, browse listPill, settings logout, FormPickerButton, TaskOptionButton (formDataPillRowGap: quick-add chips + FormDetailSection pill row)
+  formDataPillVertical: 11,
+  formDataPillHorizontal: 12,
+  formDataPillRadius: 20,
+  // space between leading icon and label inside those pills (separate from GroupedList row icon column)
+  formDataPillIconGap: 8,
+  /** horizontal gap between sibling pills in one row (quick-add chip strip, task screen recurrence + list) */
+  formDataPillRowGap: 12,
 
   // indicator/tag padding
   // used by: TaskIndicators
   indicatorHorizontal: 6,
-  // used by: TaskIndicators, ActionContextMenu, ScreenContextButton
+  // used by: TaskIndicators, ActionContextMenu (compact tags — not the header ellipsis chip)
   indicatorVertical: 2,
 
   // content padding - for scroll content, empty states
@@ -66,12 +76,12 @@ export const Paddings = {
   contentVertical: 64,
 
   // GroupedList padding - content padding inside each list item wrapper
-  // used by: GroupedList, TaskForm, CustomTextInput, IconColorModal, TaskScreenContent, FormDetailSection (recurrence pill)
+  // used by: GroupedList, TaskForm, CustomTextInput, IconColorModal, TaskScreenContent
   groupedListContentHorizontal: 16,
   // used by: GroupedList
   groupedListContentVertical: 16,
-  // icon-to-text spacing in GroupedList rows (FormDetailButton, recurrence pill)
-  // used by: FormDetailButton, CustomFormDetailButton, FormDetailSection (recurrence)
+  // icon-to-text spacing in GroupedList rows (FormDetailButton, etc.)
+  // used by: FormDetailButton, CustomFormDetailButton
   groupedListIconTextSpacing: 12,
   // gap between GroupedListHeader and content below (grouped list or pills)
   // used by: browse screen (groupedListSection, listsPillsContainer)
@@ -110,9 +120,15 @@ export const Paddings = {
 
   // context menu / small button padding
   // used by: ModalContainer, ActionContextMenu, ScreenContextButton, MainBackButton, MainCloseButton, SaveButton, TimeDurationSelectScreen
-  contextMenuHorizontal:16,
-  // used by: ModalContainer, ModalHeader, MainBackButton, MainCloseButton, SaveButton, FormPickerButton
+  contextMenuHorizontal: 16,
+  // used by: ModalContainer, ModalHeader, MainBackButton, MainCloseButton, SaveButton, FormPickerButton, ScreenContextButton, ActionContextMenu
   contextMenuVertical: 14,
+  /** corner radius for header ellipsis glass chip (ScreenContextButton, TaskEditOverflowMenu) */
+  screenContextButtonRadius: 20,
+  /** DropdownList anchor: extra top offset below header when opened from task overflow */
+  overflowDropdownTopOffset: 12,
+  /** DropdownList anchor: task edit ActionContextMenu (android) — ~Paddings.screen + 48px trigger + small gap */
+  taskEditActionsDropdownTopOffset: 72,
 
   // TaskCard - right padding to avoid overlap with completion indicator
   // used by: TaskCard

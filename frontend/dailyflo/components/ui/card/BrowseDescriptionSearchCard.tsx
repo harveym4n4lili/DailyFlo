@@ -6,7 +6,7 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ParagraphIcon, LeafIcon } from '@/components/ui/icon';
-import { DashedSeparator } from '@/components/ui/borders';
+import { SolidSeparator } from '@/components/ui/borders';
 import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -122,9 +122,9 @@ export function BrowseDescriptionSearchCard({
       </View>
 
       {!isLastItem ? (
-        <DashedSeparator
+        <SolidSeparator
           paddingLeft={CHECKBOX_SIZE_DEFAULT + 12}
-          paddingRight={separatorPaddingHorizontal}
+          paddingRight={0}
         />
       ) : null}
     </View>

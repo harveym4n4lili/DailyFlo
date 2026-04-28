@@ -1,86 +1,178 @@
-import React from 'react';
-import { View, DynamicColorIOS, Platform } from 'react-native';
-import {
-  NativeTabs,
-  Label as NativeTabLabel,
-  Icon as NativeTabIcon,
-} from 'expo-router/unstable-native-tabs';
+import React, { useEffect } from 'react';
+import { View, DynamicColorIOS, Platform, StyleSheet } from 'react-native';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSegments } from 'expo-router';
 
-// theme + typography hooks: used to style the tab bar consistently with the rest of the app
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { ThemeColors } from '@/constants/ColorPalette';
+import { IOS_LIQUID_CHROME_TRANSITION_MS } from '@/constants/nativeStackTransition';
 import { useTypography } from '@/hooks/useTypography';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { SelectionActionsBar } from '@/components/ui/SelectionActionsBar';
 import { useUI } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { getTodayTabIcon } from '@/utils/todayIcon';
+import { CustomLiquidTabBar, USE_CUSTOM_LIQUID_TAB_BAR } from '@/components/navigation/tabBarChrome';
+import { TabFabOverlayLayer } from '@/components/navigation/tabBarChrome/TabFabOverlayLayer';
+import { TabFabOverlayProvider } from '@/contexts/TabFabOverlayContext';
 
 export default function TabLayout() {
-  const { getThemeColorValue } = useThemeColor();
   const typography = useTypography();
   const themeColors = useThemeColors();
+  const dispatch = useAppDispatch();
   const { selection } = useUI();
   const isSelectionMode = selection.isSelectionMode;
   const segments = useSegments() as string[];
+  const iosLiquidChromePreSelectFade = useAppSelector((s) => s.ui.iosLiquidChromePreSelectFade);
 
-  // detect which tab is currently active so SelectionActionsBar can adapt behavior
-  // useSegments is more reliable than usePathname for tabs (pathname can return "/" with NativeTabs)
+  const tabIconUnselected =
+    Platform.OS === 'ios'
+      ? DynamicColorIOS({
+          light: ThemeColors.light.text.secondary,
+          dark: ThemeColors.dark.text.secondary,
+        })
+      : themeColors.text.secondary();
+
+  const tabIconSelected =
+    Platform.OS === 'ios'
+      ? DynamicColorIOS({
+          light: ThemeColors.light.primaryButton.fill,
+          dark: ThemeColors.dark.primaryButton.fill,
+        })
+      : themeColors.primaryButton.fill();
+
+  const tabBarBgIos =
+    Platform.OS === 'ios'
+      ? DynamicColorIOS({
+          light: ThemeColors.light.background.primary,
+          dark: ThemeColors.dark.background.primary,
+        })
+      : null;
+
+  const labelBase = {
+    ...typography.getTextStyle('navbar'),
+    ...(Platform.OS === 'ios' && { fontFamily: 'ui-rounded' as const }),
+  };
+
+  const tabBarBackgroundColor = themeColors.background.primary();
+
   const selectionScreen =
     segments.includes('planner') ? 'planner'
     : segments.includes('today') ? 'today'
     : 'other';
 
-  // activeColor: base brand color token (same 500 shade we use elsewhere, e.g. FAB)
-  const activeColor = themeColors.text.primary();
+  const onIosTaskSelectRoute =
+    Platform.OS === 'ios' &&
+    (segments.includes('select') || segments.includes('task-select'));
 
-  // tintColor: on iOS we wrap the color with DynamicColorIOS so the system treats it
-  // as a dynamic color; on Android we just use the raw hex string.
-  const tintColor =
-    Platform.OS === 'ios'
-      ? DynamicColorIOS({ light: activeColor, dark: activeColor })
-      : activeColor;
+  // root routes (e.g. /date-select) drop "select" from segments while redux task selection stays on — keep chrome hidden
+  const iosTaskMultiSelectActive =
+    Platform.OS === 'ios' && selection.isSelectionMode && selection.selectionType === 'tasks';
 
-  // labelStyle: navbar text style from our typography system so labels match design
-  // on iOS use SF Pro Rounded (ui-rounded) for tab labels; Android keeps default
-  const labelStyle = {
-    ...typography.getTextStyle('navbar'),
-    ...(Platform.OS === 'ios' && { fontFamily: 'ui-rounded' }),
-  };
+  const shouldHideLiquidChromeIos =
+    USE_CUSTOM_LIQUID_TAB_BAR &&
+    Platform.OS === 'ios' &&
+    (onIosTaskSelectRoute || iosLiquidChromePreSelectFade || iosTaskMultiSelectActive);
 
-  // solid opaque tab bar instead of clear/liquid glass: use theme background + no blur
-  const tabBarBackgroundColor = themeColors.background.primary();
+  const liquidChromeInactive = !USE_CUSTOM_LIQUID_TAB_BAR || shouldHideLiquidChromeIos;
+
+  // 1 = visible pill + fab; 0 = hidden — eased to feel like chrome travels into the native selection toolbar
+  const chromeProgress = useSharedValue(shouldHideLiquidChromeIos ? 0 : 1);
+
+  useEffect(() => {
+    chromeProgress.value = withTiming(shouldHideLiquidChromeIos ? 0 : 1, {
+      duration: IOS_LIQUID_CHROME_TRANSITION_MS,
+    });
+  }, [shouldHideLiquidChromeIos, chromeProgress]);
+
+  useEffect(() => {
+    if (onIosTaskSelectRoute && iosLiquidChromePreSelectFade) {
+      dispatch({ type: 'ui/clearIosLiquidChromePreSelectFade' });
+    }
+  }, [dispatch, onIosTaskSelectRoute, iosLiquidChromePreSelectFade]);
+
+  const liquidChromeAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: chromeProgress.value,
+    transform: [{ translateY: interpolate(chromeProgress.value, [0, 1], [22, 0]) }],
+  }));
 
   return (
-    <View style={{ flex: 1 }}>
-    <NativeTabs
-      labelStyle={labelStyle}
-      tintColor={tintColor}
-      backgroundColor={tabBarBackgroundColor}
-      blurEffect="none"
-      disableTransparentOnScrollEdge
-    >
-      <NativeTabs.Trigger name="today">
-        <NativeTabLabel>Today</NativeTabLabel>
-        <NativeTabIcon src={getTodayTabIcon()} />
-      </NativeTabs.Trigger>
+    <TabFabOverlayProvider>
+      <View style={styles.root}>
+        <NativeTabs
+          labelStyle={{
+            default: { ...labelBase, color: tabIconUnselected },
+            selected: { ...labelBase, color: tabIconSelected },
+          }}
+          iconColor={{
+            default: tabIconUnselected,
+            selected: tabIconSelected,
+          }}
+          tintColor={tabIconSelected}
+          backgroundColor={tabBarBgIos ?? tabBarBackgroundColor}
+          blurEffect="none"
+          {...(Platform.OS === 'ios' ? { minimizeBehavior: 'onScrollDown' as const } : {})}
+          hidden={USE_CUSTOM_LIQUID_TAB_BAR}
+        >
+          <NativeTabs.Trigger name="today" hidden={false}>
+            <NativeTabs.Trigger.Label>Today</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon src={getTodayTabIcon()} renderingMode="template" />
+          </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="planner">
-        <NativeTabLabel>Planner</NativeTabLabel>
-        <NativeTabIcon src={require('@/assets/icons/Timeline.png')} />
-      </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="planner" hidden={false}>
+            <NativeTabs.Trigger.Label>Planner</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon src={require('@/assets/icons/Timeline.png')} renderingMode="template" />
+          </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="ai">
-        <NativeTabLabel>AI</NativeTabLabel>
-        <NativeTabIcon src={require('@/assets/icons/Sparkles.png')} />
-      </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="ai" hidden={false}>
+            <NativeTabs.Trigger.Label>AI</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon src={require('@/assets/icons/Sparkles.png')} renderingMode="template" />
+          </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="browse">
-        <NativeTabLabel>Browse</NativeTabLabel>
-        <NativeTabIcon src={require('@/assets/icons/Browse.png')} />
-      </NativeTabs.Trigger>
-    </NativeTabs>
-    {/* selection actions bar overlays tab bar when user taps "Select Tasks" - liquid glass on iOS */}
-    {isSelectionMode && <SelectionActionsBar screen={selectionScreen} />}
-    </View>
+          <NativeTabs.Trigger name="browse" hidden={false}>
+            <NativeTabs.Trigger.Label>Browse</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon src={require('@/assets/icons/Browse.png')} renderingMode="template" />
+          </NativeTabs.Trigger>
+
+          <NativeTabs.Trigger name="test" hidden={false}>
+            <NativeTabs.Trigger.Label>Test</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon src={require('@/assets/icons/Today.png')} renderingMode="template" />
+          </NativeTabs.Trigger>
+        </NativeTabs>
+        {isSelectionMode && <SelectionActionsBar screen={selectionScreen} />}
+        {USE_CUSTOM_LIQUID_TAB_BAR ? (
+          <Animated.View
+            pointerEvents={liquidChromeInactive ? 'none' : 'box-none'}
+            style={[styles.liquidChromeMount, liquidChromeAnimatedStyle]}
+          >
+            <CustomLiquidTabBar />
+            <TabFabOverlayLayer />
+          </Animated.View>
+        ) : (
+          <View
+            pointerEvents="none"
+            style={[styles.liquidChromeMount, styles.liquidChromeInactive]}
+          >
+            <CustomLiquidTabBar />
+            <TabFabOverlayLayer />
+          </View>
+        )}
+      </View>
+    </TabFabOverlayProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  liquidChromeMount: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  liquidChromeInactive: {
+    opacity: 0,
+  },
+});

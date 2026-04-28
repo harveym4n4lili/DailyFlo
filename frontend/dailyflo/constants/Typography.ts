@@ -210,6 +210,24 @@ export function getTextStyle(styleName: keyof typeof TextStyles) {
   return TextStyles[styleName];
 }
 
+// returns a token text style with the matching Inter family for the current platform
+// so screens can use one typography helper and still get the correct weighted font files.
+export function getTypographyStyle(
+  styleName: keyof typeof TextStyles,
+  platform: 'ios' | 'android' | 'web' = 'ios',
+) {
+  const style = getTextStyle(styleName);
+  const fontWeight = `${style.fontWeight ?? FontWeight.regular}`;
+  const matchedWeight = (
+    Object.entries(FontWeight).find(([, value]) => value === fontWeight)?.[0] ?? 'regular'
+  ) as keyof typeof FontWeight;
+
+  return {
+    ...style,
+    fontFamily: getFontFamilyWithWeight(matchedWeight, platform),
+  };
+}
+
 /**
  * Get font family with fallbacks
  * @param platform - The platform ('ios', 'android', 'web')
@@ -374,6 +392,7 @@ export default {
   LetterSpacing,
   ResponsiveTypography,
   getTextStyle,
+  getTypographyStyle,
   getFontFamily,
   getResponsiveFontSize,
   createTextStyle,

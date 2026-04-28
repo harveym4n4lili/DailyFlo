@@ -50,9 +50,9 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
   // determine icon color (custom or default)
   const iconColor = customStyles?.icon?.color || themeColors.text.primary();
   const iconSize = customStyles?.icon?.size || 20;
+  const showValue =
+    value != null && (typeof value !== 'string' || value.trim().length > 0);
   const showLeftIcon = iconComponent != null || icon != null;
-
-  // determine text color for secondary value (lighter/tertiary)
   const labelColor = themeColors.text.secondary();
 
   // render the value - can be a string or custom component
@@ -135,26 +135,24 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
           {label}
         </Text>
 
-        {/* value(s) on the right */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {/* secondary value (if provided) - e.g., "Today", "In 3 days" */}
-          {secondaryValue && (
-            <Text
-              style={[
-                getTextStyle('body-large'),
-                {
-                  color: themeColors.text.tertiary?.() || labelColor,
-                },
-                customStyles?.secondaryValue,
-              ]}
-            >
-              {secondaryValue}
-            </Text>
-          )}
-
-          {/* main value - e.g., date string, "Optional" */}
-          {renderValue()}
-        </View>
+        {(secondaryValue || showValue) && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {secondaryValue && (
+              <Text
+                style={[
+                  getTextStyle('body-large'),
+                  {
+                    color: themeColors.text.tertiary?.() || labelColor,
+                  },
+                  customStyles?.secondaryValue,
+                ]}
+              >
+                {secondaryValue}
+              </Text>
+            )}
+            {showValue ? renderValue() : null}
+          </View>
+        )}
       </View>
 
       {/* right chevron icon - only shown if showChevron is true */}

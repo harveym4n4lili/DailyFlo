@@ -31,6 +31,7 @@ import { TouchableOpacity, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
+import { Paddings } from '@/constants/Paddings';
 
 export interface TaskOptionButtonProps {
   /**
@@ -72,20 +73,19 @@ export interface TaskOptionButtonProps {
    * Defaults to theme background.primarySecondaryBlend (elevated, same as GroupedListItemWrapper) when not provided.
    */
   backgroundColor?: string;
+  /** icon size override (quick-add empty pills use 20px) */
+  compact?: boolean;
 }
 
-const BORDER_RADIUS = 28; // pill shape (matches GroupedList default)
 const ICON_SIZE = 18; // form option icon size
-// match GroupedListItemWrapper content padding and min height for visual consistency
-const CONTENT_PADDING_HORIZONTAL = 20;
-const CONTENT_PADDING_VERTICAL = 14;
-const CONTENT_MIN_HEIGHT = 44;
+const CONTENT_MIN_HEIGHT = 44; // match GroupedListItemWrapper touch target
 
 /**
  * TaskOptionButton Component
  *
  * Renders a simple pill button with icon + label. Used for fields with no value.
  * Tapping opens the picker; after selection, the field becomes a FormDetailButton row.
+ * chrome matches Paddings.formDataPill* (same as FormPickerButton empty state + quick-add pills).
  * Padding and minHeight match GroupedListItemWrapper for consistent touch targets.
  */
 export const TaskOptionButton: React.FC<TaskOptionButtonProps> = ({
@@ -96,14 +96,17 @@ export const TaskOptionButton: React.FC<TaskOptionButtonProps> = ({
   containerStyle,
   customIcon,
   backgroundColor: backgroundColorProp,
+  compact = false,
 }) => {
   const themeColors = useThemeColors();
+
+  const showLabel = Boolean(label && String(label).trim().length > 0);
+  const iconSize = compact ? 20 : ICON_SIZE;
 
   const iconColor = themeColors.text.primary();
   const textColor = themeColors.text.primary();
   // elevated background: same as GroupedListItemWrapper when no override
   const backgroundColor = backgroundColorProp ?? themeColors.background.elevated();
-  const showLabel = label != null && label.length > 0;
 
   return (
     <View style={[{ alignSelf: 'flex-start' }, containerStyle]}>
@@ -114,10 +117,10 @@ export const TaskOptionButton: React.FC<TaskOptionButtonProps> = ({
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: showLabel ? 4 : 0,
-          borderRadius: BORDER_RADIUS,
-          paddingHorizontal: CONTENT_PADDING_HORIZONTAL,
-          paddingVertical: CONTENT_PADDING_VERTICAL,
+          gap: showLabel ? Paddings.formDataPillIconGap : 0,
+          borderRadius: Paddings.formDataPillRadius,
+          paddingHorizontal: Paddings.formDataPillHorizontal,
+          paddingVertical: Paddings.formDataPillVertical,
           minHeight: CONTENT_MIN_HEIGHT,
           backgroundColor,
           opacity: disabled ? 0.5 : 1,
@@ -125,14 +128,14 @@ export const TaskOptionButton: React.FC<TaskOptionButtonProps> = ({
       >
         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
           {customIcon ?? (
-            <Ionicons name={icon as any} size={ICON_SIZE} color={iconColor} />
+            <Ionicons name={icon as any} size={iconSize} color={iconColor} />
           )}
         </View>
         {showLabel && (
           <Text
             style={[
               getTextStyle('body-large'),
-              { color: textColor},
+              { color: textColor },
             ]}
           >
             {label}

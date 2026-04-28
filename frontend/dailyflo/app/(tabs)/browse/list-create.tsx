@@ -1,17 +1,24 @@
 /**
  * List create – full-screen modal on browse stack.
  * GroupedList: name + description; second list: Favorited only.
- * Header: MainCloseButton (left), MainSubmitButton / checkmark (right), same glass circle chrome.
+ * ios: Stack.Toolbar xmark + checkmark; android: glass MainCloseButton + MainSubmitButton in overlay.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, Switch, ScrollView, Platform, Alert } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { Stack, useLocalSearchParams } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainCloseButton, MainSubmitButton } from '@/components/ui/button';
+import {
+  IosBrowseModalCloseStackToolbar,
+  IosBrowseModalTrailingStackToolbar,
+} from '@/components/navigation/IosBrowseModalStackToolbars';
 import { GroupedList } from '@/components/ui/list/GroupedList';
 import { SFSymbolIcon } from '@/components/ui/icon';
 import { Description } from '@/components/features/tasks/TaskScreen/sections/Description';
@@ -31,7 +38,7 @@ const TOP_SECTION_HEIGHT = HEADER_TOP + HEADER_ROW_HEIGHT + FADE_OVERFLOW;
 const DEFAULT_LIST_COLOR: ListColor = 'blue';
 
 export default function ListCreateScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const semantic = useSemanticColors();
   const typography = useTypography();
@@ -69,11 +76,19 @@ export default function ListCreateScreen() {
 
   const canSubmit = listTitle.trim().length > 0 && !isCreating;
 
-  const topSectionHeight = TOP_SECTION_HEIGHT;
-  const headerTitleStyle = {
-    ...typography.getTextStyle('heading-3'),
-    color: themeColors.text.primary(),
-  };
+  const headerHeight = useHeaderHeight();
+  // one object for android overlay <Text> and ios native headerTitleStyle — edit here and both update
+  const headerTitleStyle = useMemo(
+    () => ({
+      ...typography.getTextStyle('heading-4'),
+      color: themeColors.text.primary(),
+    }),
+    [typography, themeColors]
+  );
+  const topSectionHeight =
+    Platform.OS === 'ios' ? headerHeight + FADE_OVERFLOW : TOP_SECTION_HEIGHT;
+  const scrollTopPadding =
+    Platform.OS === 'ios' ? headerHeight + 24 : HEADER_TOP + HEADER_ROW_HEIGHT + 24;
 
   const listGroupProps = {
     backgroundColor: themeColors.background.primarySecondaryBlend(),
@@ -95,13 +110,30 @@ export default function ListCreateScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
+      {/* ios: merges with browse stack — native title sits between Stack.Toolbar buttons; style must live here not _layout */}
+      {Platform.OS === 'ios' ? (
+        <Stack.Screen
+          options={{
+            headerTitle: 'New List',
+            headerTitleStyle,
+            headerLargeTitle: false,
+          }}
+        />
+      ) : null}
+      <IosBrowseModalCloseStackToolbar />
+      <IosBrowseModalTrailingStackToolbar
+        icon="checkmark"
+        onPress={handleSubmit}
+        disabled={!canSubmit}
+        accessibilityLabel="Create list"
+      />
       <View style={styles.contentArea}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={[
             styles.scrollContent,
-            // below close/title row + 24px gap (was 16px + 8px breathing room above list title)
-            { paddingTop: HEADER_TOP + HEADER_ROW_HEIGHT + 24 },
+            // ios: below native modal header; android: below glass close/save + in-screen title row
+            { paddingTop: scrollTopPadding },
           ]}
           showsVerticalScrollIndicator={false}
           // same as TaskScreenContent: "always" traps the keyboard open on scroll taps; "handled" dismisses on outside tap but still lets TextInput refocus
@@ -210,23 +242,27 @@ export default function ListCreateScreen() {
             pointerEvents="none"
           />
         </View>
-        <View style={[styles.headerRow, { top: HEADER_TOP }]} pointerEvents="box-none">
-          <View style={styles.headerPlaceholder} pointerEvents="none" />
-          <View style={styles.headerCenter} pointerEvents="none">
-            <Text style={headerTitleStyle}>New List</Text>
-          </View>
-          <View style={styles.headerPlaceholder} pointerEvents="none" />
-        </View>
-        <View style={styles.headerActionsContainer} pointerEvents="box-none">
-          <MainCloseButton onPress={() => router.back()} top={Paddings.screen} left={Paddings.screen} />
-          <MainSubmitButton
-            onPress={handleSubmit}
-            disabled={!canSubmit}
-            top={Paddings.screen}
-            right={Paddings.screen}
-            accessibilityLabel="Create list"
-          />
-        </View>
+        {Platform.OS === 'android' ? (
+          <>
+            <View style={[styles.headerRow, { top: HEADER_TOP }]} pointerEvents="box-none">
+              <View style={styles.headerPlaceholder} pointerEvents="none" />
+              <View style={styles.headerCenter} pointerEvents="none">
+                <Text style={headerTitleStyle}>New List</Text>
+              </View>
+              <View style={styles.headerPlaceholder} pointerEvents="none" />
+            </View>
+            <View style={styles.headerActionsContainer} pointerEvents="box-none">
+              <MainCloseButton onPress={() => router.back()} top={Paddings.screen} left={Paddings.screen} />
+              <MainSubmitButton
+                onPress={handleSubmit}
+                disabled={!canSubmit}
+                top={Paddings.screen}
+                right={Paddings.screen}
+                accessibilityLabel="Create list"
+              />
+            </View>
+          </>
+        ) : null}
       </View>
     </View>
   );

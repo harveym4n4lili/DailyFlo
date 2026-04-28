@@ -7,9 +7,12 @@
 
 import { Task } from '@/types';
 
+/** U+2022 bullet with spaces — same character as in task metadata (`formatDateWithTags`); use next to list name + recurrence row */
+export const GROUP_HEADER_META_SEPARATOR = ' • ';
+
 /**
- * Formats a date as "24 Sep, Wednesday" for group headers
- * 
+ * Formats a date for group headers: "4 Apr • Saturday" (bullet separator between date and weekday)
+ *
  * @param date - Date object to format
  * @returns Formatted date string
  */
@@ -17,7 +20,7 @@ export function formatDateForGroup(date: Date): string {
   const day = date.getDate(); // get day of month (1-31)
   const month = date.toLocaleDateString('en-US', { month: 'short' }); // get abbreviated month (Jan, Feb, etc.)
   const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }); // get full day name (Monday, Tuesday, etc.)
-  return `${day} ${month}, ${dayOfWeek}`; // format as "24 Sep, Wednesday"
+  return `${day} ${month}${GROUP_HEADER_META_SEPARATOR}${dayOfWeek}`;
 }
 
 /**
@@ -57,13 +60,13 @@ export function getTaskGroupKey(
 
         // group tasks by their due date with smart date formatting
         if (dueDate.toDateString() === today.toDateString()) {
-          return formatDateForGroup(today); // show today's date as "24 Sep, Wednesday"
+          return formatDateForGroup(today); // e.g. "4 Apr • Saturday"
         } else if (dueDate.toDateString() === tomorrow.toDateString()) {
           return 'Tomorrow';
         } else if (dueDate < today) {
           return 'Overdue';
         } else {
-          return formatDateForGroup(dueDate); // show specific date as "24 Sep, Wednesday"
+          return formatDateForGroup(dueDate);
         }
       }
     case 'color':

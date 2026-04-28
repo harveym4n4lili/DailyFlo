@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { TASK_SELECTION_STACK_ANIMATION } from '@/constants/nativeStackTransition';
 
 const useLiquidGlass = Platform.OS === 'ios' && !Platform.isPad;
 
@@ -17,10 +18,59 @@ export default function PlannerLayout() {
     >
       <Stack.Screen
         name="index"
-        options={{
-          title: 'Planner',
-          headerShown: false,
-        }}
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                // keep bar visually minimal; liquid/material headers can look heavier than we want
+                headerBlurEffect: 'none',
+                headerStyle: { backgroundColor: 'transparent' },
+                // transparent fill; planner month control is headerTitle on ios
+                headerBackground: () => (
+                  <View
+                    pointerEvents="none"
+                    style={[StyleSheet.absoluteFill, { backgroundColor: 'transparent' }]}
+                  />
+                ),
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+            : {
+                title: 'Planner',
+                headerShown: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+        }
+      />
+      <Stack.Screen
+        name="select"
+        options={
+          Platform.OS === 'ios'
+            ? {
+                animation: TASK_SELECTION_STACK_ANIMATION,
+                headerShown: true,
+                headerTransparent: true,
+                headerBlurEffect: 'none',
+                headerStyle: { backgroundColor: 'transparent' },
+                headerBackground: () => (
+                  <View
+                    pointerEvents="none"
+                    style={[StyleSheet.absoluteFill, { backgroundColor: 'transparent' }]}
+                  />
+                ),
+                headerTitle: 'Select tasks',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+            : {
+                headerShown: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+        }
       />
       {/* month select: glass draggable sheet at 60%, opened when tapping month/year in planner */}
       <Stack.Screen

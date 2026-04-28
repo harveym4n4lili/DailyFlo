@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -23,16 +23,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainBackButton } from '@/components/ui/button';
+import { ScreenHeaderActions } from '@/components/ui';
+import { IosBrowseBackStackToolbar } from '@/components/navigation/IosBrowseBackStackToolbar';
+import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { Paddings } from '@/constants/Paddings';
 import { browseScrollPaddingTop } from '@/constants/browseScrollPaddingTop';
 
 const TOP_SECTION_ROW_HEIGHT = 48;
 const TOP_SECTION_ANCHOR_HEIGHT = 64;
-// mini header appears earlier (lower threshold) since padding excludes insets.top
 const SCROLL_THRESHOLD = 16;
 
 export default function TagsScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
@@ -67,10 +69,14 @@ export default function TagsScreen() {
     ),
   }));
 
+  // android: glass back in blur band; ios uses Stack.Toolbar chevron.left.
   const backButtonTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
 
   return (
-    <View style={{ flex: 1 }}>
+    <>
+      <IosBrowseBackStackToolbar />
+      <IosDashboardOverflowToolbar />
+      <View style={{ flex: 1 }}>
       {/* top section – blur + gradient + mini header that fades in on scroll */}
       <View
         style={[
@@ -99,21 +105,28 @@ export default function TagsScreen() {
               Tags
             </Text>
           </Animated.View>
-          <View style={styles.topSectionPlaceholder} pointerEvents="none" />
+          {Platform.OS === 'android' ? (
+            <ScreenHeaderActions variant="dashboard" style={styles.topSectionContextButton} tint="primary" />
+          ) : (
+            <View style={styles.topSectionPlaceholder} pointerEvents="none" />
+          )}
         </View>
       </View>
 
-      <View style={styles.backButtonContainer} pointerEvents="box-none">
-        <MainBackButton
-          onPress={() => router.back()}
-          top={backButtonTop}
-          left={Paddings.screen}
-        />
-      </View>
+      {Platform.OS === 'android' ? (
+        <View style={styles.backButtonContainer} pointerEvents="box-none">
+          <MainBackButton
+            onPress={() => router.back()}
+            top={backButtonTop}
+            left={Paddings.screen}
+          />
+        </View>
+      ) : null}
 
       <Animated.ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
@@ -144,7 +157,8 @@ export default function TagsScreen() {
         ))}
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
@@ -188,6 +202,9 @@ const createStyles = (
     },
     miniHeaderText: {
       ...typography.getTextStyle('heading-3'),
+    },
+    topSectionContextButton: {
+      backgroundColor: 'primary',
     },
     backButtonContainer: {
       position: 'absolute',

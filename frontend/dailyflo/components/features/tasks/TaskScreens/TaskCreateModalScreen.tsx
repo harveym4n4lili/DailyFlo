@@ -1,10 +1,15 @@
 /**
- * Task create – full-screen create task form (no indent, drag to close only).
- * Presentation is fullScreenModal set on root Stack in app/_layout.tsx.
+ * Task create – full-screen modal on a tab Stack (same architecture as browse list-create), not the root formSheet.
+ *
+ * Legacy note:
+ * this screen is intentionally kept for version/rollback scenarios.
+ * New create entry points should use /task-quick-add.
  */
 
 import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import * as Haptics from 'expo-haptics';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useAppDispatch } from '@/store';
@@ -31,7 +36,7 @@ const getDefaults = (themeColor: TaskColor = 'red'): TaskFormValues => ({
 });
 
 export default function TaskCreateScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const params = useLocalSearchParams<{ dueDate?: string }>();
   const { themeColor } = useThemeColor();
   const dispatch = useAppDispatch();
@@ -60,6 +65,7 @@ export default function TaskCreateScreen() {
         duration: dup.values.duration,
         alerts: dup.values.alerts ?? [],
         pickedListId: undefined,
+        routineType: dup.values.routineType ?? 'once',
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount to consume duplicate data
@@ -71,7 +77,14 @@ export default function TaskCreateScreen() {
   useEffect(() => {
     if (hasConsumedDuplicateRef.current) return;
     const initialDueDate = params.dueDate ?? new Date().toISOString();
-    setDraft({ dueDate: initialDueDate, time: undefined, duration: undefined, alerts: [], pickedListId: undefined });
+    setDraft({
+      dueDate: initialDueDate,
+      time: undefined,
+      duration: undefined,
+      alerts: [],
+      pickedListId: undefined,
+      routineType: 'once',
+    });
     if (params.dueDate) setLocalValues((prev) => ({ ...prev, dueDate: params.dueDate }));
     setSubtasks([]);
   }, [params.dueDate, setDraft]);
@@ -177,7 +190,14 @@ export default function TaskCreateScreen() {
       if (createTask.fulfilled.match(result)) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
         setLocalValues({ ...getDefaults(themeColor) });
-        setDraft({ dueDate: undefined, time: undefined, duration: undefined, alerts: [], pickedListId: undefined });
+        setDraft({
+          dueDate: undefined,
+          time: undefined,
+          duration: undefined,
+          alerts: [],
+          pickedListId: undefined,
+          routineType: 'once',
+        });
         setSubtasks([]);
         router.back();
       }
@@ -232,8 +252,6 @@ export default function TaskCreateScreen() {
         showDragIndicator={false}
         saveButtonBottomInsetWhenKeyboardHidden={44}
         pickerHandlers={pickerHandlers}
-        onActivityLog={() => {}}
-        onDeleteTask={handleClose}
       />
   );
 }

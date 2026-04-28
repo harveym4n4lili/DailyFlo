@@ -7,7 +7,9 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
-import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -15,14 +17,15 @@ import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { useLists } from '@/store/hooks';
 import { useAppDispatch } from '@/store';
 import { updateTask } from '@/store/slices/tasks/tasksSlice';
-import { getTextStyle } from '@/constants/Typography';
+import { getTypographyStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 import { DashedSeparator } from '@/components/ui/borders';
 
 export type ListSelectRow = { id: string | null; name: string };
 
 export function ListSelectScreen() {
-  const router = useRouter();
+  const typographyPlatform = Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
+  const router = useGuardedRouter();
   const params = useLocalSearchParams<{ taskId?: string }>();
   const taskIdForPersist =
     typeof params.taskId === 'string' && params.taskId.length > 0 ? params.taskId : undefined;
@@ -92,13 +95,13 @@ export function ListSelectScreen() {
                 ]}
               >
                 <Text
-                  style={[getTextStyle('body-large'), { color: themeColors.text.primary(), flex: 1 }]}
+                  style={[getTypographyStyle('body-large', typographyPlatform), { color: themeColors.text.primary(), flex: 1 }]}
                   numberOfLines={1}
                 >
                   {row.name}
                 </Text>
                 {selected ? (
-                  <Text style={[getTextStyle('body-small'), { color: themeColors.text.tertiary() }]}>
+                  <Text style={[getTypographyStyle('body-small', typographyPlatform), { color: themeColors.text.tertiary() }]}>
                     Selected
                   </Text>
                 ) : null}

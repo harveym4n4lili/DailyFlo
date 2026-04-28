@@ -29,7 +29,9 @@ interface GroupHeaderProps {
   // optional flag to control visibility of the secondary action label
   // when true, we render a tappable text button before the dropdown arrow
   showSecondaryAction?: boolean;
-  // callback when header is pressed
+  /** when false (e.g. Today’s date group): no chevron, title is not tappable to collapse */
+  collapsible?: boolean;
+  // callback when header is pressed (expand/collapse); ignored when collapsible is false
   onPress: () => void;
 }
 
@@ -45,6 +47,7 @@ export default function GroupHeader({
   arrowRotation,
   onSecondaryActionPress,
   showSecondaryAction,
+  collapsible = true,
   onPress,
 }: GroupHeaderProps) {
   const themeColors = useThemeColors();
@@ -54,19 +57,23 @@ export default function GroupHeader({
   // create dynamic styles using theme colors, semantic colors, and typography
   const styles = createStyles(themeColors, semanticColors, typography);
 
+  const titleBlock = (
+    <View style={styles.groupTitleContainer}>
+      <Text style={styles.groupTitle}>{title}</Text>
+      {collapsible && isCollapsed && <Text style={styles.groupCount}>({count})</Text>}
+    </View>
+  );
+
   return (
     <View style={styles.groupHeader}>
-      {/* title/count - tappable to toggle expand/collapse */}
-      <TouchableOpacity
-        style={styles.leftContainer}
-        onPress={onPress}
-        activeOpacity={0.7}
-      >
-        <View style={styles.groupTitleContainer}>
-          <Text style={styles.groupTitle}>{title}</Text>
-          {isCollapsed && <Text style={styles.groupCount}>({count})</Text>}
-        </View>
-      </TouchableOpacity>
+      {/* title: tappable only when group can collapse */}
+      {collapsible ? (
+        <TouchableOpacity style={styles.leftContainer} onPress={onPress} activeOpacity={0.7}>
+          {titleBlock}
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.leftContainer}>{titleBlock}</View>
+      )}
 
       {/* Reschedule button - separate touchable so tap doesn't trigger group toggle */}
       {showSecondaryAction && onSecondaryActionPress && (
@@ -79,25 +86,26 @@ export default function GroupHeader({
         </TouchableOpacity>
       )}
 
-      {/* dropdown arrow - tappable to toggle (matches GroupedListHeader styling) */}
-      <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={0.7}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        style={styles.animatedArrowContainer}
-      >
-        <Animated.View
-          style={{
-            transform: [{ rotate: arrowRotation }],
-          }}
+      {collapsible && (
+        <TouchableOpacity
+          onPress={onPress}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={styles.animatedArrowContainer}
         >
-          <Ionicons
-            name="chevron-down"
-            size={20}
-            color={themeColors.text.secondary()}
-          />
-        </Animated.View>
-      </TouchableOpacity>
+          <Animated.View
+            style={{
+              transform: [{ rotate: arrowRotation }],
+            }}
+          >
+            <Ionicons
+              name="chevron-down"
+              size={20}
+              color={themeColors.text.tertiary()}
+            />
+          </Animated.View>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -124,12 +132,6 @@ const createStyles = (
       flex: 1, // take up available space
     },
 
-    // secondary action button styling (e.g. "Reschedule")
-    secondaryActionButton: {
-      marginLeft: 8,
-      marginRight: 4,
-    },
-
     // animated arrow container - touchable for toggle, centers the chevron (matches GroupedListHeader)
     animatedArrowContainer: {
       marginLeft: 16,
@@ -143,9 +145,13 @@ const createStyles = (
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 0,
-      paddingHorizontal: Paddings.touchTargetSmall,
-      paddingVertical: 12, // matches Browse Folders header
+      paddingLeft: Paddings.touchTargetSmall,
+      paddingRight: 0, // chevron flush to list/card right edge; left inset keeps title aligned with content
+      // top: breathing room above title; bottom: small gap before first task (see Paddings.groupHeaderPaddingBottom)
+      paddingTop: Paddings.listItemVertical,
+      paddingBottom: Paddings.groupHeaderPaddingBottom,
     },
+    // secondary action (e.g. Reschedule): margins + hit-friendly padding from shared tokens
     secondaryActionButton: {
       marginLeft: 8,
       marginRight: 4,
@@ -156,7 +162,7 @@ const createStyles = (
     // --- TYPOGRAPHY STYLES ---
     groupTitle: {
       ...typography.getTextStyle('heading-4'),
-      color: themeColors.text.primary(),
+      color: themeColors.text.secondary(),
       marginRight: 8,
     },
     groupCount: {

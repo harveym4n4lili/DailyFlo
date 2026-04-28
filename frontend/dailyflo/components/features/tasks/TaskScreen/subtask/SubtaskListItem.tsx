@@ -9,10 +9,11 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { getTextStyle } from '@/constants/Typography';
+import { getTypographyStyle } from '@/constants/Typography';
 import { TrashIcon, SFSymbolIcon } from '@/components/ui/icon';
 import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
 import { Paddings } from '@/constants/Paddings';
@@ -58,6 +59,7 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
   shouldAutoFocus = false,
   onDidAutoFocus,
 }) => {
+  const typographyPlatform = Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
   const themeColors = useThemeColors();
   const inputRef = useRef<TextInput>(null);
 
@@ -101,7 +103,7 @@ export const SubtaskListItem: React.FC<SubtaskListItemProps> = ({
         onFocus={onFocus}
         onBlur={onBlur}
         editable={!disabled}
-        style={[getTextStyle('body-large'), styles.input, { color: themeColors.text.primary() }]}
+        style={[getTypographyStyle('body-large', typographyPlatform), styles.input, { color: themeColors.text.primary() }]}
         selectionColor="white"
         cursorColor="white"
         multiline={false}

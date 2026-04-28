@@ -1,7 +1,7 @@
 /**
  * CreateTaskDraftContext
  *
- * Holds the "picker" form fields (dueDate, time, duration, alerts, list destination) that are edited
+ * Holds the "picker" form fields (dueDate, time, duration, alerts, routineType, list destination) that are edited
  * on stack screens (date-select, time-duration-select, alert-select, list-select) so they stay
  * in sync with the main task form. list-select uses pickedListId: null = Inbox, string = list id,
  * undefined = not set from that sheet (use form local listId).
@@ -9,11 +9,15 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react';
 
+import type { RoutineType } from '@/types';
+
 export interface CreateTaskDraftSlice {
   dueDate: string | undefined;
   time: string | undefined;
   duration: number | undefined;
   alerts: string[];
+  /** recurrence for quick-add / picker draft; defaults to once when omitted */
+  routineType?: RoutineType;
   /**
    * from list-select sheet only: null = Inbox (no list), string = list id.
    * omit or undefined = merged values use form state listId until user opens list-select.

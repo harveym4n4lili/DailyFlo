@@ -15,6 +15,7 @@ import {
   PrimaryColors,
   SemanticColors,
   TaskCategoryColors,
+  PrimaryButtonColors,
   ThemeColors,
   getSemanticColor,
   getTaskCategoryColor,
@@ -40,6 +41,7 @@ export interface ColorPaletteReturn {
   primary: typeof PrimaryColors.light | typeof PrimaryColors.dark;
   semantic: typeof SemanticColors;
   taskCategory: typeof TaskCategoryColors;
+  primaryButton: typeof PrimaryButtonColors.light | typeof PrimaryButtonColors.dark;
   themeColors: typeof ThemeColors.light | typeof ThemeColors.dark;
   
   // utility functions
@@ -64,6 +66,7 @@ export function useColorPalette(): ColorPaletteReturn {
   
   // get theme-specific colors
   const primary = PrimaryColors[theme];
+  const primaryButton = PrimaryButtonColors[theme];
   const themeColors = ThemeColors[theme];
   
   return {
@@ -76,6 +79,7 @@ export function useColorPalette(): ColorPaletteReturn {
     primary,
     semantic: SemanticColors,
     taskCategory: TaskCategoryColors,
+    primaryButton,
     themeColors,
     
     // utility functions with theme context
@@ -185,6 +189,8 @@ export function useThemeColors() {
       primarySecondaryBlend: () => getThemeColor('text', 'primarySecondaryBlend'),
       tertiary: () => getThemeColor('text', 'tertiary'),
       quaternary: () => getThemeColor('text', 'quaternary'),
+      // light-on-dark-surface text (e.g. icon on primary button fill)
+      inverse: () => getThemeColor('text', 'inverse'),
       // inverted colors - opposite theme colors for contrast sections
       invertedPrimary: () => getThemeColor('text', 'invertedPrimary'),
       invertedSecondary: () => getThemeColor('text', 'invertedSecondary'),
@@ -219,6 +225,12 @@ export function useThemeColors() {
       invertedHover: () => getThemeColor('interactive', 'invertedHover'),
       invertedActive: () => getThemeColor('interactive', 'invertedActive'),
       invertedDisabled: () => getThemeColor('interactive', 'invertedDisabled'),
+    },
+
+    // primary solid buttons — FAB default fill + icon; extend with pressed/hover tokens later if needed
+    primaryButton: {
+      fill: () => getThemeColor('primaryButton', 'fill'),
+      icon: () => getThemeColor('primaryButton', 'icon'),
     },
     
     // utility functions

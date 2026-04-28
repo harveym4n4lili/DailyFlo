@@ -21,17 +21,19 @@ import {
   DynamicColorIOS,
 } from 'react-native';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AddIcon } from '@/components/ui/icon';
-import * as Haptics from 'expo-haptics';
-import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { useCustomTabNavMetrics } from '@/contexts/CustomTabNavMetricsContext';
+/** offset from parent bottom/right — 0 = flush corner (used by tab layout to match FAB) */
+export const FAB_SCREEN_INSET = 20;
+
 
 // expo-glass-effect: native iOS UIVisualEffectView liquid glass. Circular FAB.
 // import GlassView from build path to avoid index.js export resolution issues.
 // we don't call isGlassEffectAPIAvailable here; GlassView will safely no-op on
 // unsupported platforms, so we only gate on Platform.OS === 'ios'.
 import GlassView from 'expo-glass-effect/build/GlassView';
+import * as Haptics from 'expo-haptics';
 
 // TASK CREATION MODAL IMPORT - REMOVED
 // TaskCreationModal is now managed by parent screens, not inside FAB
@@ -117,14 +119,15 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   // MODAL STATE MANAGEMENT - REMOVED
   // modal is now managed by parent screens to prevent duplicate modals
   // const [isModalVisible, setIsModalVisible] = useState(false);
-  
-  const insets = useSafeAreaInsets();
-  const { getThemeColorValue } = useThemeColor();
   const themeColors = useThemeColors();
-  // backgroundColor: use custom prop or fall back to theme secondary
-  const backgroundColor = customBackgroundColor ?? themeColors.background.secondary();
-  // iconColor: use custom prop or fall back to primary text color
-  const iconColor = customIconColor ?? themeColors.text.primary();
+  // when native tabs are hidden, (tabs)/_layout measures the glass strip and stores its height here — FAB matches that height
+  const { measuredNavBarHeight } = useCustomTabNavMetrics();
+  const fabSide =
+    measuredNavBarHeight != null && measuredNavBarHeight > 8 ? measuredNavBarHeight : 64;
+  const fabRadius = fabSide / 2;
+  // default fill + icon from primaryButton palette (same tokens for other primary solid buttons)
+  const backgroundColor = customBackgroundColor ?? themeColors.primaryButton.fill();
+  const iconColor = customIconColor ?? themeColors.primaryButton.icon();
   // tintColor: iOS uses DynamicColorIOS so the system can treat this as a "dynamic" color
   // just like the navbar; Android falls back to the plain hex value.
   const tintColor =
@@ -145,18 +148,25 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   // on iOS we wrap the FAB in GlassView; expo-glass-effect safely falls back elsewhere
   const glassAvailable = Platform.OS === 'ios';
 
+  const fabDynamic: ViewStyle = {
+    width: fabSide,
+    height: fabSide,
+    borderRadius: fabRadius,
+  };
+  const fabGlassRadius = Math.max(0, fabRadius - 3);
+
   const buttonContent = glassAvailable ? (
     // iOS with glass available: single glassview with pressable child for a clean glass FAB
     <GlassView
-      style={[styles.fab, style]}
-      glassEffectStyle="clear"
+      style={[styles.fab, fabDynamic, style]}
+      glassEffectStyle="regular"
       // cast to any so we can pass DynamicColorIOS on iOS while keeping TypeScript happy
       tintColor={tintColor as any}
       isInteractive
     >
       <Pressable
         onPress={disabled ? undefined : handlePress}
-        style={styles.fabGlass}
+        style={[styles.fabGlass, { borderRadius: fabGlassRadius }]}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={accessibilityHint}
@@ -172,6 +182,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
     <TouchableOpacity
       style={[
         styles.fab,
+        fabDynamic,
         {
           backgroundColor: navBarBg,
           borderWidth: 1,
@@ -193,15 +204,17 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
       />
     </TouchableOpacity>
   );
-
+  // fabContainer: absolute bottom-right of parent — no margin (flush corner)
   return (
     <View
       pointerEvents="box-none"
       style={[
         styles.fabContainer,
         {
-          bottom: 48 + 16 + insets.bottom - 29,
-          right: 16 + insets.right - 29,
+          width: fabSide,
+          height: fabSide,
+          bottom: FAB_SCREEN_INSET,
+          right: FAB_SCREEN_INSET,
         },
       ]}
     >
@@ -216,8 +229,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
  * Follows the design system specifications:
  * - 56px diameter circular button
  * - White background (from color palette)
- * - Black icon (from color palette)
- * - Bottom right positioning with 16px margins
+ * - Bottom right: FAB_SCREEN_INSET (flush when 0; exported for tab layout sync)
  * - Large elevation shadow
  * - High z-index for overlay positioning
  */
@@ -232,16 +244,11 @@ const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     zIndex: 1000,
-    width: 134,
-    height: 128,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   fab: {
-    width: 64,
-    height: 64,
-    borderRadius: 34,
     zIndex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -256,7 +263,6 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 29,
   },
 
   fabIcon: {},

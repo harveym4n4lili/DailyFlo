@@ -97,6 +97,8 @@ export interface CreateTaskInput {
   routineType?: RoutineType;        // Optional: Routine type (defaults to 'once')
   listId?: string;                  // Optional: List ID (null for inbox)
   sortOrder?: number;               // Optional: Sort order (defaults to 0)
+  /** when true, create already-completed (optional; backend may ignore if unsupported) */
+  isCompleted?: boolean;
   metadata?: Partial<Task['metadata']>; // Optional: Additional metadata
 }
 

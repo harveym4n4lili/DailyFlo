@@ -8,7 +8,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-n
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { getTextStyle } from '@/constants/Typography';
+import { getTypographyStyle } from '@/constants/Typography';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from 'react-native-reanimated';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
@@ -25,6 +25,7 @@ const DURATION_PRESETS = [
 ];
 
 export function TimeDurationSelectScreen() {
+  const typographyPlatform = Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { draft, setTime, setDuration } = useCreateTaskDraft();
@@ -100,7 +101,7 @@ export function TimeDurationSelectScreen() {
       >
         <View style={{ gap: 0 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <Text style={[getTextStyle('heading-4'), { color: themeColors.text.primary() }]}>Time</Text>
+            <Text style={[getTypographyStyle('heading-4', typographyPlatform), { color: themeColors.text.primary() }]}>Time</Text>
             <Pressable
               onPress={handleNoTimePress}
               style={({ pressed }) => ({
@@ -110,7 +111,7 @@ export function TimeDurationSelectScreen() {
                 paddingVertical: Paddings.listItemVertical - 2,
               })}
             >
-              <Text style={[getTextStyle('body-large'), { color: themeColors.text.primary?.() }]}>
+              <Text style={[getTypographyStyle('body-large', typographyPlatform), { color: themeColors.text.primary?.() }]}>
                 {getTimeButtonText()}
               </Text>
             </Pressable>
@@ -118,7 +119,7 @@ export function TimeDurationSelectScreen() {
         </View>
 
         <View style={{ gap: 16, paddingTop: Paddings.touchTarget }}>
-          <Text style={[getTextStyle('heading-4'), { color: themeColors.text.primary() }]}>Duration</Text>
+          <Text style={[getTypographyStyle('heading-4', typographyPlatform), { color: themeColors.text.primary() }]}>Duration</Text>
           <View style={{ paddingVertical: Paddings.screenSmall, position: 'relative' }}>
             <View
               style={{ height: 28, width: '100%', alignSelf: 'center', position: 'relative' }}
@@ -237,7 +238,7 @@ export function TimeDurationSelectScreen() {
                     />
                     <Text
                       style={[
-                        getTextStyle('body-medium'),
+                        getTypographyStyle('body-medium', typographyPlatform),
                         {
                           color: isSelected ? themeColors.interactive.primary() : themeColors.text.secondary(),
                           textAlign: 'center',

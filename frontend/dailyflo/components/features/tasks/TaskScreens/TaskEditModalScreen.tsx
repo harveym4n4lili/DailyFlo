@@ -1,14 +1,16 @@
 /**
- * Task view/edit – form sheet with indent (same as before).
- * Presentation is formSheet/modal set on root Stack in app/_layout.tsx.
+ * Task view/edit – full-screen modal on the root Stack (sibling to tabs), not nested under a tab Stack.
  */
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, View } from 'react-native';
 import { deleteTask } from '@/store/slices/tasks/tasksSlice';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, usePathname } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import * as Haptics from 'expo-haptics';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeColors } from '@/hooks/useColorPalette';
 import { useAppDispatch } from '@/store';
 import { updateTask, fetchTasks, createTask } from '@/store/slices/tasks/tasksSlice';
 import { useTasks } from '@/store/hooks';
@@ -42,16 +44,37 @@ function taskToFormSubtasks(
     .map((s) => ({ id: s.id, title: s.title, isCompleted: s.isCompleted, isEditing: false }));
 }
 
+function normalizeRouteParam(id: string | string[] | undefined): string | undefined {
+  if (id == null) return undefined;
+  return typeof id === 'string' ? id : id[0];
+}
+
+// expo-router sometimes leaves params empty for one frame on nested slot + formSheet; path is still /task/<id>
+function taskIdFromTaskPath(pathname: string | undefined): string | undefined {
+  if (!pathname) return undefined;
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts[0] !== 'task' || parts.length < 2) return undefined;
+  try {
+    const id = decodeURIComponent(parts[1]);
+    return id || undefined;
+  } catch {
+    return parts[1] || undefined;
+  }
+}
+
 export default function TaskEditScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
+  const pathname = usePathname();
   const params = useLocalSearchParams<{ taskId: string; occurrenceDate?: string }>();
   const { themeColor } = useThemeColor();
+  const themeColors = useThemeColors();
   const dispatch = useAppDispatch();
   const { tasks, isUpdating, updateError } = useTasks();
   const { draft, setDraft, setDueDate, setTime, setDuration, setAlerts } = useCreateTaskDraft();
   const { setDuplicateData } = useDuplicateTask();
 
-  const taskId = params.taskId;
+  const taskId =
+    normalizeRouteParam(params.taskId as string | string[] | undefined) ?? taskIdFromTaskPath(pathname);
   const task = taskId ? tasks.find((t) => t.id === taskId) : null;
 
   const [localValues, setLocalValues] = useState<Partial<TaskFormValues>>(() => {
@@ -123,6 +146,7 @@ export default function TaskEditScreen() {
       duration: t.duration,
       alerts: (t.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
       pickedListId: undefined,
+      routineType: t.routineType,
     });
     setLocalValues({
       title: t.title,
@@ -453,6 +477,7 @@ export default function TaskEditScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            if (!taskId) return;
             try {
               await dispatch(deleteTask(taskId)).unwrap();
               router.back();
@@ -465,7 +490,8 @@ export default function TaskEditScreen() {
     );
   }, [taskId, task?.title, dispatch, router]);
 
-  // duplicate: close task view, open task-create with current task data pre-filled (no API call - user edits then saves)
+  // duplicate: stash snapshot in DuplicateTaskContext, then replace with root /task-quick-add.
+  // task-quick-add is now the canonical create flow used across the app.
   const handleDuplicateTask = useCallback(() => {
     setDuplicateData({
       values: {
@@ -488,7 +514,7 @@ export default function TaskEditScreen() {
         isEditing: false,
       })),
     });
-    router.replace('/task-create');
+    router.replace('/task-quick-add' as any);
   }, [values, subtasks, setDuplicateData, router]);
 
   const pickerHandlers = useMemo(
@@ -502,41 +528,69 @@ export default function TaskEditScreen() {
     [router, taskId],
   );
 
-  if (!taskId || !task) {
-    return null;
+  // never return null — transparent formSheet + missing id looked like an empty sheet
+  if (!taskId) {
+    return (
+      <View
+        style={[
+          taskEditStyles.loadingRoot,
+          { backgroundColor: themeColors.background.primary() },
+        ]}
+      >
+        <ActivityIndicator size="large" color={themeColors.primaryButton.fill()} />
+      </View>
+    );
+  }
+  // avoid blank formSheet: redux may not have the task on first paint (fetch runs in useEffect below)
+  if (!task) {
+    return (
+      <View
+        style={[
+          taskEditStyles.loadingRoot,
+          { backgroundColor: themeColors.background.primary() },
+        ]}
+      >
+        <ActivityIndicator size="large" color={themeColors.primaryButton.fill()} />
+      </View>
+    );
   }
 
   return (
     <TaskScreenContent
-        visible={true}
-        values={values}
-        onChange={onChange}
-        onClose={handleClose}
-        hasChanges={hasChanges}
-        isSaveButtonVisible={isSaveButtonVisible}
-        onCreate={handleSave}
-        saveButtonText="Save"
-        saveLoadingText="Saving..."
-        isCreating={isUpdating}
-        updateError={updateError ?? undefined}
-        validationError={validationError ?? undefined}
-        subtasks={subtasks}
-        onSubtaskToggle={handleSubtaskToggle}
-        onSubtaskDelete={handleSubtaskDelete}
-        onSubtaskTitleChange={handleSubtaskTitleChange}
-        onSubtaskFinishEditing={handleSubtaskFinishEditing}
-        onCreateSubtask={handleCreateSubtask}
-        pendingFocusSubtaskId={pendingFocusSubtaskId}
-        onClearPendingFocus={() => setPendingFocusSubtaskId(null)}
-        embedHeaderButtons={true}
-        isEditMode={true}
-        saveButtonBottomInsetWhenKeyboardHidden={44}
-        pickerHandlers={pickerHandlers}
-        onActivityLog={() => router.push('/activity-log' as any)}
-        onDuplicateTask={handleDuplicateTask}
-        onDeleteTask={handleDeleteTask}
-        titleCheckboxCompleted={task.isCompleted}
-        onTitleCheckboxToggle={handleTitleCheckboxToggle}
-      />
+      visible={true}
+      values={values}
+      onChange={onChange}
+      onClose={handleClose}
+      hasChanges={hasChanges}
+      isSaveButtonVisible={isSaveButtonVisible}
+      onCreate={handleSave}
+      saveButtonText="Save"
+      saveLoadingText="Saving..."
+      isCreating={isUpdating}
+      updateError={updateError ?? undefined}
+      validationError={validationError ?? undefined}
+      subtasks={subtasks}
+      onSubtaskToggle={handleSubtaskToggle}
+      onSubtaskDelete={handleSubtaskDelete}
+      onSubtaskTitleChange={handleSubtaskTitleChange}
+      onSubtaskFinishEditing={handleSubtaskFinishEditing}
+      onCreateSubtask={handleCreateSubtask}
+      pendingFocusSubtaskId={pendingFocusSubtaskId}
+      onClearPendingFocus={() => setPendingFocusSubtaskId(null)}
+      embedHeaderButtons={true}
+      isEditMode={true}
+      saveButtonBottomInsetWhenKeyboardHidden={44}
+      pickerHandlers={pickerHandlers}
+      titleCheckboxCompleted={task.isCompleted}
+      onTitleCheckboxToggle={handleTitleCheckboxToggle}
+      showDragIndicator={true}
+      onActivityLog={() => router.push('/activity-log' as any)}
+      onDuplicateTask={handleDuplicateTask}
+      onDeleteTask={handleDeleteTask}
+    />
   );
 }
+
+const taskEditStyles = StyleSheet.create({
+  loadingRoot: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+});

@@ -2,15 +2,17 @@
  * Browse Settings Screen
  *
  * Settings screen accessible from the cog icon in the browse screen header.
- * Layout matches Activity Log: content first (behind), header overlay on top with
- * MainCloseButton left + centered "Settings" title. Blur + gradient.
+ * ios: native Stack.Toolbar close (xmark) + headerTitle "Settings" (same pattern as list-create).
+ * android: glass MainCloseButton + in-screen title row in overlay (stack header hidden).
  * Sections: Account/Calendar, Productivity, Personalization, Support, Logout.
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { useRouter } from 'expo-router';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { Stack } from 'expo-router';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/list/GroupedList';
@@ -24,6 +26,7 @@ import {
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainCloseButton } from '@/components/ui/button';
+import { IosBrowseModalCloseStackToolbar } from '@/components/navigation/IosBrowseModalStackToolbars';
 import { Paddings } from '@/constants/Paddings';
 
 // header row height matches close button (42) – same as Activity Log
@@ -34,15 +37,23 @@ const FADE_OVERFLOW = 48;
 const TOP_SECTION_HEIGHT = HEADER_TOP + HEADER_ROW_HEIGHT + FADE_OVERFLOW;
 
 export default function BrowseSettingsScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const typography = useTypography();
   const styles = createStyles(themeColors, typography);
-
-  const contentTopPadding = HEADER_TOP + HEADER_ROW_HEIGHT;
-  const topSectionHeight = TOP_SECTION_HEIGHT;
-  // reduced top spacing so content sits closer to header
-  const contentPaddingTop = contentTopPadding;
+  const headerHeight = useHeaderHeight();
+  // same as list-create: one style object for ios native headerTitle + android overlay <Text>
+  const headerTitleStyle = useMemo(
+    () => ({
+      ...typography.getTextStyle('heading-4'),
+      color: themeColors.text.primary(),
+    }),
+    [typography, themeColors]
+  );
+  const topSectionHeight =
+    Platform.OS === 'ios' ? headerHeight + FADE_OVERFLOW : TOP_SECTION_HEIGHT;
+  const scrollPaddingTop =
+    Platform.OS === 'ios' ? headerHeight + 24 : HEADER_TOP + HEADER_ROW_HEIGHT + 24;
 
   const listStyle = {
     backgroundColor: themeColors.background.primarySecondaryBlend(),
@@ -50,20 +61,27 @@ export default function BrowseSettingsScreen() {
     containerStyle: styles.listContainer,
   };
 
-  const headerTitleStyle = {
-    ...typography.getTextStyle('heading-3'),
-    color: themeColors.text.primary(),
-  };
-
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
+      {/* ios: native title next to Stack.Toolbar xmark — style matches list-create (heading-4) */}
+      {Platform.OS === 'ios' ? (
+        <Stack.Screen
+          options={{
+            headerTitle: 'Settings',
+            headerTitleStyle,
+            headerLargeTitle: false,
+          }}
+        />
+      ) : null}
+      <IosBrowseModalCloseStackToolbar />
       {/* content first (behind) – scrollable settings sections */}
       <View style={styles.contentArea}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: HEADER_ROW_HEIGHT + 40 },
+            // ios: below native modal header; android: below glass close + title row
+            { paddingTop: scrollPaddingTop },
           ]}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
@@ -353,23 +371,24 @@ export default function BrowseSettingsScreen() {
             pointerEvents="none"
           />
         </View>
-        <View
-          style={[styles.headerRow, { top: HEADER_TOP }]}
-          pointerEvents="box-none"
-        >
-          <View style={styles.headerPlaceholder} pointerEvents="none" />
-          <View style={styles.headerCenter} pointerEvents="none">
-            <Text style={headerTitleStyle}>Settings</Text>
-          </View>
-          <View style={styles.headerPlaceholder} pointerEvents="none" />
-        </View>
-        <View style={styles.closeButtonContainer} pointerEvents="box-none">
-          <MainCloseButton
-            onPress={() => router.back()}
-            top={Paddings.screen}
-            left={Paddings.screen}
-          />
-        </View>
+        {Platform.OS === 'android' ? (
+          <>
+            <View style={[styles.headerRow, { top: HEADER_TOP }]} pointerEvents="box-none">
+              <View style={styles.headerPlaceholder} pointerEvents="none" />
+              <View style={styles.headerCenter} pointerEvents="none">
+                <Text style={headerTitleStyle}>Settings</Text>
+              </View>
+              <View style={styles.headerPlaceholder} pointerEvents="none" />
+            </View>
+            <View style={styles.closeButtonContainer} pointerEvents="box-none">
+              <MainCloseButton
+                onPress={() => router.back()}
+                top={Paddings.screen}
+                left={Paddings.screen}
+              />
+            </View>
+          </>
+        ) : null}
       </View>
     </View>
   );
@@ -385,6 +404,7 @@ const createStyles = (
     },
     contentArea: {
       flex: 1,
+      zIndex: 0,
     },
     headerOverlay: {
       position: 'absolute',
@@ -456,15 +476,15 @@ const createStyles = (
     logoutButton: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: Paddings.groupedListContentHorizontal,
-      paddingVertical: Paddings.pillVertical,
-      borderRadius: 24,
+      paddingHorizontal: Paddings.formDataPillHorizontal,
+      paddingVertical: Paddings.formDataPillVertical,
+      borderRadius: Paddings.formDataPillRadius,
       marginTop: 24,
       minHeight: 44,
     },
     logoutButtonText: {
       ...typography.getTextStyle('body-large'),
-      marginLeft: Paddings.groupedListIconTextSpacing,
+      marginLeft: Paddings.formDataPillIconGap,
     },
     bottomSpacer: {
       height: 200,

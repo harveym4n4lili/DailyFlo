@@ -23,10 +23,19 @@ export const RECURRENCE_ID_SEPARATOR = '__';
 const MAX_OVERDUE_RECURRENCE_DAYS = 14;
 
 /**
- * format date to YYYY-MM-DD for comparison and storage
+ * calendar day YYYY-MM-DD in the device timezone (not utc from toISOString).
+ * utc slices were shifting “today” vs week columns and broke planner until user retapped the day.
  */
+export function toLocalCalendarDayString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** @internal same as toLocalCalendarDayString; kept for call sites inside this file */
 function toDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return toLocalCalendarDayString(d);
 }
 
 /**

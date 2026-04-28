@@ -5,7 +5,9 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Platform, ActivityIndicator, Pressable } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -22,6 +24,9 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { getFontFamilyWithWeight } from '@/constants/Typography';
 import { MainBackButton } from '@/components/ui/button';
+import { ScreenHeaderActions } from '@/components/ui';
+import { IosBrowseBackStackToolbar } from '@/components/navigation/IosBrowseBackStackToolbar';
+import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { Paddings } from '@/constants/Paddings';
 import { browseScrollPaddingTop } from '@/constants/browseScrollPaddingTop';
 import { ActivityLog } from '@/types/common/ActivityLog';
@@ -33,7 +38,7 @@ const TOP_SECTION_ANCHOR_HEIGHT = 64;
 const SCROLL_THRESHOLD = 16;
 
 export default function CompletedScreen() {
-  const router = useRouter();
+  const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
@@ -89,6 +94,7 @@ export default function CompletedScreen() {
     opacity: interpolate(scrollY.value, [0, SCROLL_THRESHOLD], [1, 0], Extrapolation.CLAMP),
   }));
 
+  // android: glass back in blur band; ios uses Stack.Toolbar chevron.left.
   const backButtonTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
 
   const handleLogPress = useCallback(
@@ -115,7 +121,10 @@ export default function CompletedScreen() {
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <>
+      <IosBrowseBackStackToolbar />
+      <IosDashboardOverflowToolbar />
+      <View style={{ flex: 1 }}>
       <View
         style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}
       >
@@ -140,21 +149,28 @@ export default function CompletedScreen() {
               Completed
             </Text>
           </Animated.View>
-          <View style={styles.topSectionPlaceholder} pointerEvents="none" />
+          {Platform.OS === 'android' ? (
+            <ScreenHeaderActions variant="dashboard" style={styles.topSectionContextButton} tint="primary" />
+          ) : (
+            <View style={styles.topSectionPlaceholder} pointerEvents="none" />
+          )}
         </View>
       </View>
 
-      <View style={styles.backButtonContainer} pointerEvents="box-none">
-        <MainBackButton
-          onPress={() => router.back()}
-          top={backButtonTop}
-          left={Paddings.screen}
-        />
-      </View>
+      {Platform.OS === 'android' ? (
+        <View style={styles.backButtonContainer} pointerEvents="box-none">
+          <MainBackButton
+            onPress={() => router.back()}
+            top={backButtonTop}
+            left={Paddings.screen}
+          />
+        </View>
+      ) : null}
 
       <Animated.ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
@@ -203,7 +219,8 @@ export default function CompletedScreen() {
 
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
@@ -247,6 +264,9 @@ const createStyles = (
     },
     miniHeaderText: {
       ...typography.getTextStyle('heading-3'),
+    },
+    topSectionContextButton: {
+      backgroundColor: 'primary',
     },
     backButtonContainer: {
       position: 'absolute',
