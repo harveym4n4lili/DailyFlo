@@ -134,12 +134,12 @@ APPLE_KEY_ID      = os.environ.get('APPLE_KEY_ID')
 
 ### 2.4 — Create the token verification service
 
-- [ ] Create new file: `backend/dailyflo/apps/accounts/social_auth.py`
-- [ ] Implement `verify_google_id_token(token: str) -> dict`
+- [x] Create new file: `backend/dailyflo/apps/accounts/social_auth.py`
+- [x] Implement `verify_google_id_token(token: str) -> dict`
   - Uses `google.oauth2.id_token.verify_oauth2_token`
   - Passes `audience=settings.GOOGLE_CLIENT_ID`
   - Raises `ValueError` on any failure
-- [ ] Implement `verify_apple_id_token(token: str) -> dict`
+- [x] Implement `verify_apple_id_token(token: str) -> dict`
   - Fetches Apple JWKS from `https://appleid.apple.com/auth/keys`
   - Reads `kid` from JWT header
   - Matches key, converts with `RSAAlgorithm.from_jwk`
