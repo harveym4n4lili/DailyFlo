@@ -14,10 +14,10 @@ These must be done first. You cannot test anything without them.
 
 ### 1.1 — Google Cloud Console setup
 
-- [ ] Go to [console.cloud.google.com](https://console.cloud.google.com)
-- [ ] Create a project (or select existing)
-- [ ] APIs & Services → OAuth Consent Screen → fill in app name, support email, scopes (`openid`, `email`, `profile`)
-- [ ] Credentials → Create OAuth 2.0 Client ID → type: **iOS**
+- [X] Go to [console.cloud.google.com](https://console.cloud.google.com)
+- [X] Create a project (or select existing)
+- [X] APIs & Services → OAuth Consent Screen → fill in app name, support email, scopes (`openid`, `email`, `profile`)
+- [X] Credentials → Create OAuth 2.0 Client ID → type: **iOS**
   - Bundle ID: `com.yourteam.dailyflo` (match what you'll put in `app.json`)
   - Copy the **iOS Client ID** (format: `123456789.apps.googleusercontent.com`)
   - Copy the **Reversed Client ID** (format: `com.googleusercontent.apps.123456789`)
@@ -27,12 +27,12 @@ These must be done first. You cannot test anything without them.
 - [ ] Download `GoogleService-Info.plist` (iOS) → place at `frontend/dailyflo/GoogleService-Info.plist`
 - [ ] Download `google-services.json` (Android) → place at `frontend/dailyflo/google-services.json`
 - [ ] Add **both files** to `.gitignore` (they contain API keys)
-- [ ] Create a `.env` file at `frontend/dailyflo/.env` (if it doesn't exist) with:
+- [X] Create a `.env` file at `frontend/dailyflo/.env` (if it doesn't exist) with:
   ```
   EXPO_PUBLIC_GOOGLE_CLIENT_ID=<your iOS Client ID>
   ```
-- [ ] Add `.env` to `.gitignore`
-- [ ] Create a `.env` file at `backend/dailyflo/.env` (if it doesn't exist) with:
+- [X] Add `.env` to `.gitignore`
+- [X] Create a `.env` file at `backend/dailyflo/.env` (if it doesn't exist) with:
   ```
   GOOGLE_CLIENT_ID=<your iOS Client ID>
   ```
@@ -43,19 +43,19 @@ These must be done first. You cannot test anything without them.
 
 > Requires an active Apple Developer Program membership ($99/year).
 
-- [ ] Go to [developer.apple.com](https://developer.apple.com) → Certificates, IDs & Profiles
-- [ ] Identifiers → find or create your App ID with bundle ID `com.yourteam.dailyflo`
-  - [ ] Enable the capability: **Sign In with Apple**
-  - [ ] Save
-- [ ] Keys → Create a new key
-  - [ ] Name it (e.g. `DailyFlo Sign In with Apple`)
-  - [ ] Enable **Sign In with Apple** → Configure → assign to your App ID
-  - [ ] Register the key
-  - [ ] Download the **`.p8` file** — you can only download this once
-  - [ ] Note the **Key ID** shown on the key detail page
-- [ ] Note your **Team ID** — visible in the top-right of the developer portal
-- [ ] Store the `.p8` file on your Django server only — **never commit it**
-- [ ] Add to `backend/dailyflo/.env`:
+- [X] Go to [developer.apple.com](https://developer.apple.com) → Certificates, IDs & Profiles
+- [X] Identifiers → find or create your App ID with bundle ID `com.yourteam.dailyflo`
+  - [X] Enable the capability: **Sign In with Apple**
+  - [X] Save
+- [X] Keys → Create a new key
+  - [X] Name it (e.g. `DailyFlo Sign In with Apple`)
+  - [X] Enable **Sign In with Apple** → Configure → assign to your App ID
+  - [X] Register the key
+  - [X] Download the **`.p8` file** — you can only download this once
+  - [X] Note the **Key ID** shown on the key detail page
+- [X] Note your **Team ID** — visible in the top-right of the developer portal
+- [X] Store the `.p8` file on your Django server only — **never commit it**
+- [X] Add to `backend/dailyflo/.env`:
   ```
   APPLE_TEAM_ID=<your Team ID>
   APPLE_CLIENT_ID=com.yourteam.dailyflo
@@ -79,19 +79,23 @@ pip freeze > requirements.txt
 
 > `PyJWT==2.9.0` is already in `requirements.txt` — do not reinstall.
 
+- [x] Pin and install **`google-auth`**, **`cryptography`**, **`requests`** in `requirements.txt` (plus **`python-dotenv`** so Django can load `.env`; **`cffi`** / **`pyasn1`** pins as needed for wheels; **`django-filter`** because tasks/lists views already use it).
+
 ---
 
 ### 2.2 — Update `INSTALLED_APPS` and run migration
 
 In `backend/dailyflo/config/settings.py`:
 
-- [ ] Add `'rest_framework_simplejwt.token_blacklist'` to `INSTALLED_APPS`
+- [x] Add `'rest_framework_simplejwt.token_blacklist'` to `INSTALLED_APPS`
 
 Then run:
 
 ```bash
 python manage.py migrate
 ```
+
+- [x] Run **`python manage.py migrate`** so blacklist tables exist.
 
 > This creates the blacklist tables. Without them the `ROTATE_REFRESH_TOKENS` setting will crash at runtime.
 
@@ -101,7 +105,9 @@ python manage.py migrate
 
 In `backend/dailyflo/config/settings.py`, add after the `REST_FRAMEWORK` dict:
 
-- [ ] Add the following block:
+- [x] Add **`load_dotenv(BASE_DIR / '.env')`** (via `python-dotenv`) so OAuth vars load in dev without exporting them in the shell.
+
+- [x] Add the following block:
 
 ```python
 from datetime import timedelta

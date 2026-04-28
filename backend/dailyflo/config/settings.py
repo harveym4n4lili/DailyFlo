@@ -10,10 +10,21 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+from datetime import timedelta
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# load backend/dailyflo/.env into os.environ so GOOGLE_CLIENT_ID and apple vars are available
+# without exporting them in the shell each time (never commit .env; keep it gitignored)
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(BASE_DIR / '.env')
+except ImportError:
+    pass
 
 
 # Quick-start development settings - unsuitable for production
@@ -49,7 +60,9 @@ INSTALLED_APPS = [
     'apps.lists',
     'rest_framework',
     'rest_framework.authtoken',
-    'rest_framework_simplejwt'
+    'rest_framework_simplejwt',
+    # stores invalidated refresh tokens when rotate + blacklist is enabled (needs migrate)
+    'rest_framework_simplejwt.token_blacklist',
 ]
 
 MIDDLEWARE = [
@@ -141,6 +154,22 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
 }
+
+# jwt lifetimes + rotation: old refresh tokens go to blacklist so they cannot be reused
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# used by social auth views when verifying id tokens from google / apple (set in .env)
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+APPLE_TEAM_ID = os.environ.get('APPLE_TEAM_ID')
+APPLE_CLIENT_ID = os.environ.get('APPLE_CLIENT_ID')
+APPLE_KEY_ID = os.environ.get('APPLE_KEY_ID')
 
 # CORS Configuration - allows mobile app (expo go) to access django api
 # cors (cross-origin resource sharing) lets your phone make requests to django server
