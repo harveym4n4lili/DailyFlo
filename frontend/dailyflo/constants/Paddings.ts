@@ -55,12 +55,14 @@ export const Paddings = {
   pillHorizontal: 14,
   pillVertical: 12,
 
-  // form data pills — TaskQuickAddForm, FormDetailSection, browse listPill, settings logout, FormPickerButton, TaskOptionButton
-  formDataPillVertical: 12,
-  formDataPillHorizontal: 14,
+  // form data pills — TaskQuickAddForm, FormDetailSection, browse listPill, settings logout, FormPickerButton, TaskOptionButton (formDataPillRowGap: quick-add chips + FormDetailSection pill row)
+  formDataPillVertical: 11,
+  formDataPillHorizontal: 12,
   formDataPillRadius: 20,
   // space between leading icon and label inside those pills (separate from GroupedList row icon column)
   formDataPillIconGap: 8,
+  /** horizontal gap between sibling pills in one row (quick-add chip strip, task screen recurrence + list) */
+  formDataPillRowGap: 12,
 
   // indicator/tag padding
   // used by: TaskIndicators
