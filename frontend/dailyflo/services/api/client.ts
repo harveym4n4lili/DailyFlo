@@ -13,7 +13,6 @@
  */
 
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 // redux store imports - access auth state and dispatch actions
 // store: the main redux store that holds all app state
 // logout: action that logs out the user
@@ -28,11 +27,6 @@ import {
   storeRefreshToken,
   clearAllTokens,
 } from '../auth/tokenStorage';
-
-// storage key for tracking onboarding completion status
-// this key is used to check if the user has completed the onboarding flow
-// when user logs out, we reset this so they see onboarding screens again
-const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
 
 /**
  * Configuration for the API client
@@ -181,23 +175,11 @@ const createApiClient = (): AxiosInstance => {
           // Retry the original request with the new token
           return client(originalRequest);
         } catch (refreshError) {
-          // If refresh fails, clear tokens and logout user
-          // This means the refresh token is also expired or invalid, user needs to log in again
+          // refresh token is also expired or invalid – the user needs to log in again.
+          // we only clear tokens here; the onboarding flag is intentionally left alone
+          // so a returning user who is merely logged out is taken to sign-in, not full onboarding.
           await clearAllTokens();
-          // Dispatch logout action to clear Redux state
           store.dispatch(logout());
-          
-          // Reset onboarding status when user is logged out due to token refresh failure
-          // This ensures that after logout, the user will see onboarding screens again
-          // This is important because a logged-out user should be treated as a new user
-          try {
-            await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
-          } catch (onboardingError) {
-            // If resetting onboarding fails, log it but don't fail the logout
-            // The logout should still succeed even if onboarding reset fails
-            console.error('Error resetting onboarding during token refresh failure:', onboardingError);
-          }
-          
           return Promise.reject(refreshError);
         }
       }
