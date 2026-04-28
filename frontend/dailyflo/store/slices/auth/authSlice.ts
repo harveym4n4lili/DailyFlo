@@ -6,7 +6,6 @@
  */
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, RegisterUserInput, LoginUserInput, SocialAuthInput, UpdateUserInput, UserPreferences } from '../../../types';
 // auth API service - handles API calls to Django backend for authentication
 // this service makes HTTP requests to login, register, and other auth endpoints
@@ -23,11 +22,6 @@ import {
   getTokenExpiry,
   hasValidTokens,
 } from '../../../services/auth/tokenStorage';
-
-// storage key for tracking onboarding completion status
-// this key is used to check if the user has completed the onboarding flow
-// when user logs out, we reset this so they see onboarding screens again
-const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
 
 /**
  * Define the shape of the authentication state
@@ -105,29 +99,73 @@ export const checkAuthStatus = createAsyncThunk(
   'auth/checkAuthStatus',
   async (_, { rejectWithValue, dispatch }) => {
     try {
-      // Check if we have valid tokens stored in SecureStore
-      // hasValidTokens checks if tokens exist and haven't expired
-      const hasValid = await hasValidTokens();
-      
-      if (!hasValid) {
-        // No valid tokens, user is not authenticated
-        // Clear any leftover invalid tokens
-        await clearAllTokens();
-        return null;
-      }
-      
-      // Get tokens from SecureStore
-      // These are the tokens we stored when the user logged in
+      // read all three stored values up front so we can use them regardless of expiry state
+      // we need the refresh token even when the access token has locally expired
       const accessToken = await getAccessToken();
       const refreshToken = await getRefreshToken();
       const expiry = await getTokenExpiry();
-      
-      if (!accessToken || !refreshToken) {
-        // Tokens missing, clear everything
+
+      // if there are no tokens at all, the user has never logged in (or already signed out)
+      if (!accessToken && !refreshToken) {
         await clearAllTokens();
         return null;
       }
-      
+
+      // check if the locally-stored access token is still within its 15-minute window
+      // hasValidTokens compares the stored expiry timestamp against Date.now()
+      const hasValid = await hasValidTokens();
+
+      // if the local expiry says the access token is stale, but we still have a refresh token,
+      // go straight to refreshing rather than making a getCurrentUser call that would just fail.
+      // this silently restores the session when the user opens the app after a short idle period
+      // (e.g. 15+ minutes) without forcing them to log in again.
+      if (!hasValid && refreshToken) {
+        try {
+          // ask the backend for a new access token using the long-lived refresh token
+          const refreshResponse = await authApiService.refreshToken({ refresh: refreshToken });
+          const newAccessToken = refreshResponse.access || refreshResponse.data?.access;
+          const newRefreshToken = refreshResponse.refresh || refreshResponse.data?.refresh || refreshToken;
+
+          if (!newAccessToken) {
+            throw new Error('No access token returned from refresh');
+          }
+
+          // save the new tokens to secure storage so all future requests use them
+          await storeAccessToken(newAccessToken);
+          if (newRefreshToken !== refreshToken) {
+            // some backends rotate the refresh token on each use; store the new one if so
+            await storeRefreshToken(newRefreshToken);
+          }
+
+          // reset the local expiry clock to 15 minutes from now
+          const newExpiryTime = Date.now() + (15 * 60 * 1000);
+          await storeTokenExpiry(newExpiryTime);
+
+          // fetch the user profile using the fresh access token
+          const profileResponse = await authApiService.getCurrentUser();
+          const user: User = transformApiUserToUser(profileResponse.user || profileResponse);
+
+          return {
+            user,
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+            expiresAt: new Date(newExpiryTime),
+          };
+        } catch (refreshError) {
+          // the refresh token is also expired or invalid – the user needs to log in again
+          // this is the genuine "session has fully ended" case
+          console.error('Token refresh failed during auth check (expired access token path):', refreshError);
+          await clearAllTokens();
+          return null;
+        }
+      }
+
+      // access token is locally expired and we have no refresh token to fall back on
+      if (!accessToken) {
+        await clearAllTokens();
+        return null;
+      }
+
       // Validate token with backend by fetching user profile
       // This makes an API call to verify the token is still valid on the server
       // If the token is invalid, we'll get a 401 and can try to refresh
@@ -689,18 +727,12 @@ export const logoutUser = createAsyncThunk(
       // Import clearTasks action from tasks slice to reset task state
       const { clearTasks } = await import('../tasks/tasksSlice');
       dispatch(clearTasks());
-      
-      // Reset onboarding status when user logs out
-      // This ensures that after logout, the user will see onboarding screens again
-      // This is important because a logged-out user should be treated as a new user
-      try {
-        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
-      } catch (onboardingError) {
-        // If resetting onboarding fails, log it but don't fail the logout
-        // The logout should still succeed even if onboarding reset fails
-        console.error('Error resetting onboarding during logout:', onboardingError);
-      }
-      
+
+      // intentionally NOT removing the onboarding flag here.
+      // a returning user who signs out is not a new user – they have already completed
+      // onboarding. keeping the flag means they land on the sign-in screen next open,
+      // not back at the full onboarding flow.
+
       // Return success - the reducer handles clearing the state
       return true;
     } catch (error) {
@@ -715,15 +747,7 @@ export const logoutUser = createAsyncThunk(
       } catch (taskClearError) {
         console.error('Error clearing tasks during logout:', taskClearError);
       }
-      
-      // Try to reset onboarding even if other logout steps failed
-      // This ensures onboarding is reset regardless of other errors
-      try {
-        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
-      } catch (onboardingError) {
-        console.error('Error resetting onboarding during logout:', onboardingError);
-      }
-      
+
       console.error('Error during logout (tokens may not have been cleared):', error);
       return true;
     }
