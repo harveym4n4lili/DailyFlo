@@ -76,7 +76,9 @@ export interface TaskOptionButtonProps {
   /** icon size override (quick-add empty pills use 20px) */
   compact?: boolean;
 }
+
 const ICON_SIZE = 18; // form option icon size
+const CONTENT_MIN_HEIGHT = 44; // match GroupedListItemWrapper touch target
 
 /**
  * TaskOptionButton Component
@@ -98,6 +100,9 @@ export const TaskOptionButton: React.FC<TaskOptionButtonProps> = ({
 }) => {
   const themeColors = useThemeColors();
 
+  const showLabel = Boolean(label && String(label).trim().length > 0);
+  const iconSize = compact ? 20 : ICON_SIZE;
+
   const iconColor = themeColors.text.primary();
   const textColor = themeColors.text.primary();
   // elevated background: same as GroupedListItemWrapper when no override
@@ -116,8 +121,7 @@ export const TaskOptionButton: React.FC<TaskOptionButtonProps> = ({
           borderRadius: Paddings.formDataPillRadius,
           paddingHorizontal: Paddings.formDataPillHorizontal,
           paddingVertical: Paddings.formDataPillVertical,
-          minHeight: 44,
-          minHeight: compact ? compactMinHeight : CONTENT_MIN_HEIGHT,
+          minHeight: CONTENT_MIN_HEIGHT,
           backgroundColor,
           opacity: disabled ? 0.5 : 1,
         }}
@@ -131,7 +135,7 @@ export const TaskOptionButton: React.FC<TaskOptionButtonProps> = ({
           <Text
             style={[
               getTextStyle('body-large'),
-              { color: textColor},
+              { color: textColor },
             ]}
           >
             {label}

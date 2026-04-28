@@ -109,11 +109,10 @@ export interface FormDetailButtonProps {
 
   // main label text displayed on the left (e.g., 'Date Picker')
   label: string;
-  
-  // value text displayed on the right (e.g., 'Today', 'Optional')
-  // can be a string or a custom React component for complex displays
-  value: string | React.ReactNode;
-  
+
+  // optional right-side value; omit for a single-line row (e.g., list name only on the left)
+  value?: string | React.ReactNode;
+
   // optional secondary value text displayed next to the main value
   // used for additional context (e.g., relative dates like 'Today', 'Tomorrow')
   secondaryValue?: string;

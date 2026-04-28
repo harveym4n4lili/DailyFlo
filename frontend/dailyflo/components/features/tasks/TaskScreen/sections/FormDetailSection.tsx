@@ -2,8 +2,8 @@
  * FormDetailSection Component
  *
  * Renders date picker action using GroupedList + FormDetailButton.
- * Shows date, time/duration, and alerts rows in the GroupedList when a date is selected.
- * Repeating + list-destination pills sit below the GroupedList (same chrome); pills render even when no date is set yet so recurrence is tappable on create.
+ * Shows date, time/duration, and list destination rows in the GroupedList when a date is selected.
+ * Repeating + alerts pills sit below the GroupedList (same chrome); pills render even when no date is set yet so recurrence + list tray stay tappable on create.
  */
 
 import React, { useState } from 'react';
@@ -52,7 +52,7 @@ export interface FormDetailSectionProps {
   onRoutineTypeChange?: (routineType: RoutineType) => void;
   /** opens list-select stack sheet */
   onOpenListPicker?: () => void;
-  /** inbox vs chosen list name — shown on the tray pill next to recurrence */
+  /** inbox vs chosen list name — third GroupedList row (list) when a date is set; tray pill when no date yet */
   listDestinationLabel?: string;
 }
 
@@ -103,14 +103,12 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
   // sub label: All day / No duration, or duration value (used as value prop)
   const { subLabel: timeSubLabel } = getTimeDurationDisplayLabels(time, duration);
 
-  // alerts labels: dynamic main label (label prop) - no alerts → "No Alerts"; 1 → "1 Alert"; n → "n Alerts"
-  // sub label (value prop): "Nudge"
+  // alerts labels — used on the bell pill below the list (same copy as the old grouped row)
   const alertsMainLabel = alertsCount === 0 ? 'No Alerts' : `${alertsCount} Alert${alertsCount === 1 ? '' : 's'}`;
-  const alertsSubLabel = 'Nudge';
 
   return (
     <View style={styles.container}>
-      {/* date, time, and alerts picker rows in GroupedList */}
+      {/* date, time, list destination in GroupedList — alerts moved to pill row so list matches quick-add emphasis */}
       {hasDate && (
         <View style={styles.groupedListWrap}>
           <GroupedList
@@ -155,25 +153,26 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
               showChevron
             />
             <FormDetailButton
-              key="alerts"
+              key="list"
               iconComponent={
                 <SFSymbolIcon
-                  name="bell.fill"
+                  name="tray.fill"
                   size={20}
                   color={themeColors.text.primary()}
-                  fallback={<BellIcon size={18} color={themeColors.text.primary()} isSolid />}
+                  fallback={
+                    <Ionicons name="file-tray" size={18} color={themeColors.text.primary()} />
+                  }
                 />
               }
-              label={alertsMainLabel}
-              value={alertsSubLabel}
-              onPress={onShowAlertsPicker}
+              label={listDestinationLabel}
+              onPress={() => onOpenListPicker?.()}
               showChevron
             />
           </GroupedList>
         </View>
       )}
 
-      {/* recurrence + inbox: always shown so create/edit can change routine before picking a date; ios uses tap Menu like ActionContextMenu */}
+      {/* recurrence + list (no date yet) or recurrence + alerts (date set — list is in GroupedList above); ios Menu for repeat */}
       <View style={styles.repeatingRow}>
         {Platform.OS === 'ios' ? (
           <View style={styles.repeatingRecurrenceWrap} collapsable={false}>
@@ -254,42 +253,78 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
           </>
         )}
 
-        <Pressable
-          style={styles.repeatingTapAreaCompact}
-          hitSlop={{ top: Paddings.touchTarget, bottom: Paddings.touchTarget, left: Paddings.touchTarget, right: Paddings.touchTarget }}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            onOpenListPicker?.();
-          }}
-        >
-          <View
-            style={[
-              styles.repeatingPill,
-              { backgroundColor: themeColors.background.primarySecondaryBlend() },
-            ]}
+        {hasDate ? (
+          <Pressable
+            style={styles.repeatingTapAreaCompact}
+            hitSlop={{ top: Paddings.touchTarget, bottom: Paddings.touchTarget, left: Paddings.touchTarget, right: Paddings.touchTarget }}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onShowAlertsPicker();
+            }}
           >
-            <SFSymbolIcon
-              name="tray.fill"
-              size={18}
-              color={themeColors.text.primary()}
-              fallback={
-                <Ionicons
-                  name="file-tray"
-                  size={18}
-                  color={themeColors.text.primary()}
-                  style={styles.repeatingIcon}
-                />
-              }
-              style={styles.repeatingIcon}
-            />
-            <Text
-              style={[styles.repeatingText, { color: themeColors.text.primary() }]}
-              numberOfLines={1}
+            <View
+              style={[
+                styles.repeatingPill,
+                { backgroundColor: themeColors.background.primarySecondaryBlend() },
+              ]}
             >
-              {listDestinationLabel}
-            </Text>
-          </View>
-        </Pressable>
+              <SFSymbolIcon
+                name="bell.fill"
+                size={18}
+                color={themeColors.text.primary()}
+                fallback={
+                  <View style={styles.repeatingIcon}>
+                    <BellIcon size={18} color={themeColors.text.primary()} isSolid />
+                  </View>
+                }
+                style={styles.repeatingIcon}
+              />
+              <Text
+                style={[styles.repeatingText, { color: themeColors.text.primary() }]}
+                numberOfLines={1}
+              >
+                {alertsMainLabel}
+              </Text>
+            </View>
+          </Pressable>
+        ) : (
+          <Pressable
+            style={styles.repeatingTapAreaCompact}
+            hitSlop={{ top: Paddings.touchTarget, bottom: Paddings.touchTarget, left: Paddings.touchTarget, right: Paddings.touchTarget }}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onOpenListPicker?.();
+            }}
+          >
+            <View
+              style={[
+                styles.repeatingPill,
+                { backgroundColor: themeColors.background.primarySecondaryBlend() },
+              ]}
+            >
+              <SFSymbolIcon
+                name="tray.fill"
+                size={18}
+                color={themeColors.text.primary()}
+                fallback={
+                  <Ionicons
+                    name="file-tray"
+                    size={18}
+                    color={themeColors.text.primary()}
+                    style={styles.repeatingIcon}
+                  />
+                }
+                style={styles.repeatingIcon}
+              />
+              <Text
+                style={[styles.repeatingText, { color: themeColors.text.primary() }]}
+                numberOfLines={1}
+              >
+                {listDestinationLabel}
+              </Text>
+            </View>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -311,7 +346,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap' as const,
     alignItems: 'center' as const,
     marginTop: 12,
-    gap: 12,
+    gap: Paddings.formDataPillRowGap,
   },
   repeatingRecurrenceWrap: {
     alignSelf: 'flex-start' as const,

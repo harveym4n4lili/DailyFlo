@@ -434,6 +434,8 @@ export function TaskQuickAddForm({
           dark: themeColors.primaryButton.fill(),
         })
       : themeColors.primaryButton.fill();
+  // fab circle uses fill; icons use icon — caret/selection follow fill so ios/android don’t stick to system blue
+  const primaryButtonFill = themeColors.primaryButton.fill();
   const primaryIconColor = themeColors.primaryButton.icon();
 
   return (
@@ -458,7 +460,15 @@ export function TaskQuickAddForm({
         </View>
         {/* title column: right padding mirrors checkbox column so text and dashed line align like task screen */}
         <View style={styles.titleInputWrap} pointerEvents="box-none">
-          <TextInput
+          {/* ios: view tint can drive uitextview caret when selectionColor alone stays system blue */}
+          <View
+            style={
+              Platform.OS === 'ios'
+                ? ({ alignSelf: 'stretch', tintColor: primaryButtonFill } as object)
+                : { alignSelf: 'stretch' }
+            }
+          >
+            <TextInput
             ref={titleInputRef}
             value={title}
             onChangeText={setTitle}
@@ -468,17 +478,19 @@ export function TaskQuickAddForm({
             }}
             placeholder="e.g., Answering emails"
             placeholderTextColor={themeColors.text.tertiary()}
-            selectionColor="#FFFFFF"
-            cursorColor="#FFFFFF"
+            selectionColor={primaryButtonFill}
+            cursorColor={primaryButtonFill}
+            underlineColorAndroid="transparent"
             style={[
-              getTypographyStyle('heading-2', typographyPlatform),
+              getTypographyStyle('heading-3', typographyPlatform),
               {
-                color: themeColors.text.primary(),
+                color: primaryIconColor,
                 paddingBottom: Paddings.none,
                 paddingHorizontal: Paddings.none,
                 maxHeight: 68,
+                textAlignVertical: 'top',
                 // @ts-expect-error caretColor works on RN TextInput; @types/react-native TextStyle is incomplete
-                caretColor: '#FFFFFF',
+                caretColor: primaryButtonFill,
               },
             ]}
             multiline
@@ -486,6 +498,7 @@ export function TaskQuickAddForm({
             scrollEnabled
             returnKeyType="next"
           />
+          </View>
           {/* dashed underline under title — same component/spacing as TaskScreenContent */}
           <DashedSeparator style={{ marginTop: 8 }} />
           <View style={styles.titleSpacer} />
@@ -672,13 +685,16 @@ export function TaskQuickAddForm({
       ) : null}
 
       <View
-        style={[styles.separator, { backgroundColor: themeColors.border.primary() }]}
+        style={[
+          styles.bottomSeparatorBleed,
+          { backgroundColor: themeColors.border.primary() },
+        ]}
         pointerEvents="none"
       />
 
       <View style={styles.bottomBar} pointerEvents="box-none">
         <Pressable
-          style={styles.pillTapArea}
+          style={[styles.pillTapArea, styles.bottomBarListPill]}
           hitSlop={{ top: Paddings.touchTarget, bottom: Paddings.touchTarget, left: Paddings.touchTarget, right: Paddings.touchTarget }}
           accessibilityRole="button"
           accessibilityLabel="List destination"
@@ -706,7 +722,6 @@ export function TaskQuickAddForm({
                 />
               </View>
               <Text style={[styles.pillText, { color: pillChromeDefaultColor }]}>Inbox</Text>
-              <Ionicons name="chevron-down" size={16} color={themeColors.text.secondary()} />
             </View>
           </View>
         </Pressable>
@@ -781,7 +796,7 @@ const styles = StyleSheet.create({
   },
   formColumn: {
     paddingHorizontal: Paddings.screen,
-    paddingTop: Platform.OS === 'ios' ? 32 : 28,
+    paddingTop: Platform.OS === 'ios' ? 26 : 22,
     paddingBottom: 14,
   },
   titleRow: {
@@ -821,29 +836,37 @@ const styles = StyleSheet.create({
   // bleed wrapper: cancels formColumn's horizontal screen padding so the slider runs edge-to-edge
   chipsBleed: {
     marginHorizontal: -Paddings.screen,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   // when subtask block is hidden, add top gap so title → pills matches the old title → subtask margin
   chipsBleedTightToTitle: {
     marginTop: 12,
   },
-  // horizontal inset matches formColumn; paddingTop only — bottom padding would add extra space above the separator (match 12pt: pills↔separator = separator↔buttons via chipsBleed.marginBottom + separator.marginBottom)
+  // horizontal inset matches formColumn; paddingTop only — bottom padding would add extra space above the full-bleed rule (match 12pt: pills↔rule = rule↔buttons via chipsBleed.marginBottom + bottomSeparatorBleed.marginBottom)
   chipsContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingTop: 4,
+    gap: Paddings.formDataPillRowGap,
+    paddingTop: 0,
     paddingBottom: 0,
     paddingHorizontal: Paddings.screen,
   },
-  separator: {
+  // full-width rule above list pill + FAB — cancel formColumn horizontal padding (same bleed idea as chipsBleed)
+  bottomSeparatorBleed: {
     height: StyleSheet.hairlineWidth,
+    marginHorizontal: -Paddings.screen,
     marginBottom: 12,
   },
   bottomBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  // chip row pills use alignSelf flex-start; here we center with the 48pt primary FAB on the cross axis
+  bottomBarListPill: {
+    alignSelf: 'center',
+    minHeight: QUICK_ADD_PRIMARY_FAB_SIZE,
+    justifyContent: 'center',
   },
   pillTapArea: {
     flexDirection: 'row',

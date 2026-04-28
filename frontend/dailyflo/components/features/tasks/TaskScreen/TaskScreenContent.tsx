@@ -492,7 +492,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
           </View>
         </View>
 
-        {/* picker section: date picker (if date selected) + time/alert display row */}
+        {/* picker section: date + time + list in GroupedList when date set; recurrence + list or alerts pills below */}
         <View style={styles.pickerSectionWrap}>
           <FormDetailSection
             onShowDatePicker={handleShowDatePicker}
