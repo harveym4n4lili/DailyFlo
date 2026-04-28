@@ -20,9 +20,9 @@ import { useFocusEffect } from 'expo-router';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 
-import { ScreenContainer } from '@/components';
-import { ListCard } from '@/components/ui/card';
-import { SelectionCloseButton, SelectAllButton } from '@/components/ui/button';
+import { ScreenContainer } from '@/components/index';
+import { ListCard } from '@/components/ui/Card';
+import { SelectionCloseButton, SelectAllButton } from '@/components/ui/Button';
 import { ScreenHeaderActions } from '@/components/ui';
 import { IosTaskSelectionCloseStackToolbar } from '@/components/navigation/IosTaskSelectionCloseStackToolbar';
 import { IosTaskSelectionSelectAllStackToolbar } from '@/components/navigation/IosTaskSelectionSelectAllStackToolbar';

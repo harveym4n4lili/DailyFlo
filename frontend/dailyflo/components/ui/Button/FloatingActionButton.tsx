@@ -21,7 +21,7 @@ import {
   DynamicColorIOS,
 } from 'react-native';
 
-import { AddIcon } from '@/components/ui/icon';
+import { AddIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useCustomTabNavMetrics } from '@/contexts/CustomTabNavMetricsContext';
 /** offset from parent bottom/right — 0 = flush corner (used by tab layout to match FAB) */

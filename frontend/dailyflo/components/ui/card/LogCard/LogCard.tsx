@@ -14,7 +14,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { DashedSeparator } from '@/components/ui/borders';
-import { SFSymbolIcon } from '@/components/ui/icon';
+import { SFSymbolIcon } from '@/components/ui/Icon';
 import { useTypography } from '@/hooks/useTypography';
 import { getFontFamilyWithWeight } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';

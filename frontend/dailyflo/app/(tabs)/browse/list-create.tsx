@@ -14,13 +14,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { MainCloseButton, MainSubmitButton } from '@/components/ui/button';
+import { MainCloseButton, MainSubmitButton } from '@/components/ui/Button';
 import {
   IosBrowseModalCloseStackToolbar,
   IosBrowseModalTrailingStackToolbar,
 } from '@/components/navigation/IosBrowseModalStackToolbars';
-import { GroupedList } from '@/components/ui/list/GroupedList';
-import { SFSymbolIcon } from '@/components/ui/icon';
+import { GroupedList } from '@/components/ui/List/GroupedList';
+import { SFSymbolIcon } from '@/components/ui/Icon';
 import { Description } from '@/components/features/tasks/TaskScreen/sections/Description';
 import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';

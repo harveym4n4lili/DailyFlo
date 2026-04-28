@@ -12,7 +12,7 @@ import AnimatedReanimated, {
   withTiming,
   interpolate,
 } from 'react-native-reanimated';
-import { TickIcon } from '@/components/ui/icon';
+import { TickIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import {
   CHECKBOX_SIZE_DEFAULT,

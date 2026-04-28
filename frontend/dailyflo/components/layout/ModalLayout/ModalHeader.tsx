@@ -20,7 +20,7 @@ import { Paddings } from '@/constants/Paddings';
 import { TaskCategoryColors } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
 // import directly from CloseButton to avoid require cycle with Button barrel
-import { MainCloseButton } from '@/components/ui/button/CloseButton';
+import { MainCloseButton } from '@/components/ui/Button/CloseButton';
 
 /**
  * Props for ModalHeader component

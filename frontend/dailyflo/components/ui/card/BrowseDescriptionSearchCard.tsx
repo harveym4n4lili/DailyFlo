@@ -5,9 +5,9 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { ParagraphIcon, LeafIcon } from '@/components/ui/icon';
+import { ParagraphIcon, LeafIcon } from '@/components/ui/Icon';
 import { SolidSeparator } from '@/components/ui/borders';
-import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
+import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/Button';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';

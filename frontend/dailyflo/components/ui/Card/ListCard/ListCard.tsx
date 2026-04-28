@@ -16,7 +16,7 @@ import { View, Text, StyleSheet, FlatList, ListRenderItem, RefreshControl, Touch
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UIManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { EllipsisIcon } from '@/components/ui/icon';
+import { EllipsisIcon } from '@/components/ui/Icon';
 
 // enable layout animations on android for smooth group expansion animations
 // this ensures android can use layout animations like ios does
@@ -44,7 +44,7 @@ import AnimatedReanimated, { useAnimatedStyle, useSharedValue, useAnimatedScroll
 import { LAYOUT_TRANSITION_SPRING } from '@/constants/LayoutTransitions';
 
 const AnimatedFlatList = AnimatedReanimated.createAnimatedComponent(FlatList);
-import { DropdownList, DropdownListItem } from '@/components/ui/list';
+import { DropdownList, DropdownListItem } from '@/components/ui/List';
 
 // import sub-components
 import GroupHeader from './GroupHeader';

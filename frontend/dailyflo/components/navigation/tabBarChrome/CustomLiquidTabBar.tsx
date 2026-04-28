@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeColors } from '@/constants/ColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { FAB_SCREEN_INSET } from '@/components/ui/button';
+import { FAB_SCREEN_INSET } from '@/components/ui/Button';
 import { useCustomTabNavMetrics } from '@/contexts/CustomTabNavMetricsContext';
 
 import { buildCustomTabNavItems } from './customTabNavItems';

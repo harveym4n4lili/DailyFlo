@@ -6,7 +6,7 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
-import { SelectAllButton } from '@/components/ui/button';
+import { SelectAllButton } from '@/components/ui/Button';
 import { useUI } from '@/store/hooks';
 
 export type IosTaskSelectionSelectAllStackToolbarProps = {

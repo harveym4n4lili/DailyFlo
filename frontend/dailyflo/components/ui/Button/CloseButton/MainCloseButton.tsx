@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 // CUSTOM ICON IMPORTS
 // SFSymbolIcon: SF Symbols on iOS, falls back to Ionicons on Android/Web
-import { SFSymbolIcon } from '@/components/ui/icon';
+import { SFSymbolIcon } from '@/components/ui/Icon';
 
 // CONSTANTS IMPORTS
 // design system constants for styling

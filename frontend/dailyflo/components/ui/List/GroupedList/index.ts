@@ -5,10 +5,10 @@
  * 
  * Usage:
  * // Flexible list with custom children
- * import { GroupedList } from '@/components/ui/list/GroupedList';
+ * import { GroupedList } from '@/components/ui/List/GroupedList';
  * 
  * // Button-style items for task forms
- * import { GroupedList, FormDetailButton } from '@/components/ui/list/GroupedList';
+ * import { GroupedList, FormDetailButton } from '@/components/ui/List/GroupedList';
  */
 
 // main component exports
@@ -17,7 +17,7 @@ export { GroupedListItemWrapper } from './GroupedListItemWrapper';
 export { default as GroupedListHeader } from './GroupedListHeader';
 
 // re-export FormDetailButton from TaskButton folder for backward compatibility
-export { FormDetailButton } from '@/components/ui/button/TaskButton';
+export { FormDetailButton } from '@/components/ui/Button/TaskButton';
 
 // deprecated exports (kept for backward compatibility)
 export { GroupedListItem } from './GroupedListItem';

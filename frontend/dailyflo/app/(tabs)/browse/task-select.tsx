@@ -26,7 +26,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { IosTaskSelectionBottomToolbar } from '@/components/navigation/IosTaskSelectionBottomToolbar';
 import { IosTaskSelectionCloseStackToolbar } from '@/components/navigation/IosTaskSelectionCloseStackToolbar';
 import { IosTaskSelectionSelectAllStackToolbar } from '@/components/navigation/IosTaskSelectionSelectAllStackToolbar';
-import { ListCard } from '@/components/ui/card';
+import { ListCard } from '@/components/ui/Card';
 import { Paddings } from '@/constants/Paddings';
 import { browseScrollPaddingTop } from '@/constants/browseScrollPaddingTop';
 import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';

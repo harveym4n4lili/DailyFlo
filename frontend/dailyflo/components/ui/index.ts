@@ -6,17 +6,17 @@
  */
 
 // export button components
-export { FloatingActionButton } from './button';
-export type { FloatingActionButtonProps } from './button';
+export { FloatingActionButton } from './Button';
+export type { FloatingActionButtonProps } from './Button';
 
-export { FormPickerButton } from './button';
-export type { FormPickerButtonProps } from './button';
+export { FormPickerButton } from './Button';
+export type { FormPickerButtonProps } from './Button';
 
-export { TaskOptionButton } from './button';
-export type { TaskOptionButtonProps } from './button';
+export { TaskOptionButton } from './Button';
+export type { TaskOptionButtonProps } from './Button';
 
-export { ScreenContextButton } from './button';
-export type { ScreenContextButtonProps } from './button';
+export { ScreenContextButton } from './Button';
+export type { ScreenContextButtonProps } from './Button';
 
 export { ActionContextMenu } from './contextMenu/actionContextMenu/ActionContextMenu';
 export type {
@@ -33,27 +33,27 @@ export {
   getTimeDurationPickerDisplay,
   getAlertsPickerDisplay,
   getRelativeDateMessage,
-} from './button';
-export type { PickerButtonDisplay } from './button';
+} from './Button';
+export type { PickerButtonDisplay } from './Button';
 
 // export task-related components
-export { TaskCard } from './card';
-export type { TaskCardProps } from './card';
+export { TaskCard } from './Card';
+export type { TaskCardProps } from './Card';
 
-export { ListCard } from './card';
-export type {ListCardProps } from './card';
+export { ListCard } from './Card';
+export type {ListCardProps } from './Card';
 
 // export text input components
-export { CustomTextInput } from './textinput';
-export type { CustomTextInputProps } from './textinput';
+export { CustomTextInput } from './TextInput';
+export type { CustomTextInputProps } from './TextInput';
 
 // export list components (includes DropdownList)
-export { DropdownList } from './list';
+export { DropdownList } from './List';
 export type { 
   DropdownListProps, 
   DropdownListItem, 
   DropdownListAnchorPosition 
-} from './list';
+} from './List';
 
 // export custom icon components (SVG-based; paste your SVG path d in each icon file)
 export {
@@ -64,7 +64,7 @@ export {
   ClockIcon,
   BellIcon,
   BrowseIcon,
-} from './icon';
+} from './Icon';
 
 // blurred mesh gradient backgrounds (full-screen; use behind transparent screens)
 export { MeshGradientBackground } from './background';
@@ -84,4 +84,4 @@ export type {
   ClockIconProps,
   BellIconProps,
   BrowseIconProps,
-} from './icon';
+} from './Icon';

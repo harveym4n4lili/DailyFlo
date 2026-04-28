@@ -17,7 +17,7 @@ import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-nativ
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { MainCloseButton, MainCreateButton } from '@/components/ui/button';
+import { MainCloseButton, MainCreateButton } from '@/components/ui/Button';
 import {
   IosBrowseModalCloseStackToolbar,
   IosBrowseModalTrailingStackToolbar,
@@ -25,7 +25,7 @@ import {
 import { LIST_CREATE_OPENED_FROM_BROWSE } from './navigationParams';
 import { Paddings } from '@/constants/Paddings';
 import { getFontFamilyWithWeight } from '@/constants/Typography';
-import { LeafIcon } from '@/components/ui/icon';
+import { LeafIcon } from '@/components/ui/Icon';
 import { useLists } from '@/store/hooks';
 import type { List } from '@/types';
 

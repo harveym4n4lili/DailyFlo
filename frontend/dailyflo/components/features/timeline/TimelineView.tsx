@@ -21,7 +21,7 @@ import TimeLabel from './TimeLabel';
 import { OverlappingTaskCard } from './OverlappingTaskCard';
 import DragOverlay from './DragOverlay';
 import { DashedVerticalLine } from '@/components/ui/borders';
-import { SparklesIcon } from '@/components/ui/icon';
+import { SparklesIcon } from '@/components/ui/Icon';
 import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag, getTaskCardHeight } from './timelineUtils';
 
 // layout transition for planner: footer + timeline slide up together when task is checked

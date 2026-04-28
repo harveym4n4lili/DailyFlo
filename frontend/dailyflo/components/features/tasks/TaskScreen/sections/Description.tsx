@@ -11,8 +11,8 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 
-import { CustomTextInput } from '@/components/ui/textinput';
-import { ParagraphIcon, SFSymbolIcon } from '@/components/ui/icon';
+import { CustomTextInput } from '@/components/ui/TextInput';
+import { ParagraphIcon, SFSymbolIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 import type { TaskColor } from '@/types';

@@ -15,17 +15,17 @@ import { Stack } from 'expo-router';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/list/GroupedList';
+import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
 import {
   SFSymbolIcon,
   BellIcon,
   GearIcon,
   CalendarIcon,
   SparklesIcon,
-} from '@/components/ui/icon';
+} from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { MainCloseButton } from '@/components/ui/button';
+import { MainCloseButton } from '@/components/ui/Button';
 import { IosBrowseModalCloseStackToolbar } from '@/components/navigation/IosBrowseModalStackToolbars';
 import { Paddings } from '@/constants/Paddings';
 

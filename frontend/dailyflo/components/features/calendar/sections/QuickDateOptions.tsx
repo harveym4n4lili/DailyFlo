@@ -14,7 +14,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 // icons from expo vector icons (fallback on Android/Web where SF Symbols unavailable)
 import { Ionicons } from '@expo/vector-icons';
 // SF Symbols on iOS, custom/vector icons as fallback
-import { CalendarIcon, SFSymbolIcon } from '@/components/ui/icon';
+import { CalendarIcon, SFSymbolIcon } from '@/components/ui/Icon';
 
 // typography system for consistent text styling
 import { getTextStyle } from '@/constants/Typography';

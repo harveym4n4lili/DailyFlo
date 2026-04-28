@@ -22,7 +22,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { MainBackButton } from '@/components/ui/button';
+import { MainBackButton } from '@/components/ui/Button';
 import { ScreenHeaderActions } from '@/components/ui';
 import { IosBrowseBackStackToolbar } from '@/components/navigation/IosBrowseBackStackToolbar';
 import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';

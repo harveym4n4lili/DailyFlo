@@ -10,13 +10,13 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { GroupedList, FormDetailButton } from '@/components/ui/list/GroupedList';
-import { DropdownList } from '@/components/ui/list';
+import { GroupedList, FormDetailButton } from '@/components/ui/List/GroupedList';
+import { DropdownList } from '@/components/ui/List';
 import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 import { Ionicons } from '@expo/vector-icons';
-import { CalendarIcon, ClockIcon, BellIcon, RepeatIcon, SFSymbolIcon } from '@/components/ui/icon';
-import { getTimeDurationDisplayLabels } from '@/components/ui/button';
+import { CalendarIcon, ClockIcon, BellIcon, RepeatIcon, SFSymbolIcon } from '@/components/ui/Icon';
+import { getTimeDurationDisplayLabels } from '@/components/ui/Button';
 import type { RoutineType } from '@/types';
 import { Host, Menu, Button } from '@expo/ui/swift-ui';
 

@@ -34,7 +34,7 @@ import TaskIndicators from './TaskIndicators';
 import TaskIcon from './TaskIcon';
 import TaskCardCheckbox from './TaskCardCheckbox';
 
-import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/button';
+import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/Button';
 
 // import border components
 import { DashedSeparator, SolidSeparator } from '@/components/ui/borders';

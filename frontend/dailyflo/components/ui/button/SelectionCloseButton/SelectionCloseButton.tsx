@@ -10,7 +10,7 @@ import { Pressable, TouchableOpacity, Platform, StyleSheet, ViewStyle } from 're
 import { Ionicons } from '@expo/vector-icons';
 import GlassView from 'expo-glass-effect/build/GlassView';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { SFSymbolIcon } from '@/components/ui/icon';
+import { SFSymbolIcon } from '@/components/ui/Icon';
 
 export interface SelectionCloseButtonProps {
   onPress: () => void;

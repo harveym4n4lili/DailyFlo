@@ -13,8 +13,8 @@ import { useTypography } from '@/hooks/useTypography';
 import { useAppDispatch, store } from '@/store';
 import { useLists, useTasks } from '@/store/hooks';
 import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
-import { MainCloseButton } from '@/components/ui/button';
-import { SFSymbolIcon, BrowseIcon } from '@/components/ui/icon';
+import { MainCloseButton } from '@/components/ui/Button';
+import { SFSymbolIcon, BrowseIcon } from '@/components/ui/Icon';
 import { Paddings } from '@/constants/Paddings';
 import {
   isExpandedRecurrenceId,
