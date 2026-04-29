@@ -169,7 +169,7 @@ See `social-auth-plan.md` §3.3 for the full code.
 
 In `backend/dailyflo/apps/accounts/serializers.py`:
 
-- [ ] Replace the current `SocialAuthSerializer` class with:
+- [x] Replace the current `SocialAuthSerializer` class with:
   - `provider` — `ChoiceField(choices=['google', 'apple'])` — remove `facebook`
   - `id_token` — `CharField(required=True)` — rename from `access_token`
   - `first_name` — `CharField(required=False, allow_blank=True, default='')`
@@ -182,8 +182,8 @@ In `backend/dailyflo/apps/accounts/serializers.py`:
 
 In `backend/dailyflo/apps/accounts/views.py`:
 
-- [ ] Import `verify_google_id_token` and `verify_apple_id_token` from `.social_auth`
-- [ ] Replace the view body with:
+- [x] Import `verify_google_id_token` and `verify_apple_id_token` from `.social_auth`
+- [x] Replace the view body with:
   1. Validate serializer
   2. Call the correct verification function based on `provider`
   3. Return HTTP 401 if verification raises `ValueError`
