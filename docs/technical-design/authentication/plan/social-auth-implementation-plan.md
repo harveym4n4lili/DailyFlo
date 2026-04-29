@@ -152,14 +152,16 @@ See `social-auth-plan.md` §3.3 for the full code.
 
 ### 2.5 — Write unit tests for the verification functions
 
-- [ ] Create `backend/dailyflo/apps/accounts/tests/test_social_auth.py`
-- [ ] Test `verify_google_id_token` with a valid token (use Google OAuth Playground to generate one)
-- [ ] Test `verify_google_id_token` with an expired token → expect `ValueError`
-- [ ] Test `verify_google_id_token` with wrong audience → expect `ValueError`
-- [ ] Test `verify_apple_id_token` with a valid locally-signed RS256 JWT and mocked JWKS
-- [ ] Test `verify_apple_id_token` with expired token → expect `ValueError`
+- [x] Create `backend/dailyflo/apps/accounts/tests/test_social_auth.py`
+- [x] Test `verify_google_id_token` with a valid token (use Google OAuth Playground to generate one)
+- [x] Test `verify_google_id_token` with an expired token → expect `ValueError`
+- [x] Test `verify_google_id_token` with wrong audience → expect `ValueError`
+- [x] Test `verify_apple_id_token` with a valid locally-signed RS256 JWT and mocked JWKS
+- [x] Test `verify_apple_id_token` with expired token → expect `ValueError`
 
 > Run: `python manage.py test apps.accounts.tests.test_social_auth`
+
+> The **valid Google** case mocks `verify_oauth2_token` so CI never depends on a live Playground token; you can still paste a real token into Postman during Phase 2.8.
 
 ---
 
