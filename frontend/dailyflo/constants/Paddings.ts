@@ -146,6 +146,12 @@ export const Paddings = {
   // zero - for reset or no-padding cases
   // used by: Description, CustomFormDetailButton, SubtaskListItem, ModalHeader, TaskScreenContent, TaskCard, FormPickerButton, planner/index, CreateSubtaskButton, SubtaskListItem (TaskScreen), SubtaskCreateButton, AlertSelectScreen, QuickDateOptions, WeekView, TimelineItem, DragOverlay
   none: 0,
+
+  /**
+   * Inset around expo-glass-effect views so the native blur can extend past the layout box without clipping.
+   * ContinueButton uses this for its halo and to align the visible circle with Paddings.screen when absolutely positioned.
+   */
+  liquidGlassBleed: 6,
 } as const;
 
 export type PaddingKey = keyof typeof Paddings;

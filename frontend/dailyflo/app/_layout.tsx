@@ -72,7 +72,7 @@ export default function RootLayout() {
    * 
    * Flow (PRIORITIZES ONBOARDING):
    * 1. FIRST: Check AsyncStorage for onboarding completion flag
-   * 2. If onboarding NOT complete → route to onboarding welcome screen immediately
+   * 2. If onboarding NOT complete → route to onboarding (index screen) immediately
    * 3. If onboarding IS complete → check authentication status
    * 4. If authenticated → load user data and route to main app (tabs)
    * 5. If not authenticated → route to onboarding (where they can sign in)
@@ -104,7 +104,7 @@ export default function RootLayout() {
         await new Promise(resolve => setTimeout(resolve, 100));
         
         // get current route group from segments to check if we're already on the correct route
-        // segments will be like ["(onboarding)", "welcome"] or ["(tabs)", "today"]
+        // segments will be like ["(onboarding)"] or ["(tabs)", "today"]
         const currentGroup = segments[0];
         
         if (onboardingComplete !== 'true') {
@@ -122,7 +122,7 @@ export default function RootLayout() {
           // only navigate if we're not already on the onboarding route
           if (currentGroup !== '(onboarding)') {
             // this is the first screen in the onboarding flow
-            router.replace('/(onboarding)/welcome');
+            router.replace('/(onboarding)');
           }
         } else {
           // user has completed onboarding, now check authentication status
@@ -149,11 +149,11 @@ export default function RootLayout() {
           } else {
             // onboarding is complete but user is not authenticated
             // this can happen if user skipped onboarding without logging in
-            // route them to the first onboarding screen (welcome) so they can complete the flow
+            // route them to onboarding so they can finish or sign in later
             // only navigate if we're not already on the onboarding route
             if (currentGroup !== '(onboarding)') {
-              // route to welcome screen (first onboarding screen)
-              router.replace('/(onboarding)/welcome');
+              // first onboarding route is the group index screen
+              router.replace('/(onboarding)');
             }
           }
         }
@@ -175,7 +175,7 @@ export default function RootLayout() {
         // only navigate if we're not already on onboarding
         const currentGroup = segments[0];
         if (currentGroup !== '(onboarding)') {
-          router.replace('/(onboarding)/welcome');
+          router.replace('/(onboarding)');
         }
       } finally {
         // always set checking to false so the app can render
