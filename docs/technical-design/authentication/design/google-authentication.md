@@ -6,6 +6,18 @@ This guide explains **how Google Sign-In fits DailyFlo end-to-end**: tokens, OAu
 
 **Related code:** `backend/dailyflo/apps/accounts/social_auth.py` (`verify_google_id_token`), future `SocialAuthView`, frontend Google button + Expo AuthSession (see `social-auth-implementation-plan.md`).
 
+### Full Google auth flow (arrows)
+
+Sarah taps **Sign in with Google** →  
+DailyFlo launches Google’s OAuth/OpenID UI →  
+Sarah signs in with Google (DailyFlo never receives her Google password) →  
+Google completes the flow **on the device** and returns tokens **to the app** (often a Google **access token** plus a Google **ID token**) →  
+The app **POST**s JSON to Django’s social-auth endpoint with **`provider: google`** and **`id_token`** (the Google JWT string) →  
+Django runs **`verify_google_id_token`**, which cryptographically validates the JWT and checks **`exp`**, issuer, and **`aud`** against **`GOOGLE_CLIENT_ID`** →  
+If verification succeeds, Django finds or creates **`CustomUser`** using **`sub`** (and email rules where applicable), then issues **DailyFlo access and refresh JWTs** (those—not Google’s tokens—are what authorize calls to DailyFlo’s APIs) →  
+The app stores DailyFlo’s JWTs securely (e.g. SecureStore) and sends **`Authorization: Bearer`** plus the DailyFlo access token on subsequent requests →  
+Google’s access token is **not** kept server-side for login; it is only needed later if you add Google API integrations.
+
 ---
 
 ## Part 0 — Concepts in one place

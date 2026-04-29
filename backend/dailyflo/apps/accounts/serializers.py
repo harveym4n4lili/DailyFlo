@@ -131,18 +131,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 class SocialAuthSerializer(serializers.Serializer):
     """
-    serializer for social authentication
+    incoming shape for POST /accounts/auth/social/
+
+    id_token is the raw jwt string from google/apple — identity must come from server-side verification,
+    not from a client-supplied dict (removed user_info — that was a trust boundary bug).
     """
-    provider = serializers.ChoiceField(choices=['google', 'apple', 'facebook'])
-    access_token = serializers.CharField(required=True)
-    user_info = serializers.DictField(required=False)
-    
-    def validate_provider(self, value):
-        """validate social auth provider"""
-        allowed_providers = ['google', 'apple', 'facebook']
-        if value not in allowed_providers:
-            raise serializers.ValidationError(f"Invalid provider: {value}")
-        return value
+    provider = serializers.ChoiceField(choices=['google', 'apple'])
+    id_token = serializers.CharField(required=True)
+    # apple only sends full name on first sign-in; client forwards these when present
+    first_name = serializers.CharField(required=False, allow_blank=True, default='')
+    last_name = serializers.CharField(required=False, allow_blank=True, default='')
 
 
 class UserLoginSerializer(serializers.Serializer):
