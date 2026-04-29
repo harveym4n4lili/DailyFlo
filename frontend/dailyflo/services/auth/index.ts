@@ -25,3 +25,5 @@ export {
   clearAllTokens,
   hasValidTokens,
 } from './tokenStorage';
+
+export { triggerGoogleSignIn, triggerAppleSignIn } from './socialAuth';

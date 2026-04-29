@@ -10,11 +10,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dailyflo.app",
+      "usesAppleSignIn": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -40,6 +43,7 @@
       "expo-font",
       "expo-secure-store",
       "expo-web-browser",
+      "expo-apple-authentication",
       "expo-image"
     ],
     "experiments": {
