@@ -97,14 +97,12 @@ export interface LoginUserInput {
   password: string;                 // Required: User's password (for email auth)
 }
 
-// Type for social authentication input
+// Type for social authentication — matches django SocialAuthSerializer (id_token verified server-side)
 export interface SocialAuthInput {
-  authProvider: 'google' | 'apple' | 'facebook'; // Required: Social provider
-  authProviderId: string;           // Required: Provider-specific user ID
-  email: string;                    // Required: User's email from provider
-  firstName?: string;               // Optional: First name from provider
-  lastName?: string;               // Optional: Last name from provider
-  avatarUrl?: string;              // Optional: Avatar URL from provider
+  provider: 'google' | 'apple';
+  idToken: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 // Type for updating user profile

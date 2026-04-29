@@ -607,64 +607,60 @@ export const registerUser = createAsyncThunk(
   }
 );
 
-// Social authentication (Google, Apple, Facebook)
+/**
+ * google / apple login — same token storage path as loginUser after django verifies id_token.
+ */
 export const socialAuth = createAsyncThunk(
   'auth/socialAuth',
-  async (authData: SocialAuthInput, { rejectWithValue }) => {
+  async (payload: SocialAuthInput, { rejectWithValue }) => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.socialAuth(authData);
-      // return response.data;
-      
-      // For now, create a mock user
-      const mockUser: User = {
-        id: Date.now().toString(),
-        email: authData.email,
-        authProvider: authData.authProvider,
-        authProviderId: authData.authProviderId,
-        firstName: authData.firstName || '',
-        lastName: authData.lastName || '',
-        avatarUrl: authData.avatarUrl || null,
-        isEmailVerified: true,
-        lastLogin: new Date(),
-        preferences: {
-          theme: 'light',
-          notifications: {
-            enabled: true,
-            dueDateReminders: true,
-            routineReminders: true,
-            pushNotifications: true,
-            emailNotifications: false,
-          },
-          defaultPriority: 3,
-          defaultColor: 'blue',
-          defaultListView: 'list',
-          timezone: 'UTC',
-          dateFormat: 'MM/DD/YYYY',
-          timeFormat: '12h',
-          autoArchiveCompleted: false,
-          showCompletedTasks: true,
-          sortTasksBy: 'dueDate',
-          analyticsEnabled: true,
-          crashReportingEnabled: true,
-        },
-        softDeleted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      const mockTokens = {
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-      };
-      
+      // snake_case keys match SocialAuthSerializer + axios django conventions
+      const response = await authApiService.socialLogin({
+        provider: payload.provider,
+        id_token: payload.idToken,
+        first_name: payload.firstName ?? '',
+        last_name: payload.lastName ?? '',
+      });
+
+      const accessToken = response.tokens?.access ?? response.access;
+      const refreshToken = response.tokens?.refresh ?? response.refresh;
+      const rawUser = response.user;
+
+      if (!accessToken || !refreshToken) {
+        throw new Error('Tokens not received from server');
+      }
+      if (!rawUser) {
+        throw new Error('User not received from server');
+      }
+
+      await storeAccessToken(accessToken);
+      await storeRefreshToken(refreshToken);
+      const expiryTime = Date.now() + 15 * 60 * 1000;
+      await storeTokenExpiry(expiryTime);
+
+      const user = transformApiUserToUser(rawUser);
+
       return {
-        user: mockUser,
-        ...mockTokens,
+        user,
+        accessToken,
+        refreshToken,
+        expiresAt: new Date(expiryTime),
+        isNewUser: Boolean(response.is_new_user ?? response.isNewUser),
       };
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Social authentication failed');
+    } catch (error: any) {
+      if (error.response?.status === 409) {
+        const msg =
+          error.response?.data?.message ??
+          'An account with this email already exists. Sign in with your existing method.';
+        return rejectWithValue({ code: 'account_conflict' as const, message: msg });
+      }
+
+      const msg =
+        (typeof error.response?.data?.error === 'string' && error.response.data.error) ||
+        error.response?.data?.detail ||
+        error.message ||
+        'Social authentication failed';
+      return rejectWithValue(typeof msg === 'string' ? msg : 'Social authentication failed');
     }
   }
 );
@@ -925,18 +921,22 @@ const authSlice = createSlice({
         state.tokenExpiry = action.payload.expiresAt.getTime();
         state.authMethod = action.payload.user.authProvider;
         state.lastLoginTime = Date.now();
-        
-        // Store tokens if remember me is enabled
-        if (state.rememberMe) {
-          localStorage.setItem('accessToken', action.payload.accessToken);
-          localStorage.setItem('refreshToken', action.payload.refreshToken);
-          localStorage.setItem('user', JSON.stringify(action.payload.user));
-          localStorage.setItem('tokenExpiry', action.payload.expiresAt.getTime().toString());
-        }
+        state.loginError = null;
       })
       .addCase(socialAuth.rejected, (state, action) => {
         state.isLoggingIn = false;
-        state.loginError = action.payload as string;
+        const p = action.payload;
+        if (
+          typeof p === 'object' &&
+          p !== null &&
+          'message' in p &&
+          typeof (p as { message: unknown }).message === 'string'
+        ) {
+          state.loginError = (p as { message: string }).message;
+        } else {
+          state.loginError =
+            typeof p === 'string' ? p : 'Social authentication failed';
+        }
       })
       
       // Handle updateUserProfile actions
