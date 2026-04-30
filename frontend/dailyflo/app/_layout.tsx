@@ -122,7 +122,7 @@ export default function RootLayout() {
           // only navigate if we're not already on the onboarding route
           if (currentGroup !== '(onboarding)') {
             // this is the first screen in the onboarding flow
-            router.replace('/(onboarding)');
+            router.replace('/(onboarding)/introductory');
           }
         } else {
           // user has completed onboarding, now check authentication status
@@ -153,7 +153,7 @@ export default function RootLayout() {
             // only navigate if we're not already on the onboarding route
             if (currentGroup !== '(onboarding)') {
               // first onboarding route is the group index screen
-              router.replace('/(onboarding)');
+              router.replace('/(onboarding)/introductory');
             }
           }
         }
@@ -175,7 +175,7 @@ export default function RootLayout() {
         // only navigate if we're not already on onboarding
         const currentGroup = segments[0];
         if (currentGroup !== '(onboarding)') {
-          router.replace('/(onboarding)');
+          router.replace('/(onboarding)/introductory');
         }
       } finally {
         // always set checking to false so the app can render
@@ -224,7 +224,23 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: themeColors.background.primary() },
             }}
           >
-            <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="(onboarding)"
+              options={{
+                headerShown: false,
+                // outer card still gets default scroll-edge “fade” on ios; hide so intro pager has no top strip
+                ...(Platform.OS === 'ios'
+                  ? {
+                      scrollEdgeEffects: {
+                        top: 'hidden' as const,
+                        bottom: 'hidden' as const,
+                        left: 'hidden' as const,
+                        right: 'hidden' as const,
+                      },
+                    }
+                  : {}),
+              }}
+            />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             {/* legacy create routes now mount the same quick-add overlay flow as Today */}
             <Stack.Screen

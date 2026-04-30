@@ -6,6 +6,7 @@
  */
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, RegisterUserInput, LoginUserInput, SocialAuthInput, UpdateUserInput, UserPreferences } from '../../../types';
 // auth API service - handles API calls to Django backend for authentication
 // this service makes HTTP requests to login, register, and other auth endpoints
@@ -22,6 +23,11 @@ import {
   getTokenExpiry,
   hasValidTokens,
 } from '../../../services/auth/tokenStorage';
+
+// storage key for tracking onboarding completion status
+// this key is used to check if the user has completed the onboarding flow
+// when user logs out, we reset this so they see onboarding screens again
+const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
 
 /**
  * Define the shape of the authentication state
@@ -99,73 +105,29 @@ export const checkAuthStatus = createAsyncThunk(
   'auth/checkAuthStatus',
   async (_, { rejectWithValue, dispatch }) => {
     try {
-      // read all three stored values up front so we can use them regardless of expiry state
-      // we need the refresh token even when the access token has locally expired
+      // Check if we have valid tokens stored in SecureStore
+      // hasValidTokens checks if tokens exist and haven't expired
+      const hasValid = await hasValidTokens();
+      
+      if (!hasValid) {
+        // No valid tokens, user is not authenticated
+        // Clear any leftover invalid tokens
+        await clearAllTokens();
+        return null;
+      }
+      
+      // Get tokens from SecureStore
+      // These are the tokens we stored when the user logged in
       const accessToken = await getAccessToken();
       const refreshToken = await getRefreshToken();
       const expiry = await getTokenExpiry();
-
-      // if there are no tokens at all, the user has never logged in (or already signed out)
-      if (!accessToken && !refreshToken) {
+      
+      if (!accessToken || !refreshToken) {
+        // Tokens missing, clear everything
         await clearAllTokens();
         return null;
       }
-
-      // check if the locally-stored access token is still within its 15-minute window
-      // hasValidTokens compares the stored expiry timestamp against Date.now()
-      const hasValid = await hasValidTokens();
-
-      // if the local expiry says the access token is stale, but we still have a refresh token,
-      // go straight to refreshing rather than making a getCurrentUser call that would just fail.
-      // this silently restores the session when the user opens the app after a short idle period
-      // (e.g. 15+ minutes) without forcing them to log in again.
-      if (!hasValid && refreshToken) {
-        try {
-          // ask the backend for a new access token using the long-lived refresh token
-          const refreshResponse = await authApiService.refreshToken({ refresh: refreshToken });
-          const newAccessToken = refreshResponse.access || refreshResponse.data?.access;
-          const newRefreshToken = refreshResponse.refresh || refreshResponse.data?.refresh || refreshToken;
-
-          if (!newAccessToken) {
-            throw new Error('No access token returned from refresh');
-          }
-
-          // save the new tokens to secure storage so all future requests use them
-          await storeAccessToken(newAccessToken);
-          if (newRefreshToken !== refreshToken) {
-            // some backends rotate the refresh token on each use; store the new one if so
-            await storeRefreshToken(newRefreshToken);
-          }
-
-          // reset the local expiry clock to 15 minutes from now
-          const newExpiryTime = Date.now() + (15 * 60 * 1000);
-          await storeTokenExpiry(newExpiryTime);
-
-          // fetch the user profile using the fresh access token
-          const profileResponse = await authApiService.getCurrentUser();
-          const user: User = transformApiUserToUser(profileResponse.user || profileResponse);
-
-          return {
-            user,
-            accessToken: newAccessToken,
-            refreshToken: newRefreshToken,
-            expiresAt: new Date(newExpiryTime),
-          };
-        } catch (refreshError) {
-          // the refresh token is also expired or invalid – the user needs to log in again
-          // this is the genuine "session has fully ended" case
-          console.error('Token refresh failed during auth check (expired access token path):', refreshError);
-          await clearAllTokens();
-          return null;
-        }
-      }
-
-      // access token is locally expired and we have no refresh token to fall back on
-      if (!accessToken) {
-        await clearAllTokens();
-        return null;
-      }
-
+      
       // Validate token with backend by fetching user profile
       // This makes an API call to verify the token is still valid on the server
       // If the token is invalid, we'll get a 401 and can try to refresh
@@ -607,60 +569,64 @@ export const registerUser = createAsyncThunk(
   }
 );
 
-/**
- * google / apple login — same token storage path as loginUser after django verifies id_token.
- */
+// Social authentication (Google, Apple, Facebook)
 export const socialAuth = createAsyncThunk(
   'auth/socialAuth',
-  async (payload: SocialAuthInput, { rejectWithValue }) => {
+  async (authData: SocialAuthInput, { rejectWithValue }) => {
     try {
-      // snake_case keys match SocialAuthSerializer + axios django conventions
-      const response = await authApiService.socialLogin({
-        provider: payload.provider,
-        id_token: payload.idToken,
-        first_name: payload.firstName ?? '',
-        last_name: payload.lastName ?? '',
-      });
-
-      const accessToken = response.tokens?.access ?? response.access;
-      const refreshToken = response.tokens?.refresh ?? response.refresh;
-      const rawUser = response.user;
-
-      if (!accessToken || !refreshToken) {
-        throw new Error('Tokens not received from server');
-      }
-      if (!rawUser) {
-        throw new Error('User not received from server');
-      }
-
-      await storeAccessToken(accessToken);
-      await storeRefreshToken(refreshToken);
-      const expiryTime = Date.now() + 15 * 60 * 1000;
-      await storeTokenExpiry(expiryTime);
-
-      const user = transformApiUserToUser(rawUser);
-
-      return {
-        user,
-        accessToken,
-        refreshToken,
-        expiresAt: new Date(expiryTime),
-        isNewUser: Boolean(response.is_new_user ?? response.isNewUser),
+      // TODO: Replace with actual API call
+      // const response = await api.socialAuth(authData);
+      // return response.data;
+      
+      // For now, create a mock user
+      const mockUser: User = {
+        id: Date.now().toString(),
+        email: authData.email,
+        authProvider: authData.authProvider,
+        authProviderId: authData.authProviderId,
+        firstName: authData.firstName || '',
+        lastName: authData.lastName || '',
+        avatarUrl: authData.avatarUrl || null,
+        isEmailVerified: true,
+        lastLogin: new Date(),
+        preferences: {
+          theme: 'light',
+          notifications: {
+            enabled: true,
+            dueDateReminders: true,
+            routineReminders: true,
+            pushNotifications: true,
+            emailNotifications: false,
+          },
+          defaultPriority: 3,
+          defaultColor: 'blue',
+          defaultListView: 'list',
+          timezone: 'UTC',
+          dateFormat: 'MM/DD/YYYY',
+          timeFormat: '12h',
+          autoArchiveCompleted: false,
+          showCompletedTasks: true,
+          sortTasksBy: 'dueDate',
+          analyticsEnabled: true,
+          crashReportingEnabled: true,
+        },
+        softDeleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
-    } catch (error: any) {
-      if (error.response?.status === 409) {
-        const msg =
-          error.response?.data?.message ??
-          'An account with this email already exists. Sign in with your existing method.';
-        return rejectWithValue({ code: 'account_conflict' as const, message: msg });
-      }
-
-      const msg =
-        (typeof error.response?.data?.error === 'string' && error.response.data.error) ||
-        error.response?.data?.detail ||
-        error.message ||
-        'Social authentication failed';
-      return rejectWithValue(typeof msg === 'string' ? msg : 'Social authentication failed');
+      
+      const mockTokens = {
+        accessToken: 'mock-access-token',
+        refreshToken: 'mock-refresh-token',
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      };
+      
+      return {
+        user: mockUser,
+        ...mockTokens,
+      };
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : 'Social authentication failed');
     }
   }
 );
@@ -723,12 +689,18 @@ export const logoutUser = createAsyncThunk(
       // Import clearTasks action from tasks slice to reset task state
       const { clearTasks } = await import('../tasks/tasksSlice');
       dispatch(clearTasks());
-
-      // intentionally NOT removing the onboarding flag here.
-      // a returning user who signs out is not a new user – they have already completed
-      // onboarding. keeping the flag means they land on the sign-in screen next open,
-      // not back at the full onboarding flow.
-
+      
+      // Reset onboarding status when user logs out
+      // This ensures that after logout, the user will see onboarding screens again
+      // This is important because a logged-out user should be treated as a new user
+      try {
+        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+      } catch (onboardingError) {
+        // If resetting onboarding fails, log it but don't fail the logout
+        // The logout should still succeed even if onboarding reset fails
+        console.error('Error resetting onboarding during logout:', onboardingError);
+      }
+      
       // Return success - the reducer handles clearing the state
       return true;
     } catch (error) {
@@ -743,7 +715,15 @@ export const logoutUser = createAsyncThunk(
       } catch (taskClearError) {
         console.error('Error clearing tasks during logout:', taskClearError);
       }
-
+      
+      // Try to reset onboarding even if other logout steps failed
+      // This ensures onboarding is reset regardless of other errors
+      try {
+        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+      } catch (onboardingError) {
+        console.error('Error resetting onboarding during logout:', onboardingError);
+      }
+      
       console.error('Error during logout (tokens may not have been cleared):', error);
       return true;
     }
@@ -921,22 +901,18 @@ const authSlice = createSlice({
         state.tokenExpiry = action.payload.expiresAt.getTime();
         state.authMethod = action.payload.user.authProvider;
         state.lastLoginTime = Date.now();
-        state.loginError = null;
+        
+        // Store tokens if remember me is enabled
+        if (state.rememberMe) {
+          localStorage.setItem('accessToken', action.payload.accessToken);
+          localStorage.setItem('refreshToken', action.payload.refreshToken);
+          localStorage.setItem('user', JSON.stringify(action.payload.user));
+          localStorage.setItem('tokenExpiry', action.payload.expiresAt.getTime().toString());
+        }
       })
       .addCase(socialAuth.rejected, (state, action) => {
         state.isLoggingIn = false;
-        const p = action.payload;
-        if (
-          typeof p === 'object' &&
-          p !== null &&
-          'message' in p &&
-          typeof (p as { message: unknown }).message === 'string'
-        ) {
-          state.loginError = (p as { message: string }).message;
-        } else {
-          state.loginError =
-            typeof p === 'string' ? p : 'Social authentication failed';
-        }
+        state.loginError = action.payload as string;
       })
       
       // Handle updateUserProfile actions
