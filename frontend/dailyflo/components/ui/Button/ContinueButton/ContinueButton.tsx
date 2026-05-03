@@ -27,6 +27,10 @@ export interface ContinueButtonProps {
   loading?: boolean;
   accessibilityLabel?: string;
   testID?: string;
+  /** when set, overrides theme `primaryButton.fill` (circle / glass tint) */
+  fillColor?: string;
+  /** when set, overrides theme `primaryButton.icon` (chevron + spinner) */
+  iconColor?: string;
   /**
    * absolute — bottom-right using Paddings.screen + max(insets.bottom, Paddings.screen), minus liquidGlassBleed
    * so the visible glass circle lines up with screen padding (parent should be flex:1 full screen).
@@ -51,6 +55,8 @@ export function ContinueButton({
   testID,
   layout = 'absolute',
   style,
+  fillColor: fillColorProp,
+  iconColor: iconColorProp,
 }: ContinueButtonProps) {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
@@ -58,8 +64,8 @@ export function ContinueButton({
   const glassAvailable = Platform.OS === 'ios';
   const bleed = Paddings.liquidGlassBleed;
 
-  const fill = themeColors.primaryButton.fill();
-  const iconColor = themeColors.primaryButton.icon();
+  const fill = fillColorProp ?? themeColors.primaryButton.fill();
+  const iconColor = iconColorProp ?? themeColors.primaryButton.icon();
   const inactive = disabled || loading;
 
   // glass blur draws outside the view bounds — do not clip on GlassView.

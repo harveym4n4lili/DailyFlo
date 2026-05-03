@@ -191,6 +191,7 @@ export function useThemeColors() {
       quaternary: () => getThemeColor('text', 'quaternary'),
       // light-on-dark-surface text (e.g. icon on primary button fill)
       inverse: () => getThemeColor('text', 'inverse'),
+      disabled: () => getThemeColor('text', 'disabled'),
       // inverted colors - opposite theme colors for contrast sections
       invertedPrimary: () => getThemeColor('text', 'invertedPrimary'),
       invertedSecondary: () => getThemeColor('text', 'invertedSecondary'),

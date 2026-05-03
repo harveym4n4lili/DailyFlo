@@ -3,6 +3,8 @@
  */
 
 export {
+  INTRO_THEME_BACKGROUND_INVERTED_KEYS,
+  INTRO_THEME_TEXT_INVERTED_KEYS,
   ONBOARDING_INTRO_PAGE_COUNT,
   INTRO_TITLE_AREA_HEIGHT,
   INTRO_TITLE_SUBTEXT_GAP,
@@ -15,10 +17,13 @@ export {
 } from './introductory';
 export type {
   IntroPageTitleConfig,
+  IntroPrimaryButtonColorKey,
   IntroSlideUiConfig,
   IntroTextStyleToken,
   IntroThemeBackgroundColorKey,
+  IntroThemeBackgroundInvertedColorKey,
   IntroThemeTextColorKey,
+  IntroThemeTextInvertedColorKey,
 } from './introductory';
 export { ONBOARDING_COMPLETE_STORAGE_KEY, useCompleteOnboardingAndExit } from './introductory';
 export {
@@ -28,10 +33,13 @@ export {
   type UseOnboardingIntroHeaderOpts,
 } from './introductory';
 export {
+  blendIntroContinueButtonColors,
   resolveIntroBackgroundColor,
+  resolveIntroContinueButtonPaint,
   resolveIntroTextColor,
   crossfadeInputRange,
   crossfadeOutputRange,
+  lerpIntroHexColor,
   splitIntroTitleHighlight,
 } from './introductory';
 export { IntroScrollCrossfadeBackgrounds, IntroScrollCrossfadeTitleLayer } from './introductory';
