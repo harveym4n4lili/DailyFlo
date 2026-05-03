@@ -35,6 +35,8 @@ import {
   IntroScrollCrossfadeBackgrounds,
   IntroScrollCrossfadeTitleLayer,
   resolveIntroTextColor,
+  resolveIntroContinueButtonPaint,
+  blendIntroContinueButtonColors,
 } from '@/components/features/onboarding';
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -72,9 +74,33 @@ export default function OnboardingIntroductoryScreen() {
 
   const captionTypographyOnly = useMemo(() => typography.getTextStyle('body-large'), [typography]);
 
+  // header dots still snap to rounded page; FAB fill/icon crossfade in rgb as you scroll (fractional `pageProgress`).
+  const headerDotColor = useMemo(() => {
+    const idx = Math.min(Math.max(Math.round(pageProgress), 0), ONBOARDING_INTRO_PAGE_COUNT - 1);
+    return resolveIntroTextColor(themeColors.text, INTRO_PAGE_SLIDE_UI[idx].dotIndicatorColor);
+  }, [pageProgress, themeColors]);
+
+  const continuePaintByPage = useMemo(
+    () => ({
+      fills: INTRO_PAGE_SLIDE_UI.map((c) =>
+        resolveIntroContinueButtonPaint(themeColors, c.continueButtonBackground),
+      ),
+      icons: INTRO_PAGE_SLIDE_UI.map((c) =>
+        resolveIntroContinueButtonPaint(themeColors, c.continueButtonIcon),
+      ),
+    }),
+    [themeColors],
+  );
+
+  const continuePaint = useMemo(
+    () => blendIntroContinueButtonColors(pageProgress, continuePaintByPage.fills, continuePaintByPage.icons),
+    [pageProgress, continuePaintByPage],
+  );
+
   useOnboardingIntroHeader({
     pageProgress,
     totalPages: ONBOARDING_INTRO_PAGE_COUNT,
+    dotColor: headerDotColor,
   });
 
   const onMomentumScrollEnd = useCallback(
@@ -162,13 +188,17 @@ export default function OnboardingIntroductoryScreen() {
         {introPages}
       </Animated.ScrollView>
 
-      <ContinueButton
-        onPress={onContinue}
-        loading={busy}
-        accessibilityLabel={
-          pageIndex < ONBOARDING_INTRO_PAGE_COUNT - 1 ? 'Continue to next slide' : 'Finish intro and enter app'
-        }
-      />
+      <View style={[StyleSheet.absoluteFillObject, { zIndex: 10, elevation: 10 }]} pointerEvents="box-none">
+        <ContinueButton
+          onPress={onContinue}
+          loading={busy}
+          fillColor={continuePaint.fill}
+          iconColor={continuePaint.icon}
+          accessibilityLabel={
+            pageIndex < ONBOARDING_INTRO_PAGE_COUNT - 1 ? 'Continue to next slide' : 'Finish intro and enter app'
+          }
+        />
+      </View>
     </View>
   );
 }

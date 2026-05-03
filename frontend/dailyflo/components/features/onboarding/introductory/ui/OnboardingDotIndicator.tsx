@@ -1,18 +1,17 @@
 /**
  * horizontal dots for onboarding / intro funnel — renders in native headerTitle (or anywhere).
- * pass total steps + current index; active dot uses primary text color, inactive uses muted.
+ * pass total steps + scroll progress; parent passes resolved `dotColor` so each intro slide can pick its own token.
  */
 
 import React from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { INTRO_CONTROL_TRANSITION_MS } from '../constants';
 
 const DOT_SIZE_ACTIVE = 8;
 const DOT_SIZE_INACTIVE = 8;
 const DOT_WIDTH_ACTIVE = 20;
 const DOT_GAP = 8;
-const DOT_TRANSITION_MS = 320;
 const DOT_FIRST_LOAD_OFFSET = 0.6;
 
 export type OnboardingDotIndicatorProps = {
@@ -20,10 +19,11 @@ export type OnboardingDotIndicatorProps = {
   totalSteps: number;
   /** fractional scroll position (0..N-1) so dot widths morph while dragging */
   activeProgress: number;
+  /** resolved fill color (e.g. from `resolveIntroTextColor` + current slide’s `dotIndicatorColor`) */
+  dotColor: string;
 };
 
-export function OnboardingDotIndicator({ totalSteps, activeProgress }: OnboardingDotIndicatorProps) {
-  const themeColors = useThemeColors();
+export function OnboardingDotIndicator({ totalSteps, activeProgress, dotColor }: OnboardingDotIndicatorProps) {
   // start slightly before current index so the first visible step animates in on first render.
   const animatedProgress = React.useRef(new Animated.Value(activeProgress - DOT_FIRST_LOAD_OFFSET)).current;
 
@@ -36,7 +36,7 @@ export function OnboardingDotIndicator({ totalSteps, activeProgress }: Onboardin
     if (totalSteps <= 0) return;
     Animated.timing(animatedProgress, {
       toValue: clamped,
-      duration: DOT_TRANSITION_MS,
+      duration: INTRO_CONTROL_TRANSITION_MS,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false, // width interpolation is layout-based
     }).start();
@@ -101,7 +101,7 @@ export function OnboardingDotIndicator({ totalSteps, activeProgress }: Onboardin
                 width,
                 height: DOT_SIZE_ACTIVE,
                 borderRadius: DOT_SIZE_ACTIVE / 2,
-                backgroundColor: themeColors.text.primary(),
+                backgroundColor: dotColor,
                 opacity: emphasisOpacity,
               },
             ]}

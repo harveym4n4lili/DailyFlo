@@ -3,6 +3,8 @@
  */
 
 export {
+  INTRO_THEME_BACKGROUND_INVERTED_KEYS,
+  INTRO_THEME_TEXT_INVERTED_KEYS,
   ONBOARDING_INTRO_PAGE_COUNT,
   INTRO_TITLE_AREA_HEIGHT,
   INTRO_TITLE_SUBTEXT_GAP,
@@ -15,10 +17,13 @@ export {
 } from './constants';
 export type {
   IntroPageTitleConfig,
+  IntroPrimaryButtonColorKey,
   IntroSlideUiConfig,
   IntroTextStyleToken,
   IntroThemeBackgroundColorKey,
+  IntroThemeBackgroundInvertedColorKey,
   IntroThemeTextColorKey,
+  IntroThemeTextInvertedColorKey,
 } from './constants';
 
 export {
@@ -45,13 +50,15 @@ export {
 export type { UseIntroScrollTransitionResult, UseOnboardingIntroHeaderOpts } from './hooks';
 
 export {
+  blendIntroContinueButtonColors,
   crossfadeInputRange,
   crossfadeOutputRange,
+  lerpIntroHexColor,
   resolveIntroBackgroundColor,
+  resolveIntroContinueButtonPaint,
   resolveIntroTextColor,
   splitIntroTitleHighlight,
 } from './scrollTransition';
-
 export { IntroScrollCrossfadeBackgrounds, IntroScrollCrossfadeTitleLayer } from './components';
 export type {
   IntroScrollCrossfadeBackgroundsProps,

@@ -3,37 +3,41 @@
  * `ONBOARDING_INTRO_PAGE_COUNT` is derived from `INTRO_PAGE_TITLES` so dots + slides stay aligned.
  */
 import type { TextStyle } from 'react-native';
+import { ThemeColors } from '@/constants/ColorPalette';
 import type { TextStyleName } from '@/constants/Typography';
 
-export type IntroThemeTextColorKey =
-  | 'primary'
-  | 'secondary'
-  | 'primarySecondaryBlend'
-  | 'tertiary'
-  | 'quaternary'
-  | 'inverse'
-  | 'invertedPrimary'
-  | 'invertedSecondary'
-  | 'invertedTertiary'
-  | 'invertedDisabled';
+// color keys are derived from `ThemeColors` in ColorPalette.ts so names match the design system
+// (same paths as `getThemeColor(theme, 'text', variant)` / `useThemeColors().text[variant]()`).
+export type IntroThemeTextColorKey = keyof typeof ThemeColors.light.text;
 
-/**
- * background tokens from `useThemeColors().background` — edit slides with these keys so light/dark stay consistent.
- */
-export type IntroThemeBackgroundColorKey =
-  | 'primary'
-  | 'secondary'
-  | 'primarySecondaryBlend'
-  | 'tertiary'
-  | 'quaternary'
-  | 'elevated'
-  | 'overlay'
-  | 'darkOverlay'
-  | 'lightOverlay'
-  | 'invertedPrimary'
-  | 'invertedSecondary'
-  | 'invertedTertiary'
-  | 'invertedElevated';
+// same as `getThemeColor(theme, 'background', variant)` / `useThemeColors().background[variant]()`.
+export type IntroThemeBackgroundColorKey = keyof typeof ThemeColors.light.background;
+
+// inverted surface / text pairs — use these when `background` is an `inverted*` token so contrast matches ColorPalette.
+export type IntroThemeTextInvertedColorKey = Extract<IntroThemeTextColorKey, `inverted${string}`>;
+export type IntroThemeBackgroundInvertedColorKey = Extract<
+  IntroThemeBackgroundColorKey,
+  `inverted${string}`
+>;
+
+/** background.inverted* names from ThemeColors — handy when picking a dark band / light card in intro */
+export const INTRO_THEME_BACKGROUND_INVERTED_KEYS = [
+  'invertedPrimary',
+  'invertedSecondary',
+  'invertedTertiary',
+  'invertedElevated',
+] as const satisfies readonly IntroThemeBackgroundInvertedColorKey[];
+
+/** text.inverted* names — use on inverted backgrounds instead of `primary` / `secondary` */
+export const INTRO_THEME_TEXT_INVERTED_KEYS = [
+  'invertedPrimary',
+  'invertedSecondary',
+  'invertedTertiary',
+  'invertedDisabled',
+] as const satisfies readonly IntroThemeTextInvertedColorKey[];
+
+// same slots as `ThemeColors.light.primaryButton` / `useThemeColors().primaryButton`.
+export type IntroPrimaryButtonColorKey = keyof typeof ThemeColors.light.primaryButton;
 
 /**
  * per-slide ui colors — one entry per intro page, same order as `INTRO_PAGE_TITLES` / `INTRO_PAGE_CAPTIONS`.
@@ -45,6 +49,18 @@ export type IntroSlideUiConfig = {
   /** if omitted, highlight reuses `titleColor` */
   titleHighlightColor?: IntroThemeTextColorKey;
   captionColor: IntroThemeTextColorKey;
+  /**
+   * header dot indicator fill — same tokens as `titleColor` / `useThemeColors().text`.
+   * inactive dots reuse this color at lower opacity; pick inverted text on inverted slides so dots stay visible.
+   */
+  dotIndicatorColor: IntroThemeTextColorKey;
+  /**
+   * floating continue FAB — circle fill / iOS glass tint.
+   * `fill` / `icon` → `primaryButton`; names like `primary` → `interactive` / `text` in `useThemeColors()`; else hex/rgb string.
+   */
+  continueButtonBackground: string;
+  /** chevron + loading spinner — same resolution order as `continueButtonBackground` */
+  continueButtonIcon: string;
 };
 
 export const INTRO_PAGE_SLIDE_UI: readonly IntroSlideUiConfig[] = [
@@ -53,24 +69,36 @@ export const INTRO_PAGE_SLIDE_UI: readonly IntroSlideUiConfig[] = [
     titleColor: 'primary',
     titleHighlightColor: 'primary',
     captionColor: 'secondary',
+    dotIndicatorColor: 'primary',
+    continueButtonBackground: 'primary',
+    continueButtonIcon: 'icon',
   },
   {
-    background: 'primarySecondaryBlend',
+    background: 'invertedPrimary',
+    titleColor: 'invertedSecondary',
+    titleHighlightColor: 'invertedPrimary',
+    captionColor: 'invertedSecondary',
+    dotIndicatorColor: 'invertedPrimary',
+    continueButtonBackground: 'fill',
+    continueButtonIcon: 'icon',
+  },
+  {
+    background: 'invertedPrimary',
+    titleColor: 'invertedPrimary',
+    titleHighlightColor: 'invertedPrimary',
+    captionColor: 'invertedSecondary',
+    dotIndicatorColor: 'invertedPrimary',
+    continueButtonBackground: 'fill',
+    continueButtonIcon: 'icon',
+  },
+  {
+    background: 'quaternary',
     titleColor: 'primary',
     titleHighlightColor: 'primary',
     captionColor: 'secondary',
-  },
-  {
-    background: 'primarySecondaryBlend',
-    titleColor: 'primary',
-    titleHighlightColor: 'primary',
-    captionColor: 'secondary',
-  },
-  {
-    background: 'primary',
-    titleColor: 'primary',
-    titleHighlightColor: 'primary',
-    captionColor: 'secondary',
+    dotIndicatorColor: 'primary',
+    continueButtonBackground: 'fill',
+    continueButtonIcon: 'icon',
   },
 ];
 
@@ -213,3 +241,9 @@ export const INTRO_SUBTEXT_AREA_HEIGHT = 88;
 /** total height of the fixed title + subtext overlay — match spacer at top of each swipe page */
 export const INTRO_FIXED_HEADLINE_OVERLAY_HEIGHT =
   INTRO_TITLE_AREA_HEIGHT + INTRO_TITLE_SUBTEXT_GAP + INTRO_SUBTEXT_AREA_HEIGHT;
+
+/**
+ * duration (ms) for intro chrome that should move together — header dots + continue FAB fade.
+ * easing: `Easing.out(Easing.cubic)` in callers (matches `OnboardingDotIndicator`).
+ */
+export const INTRO_CONTROL_TRANSITION_MS = 320;

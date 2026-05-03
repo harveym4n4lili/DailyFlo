@@ -13,14 +13,22 @@ export type UseOnboardingIntroHeaderOpts = {
   pageProgress: number;
   /** total horizontal intro pages — must equal ScrollView children count */
   totalPages: number;
+  /** per-slide dot fill from intro constants — updates when scroll progress crosses page boundaries */
+  dotColor: string;
 };
 
-export function useOnboardingIntroHeader({ pageProgress, totalPages }: UseOnboardingIntroHeaderOpts): void {
+export function useOnboardingIntroHeader({
+  pageProgress,
+  totalPages,
+  dotColor,
+}: UseOnboardingIntroHeaderOpts): void {
   const navigation = useNavigation();
 
   const headerTitle = useCallback(
-    () => <OnboardingDotIndicator totalSteps={totalPages} activeProgress={pageProgress} />,
-    [pageProgress, totalPages],
+    () => (
+      <OnboardingDotIndicator totalSteps={totalPages} activeProgress={pageProgress} dotColor={dotColor} />
+    ),
+    [pageProgress, totalPages, dotColor],
   );
 
   // native stack: hide any default back affordance — intro funnel has swipe + skip + continue only.
