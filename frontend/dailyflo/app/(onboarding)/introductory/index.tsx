@@ -1,46 +1,79 @@
 /**
- * introductory route — horizontal pager host; slide UI lives in `@/components/.../introductory/pages`.
+ * introductory route — horizontal swipe carousel; slide UI lives in `@/components/.../introductory/pages`.
+ * titles + backgrounds crossfade via `introductory/scrollTransition` helpers and `introductory/components`.
  */
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
-  Animated,
   StyleSheet,
-  ScrollView,
   Platform,
   Pressable,
   Text,
+  Animated,
   useWindowDimensions,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ContinueButton } from '@/components/ui/Button';
-import { useThemeColors } from '@/hooks/useColorPalette';
-import { useTypography } from '@/hooks/useTypography';
 import {
   ONBOARDING_INTRO_PAGE_COUNT,
-  IntroSamplePageOne,
-  IntroSamplePageTwo,
+  INTRO_TEXT_TOKENS,
+  INTRO_PAGE_TITLES,
+  INTRO_PAGE_CAPTIONS,
+  INTRO_PAGE_SLIDE_UI,
+  IntroWelcomeDailyFloPage,
+  IntroYourDayTimelinePage,
+  IntroHabitsFlowPage,
+  IntroCopilotPlanPage,
   useCompleteOnboardingAndExit,
   useOnboardingIntroHeader,
+  useIntroScrollTransition,
+  IntroScrollCrossfadeBackgrounds,
+  IntroScrollCrossfadeTitleLayer,
+  resolveIntroTextColor,
 } from '@/components/features/onboarding';
+import { Paddings } from '@/constants/Paddings';
+import { useThemeColors } from '@/hooks/useColorPalette';
+import { useTypography } from '@/hooks/useTypography';
 
 export default function OnboardingIntroductoryScreen() {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
   const themeColors = useThemeColors();
   const typography = useTypography();
-  const scrollRef = useRef<ScrollView>(null);
-  const scrollX = useRef(new Animated.Value(0)).current;
 
   const [pageIndex, setPageIndex] = useState(0);
+  const [pageProgress, setPageProgress] = useState(0);
   const { completeAndExit, busy } = useCompleteOnboardingAndExit();
 
+  const { scrollRef, scrollX, onScroll } = useIntroScrollTransition(
+    ONBOARDING_INTRO_PAGE_COUNT,
+    windowWidth,
+    setPageProgress,
+  );
+
+  const skipTextStyle = useMemo(
+    () => [
+      typography.getTextStyle(INTRO_TEXT_TOKENS.skip.typography),
+      { color: resolveIntroTextColor(themeColors.text, INTRO_TEXT_TOKENS.skip.color) },
+    ],
+    [typography, themeColors],
+  );
+
+  const titleTypographyOnly = useMemo(
+    () => typography.getTextStyle(INTRO_TEXT_TOKENS.title.typography),
+    [typography],
+  );
+
+  const captionTypographyOnly = useMemo(() => typography.getTextStyle('body-large'), [typography]);
+
   useOnboardingIntroHeader({
-    pageIndex,
+    pageProgress,
     totalPages: ONBOARDING_INTRO_PAGE_COUNT,
   });
 
@@ -48,7 +81,9 @@ export default function OnboardingIntroductoryScreen() {
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const x = e.nativeEvent.contentOffset.x;
       const next = Math.round(x / Math.max(windowWidth, 1));
-      setPageIndex(Math.min(Math.max(next, 0), ONBOARDING_INTRO_PAGE_COUNT - 1));
+      const clamped = Math.min(Math.max(next, 0), ONBOARDING_INTRO_PAGE_COUNT - 1);
+      setPageIndex(clamped);
+      setPageProgress(clamped);
     },
     [windowWidth],
   );
@@ -59,16 +94,21 @@ export default function OnboardingIntroductoryScreen() {
       return;
     }
     void completeAndExit();
-  }, [pageIndex, windowWidth, completeAndExit]);
+  }, [pageIndex, windowWidth, completeAndExit, scrollRef]);
 
-  // keep pager children aligned with ONBOARDING_INTRO_PAGE_COUNT
   const introPages = useMemo(
     () => [
       <View key={0} style={[styles.page, { width: windowWidth, height: windowHeight }]}>
-        <IntroSamplePageOne />
+        <IntroWelcomeDailyFloPage />
       </View>,
       <View key={1} style={[styles.page, { width: windowWidth, height: windowHeight }]}>
-        <IntroSamplePageTwo />
+        <IntroYourDayTimelinePage />
+      </View>,
+      <View key={2} style={[styles.page, { width: windowWidth, height: windowHeight }]}>
+        <IntroHabitsFlowPage />
+      </View>,
+      <View key={3} style={[styles.page, { width: windowWidth, height: windowHeight }]}>
+        <IntroCopilotPlanPage />
       </View>,
     ],
     [windowWidth, windowHeight],
@@ -76,25 +116,12 @@ export default function OnboardingIntroductoryScreen() {
 
   return (
     <View style={styles.root}>
-      {/* fixed background layer: keep page-1 color solid and fade page-2 color on top to avoid mid-swipe dark dip. */}
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: themeColors.background.primary() }]} />
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFillObject,
-            {
-              backgroundColor: themeColors.background.primarySecondaryBlend(),
-              opacity: scrollX.interpolate({
-                inputRange: [0, windowWidth],
-                outputRange: [0, 1],
-                extrapolate: 'clamp',
-              }),
-            },
-          ]}
-        />
-      </View>
+      <IntroScrollCrossfadeBackgrounds
+        scrollX={scrollX}
+        pageWidth={windowWidth}
+        slideUiList={INTRO_PAGE_SLIDE_UI}
+      />
 
-      {/* skip sits in screen content so it stays plain text, not native header toolbar/liquid glass. */}
       <Pressable
         onPress={completeAndExit}
         accessibilityRole="button"
@@ -102,10 +129,19 @@ export default function OnboardingIntroductoryScreen() {
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 8 }}
         style={[styles.skipButton, { top: insets.top + 10 }]}
       >
-        <Text style={[typography.getTextStyle('body-large'), { color: themeColors.text.secondary() }]}>
-          Skip
-        </Text>
+        <Text style={skipTextStyle}>Skip</Text>
       </Pressable>
+
+      <IntroScrollCrossfadeTitleLayer
+        scrollX={scrollX}
+        pageWidth={windowWidth}
+        titleLayerTop={headerHeight + Paddings.screen}
+        titleConfigs={INTRO_PAGE_TITLES}
+        captions={INTRO_PAGE_CAPTIONS}
+        slideUiList={INTRO_PAGE_SLIDE_UI}
+        titleTypographyStyle={titleTypographyOnly}
+        captionTypographyStyle={captionTypographyOnly}
+      />
 
       <Animated.ScrollView
         ref={scrollRef}
@@ -115,12 +151,9 @@ export default function OnboardingIntroductoryScreen() {
         keyboardShouldPersistTaps="handled"
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={onMomentumScrollEnd}
-        style={styles.pager}
-        contentContainerStyle={styles.pagerContent}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: true },
-        )}
+        style={styles.horizontalCarousel}
+        contentContainerStyle={styles.horizontalCarouselContent}
+        onScroll={onScroll}
         scrollEventThrottle={16}
         contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
         automaticallyAdjustContentInsets={false}
@@ -150,10 +183,10 @@ const styles = StyleSheet.create({
     right: 16,
     zIndex: 3,
   },
-  pager: {
+  horizontalCarousel: {
     flex: 1,
   },
-  pagerContent: {
+  horizontalCarouselContent: {
     flexGrow: 1,
     alignItems: 'stretch',
   },

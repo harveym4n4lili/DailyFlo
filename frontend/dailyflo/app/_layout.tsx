@@ -7,7 +7,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { useFonts } from 'expo-font';
-import { Stack, useSegments } from 'expo-router';
+import { Stack } from 'expo-router';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { StatusBar } from 'expo-status-bar';
@@ -38,7 +38,6 @@ const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useGuardedRouter();
-  const segments = useSegments();
   // theme background used when liquid glass is not available (android or older ios)
   const themeColors = useThemeColors();
   const tabBarBackgroundColor = themeColors.background.primary();
@@ -67,127 +66,67 @@ export default function RootLayout() {
   });
 
   /**
-   * Check onboarding completion and authentication status on app launch
-   * This determines whether user is logged in and where to route them
-   * 
-   * Flow (PRIORITIZES ONBOARDING):
-   * 1. FIRST: Check AsyncStorage for onboarding completion flag
-   * 2. If onboarding NOT complete → route to onboarding (index screen) immediately
-   * 3. If onboarding IS complete → check authentication status
-   * 4. If authenticated → load user data and route to main app (tabs)
-   * 5. If not authenticated → route to onboarding (where they can sign in)
-   * 6. On error → default to onboarding (safer for new users)
-   * 
-   * We prioritize onboarding check first so that users who haven't completed
-   * onboarding will always see onboarding screens, regardless of auth status.
-   * 
-   * We use a ref to ensure this only runs once, preventing flashing
-   * We only depend on 'loaded' to avoid re-running when segments change
+   * bootstrap navigation: land on today first, then stack-present onboarding when needed.
+   *
+   * flow:
+   * 1. hydrate auth (tokens / user) via checkAuthStatus
+   * 2. if intro not finished but redux says logged in, logout so first-run stays clean
+   * 3. replace to today tab (main app is always underneath)
+   * 4. if user is new (intro incomplete) or logged out, push onboarding as a root-stack modal
+   *    so it slides up over today instead of replacing the whole app
    */
   useEffect(() => {
     // prevent multiple navigation checks - only do this once
     if (hasNavigatedRef.current || !loaded) {
       return;
     }
-    
+
     const checkOnboardingStatus = async () => {
       try {
-        // FIRST: check if user has completed onboarding by reading from AsyncStorage
-        // AsyncStorage is a simple key-value storage system for React Native
-        // We check this FIRST to prioritize onboarding over authentication
-        const onboardingComplete = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY);
-        
-        // mark that we've started navigation check to prevent re-running
         hasNavigatedRef.current = true;
-        
-        // small delay to allow router to initialize and prevent flash
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // get current route group from segments to check if we're already on the correct route
-        // segments will be like ["(onboarding)"] or ["(tabs)", "today"]
-        const currentGroup = segments[0];
-        
-        if (onboardingComplete !== 'true') {
-          // user hasn't completed onboarding - prioritize showing onboarding screens
-          // this happens regardless of authentication status - onboarding comes first
-          // ensure no account is logged in - clear any existing auth state
-          // this ensures first-time users start with a clean slate
-          const authState = store.getState().auth;
-          if (authState.isAuthenticated) {
-            // dispatch logout action to clear auth state
-            // this ensures first-time users don't have any logged-in account
-            store.dispatch(logout());
-          }
-          
-          // only navigate if we're not already on the onboarding route
-          if (currentGroup !== '(onboarding)') {
-            // this is the first screen in the onboarding flow
-            router.replace('/(onboarding)/introductory');
-          }
-        } else {
-          // user has completed onboarding, now check authentication status
-          // This checks if user has valid tokens and loads user data if authenticated
-          // checkAuthStatus is a Redux async thunk that:
-          // - Checks SecureStore for tokens
-          // - Validates tokens with backend
-          // - Refreshes tokens if expired
-          // - Loads user data if tokens are valid
-          await store.dispatch(checkAuthStatus());
-          
-          // after checking auth status, verify user is actually authenticated
-          // this handles the case where onboarding is complete but user is not logged in
-          // (can happen if user skipped onboarding without logging in)
-          const authState = store.getState().auth;
-          
-          if (authState.isAuthenticated) {
-            // user has completed onboarding AND is authenticated - route to main app
-            // only navigate if we're not already on the tabs route
-            if (currentGroup !== '(tabs)') {
-              // use replace instead of push to prevent going back to onboarding
-              router.replace('/(tabs)');
-            }
-          } else {
-            // onboarding is complete but user is not authenticated
-            // this can happen if user skipped onboarding without logging in
-            // route them to onboarding so they can finish or sign in later
-            // only navigate if we're not already on the onboarding route
-            if (currentGroup !== '(onboarding)') {
-              // first onboarding route is the group index screen
-              router.replace('/(onboarding)/introductory');
-            }
-          }
+
+        // small delay so expo-router's stack mounts before we replace/push
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const onboardingComplete = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY);
+
+        await store.dispatch(checkAuthStatus());
+
+        let authState = store.getState().auth;
+
+        // first launch: don't keep a stale session while intro is still pending
+        if (onboardingComplete !== 'true' && authState.isAuthenticated) {
+          store.dispatch(logout());
+          authState = store.getState().auth;
+        }
+
+        // today is the default tab; keep tabs mounted so onboarding is just a layer on top
+        router.replace('/(tabs)/today');
+
+        const needsOnboarding = onboardingComplete !== 'true' || !authState.isAuthenticated;
+        if (needsOnboarding) {
+          router.push('/(onboarding)/introductory');
         }
       } catch (error) {
-        // if there's an error reading from storage, default to showing onboarding
-        // this is safer because new users should see onboarding
         console.error('Failed to check onboarding status:', error);
-        
-        // mark as navigated
+
         hasNavigatedRef.current = true;
-        
-        // on error, treat as first-time user - ensure no account is logged in
+
         const authState = store.getState().auth;
         if (authState.isAuthenticated) {
-          // dispatch logout action to clear auth state
           store.dispatch(logout());
         }
-        
-        // only navigate if we're not already on onboarding
-        const currentGroup = segments[0];
-        if (currentGroup !== '(onboarding)') {
-          router.replace('/(onboarding)/introductory');
-        }
+
+        router.replace('/(tabs)/today');
+        router.push('/(onboarding)/introductory');
       } finally {
-        // always set checking to false so the app can render
-        // this happens whether the check succeeded or failed
         setIsCheckingOnboarding(false);
       }
     };
-    
-    // start the check
+
     checkOnboardingStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded]); // only depend on loaded - segments and router are stable references
+  }, [loaded]);
 
   // wait for fonts to load before showing the app
   // this prevents text from showing with wrong fonts while loading
@@ -224,11 +163,17 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: themeColors.background.primary() },
             }}
           >
+            {/* tabs first so cold start resolves to main app; onboarding is pushed on top when needed */}
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen
               name="(onboarding)"
               options={{
                 headerShown: false,
-                // outer card still gets default scroll-edge “fade” on ios; hide so intro pager has no top strip
+                presentation: 'fullScreenModal',
+                animation: 'slide_from_bottom',
+                gestureEnabled: true,
+                gestureDirection: 'vertical',
+                // outer card still gets default scroll-edge “fade” on ios; hide so intro carousel has no top strip
                 ...(Platform.OS === 'ios'
                   ? {
                       scrollEdgeEffects: {
@@ -241,7 +186,6 @@ export default function RootLayout() {
                   : {}),
               }}
             />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             {/* legacy create routes now mount the same quick-add overlay flow as Today */}
             <Stack.Screen
               name="task-create"

@@ -1,5 +1,5 @@
 /**
- * one horizontal pager slide content shell.
+ * one intro carousel slide content shell (body area under the header).
  * bg is now owned by the parent screen so it can fade between pages without moving on horizontal scroll.
  */
 
@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Paddings } from '@/constants/Paddings';
 
 const GAP_UNDER_HEADER_BAR = Paddings.screen;
+const TITLE_BODY_HORIZONTAL_ALIGNMENT_OFFSET = 16;
 
 export type OnboardingIntroShellProps = {
   children: React.ReactNode;
@@ -30,7 +31,8 @@ export function OnboardingIntroShell({ children }: OnboardingIntroShellProps) {
           styles.content,
           {
             paddingTop: headerHeight + GAP_UNDER_HEADER_BAR,
-            paddingHorizontal: Paddings.screen,
+            // keep body text aligned with the title overlay inset from `introductory/index.tsx`
+            paddingHorizontal: Paddings.screen + TITLE_BODY_HORIZONTAL_ALIGNMENT_OFFSET,
             paddingBottom: bottomPadding,
           },
         ]}

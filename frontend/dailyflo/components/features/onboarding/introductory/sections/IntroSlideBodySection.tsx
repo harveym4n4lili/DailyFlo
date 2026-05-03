@@ -8,11 +8,15 @@ import { Text, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 
+import type { IntroThemeTextColorKey } from '@/components/features/onboarding/introductory/constants';
+
 export type IntroSlideBodySectionProps = {
   text: string;
+  /** theme text token — set per slide via `INTRO_PAGE_SLIDE_UI` in onboarding constants */
+  textColorKey?: IntroThemeTextColorKey;
 };
 
-export function IntroSlideBodySection({ text }: IntroSlideBodySectionProps) {
+export function IntroSlideBodySection({ text, textColorKey = 'secondary' }: IntroSlideBodySectionProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
   return (
@@ -20,7 +24,7 @@ export function IntroSlideBodySection({ text }: IntroSlideBodySectionProps) {
       style={[
         typography.getTextStyle('body-large'),
         styles.body,
-        { color: themeColors.text.secondary() },
+        { color: themeColors.text[textColorKey]() },
       ]}
     >
       {text}

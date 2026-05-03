@@ -18,7 +18,12 @@ export function useCompleteOnboardingAndExit() {
     setBusy(true);
     try {
       await AsyncStorage.setItem(ONBOARDING_COMPLETE_STORAGE_KEY, 'true');
-      router.replace('/(tabs)');
+      // intro was pushed as a root modal over today — pop it so the tab stays underneath.
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/today');
+      }
     } finally {
       setBusy(false);
     }
