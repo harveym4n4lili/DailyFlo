@@ -67,12 +67,12 @@ export function IntroScrollCrossfadeTitleLayer({
           extrapolate: 'clamp',
         });
         const parts = splitIntroTitleHighlight(titleConfig.title, titleConfig.highlight?.text);
-        const titleColor = resolveIntroTextColor(themeColors.text, slideUi.titleColor);
+        const titleColor = resolveIntroTextColor(themeColors, slideUi.titleColor);
         const highlightColor = resolveIntroTextColor(
-          themeColors.text,
+          themeColors,
           slideUi.titleHighlightColor ?? slideUi.titleColor,
         );
-        const captionColor = resolveIntroTextColor(themeColors.text, slideUi.captionColor);
+        const captionColor = resolveIntroTextColor(themeColors, slideUi.captionColor);
         const caption = captions[i] ?? '';
         return (
           <Animated.View
