@@ -6,6 +6,7 @@
  * utility functions for consistent color usage throughout the app.
  * 
  * The color system is organized into:
+ * - Brand colors — three green ramps (`PlantBrandColors`, `SageBrandColors`, `MossBrandColors`; same step keys as `PrimaryColors`)
  * - Primary colors (neutral grays)
  * - Semantic colors (success, error, warning, info)
  * - Task category colors
@@ -73,6 +74,72 @@ export const PrimaryColors = {
     900: '#CCCFE0',
   },
 } as const;
+
+/**
+ * Three botanical-green brand ramps — same 25→900 keys as `PrimaryColors`.
+ * - **Plant** = fresh yellow-green (default product accent / CTAs via `getBrandColor`).
+ * - **Sage** = muted blue-gray green for calmer marketing surfaces.
+ * - **Moss** = deep olive / earth moss for contrast pairings.
+ */
+export const PlantBrandColors = {
+  // muted brand chrome on dark
+  200: '#0E120E',
+  // tertiary brand emphasis
+  300: '#46553B',
+  // secondary brand icons on dark
+  400: '#6E7E5C',
+  // main brand accent on dark (same hue anchor as light 500)
+  500: '#92a079',
+  // hover / lift on dark (slightly lighter coral)
+  600: '#C4C9AB',
+
+  700: '#E8EAE0',
+
+  800: '#f2f5e6',
+} as const;
+
+export const MossBrandColors = {
+   // muted brand chrome on dark
+   200: '#0E120E',
+   // tertiary brand emphasis
+   300: '#022E24',
+   // secondary brand icons on dark
+   400: '#1F4D3A',
+   // main brand accent on dark (same hue anchor as light 500)
+   500: '#4F8F75',
+   // hover / lift on dark (slightly lighter coral)
+   600: '#9FC3B2',
+ 
+   700: '#e7f1ec',
+ 
+   800: '#EEFAF4',
+} as const;
+
+export const SageBrandColors = {
+   // muted brand chrome on dark
+   200: '#1D2024',
+   // tertiary brand emphasis
+   300: '#343C45',
+   // secondary brand icons on dark
+   400: '#526272',
+   // main brand accent on dark (same hue anchor as light 500)
+   500: '#7B8BA5',
+   // hover / lift on dark (slightly lighter coral)
+   600: '#B5BFCC',
+ 
+   700: '#D6DBE3',
+ 
+   800: '#EFF0EB',
+} as const;
+
+/** maps string id → ramp object — used by `getBrandPaletteColor` and intro `plant:` / `sage:` / `moss:` tokens */
+export const BrandPalettes = {
+  plant: PlantBrandColors,
+  sage: SageBrandColors,
+  moss: MossBrandColors,
+} as const;
+
+export type BrandPaletteId = keyof typeof BrandPalettes;
 
 /**
  * Semantic Color Palette
@@ -198,17 +265,18 @@ export const TaskCategoryColors = {
 
 /**
  * Primary button palette — solid fills and icon color for main CTAs (FAB, primary actions).
- * `fill` / `icon` are mapped into ThemeColors.primaryButton; tweak here to keep buttons consistent.
+ * `fill` uses brand scale `500`; icons stay on-theme neutrals for contrast.
+ * `fill` / `icon` are mapped into ThemeColors.primaryButton.
  */
 export const PrimaryButtonColors = {
   light: {
-    /** main solid fill — matches tab bar selected tint + FAB */
-    fill: '#DE584E',
+    /** main solid fill — brand 500 via helper */
+    fill: getBrandColor(500),
     /** label / icon on fill — same role as text.inverse on this surface */
     icon: PrimaryColors.dark[25],
   },
   dark: {
-    fill: '#DE584E',
+    fill: getBrandColor(500),
     /** readable on dark primary fills (matches theme text.inverse intent) */
     icon: PrimaryColors.light[25],
   },
@@ -375,7 +443,8 @@ export const ThemeColors = {
  * `glassBorder`: semi-transparent white for glass-like border ring (Android fallback).
  */
 export const FABColors = {
-  tint: PrimaryButtonColors.light.fill,
+  // legacy export now resolves tint through brand helper to avoid hardcoded brand references
+  tint: getBrandColor(500),
   icon: PrimaryButtonColors.light.icon,
   glassBorder: 'rgba(255, 255, 255, 0.5)',
 } as const;
@@ -424,6 +493,48 @@ export function getTaskCategoryColor(
   shade: keyof typeof TaskCategoryColors.red = 500
 ): string {
   return TaskCategoryColors[color][shade];
+}
+
+/**
+ * Pick one botanical ramp + step — returns a hex string; invalid shade falls back to 500 on that ramp.
+ */
+export function getBrandPaletteColor(palette: BrandPaletteId, shade: BrandColorShade = 500): string {
+  const ramp = BrandPalettes[palette];
+  return ramp[shade] ?? ramp[500];
+}
+
+/** plant ramp — same hues as default `getBrandColor` */
+export function getPlantBrandColor(shade: BrandColorShade = 500): string {
+  return getBrandPaletteColor('plant', shade);
+}
+
+export function getSageBrandColor(shade: BrandColorShade = 500): string {
+  return getBrandPaletteColor('sage', shade);
+}
+
+export function getMossBrandColor(shade: BrandColorShade = 500): string {
+  return getBrandPaletteColor('moss', shade);
+}
+
+/**
+ * Parses intro / config strings like `brand:500`, `plant:300`, `sage:100` — `brand` is an alias for **plant**.
+ * Returns null if the string is not that pattern (so callers can fall through to theme keys or raw hex).
+ */
+export function resolveBrandStyleToken(token: string): string | null {
+  const match = /^(brand|plant|sage|moss):(\d+)$/.exec(token);
+  if (!match) return null;
+  const prefix = match[1] as 'brand' | 'plant' | 'sage' | 'moss';
+  const shade = Number(match[2]) as BrandColorShade;
+  const palette: BrandPaletteId = prefix === 'brand' || prefix === 'plant' ? 'plant' : prefix;
+  return getBrandPaletteColor(palette, shade);
+}
+
+/**
+ * Default product accent — uses **plant** ramp (primary CTAs / FAB).
+ * For sage or moss, call `getSageBrandColor` / `getMossBrandColor` or `getBrandPaletteColor('sage', shade)`.
+ */
+export function getBrandColor(shade: BrandColorShade = 500): string {
+  return getPlantBrandColor(shade);
 }
 
 /**
@@ -502,6 +613,11 @@ export function withOpacity(color: string, opacity: number): string {
  *    - Task backgrounds: getTaskCategoryColor('red', 50)
  *    - Task hover states: getTaskCategoryColor('red', 100)
  * 
+ * 4b. Brand Colors (three green ramps — plant default for CTAs):
+ *    - Primary accent: getBrandColor(500)  → plant 500
+ *    - Other ramps: getBrandPaletteColor('sage', 500), getMossBrandColor(100), etc.
+ *    - In components: useColorPalette().plantBrand[500] / .sageBrand / .mossBrand
+ * 
  * 5. Overlay Colors:
  *    - Standard overlay: ThemeColors[theme].background.overlay
  *    - Dark overlay: ThemeColors[theme].background.darkOverlay (stronger dark backdrop)
@@ -545,6 +661,7 @@ export function withOpacity(color: string, opacity: number): string {
  * Type definitions for color system
  */
 export type PrimaryColorShade = keyof typeof PrimaryColors.light;
+export type BrandColorShade = keyof typeof PlantBrandColors;
 export type SemanticColorName = keyof typeof SemanticColors;
 export type TaskCategoryColorName = keyof typeof TaskCategoryColors;
 export type ThemeColorCategory = keyof typeof ThemeColors.light;
@@ -555,6 +672,10 @@ export type ThemeColorVariant = string;
  */
 export default {
   PrimaryColors,
+  PlantBrandColors,
+  SageBrandColors,
+  MossBrandColors,
+  BrandPalettes,
   SemanticColors,
   TaskCategoryColors,
   PrimaryButtonColors,
@@ -562,6 +683,12 @@ export default {
   getColorValue,
   getSemanticColor,
   getTaskCategoryColor,
+  getBrandPaletteColor,
+  getPlantBrandColor,
+  getSageBrandColor,
+  getMossBrandColor,
+  getBrandColor,
   getThemeColor,
   withOpacity,
+  resolveBrandStyleToken,
 };

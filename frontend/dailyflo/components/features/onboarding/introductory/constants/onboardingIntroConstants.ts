@@ -3,7 +3,13 @@
  * `ONBOARDING_INTRO_PAGE_COUNT` is derived from `INTRO_PAGE_TITLES` so dots + slides stay aligned.
  */
 import type { TextStyle } from 'react-native';
-import { ThemeColors } from '@/constants/ColorPalette';
+import {
+  PlantBrandColors,
+  ThemeColors,
+  getMossBrandColor,
+  getPlantBrandColor,
+  getSageBrandColor,
+} from '@/constants/ColorPalette';
 import type { TextStyleName } from '@/constants/Typography';
 
 // color keys are derived from `ThemeColors` in ColorPalette.ts so names match the design system
@@ -12,6 +18,23 @@ export type IntroThemeTextColorKey = keyof typeof ThemeColors.light.text;
 
 // same as `getThemeColor(theme, 'background', variant)` / `useThemeColors().background[variant]()`.
 export type IntroThemeBackgroundColorKey = keyof typeof ThemeColors.light.background;
+
+// shade keys match every botanical ramp (plant / sage / moss share the same steps in ColorPalette).
+export type IntroBrandColorShade = keyof typeof PlantBrandColors;
+
+// intro string tokens — `resolveBrandStyleToken` maps these to hex (`brand:` and `plant:` both use the plant ramp).
+export type IntroBrandStyleToken =
+  | `brand:${IntroBrandColorShade}`
+  | `plant:${IntroBrandColorShade}`
+  | `sage:${IntroBrandColorShade}`
+  | `moss:${IntroBrandColorShade}`;
+
+export type IntroBrandBackgroundToken = IntroBrandStyleToken;
+export type IntroBrandTextToken = IntroBrandStyleToken;
+// intro pages can use either theme background keys or brand ramp tokens.
+export type IntroSlideBackgroundColor = IntroThemeBackgroundColorKey | IntroBrandBackgroundToken;
+// intro text can use theme text keys or brand ramp tokens.
+export type IntroSlideTextColor = IntroThemeTextColorKey | IntroBrandTextToken;
 
 // inverted surface / text pairs — use these when `background` is an `inverted*` token so contrast matches ColorPalette.
 export type IntroThemeTextInvertedColorKey = Extract<IntroThemeTextColorKey, `inverted${string}`>;
@@ -38,67 +61,98 @@ export const INTRO_THEME_TEXT_INVERTED_KEYS = [
 
 // same slots as `ThemeColors.light.primaryButton` / `useThemeColors().primaryButton`.
 export type IntroPrimaryButtonColorKey = keyof typeof ThemeColors.light.primaryButton;
+// same slots as `ThemeColors.light.interactive` / `useThemeColors().interactive`.
+export type IntroThemeInteractiveColorKey = keyof typeof ThemeColors.light.interactive;
+// continue button color token can come from primaryButton, interactive, text/brand tokens, or be a literal color.
+export type IntroContinueButtonColorToken =
+  | IntroPrimaryButtonColorKey
+  | IntroThemeInteractiveColorKey
+  | IntroSlideTextColor
+  | string;
+
+/**
+ * Intro brand swatches.
+ * These are direct brand hex values (not theme text/background tokens) and are useful for
+ * art/illustration accents in onboarding constants.
+ */
+export const INTRO_BRAND_COLORS = {
+  plant: {
+    accent: getPlantBrandColor(500),
+    soft: getPlantBrandColor(100),
+  },
+  sage: {
+    accent: getSageBrandColor(500),
+    soft: getSageBrandColor(100),
+  },
+  moss: {
+    accent: getMossBrandColor(500),
+    soft: getMossBrandColor(100),
+  },
+} as const;
 
 /**
  * per-slide ui colors — one entry per intro page, same order as `INTRO_PAGE_TITLES` / `INTRO_PAGE_CAPTIONS`.
  * change tokens here to restyle each slide without touching layout components.
  */
 export type IntroSlideUiConfig = {
-  background: IntroThemeBackgroundColorKey;
-  titleColor: IntroThemeTextColorKey;
+  background: IntroSlideBackgroundColor;
+  titleColor: IntroSlideTextColor;
   /** if omitted, highlight reuses `titleColor` */
-  titleHighlightColor?: IntroThemeTextColorKey;
-  captionColor: IntroThemeTextColorKey;
+  titleHighlightColor?: IntroSlideTextColor;
+  captionColor: IntroSlideTextColor;
   /**
    * header dot indicator fill — same tokens as `titleColor` / `useThemeColors().text`.
    * inactive dots reuse this color at lower opacity; pick inverted text on inverted slides so dots stay visible.
    */
-  dotIndicatorColor: IntroThemeTextColorKey;
+  dotIndicatorColor: IntroSlideTextColor;
   /**
    * floating continue FAB — circle fill / iOS glass tint.
    * `fill` / `icon` → `primaryButton`; names like `primary` → `interactive` / `text` in `useThemeColors()`; else hex/rgb string.
    */
-  continueButtonBackground: string;
+  continueButtonBackground: IntroContinueButtonColorToken;
   /** chevron + loading spinner — same resolution order as `continueButtonBackground` */
-  continueButtonIcon: string;
+  continueButtonIcon: IntroContinueButtonColorToken;
 };
 
 export const INTRO_PAGE_SLIDE_UI: readonly IntroSlideUiConfig[] = [
   {
-    background: 'primary',
-    titleColor: 'primary',
-    titleHighlightColor: 'primary',
+    // moss ramp — swap `moss:` → `plant:` or `brand:` / `sage:` to use another green scale (see ColorPalette).
+    background: 'plant:800',
+    titleColor: 'plant:300',
+    titleHighlightColor: 'plant:300',
     captionColor: 'secondary',
-    dotIndicatorColor: 'primary',
-    continueButtonBackground: 'primary',
-    continueButtonIcon: 'icon',
+    dotIndicatorColor: 'plant:600',
+    continueButtonBackground: 'plant:500',
+    continueButtonIcon: 'plant:700',
   },
   {
-    background: 'invertedPrimary',
-    titleColor: 'invertedSecondary',
-    titleHighlightColor: 'invertedPrimary',
-    captionColor: 'invertedSecondary',
-    dotIndicatorColor: 'invertedPrimary',
-    continueButtonBackground: 'fill',
-    continueButtonIcon: 'icon',
-  },
-  {
-    background: 'invertedPrimary',
-    titleColor: 'invertedPrimary',
-    titleHighlightColor: 'invertedPrimary',
-    captionColor: 'invertedSecondary',
-    dotIndicatorColor: 'invertedPrimary',
-    continueButtonBackground: 'fill',
-    continueButtonIcon: 'icon',
-  },
-  {
-    background: 'quaternary',
-    titleColor: 'primary',
-    titleHighlightColor: 'primary',
+    background: 'moss:800',
+    titleColor: 'moss:400',
+    titleHighlightColor: 'moss:400',
     captionColor: 'secondary',
-    dotIndicatorColor: 'primary',
-    continueButtonBackground: 'fill',
-    continueButtonIcon: 'icon',
+    dotIndicatorColor: 'moss:600',
+    continueButtonBackground: 'moss:600',
+    continueButtonIcon: 'moss:700',
+  },
+  {
+    // moss ramp — swap `moss:` → `plant:` or `brand:` / `sage:` to use another green scale (see ColorPalette).
+    background: 'sage:800',
+    titleColor: 'sage:300',
+    titleHighlightColor: 'sage:300',
+    captionColor: 'secondary',
+    dotIndicatorColor: 'sage:400',
+    continueButtonBackground: 'sage:700',
+    continueButtonIcon: 'sage:500',
+  },
+  {
+    // moss ramp — swap `moss:` → `plant:` or `brand:` / `sage:` to use another green scale (see ColorPalette).
+    background: 'plant:800',
+    titleColor: 'plant:300',
+    titleHighlightColor: 'plant:300',
+    captionColor: 'secondary',
+    dotIndicatorColor: 'plant:600',
+    continueButtonBackground: 'plant:500',
+    continueButtonIcon: 'plant:700',
   },
 ];
 
@@ -106,7 +160,7 @@ export type IntroTextStyleToken = {
   // typography token from the shared typography system
   typography: TextStyleName;
   // theme text color token from useThemeColors().text
-  color: IntroThemeTextColorKey;
+  color: IntroSlideTextColor;
 };
 
 /**
@@ -157,7 +211,7 @@ export const INTRO_PAGE_TITLES: readonly IntroPageTitleConfig[] = [
     highlight: {
       text: 'DailyFlo',
       style: {
-        
+        fontFamily: 'Inter',
         fontWeight: 600,
 
       },

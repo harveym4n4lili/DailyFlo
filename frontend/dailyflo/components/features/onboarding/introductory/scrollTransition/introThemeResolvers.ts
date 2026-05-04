@@ -3,25 +3,36 @@
  */
 
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { resolveBrandStyleToken } from '@/constants/ColorPalette';
 
 import type {
-  IntroPrimaryButtonColorKey,
-  IntroThemeBackgroundColorKey,
-  IntroThemeTextColorKey,
+  IntroContinueButtonColorToken,
+  IntroSlideBackgroundColor,
+  IntroSlideTextColor,
 } from '../constants';
 
+// `brand:` / `plant:` / `sage:` / `moss:` strings (see `resolveBrandStyleToken` in ColorPalette) -> hex at parse time.
+
 export function resolveIntroTextColor(
-  textColors: ReturnType<typeof useThemeColors>['text'],
-  colorKey: IntroThemeTextColorKey,
+  themeColors: Pick<ReturnType<typeof useThemeColors>, 'text'>,
+  colorKey: IntroSlideTextColor,
 ): string {
-  return textColors[colorKey]();
+  if (typeof colorKey === 'string') {
+    const fromBrand = resolveBrandStyleToken(colorKey);
+    if (fromBrand !== null) return fromBrand;
+  }
+  return themeColors.text[colorKey as keyof typeof themeColors.text]();
 }
 
 export function resolveIntroBackgroundColor(
-  background: ReturnType<typeof useThemeColors>['background'],
-  colorKey: IntroThemeBackgroundColorKey,
+  themeColors: Pick<ReturnType<typeof useThemeColors>, 'background'>,
+  colorKey: IntroSlideBackgroundColor,
 ): string {
-  return background[colorKey]();
+  if (typeof colorKey === 'string') {
+    const fromBrand = resolveBrandStyleToken(colorKey);
+    if (fromBrand !== null) return fromBrand;
+  }
+  return themeColors.background[colorKey as keyof typeof themeColors.background]();
 }
 
 type ThemeColorsForContinuePaint = Pick<
@@ -36,8 +47,12 @@ type ThemeColorsForContinuePaint = Pick<
  */
 export function resolveIntroContinueButtonPaint(
   themeColors: ThemeColorsForContinuePaint,
-  value: IntroPrimaryButtonColorKey | string,
+  value: IntroContinueButtonColorToken,
 ): string {
+  if (typeof value === 'string') {
+    const fromBrand = resolveBrandStyleToken(value);
+    if (fromBrand !== null) return fromBrand;
+  }
   if (value === 'fill' || value === 'icon') {
     return themeColors.primaryButton[value]();
   }

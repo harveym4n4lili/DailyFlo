@@ -62,7 +62,7 @@ export default function OnboardingIntroductoryScreen() {
   const skipTextStyle = useMemo(
     () => [
       typography.getTextStyle(INTRO_TEXT_TOKENS.skip.typography),
-      { color: resolveIntroTextColor(themeColors.text, INTRO_TEXT_TOKENS.skip.color) },
+      { color: resolveIntroTextColor(themeColors, INTRO_TEXT_TOKENS.skip.color) },
     ],
     [typography, themeColors],
   );
@@ -77,7 +77,7 @@ export default function OnboardingIntroductoryScreen() {
   // header dots still snap to rounded page; FAB fill/icon crossfade in rgb as you scroll (fractional `pageProgress`).
   const headerDotColor = useMemo(() => {
     const idx = Math.min(Math.max(Math.round(pageProgress), 0), ONBOARDING_INTRO_PAGE_COUNT - 1);
-    return resolveIntroTextColor(themeColors.text, INTRO_PAGE_SLIDE_UI[idx].dotIndicatorColor);
+    return resolveIntroTextColor(themeColors, INTRO_PAGE_SLIDE_UI[idx].dotIndicatorColor);
   }, [pageProgress, themeColors]);
 
   const continuePaintByPage = useMemo(

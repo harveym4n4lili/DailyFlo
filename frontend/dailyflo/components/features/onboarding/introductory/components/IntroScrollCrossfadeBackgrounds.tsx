@@ -45,7 +45,7 @@ export function IntroScrollCrossfadeBackgrounds({
 }: IntroScrollCrossfadeBackgroundsProps) {
   const themeColors = useThemeColors();
   const colors = useMemo(
-    () => slideUiList.map((s) => resolveIntroBackgroundColor(themeColors.background, s.background)),
+    () => slideUiList.map((s) => resolveIntroBackgroundColor(themeColors, s.background)),
     // use `theme` not whole `themeColors` — the hook returns a fresh object each render and would rebind listeners
     [slideUiList, themeColors.theme],
   );
