@@ -41,6 +41,11 @@ import {
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
+import type { Href } from 'expo-router';
+
+// post-intro questionnaire stack — href cast keeps tsc happy until expo regenerates route types from this file tree
+const SLIDES_HREF = '/(onboarding)/slides' as Href;
 
 export default function OnboardingIntroductoryScreen() {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -48,6 +53,7 @@ export default function OnboardingIntroductoryScreen() {
   const headerHeight = useHeaderHeight();
   const themeColors = useThemeColors();
   const typography = useTypography();
+  const router = useGuardedRouter();
 
   const [pageIndex, setPageIndex] = useState(0);
   const [pageProgress, setPageProgress] = useState(0);
@@ -119,8 +125,9 @@ export default function OnboardingIntroductoryScreen() {
       scrollRef.current?.scrollTo({ x: windowWidth * (pageIndex + 1), animated: true });
       return;
     }
-    void completeAndExit();
-  }, [pageIndex, windowWidth, completeAndExit, scrollRef]);
+    // intro done — stack-push the questionnaire-style slides (`slides/index`); onboarding completes there.
+    router.push(SLIDES_HREF);
+  }, [pageIndex, windowWidth, scrollRef, router]);
 
   const introPages = useMemo(
     () => [

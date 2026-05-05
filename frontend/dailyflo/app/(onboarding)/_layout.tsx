@@ -1,5 +1,5 @@
 /**
- * onboarding stack — transparent native header (dots + skip); intro route lives under `introductory/`.
+ * onboarding stack — transparent native header; `introductory/` (dots), `slides/` (back + progress).
  */
 
 import React from 'react';
@@ -48,7 +48,7 @@ export default function OnboardingLayout() {
     >
       {/* redirect-only route — suppress header so onboarding never flashes chrome here */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      {/* `introductory/index` inherits screenOptions above */}
+      {/* introductory + slides screens inherit transparent header */}
     </Stack>
   );
 }

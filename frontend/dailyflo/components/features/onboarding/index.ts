@@ -65,3 +65,6 @@ export {
   IntroSlideBodySection,
   IntroSlideSampleContent,
 } from './introductory';
+
+// post-intro questionnaire carousel (`app/(onboarding)/slides`)
+export * from './onboarding';
