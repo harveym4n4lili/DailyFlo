@@ -22,6 +22,11 @@ import { ContinueButton } from '@/components/ui/Button';
 import {
   ONBOARDING_INTRO_PAGE_COUNT,
   INTRO_TEXT_TOKENS,
+  INTRO_SKIP_TEXT_STYLE_TOKEN,
+  INTRO_SKIP_BUTTON_HIT_SLOP,
+  INTRO_SKIP_BUTTON_ABSOLUTE_LAYOUT,
+  INTRO_SKIP_BUTTON_ACCESSIBILITY_LABEL,
+  INTRO_SKIP_BUTTON_LABEL,
   INTRO_PAGE_TITLES,
   INTRO_PAGE_CAPTIONS,
   INTRO_PAGE_SLIDE_UI,
@@ -67,8 +72,8 @@ export default function OnboardingIntroductoryScreen() {
 
   const skipTextStyle = useMemo(
     () => [
-      typography.getTextStyle(INTRO_TEXT_TOKENS.skip.typography),
-      { color: resolveIntroTextColor(themeColors, INTRO_TEXT_TOKENS.skip.color) },
+      typography.getTextStyle(INTRO_SKIP_TEXT_STYLE_TOKEN.typography),
+      { color: resolveIntroTextColor(themeColors, INTRO_SKIP_TEXT_STYLE_TOKEN.color) },
     ],
     [typography, themeColors],
   );
@@ -158,11 +163,18 @@ export default function OnboardingIntroductoryScreen() {
       <Pressable
         onPress={completeAndExit}
         accessibilityRole="button"
-        accessibilityLabel="Skip introduction"
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 8 }}
-        style={[styles.skipButton, { top: insets.top + 10 }]}
+        accessibilityLabel={INTRO_SKIP_BUTTON_ACCESSIBILITY_LABEL}
+        hitSlop={INTRO_SKIP_BUTTON_HIT_SLOP}
+        style={[
+          {
+            position: 'absolute',
+            right: INTRO_SKIP_BUTTON_ABSOLUTE_LAYOUT.offsetRight,
+            zIndex: INTRO_SKIP_BUTTON_ABSOLUTE_LAYOUT.zIndex,
+          },
+          { top: insets.top + INTRO_SKIP_BUTTON_ABSOLUTE_LAYOUT.topInsetPlus },
+        ]}
       >
-        <Text style={skipTextStyle}>Skip</Text>
+        <Text style={skipTextStyle}>{INTRO_SKIP_BUTTON_LABEL}</Text>
       </Pressable>
 
       <IntroScrollCrossfadeTitleLayer
@@ -214,11 +226,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: 'transparent',
-  },
-  skipButton: {
-    position: 'absolute',
-    right: 16,
-    zIndex: 3,
   },
   horizontalCarousel: {
     flex: 1,

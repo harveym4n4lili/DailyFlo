@@ -25,7 +25,8 @@ export function useOnboardingSlidesScrollTransition(
   const onScroll = useMemo(
     () =>
       Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
-        useNativeDriver: true,
+        // native driver drops many scroll deltas on some stacks — listener would only see snaps at rest.
+        useNativeDriver: false,
         listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
           const x = e.nativeEvent.contentOffset.x;
           const raw = x / Math.max(pageWidth, 1);

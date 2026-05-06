@@ -21,7 +21,7 @@ export function OnboardingSlideSampleContent({ pageIndex }: OnboardingSlideSampl
   return (
     <View style={styles.root}>
       <Text style={[typography.getTextStyle('body-small'), styles.hint, { color: themeColors.text.tertiary() }]}>
-        Onboarding questionnaire — sample step. Add sibling pages beside this one in the route file.
+        Questionnaire placeholder — wire real controls in this section when you add fields per step.
       </Text>
       <View
         style={[
