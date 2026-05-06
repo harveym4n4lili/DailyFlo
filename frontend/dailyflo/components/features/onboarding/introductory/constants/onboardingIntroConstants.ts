@@ -164,6 +164,33 @@ export type IntroTextStyleToken = {
 };
 
 /**
+ * skip label — typography + theme text color.
+ * keep in sync with `ONBOARDING_SLIDES_SKIP_TEXT_STYLE_TOKEN` in onboardingSlidesConstants.ts (same body-large + secondary).
+ */
+export const INTRO_SKIP_TEXT_STYLE_TOKEN: IntroTextStyleToken = {
+  typography: 'body-large',
+  color: 'secondary',
+};
+
+/**
+ * touch slop + overlay placement for the introductory skip control.
+ * skip stays out of `headerRight` so ios does not wrap it in liquid glass bar chrome (same pattern as questionnaire slides).
+ * numeric hit slop matches `ONBOARDING_SLIDES_SKIP_BUTTON_HIT_SLOP` on the questionnaire route.
+ */
+export const INTRO_SKIP_BUTTON_HIT_SLOP = { top: 12, bottom: 12, left: 12, right: 8 } as const;
+
+export const INTRO_SKIP_BUTTON_ABSOLUTE_LAYOUT = {
+  offsetRight: 16,
+  zIndex: 3,
+  /** added to safe-area top for the overlay skip row */
+  topInsetPlus: 10,
+} as const;
+
+export const INTRO_SKIP_BUTTON_ACCESSIBILITY_LABEL = 'Skip introduction';
+
+export const INTRO_SKIP_BUTTON_LABEL = 'Skip';
+
+/**
  * one config entry per intro slide.
  * edit title text + overall typography for each screen in this file.
  */
@@ -186,10 +213,7 @@ export const INTRO_TEXT_TOKENS: Readonly<{
   skip: IntroTextStyleToken;
   title: IntroTextStyleToken;
 }> = {
-  skip: {
-    typography: 'body-large',
-    color: 'secondary',
-  },
+  skip: INTRO_SKIP_TEXT_STYLE_TOKEN,
   title: {
     typography: 'heading-1',
     // title fill is per slide in `INTRO_PAGE_SLIDE_UI.titleColor` — this field stays for the shared token shape

@@ -3,6 +3,7 @@
  */
 
 export * from './constants';
+export { resolveOnboardingSlidesTextColor } from './onboardingSlidesThemeResolvers';
 export {
   useOnboardingSlidesHeader,
   useOnboardingSlidesScrollTransition,

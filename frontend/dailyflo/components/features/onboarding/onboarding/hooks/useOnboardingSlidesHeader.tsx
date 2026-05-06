@@ -1,10 +1,11 @@
 /**
- * native stack header for post-intro slides — back (left) + completion bar (flex grow).
- * intro deliberately hides back; this stack screen opts in so users can return to introductory.
+ * native stack header for post-intro slides — back (left) + completion bar + plain-text skip (right).
+ * skip lives in this custom `headerTitle` row — not in `headerRight` (liquid glass) — and not overlaid
+ * on the screen body (the native header would paint the progress bar above a body overlay and hide taps).
  */
 
 import React, { useCallback, useLayoutEffect } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, type Insets, type StyleProp, type TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
@@ -18,6 +19,15 @@ export type UseOnboardingSlidesHeaderOpts = {
   fillColor: string;
   iconColor: string;
   onBackPress: () => void;
+  /** plain label in the header row — avoids headerRight chrome + avoids body overlays under the native header */
+  skip: {
+    label: string;
+    accessibilityLabel: string;
+    hitSlop: Insets;
+    textStyle: StyleProp<TextStyle>;
+    onPress: () => void;
+    disabled?: boolean;
+  };
 };
 
 export function useOnboardingSlidesHeader({
@@ -27,6 +37,7 @@ export function useOnboardingSlidesHeader({
   fillColor,
   iconColor,
   onBackPress,
+  skip,
 }: UseOnboardingSlidesHeaderOpts): void {
   const navigation = useNavigation();
 
@@ -49,9 +60,19 @@ export function useOnboardingSlidesHeader({
         <View style={styles.barSlot}>
           <OnboardingSlidesProgressBar progress={completionRatio} trackColor={trackColor} fillColor={fillColor} />
         </View>
+        <Pressable
+          onPress={skip.onPress}
+          disabled={skip.disabled}
+          hitSlop={skip.hitSlop}
+          accessibilityRole="button"
+          accessibilityLabel={skip.accessibilityLabel}
+          style={({ pressed }) => [styles.skipTap, pressed && styles.skipTapPressed]}
+        >
+          <Text style={skip.textStyle}>{skip.label}</Text>
+        </Pressable>
       </View>
     ),
-    [completionRatio, trackColor, fillColor, iconColor, onBackPress],
+    [completionRatio, trackColor, fillColor, iconColor, onBackPress, skip],
   );
 
   useLayoutEffect(() => {
@@ -60,6 +81,7 @@ export function useOnboardingSlidesHeader({
       headerLeft: () => null,
       headerTitle,
       headerTitleAlign: Platform.OS === 'ios' ? 'left' : 'left',
+      // keep header-right empty — same reason as intro: ios wraps `headerRight` in liquid glass bar chrome.
       headerRight: () => null,
       ...(Platform.OS === 'android' ? { title: '' } : {}),
     });
@@ -80,11 +102,18 @@ const styles = StyleSheet.create({
   backPressed: {
     opacity: 0.6,
   },
-  /** flex so the pill stretches between back icon and trailing safe inset */
+  /** flex so the pill shares the row with trailing skip (no marginRight — row gap handles spacing) */
   barSlot: {
     flex: 1,
     justifyContent: 'center',
     minHeight: 24,
-    marginRight: 8,
+  },
+  skipTap: {
+    paddingVertical: 4,
+    paddingLeft: 4,
+    justifyContent: 'center',
+  },
+  skipTapPressed: {
+    opacity: 0.6,
   },
 });
