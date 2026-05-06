@@ -1812,5 +1812,27 @@ Updated User app, models, serializers, views and urls
 
 TODO:
 - Fix new list header -
-- restyle create screen 
+- restyle create screen
 - restyle search bar
+
+---
+
+## [06/05/2026] - [Wednesday]
+
+### Today's Goals
+- [x] Shipped onboarding **questionnaire** (`app/(onboarding)/slides`) polish aligned with introductory patterns: primary background on the carousel body, questionnaire skip wired through shared tokens (`ONBOARDING_SLIDES_*` mirroring `INTRO_SKIP_*`) and `resolveOnboardingSlidesTextColor`.
+- [x] Kept questionnaire **Skip** out of Liquid Glass-heavy `headerRight` by embedding it in the **custom stack header row** beside back chevron + progress (same rationale as introductory header comments).
+- [x] Unblocked **fractional header progress**: progress bar stops relying on restarted long `Animated.timing` pulses; **`widthAnim.setValue`** tracks scroll fractions; scroll bridge uses **`useNativeDriver: false`** so throttle listeners fire during drags (not only on momentum end).
+- [x] Replaced questionnaire copy layer with **four setup slides**: get-started planning welcome, wake time, sleep time, task vs habit (titles + captions + matching `PAGE_SLIDE_UI` rows).
+- [x] Upgraded onboarding progress **pill fill** to **`expo-linear-gradient`**-driven glow via `onboardingSlidesProgressGlow.ts` (stopped horizontal “sheen”; **bottom→top** luminance stacking so light reads upward through the clipped capsule).
+
+### Plans For Future
+- Wire **wake / sleep time** slides to real controls (pickers / presets), validation, and **persist** onboarding answers (`AsyncStorage` short-term vs profile API contract).
+- Flesh slide 4 (**task vs habit**) into branching UX (routing, sensible defaults into task create / recurring patterns).
+- Revisit **Liquid Glass**: keep skipping `headerRight` for plain-text onboarding actions; optionally extract a reusable “stack header caption row” if more questionnaire steps borrow the same chrome.
+- **Quick-add** iterations from April (validation, list routing, dismiss gestures) plus outstanding TODO (**new-list header**, create screen restyle, **search bar** restyle).
+- Broader backlog unchanged: MVP realignment/strategic review themes, palette/UI reconstruction, AI model choice, gamification/theme revamp aspirations.
+
+### Notes
+- Retro: **Daily dev-log bullets were not typed between ~21/04/2026 and 05/05/2026** in this journal; assumptions from **20/04/2026** plans carried until this catch-up unless implemented elsewhere—verify merge history if year-end accounting matters.
+- New helpers under `components/features/onboarding/onboarding/` include **`onboardingSlidesThemeResolvers.ts`** (`resolveOnboardingSlidesTextColor`) and **`ui/onboardingSlidesProgressGlow.ts`** (`onboardingProgressGlowStops`); Expo lint still reports unrelated repo-wide errors unrelated to onboarding work (see tooling pass when churn allows).
