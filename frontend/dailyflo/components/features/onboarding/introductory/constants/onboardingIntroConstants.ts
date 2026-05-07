@@ -1,8 +1,9 @@
 /**
  * intro swipe carousel — dot count must match horizontal ScrollView page children.
  * `ONBOARDING_INTRO_PAGE_COUNT` is derived from `INTRO_PAGE_TITLES` so dots + slides stay aligned.
+ * typography + skip spacing mirror `onboarding/onboarding/constants/onboardingSlidesConstants.ts`.
  */
-import type { TextStyle } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
 import {
   PlantBrandColors,
   ThemeColors,
@@ -10,7 +11,8 @@ import {
   getPlantBrandColor,
   getSageBrandColor,
 } from '@/constants/ColorPalette';
-import type { TextStyleName } from '@/constants/Typography';
+import { Paddings } from '@/constants/Paddings';
+import { getOnboardingTextStyle, type Platform as TypographyPlatform } from '@/constants/Typography';
 
 // color keys are derived from `ThemeColors` in ColorPalette.ts so names match the design system
 // (same paths as `getThemeColor(theme, 'text', variant)` / `useThemeColors().text[variant]()`).
@@ -78,15 +80,15 @@ export type IntroContinueButtonColorToken =
 export const INTRO_BRAND_COLORS = {
   plant: {
     accent: getPlantBrandColor(500),
-    soft: getPlantBrandColor(100),
+    soft: getPlantBrandColor(200),
   },
   sage: {
     accent: getSageBrandColor(500),
-    soft: getSageBrandColor(100),
+    soft: getSageBrandColor(200),
   },
   moss: {
     accent: getMossBrandColor(500),
-    soft: getMossBrandColor(100),
+    soft: getMossBrandColor(200),
   },
 } as const;
 
@@ -156,34 +158,38 @@ export const INTRO_PAGE_SLIDE_UI: readonly IntroSlideUiConfig[] = [
   },
 ];
 
-export type IntroTextStyleToken = {
-  // typography token from the shared typography system
-  typography: TextStyleName;
-  // theme text color token from useThemeColors().text
-  color: IntroSlideTextColor;
-};
+// tie intro typography to the shared helpers in Typography.ts (sf pro rounded stack on ios) — no { typography, color } token objects.
+const INTRO_TYPOGRAPHY_PLATFORM = Platform.OS as TypographyPlatform;
 
-/**
- * skip label — typography + theme text color.
- * keep in sync with `ONBOARDING_SLIDES_SKIP_TEXT_STYLE_TOKEN` in onboardingSlidesConstants.ts (same body-large + secondary).
- */
-export const INTRO_SKIP_TEXT_STYLE_TOKEN: IntroTextStyleToken = {
-  typography: 'body-large',
-  color: 'secondary',
-};
+/** skip label — `getOnboardingTextStyle('body-large')` baked once so routes merge color only */
+export const INTRO_SKIP_TEXT_STYLE = getOnboardingTextStyle('body-large', INTRO_TYPOGRAPHY_PLATFORM);
+
+/** theme text key for skip — pass through `resolveIntroTextColor(themeColors, …)` in the screen */
+export const INTRO_SKIP_TEXT_COLOR: IntroSlideTextColor = 'secondary';
+
+/** crossfade title layer — merges under per-slide `titleStyle` in `IntroScrollCrossfadeTitleLayer` */
+export const INTRO_CROSSFADE_TITLE_TEXT_STYLE = getOnboardingTextStyle('heading-1', INTRO_TYPOGRAPHY_PLATFORM);
+
+/** body copy under the crossfade headline — same helper as skip (`body-large`) */
+export const INTRO_CAPTION_TEXT_STYLE = getOnboardingTextStyle('body-large', INTRO_TYPOGRAPHY_PLATFORM);
 
 /**
  * touch slop + overlay placement for the introductory skip control.
  * skip stays out of `headerRight` so ios does not wrap it in liquid glass bar chrome (same pattern as questionnaire slides).
- * numeric hit slop matches `ONBOARDING_SLIDES_SKIP_BUTTON_HIT_SLOP` on the questionnaire route.
+ * values mirror `Paddings` so onboarding stays on the global spacing scale.
  */
-export const INTRO_SKIP_BUTTON_HIT_SLOP = { top: 12, bottom: 12, left: 12, right: 8 } as const;
+export const INTRO_SKIP_BUTTON_HIT_SLOP = {
+  top: Paddings.listItemVertical,
+  bottom: Paddings.listItemVertical,
+  left: Paddings.listItemVertical,
+  right: Paddings.touchTarget,
+} as const;
 
 export const INTRO_SKIP_BUTTON_ABSOLUTE_LAYOUT = {
-  offsetRight: 16,
+  offsetRight: Paddings.screenSmall,
   zIndex: 3,
   /** added to safe-area top for the overlay skip row */
-  topInsetPlus: 10,
+  topInsetPlus: Paddings.groupedListHeaderContentGap,
 } as const;
 
 export const INTRO_SKIP_BUTTON_ACCESSIBILITY_LABEL = 'Skip introduction';
@@ -208,22 +214,9 @@ export type IntroPageTitleConfig = {
   };
 };
 
-// one place for shared intro text tokens so route components stay style-free
-export const INTRO_TEXT_TOKENS: Readonly<{
-  skip: IntroTextStyleToken;
-  title: IntroTextStyleToken;
-}> = {
-  skip: INTRO_SKIP_TEXT_STYLE_TOKEN,
-  title: {
-    typography: 'heading-1',
-    // title fill is per slide in `INTRO_PAGE_SLIDE_UI.titleColor` — this field stays for the shared token shape
-    color: 'primary',
-  },
-};
-
 /**
  * edit each screen title and typography here.
- * titleStyle merges on top of `heading-2` in the intro screen.
+ * titleStyle merges on top of `INTRO_CROSSFADE_TITLE_TEXT_STYLE` in the intro screen.
  */
 export const INTRO_PAGE_TITLES: readonly IntroPageTitleConfig[] = [
   {
@@ -235,9 +228,8 @@ export const INTRO_PAGE_TITLES: readonly IntroPageTitleConfig[] = [
     highlight: {
       text: 'DailyFlo',
       style: {
-        fontFamily: 'Inter',
+        // font family inherits from title layer (`getOnboardingTextStyle` → SF Pro Rounded on ios)
         fontWeight: 600,
-
       },
     },
   },
@@ -309,7 +301,7 @@ if (__DEV__ && INTRO_PAGE_SLIDE_UI.length !== ONBOARDING_INTRO_PAGE_COUNT) {
 export const INTRO_TITLE_AREA_HEIGHT = 120;
 
 /** small gap between title and subtext inside the fixed headline overlay */
-export const INTRO_TITLE_SUBTEXT_GAP = 8;
+export const INTRO_TITLE_SUBTEXT_GAP = Paddings.touchTarget;
 
 /**
  * room for crossfading caption lines (body-large); keeps the fixed block height stable when a slide has no caption.

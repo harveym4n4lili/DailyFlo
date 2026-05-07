@@ -11,7 +11,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Paddings } from '@/constants/Paddings';
 
 const GAP_UNDER_HEADER_BAR = Paddings.screen;
-const TITLE_BODY_HORIZONTAL_ALIGNMENT_OFFSET = 16;
 
 export type OnboardingIntroShellProps = {
   children: React.ReactNode;
@@ -31,8 +30,8 @@ export function OnboardingIntroShell({ children }: OnboardingIntroShellProps) {
           styles.content,
           {
             paddingTop: headerHeight + GAP_UNDER_HEADER_BAR,
-            // keep body text aligned with the title overlay inset from `introductory/index.tsx`
-            paddingHorizontal: Paddings.screen + TITLE_BODY_HORIZONTAL_ALIGNMENT_OFFSET,
+            // `Paddings.screen` + `screenSmall` — same horizontal inset as `IntroScrollCrossfadeTitleLayer` and questionnaire shell
+            paddingHorizontal: Paddings.screen + Paddings.screenSmall,
             paddingBottom: bottomPadding,
           },
         ]}

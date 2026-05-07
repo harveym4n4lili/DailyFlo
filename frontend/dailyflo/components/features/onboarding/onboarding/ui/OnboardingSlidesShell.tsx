@@ -1,8 +1,7 @@
 /**
- * body shell under the native header — matches introductory OnboardingIntroShell spacing
- * so questionnaire slides line up with the intro funnel rhythm.
+ * body shell under the native header — same horizontal inset as intro (`Paddings.screen` + `Paddings.screenSmall`)
+ * so questionnaire copy lines up with `OnboardingIntroShell` and the intro crossfade title layer.
  */
-
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -28,7 +27,7 @@ export function OnboardingSlidesShell({ children }: OnboardingSlidesShellProps) 
           styles.content,
           {
             paddingTop: headerHeight + GAP_UNDER_HEADER_BAR,
-            paddingHorizontal: Paddings.screen,
+            paddingHorizontal: Paddings.screen + Paddings.screenSmall,
             paddingBottom: bottomPadding,
           },
         ]}

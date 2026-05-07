@@ -21,8 +21,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ContinueButton } from '@/components/ui/Button';
 import {
   ONBOARDING_INTRO_PAGE_COUNT,
-  INTRO_TEXT_TOKENS,
-  INTRO_SKIP_TEXT_STYLE_TOKEN,
+  INTRO_SKIP_TEXT_STYLE,
+  INTRO_SKIP_TEXT_COLOR,
   INTRO_SKIP_BUTTON_HIT_SLOP,
   INTRO_SKIP_BUTTON_ABSOLUTE_LAYOUT,
   INTRO_SKIP_BUTTON_ACCESSIBILITY_LABEL,
@@ -30,6 +30,8 @@ import {
   INTRO_PAGE_TITLES,
   INTRO_PAGE_CAPTIONS,
   INTRO_PAGE_SLIDE_UI,
+  INTRO_CROSSFADE_TITLE_TEXT_STYLE,
+  INTRO_CAPTION_TEXT_STYLE,
   IntroWelcomeDailyFloPage,
   IntroYourDayTimelinePage,
   IntroHabitsFlowPage,
@@ -45,7 +47,6 @@ import {
 } from '@/components/features/onboarding';
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { useTypography } from '@/hooks/useTypography';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import type { Href } from 'expo-router';
 
@@ -57,7 +58,6 @@ export default function OnboardingIntroductoryScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const themeColors = useThemeColors();
-  const typography = useTypography();
   const router = useGuardedRouter();
 
   const [pageIndex, setPageIndex] = useState(0);
@@ -71,19 +71,9 @@ export default function OnboardingIntroductoryScreen() {
   );
 
   const skipTextStyle = useMemo(
-    () => [
-      typography.getTextStyle(INTRO_SKIP_TEXT_STYLE_TOKEN.typography),
-      { color: resolveIntroTextColor(themeColors, INTRO_SKIP_TEXT_STYLE_TOKEN.color) },
-    ],
-    [typography, themeColors],
+    () => [INTRO_SKIP_TEXT_STYLE, { color: resolveIntroTextColor(themeColors, INTRO_SKIP_TEXT_COLOR) }],
+    [themeColors],
   );
-
-  const titleTypographyOnly = useMemo(
-    () => typography.getTextStyle(INTRO_TEXT_TOKENS.title.typography),
-    [typography],
-  );
-
-  const captionTypographyOnly = useMemo(() => typography.getTextStyle('body-large'), [typography]);
 
   // header dots still snap to rounded page; FAB fill/icon crossfade in rgb as you scroll (fractional `pageProgress`).
   const headerDotColor = useMemo(() => {
@@ -184,8 +174,8 @@ export default function OnboardingIntroductoryScreen() {
         titleConfigs={INTRO_PAGE_TITLES}
         captions={INTRO_PAGE_CAPTIONS}
         slideUiList={INTRO_PAGE_SLIDE_UI}
-        titleTypographyStyle={titleTypographyOnly}
-        captionTypographyStyle={captionTypographyOnly}
+        titleTypographyStyle={INTRO_CROSSFADE_TITLE_TEXT_STYLE}
+        captionTypographyStyle={INTRO_CAPTION_TEXT_STYLE}
       />
 
       <Animated.ScrollView

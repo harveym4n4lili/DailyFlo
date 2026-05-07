@@ -16,7 +16,7 @@ export function IntroSlideTitleSection({ title }: IntroSlideTitleSectionProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
   return (
-    <Text style={[styles.title, typography.getTextStyle('heading-2'), { color: themeColors.text.primary() }]}>
+    <Text style={[styles.title, typography.getOnboardingTextStyle('heading-2'), { color: themeColors.text.primary() }]}>
       {title}
     </Text>
   );

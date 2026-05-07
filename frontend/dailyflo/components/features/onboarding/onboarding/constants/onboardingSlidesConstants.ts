@@ -1,8 +1,8 @@
 /**
  * questionnaire carousel (`app/(onboarding)/slides`) — dot/progress count must match horizontal pager pages.
  * structure mirrors `introductory/constants/onboardingIntroConstants.ts` so both funnels stay consistent.
- */
-import type { TextStyle } from 'react-native';
+ * typography + skip spacing mirror the intro file (`getOnboardingTextStyle`, shared `Paddings` hit slop).
+ */import { Platform, type TextStyle } from 'react-native';
 import {
   PlantBrandColors,
   ThemeColors,
@@ -10,7 +10,8 @@ import {
   getPlantBrandColor,
   getSageBrandColor,
 } from '@/constants/ColorPalette';
-import type { TextStyleName } from '@/constants/Typography';
+import { Paddings } from '@/constants/Paddings';
+import { FontWeight, getOnboardingTextStyle, type Platform as TypographyPlatform } from '@/constants/Typography';
 
 export type OnboardingSlidesThemeTextColorKey = keyof typeof ThemeColors.light.text;
 
@@ -133,26 +134,36 @@ export const ONBOARDING_SLIDES_PAGE_SLIDE_UI: readonly OnboardingSlidesSlideUiCo
   },
 ];
 
-export type OnboardingSlidesTextStyleToken = {
-  typography: TextStyleName;
-  color: OnboardingSlidesSlideTextColor;
-};
+// questionnaire typography — same as intro: `getOnboardingTextStyle` from Typography.ts (sf pro rounded on ios).
+const ONBOARDING_SLIDES_TYPOGRAPHY_PLATFORM = Platform.OS as TypographyPlatform;
 
-/**
- * skip label — typography + theme text color.
- * keep in sync with `INTRO_SKIP_TEXT_STYLE_TOKEN` in onboardingIntroConstants.ts (same body-large + secondary).
- */
-export const ONBOARDING_SLIDES_SKIP_TEXT_STYLE_TOKEN: OnboardingSlidesTextStyleToken = {
-  typography: 'body-large',
-  color: 'secondary',
-};
+/** skip in header row — `getOnboardingTextStyle('body-large')` from Typography.ts (same as intro skip) */
+export const ONBOARDING_SLIDES_SKIP_TEXT_STYLE = getOnboardingTextStyle(
+  'body-large',
+  ONBOARDING_SLIDES_TYPOGRAPHY_PLATFORM,
+);
 
-/** same touch expansion as introductory skip — keep numeric values aligned with `INTRO_SKIP_BUTTON_HIT_SLOP` */
+/** theme text key for skip — use with `resolveOnboardingSlidesTextColor` */
+export const ONBOARDING_SLIDES_SKIP_TEXT_COLOR: OnboardingSlidesSlideTextColor = 'secondary';
+
+/** questionnaire headline base before caption + per-slide merges */
+export const ONBOARDING_SLIDES_PAGE_TITLE_TEXT_STYLE = getOnboardingTextStyle(
+  'heading-1',
+  ONBOARDING_SLIDES_TYPOGRAPHY_PLATFORM,
+);
+
+/** caption under questionnaire titles — `body-large` via Typography helper */
+export const ONBOARDING_SLIDES_CAPTION_TEXT_STYLE = getOnboardingTextStyle(
+  'body-large',
+  ONBOARDING_SLIDES_TYPOGRAPHY_PLATFORM,
+);
+
+/** same touch expansion as introductory skip — uses `Paddings` */
 export const ONBOARDING_SLIDES_SKIP_BUTTON_HIT_SLOP = {
-  top: 12,
-  bottom: 12,
-  left: 12,
-  right: 8,
+  top: Paddings.listItemVertical,
+  bottom: Paddings.listItemVertical,
+  left: Paddings.listItemVertical,
+  right: Paddings.touchTarget,
 } as const;
 
 export const ONBOARDING_SLIDES_SKIP_BUTTON_ACCESSIBILITY_LABEL = 'Skip onboarding';
@@ -165,9 +176,9 @@ export const ONBOARDING_SLIDES_SKIP_BUTTON_LABEL = 'Skip';
  * skip stays out of `navigation.setOptions({ headerRight })` on ios — liquid glass wraps bar-slot controls there.
  */
 export const ONBOARDING_SLIDES_SKIP_BUTTON_ABSOLUTE_LAYOUT = {
-  offsetRight: 16,
+  offsetRight: Paddings.screenSmall,
   zIndex: 3,
-  topInsetPlus: 10,
+  topInsetPlus: Paddings.groupedListHeaderContentGap,
 } as const;
 
 export type OnboardingSlidesPageTitleConfig = {
@@ -179,68 +190,38 @@ export type OnboardingSlidesPageTitleConfig = {
   };
 };
 
-export const ONBOARDING_SLIDES_TEXT_TOKENS: Readonly<{
-  skip: OnboardingSlidesTextStyleToken;
-  title: OnboardingSlidesTextStyleToken;
-}> = {
-  skip: ONBOARDING_SLIDES_SKIP_TEXT_STYLE_TOKEN,
-  title: {
-    typography: 'heading-2',
-    color: 'primary',
-  },
+/** questionnaire headline base comes from `ONBOARDING_SLIDES_PAGE_TITLE_TEXT_STYLE`; bump weight for the emphasized word only. */
+const ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE: TextStyle = {
+  fontWeight: FontWeight.bold,
 };
 
 export const ONBOARDING_SLIDES_PAGE_TITLES: readonly OnboardingSlidesPageTitleConfig[] = [
   {
-    title: "Let's get started planning",
-    titleStyle: {
-      fontSize: 32,
-      fontWeight: 400,
-    },
+    title: "Start planning your day...",
     highlight: {
       text: 'planning',
-      style: {
-        fontWeight: 600,
-      },
+      style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE,
     },
   },
   {
     title: 'What time do you wake up?',
-    titleStyle: {
-      fontSize: 32,
-      fontWeight: 400,
-    },
     highlight: {
       text: 'wake',
-      style: {
-        fontWeight: 600,
-      },
+      style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE,
     },
   },
   {
     title: 'What time do you sleep?',
-    titleStyle: {
-      fontSize: 32,
-      fontWeight: 400,
-    },
     highlight: {
       text: 'sleep',
-      style: {
-        fontWeight: 600,
-      },
+      style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE,
     },
   },
   {
     title: 'Are you making a task or a habit?',
-    titleStyle: {
-      fontSize: 32,
-      fontWeight: 400,
-    },
     highlight: {
       text: 'habit',
-      style: {
-        fontWeight: 600,
-      },
+      style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE,
     },
   },
 ];
@@ -256,7 +237,7 @@ export const ONBOARDING_SLIDES_PAGE_COUNT = ONBOARDING_SLIDES_PAGE_TITLES.length
 
 export const ONBOARDING_SLIDES_TITLE_AREA_HEIGHT = 120;
 
-export const ONBOARDING_SLIDES_TITLE_SUBTEXT_GAP = 8;
+export const ONBOARDING_SLIDES_TITLE_SUBTEXT_GAP = Paddings.touchTarget;
 
 export const ONBOARDING_SLIDES_SUBTEXT_AREA_HEIGHT = 88;
 
