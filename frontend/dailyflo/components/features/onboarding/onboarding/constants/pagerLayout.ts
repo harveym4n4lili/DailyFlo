@@ -15,5 +15,5 @@ export const ONBOARDING_SLIDES_FIXED_HEADLINE_OVERLAY_HEIGHT =
   ONBOARDING_SLIDES_TITLE_SUBTEXT_GAP +
   ONBOARDING_SLIDES_SUBTEXT_AREA_HEIGHT;
 
-/** ms — easing set in OnboardingSlidesProgressBar */
+/** ms — OnboardingSlidesProgressBar uses reanimated `withTiming` with this duration */
 export const ONBOARDING_SLIDES_CONTROL_TRANSITION_MS = 320;

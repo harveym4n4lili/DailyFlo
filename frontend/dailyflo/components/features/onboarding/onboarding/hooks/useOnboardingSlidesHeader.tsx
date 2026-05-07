@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { OnboardingSlidesProgressBar } from '../ui/OnboardingSlidesProgressBar';
 
 export type UseOnboardingSlidesHeaderOpts = {
-  /** fractional carousel index (can be non-integer mid-swipe) — combined with page count for bar fill */
+  /** settled carousel page index (0 … totalPages−1) — bar fill steps once per page, not while dragging */
   pageProgress: number;
   totalPages: number;
   trackColor: string;

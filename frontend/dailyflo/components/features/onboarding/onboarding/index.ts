@@ -4,14 +4,7 @@
 
 export * from './constants';
 export { resolveOnboardingSlidesTextColor } from './onboardingSlidesThemeResolvers';
-export {
-  useOnboardingSlidesHeader,
-  useOnboardingSlidesScrollTransition,
-} from './hooks';
-export type {
-  UseOnboardingSlidesHeaderOpts,
-  UseOnboardingSlidesScrollTransitionResult,
-} from './hooks';
+export { useOnboardingSlidesHeader, type UseOnboardingSlidesHeaderOpts } from './hooks';
 export { OnboardingSlidesProgressBar, OnboardingSlidesShell } from './ui';
 export type { OnboardingSlidesProgressBarProps, OnboardingSlidesShellProps } from './ui';
 export { OnboardingSampleSlidePage } from './pages';

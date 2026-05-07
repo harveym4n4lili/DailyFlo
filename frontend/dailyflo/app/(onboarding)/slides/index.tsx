@@ -5,8 +5,8 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  Animated,
   Platform,
+  ScrollView,
   StyleSheet,
   View,
   useWindowDimensions,
@@ -25,7 +25,6 @@ import {
   resolveOnboardingSlidesTextColor,
   useCompleteOnboardingAndExit,
   useOnboardingSlidesHeader,
-  useOnboardingSlidesScrollTransition,
 } from '@/components/features/onboarding';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -44,12 +43,6 @@ export default function OnboardingSlidesScreen() {
       { color: resolveOnboardingSlidesTextColor(themeColors, ONBOARDING_SLIDES_SKIP_TEXT_COLOR) },
     ],
     [themeColors],
-  );
-
-  const { scrollRef, onScroll } = useOnboardingSlidesScrollTransition(
-    ONBOARDING_SLIDES_PAGE_COUNT,
-    windowWidth,
-    setPageProgress,
   );
 
   const barTrack = themeColors.border.primary();
@@ -95,7 +88,7 @@ export default function OnboardingSlidesScreen() {
   const slidePages = useMemo(
     () =>
       Array.from({ length: ONBOARDING_SLIDES_PAGE_COUNT }, (_, pageIndex) => (
-        <View key={pageIndex} style={[styles.page, { width: windowWidth, height: windowHeight }]}>
+        <View key={pageIndex} style={{ width: windowWidth, height: windowHeight }}>
           <OnboardingSampleSlidePage pageIndex={pageIndex} />
         </View>
       )),
@@ -105,8 +98,7 @@ export default function OnboardingSlidesScreen() {
   return (
     // fills the stack’s transparent content area with app primary surface so the pager isn’t see-through
     <View style={[styles.root, { backgroundColor: themeColors.background.primary() }]}>
-      <Animated.ScrollView
-        ref={scrollRef}
+      <ScrollView
         horizontal
         pagingEnabled
         nestedScrollEnabled
@@ -115,14 +107,12 @@ export default function OnboardingSlidesScreen() {
         onMomentumScrollEnd={onMomentumScrollEnd}
         style={styles.carousel}
         contentContainerStyle={styles.carouselContent}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
         contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
         automaticallyAdjustContentInsets={false}
         bounces={false}
       >
         {slidePages}
-      </Animated.ScrollView>
+      </ScrollView>
     </View>
   );
 }
@@ -138,5 +128,4 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'stretch',
   },
-  page: {},
 });
