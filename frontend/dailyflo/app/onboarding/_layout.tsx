@@ -1,12 +1,11 @@
 /**
- * onboarding stack — transparent native header; `introductory/` (dots), `slides/` (back + progress).
+ * questionnaire funnel — root stack screen (see `app/_layout.tsx`), pushed after introductory completes.
+ * native transparent header: back + progress bar (`useOnboardingSlidesHeader`).
  */
 
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
-
-import { OnboardingSlidesInitialHeader } from '@/components/features/onboarding';
 
 const IOS_ONBOARDING_SCROLL_EDGE_HIDDEN = {
   top: 'hidden' as const,
@@ -21,7 +20,7 @@ function TransparentHeaderBackground() {
   );
 }
 
-export default function OnboardingLayout() {
+export default function OnboardingQuestionnaireLayout() {
   const iosHeaderNoChromeFade =
     Platform.OS === 'ios'
       ? ({
@@ -47,28 +46,6 @@ export default function OnboardingLayout() {
         headerBackVisible: false,
         ...iosHeaderNoChromeFade,
       }}
-    >
-      {/* redirect-only route — suppress header so onboarding never flashes chrome here */}
-      <Stack.Screen name="index" options={{ headerShown: true,
-        headerTransparent: true,
-        headerShadowVisible: false,
-        headerStyle: { backgroundColor: 'transparent' },}} />
-      {/* full header is configured before questionnaire body mounts — avoids route title / empty bar flash */}
-      <Stack.Screen
-        name="slides"
-        options={{
-          title: '',
-          headerBackVisible: true,
-          headerShown: true,
-          headerTransparent: true,
-          headerShadowVisible: false,
-          headerStyle: { backgroundColor: 'transparent' },
-          headerLeft: () => null,
-          headerRight: () => null,
-          headerTitle: () => <OnboardingSlidesInitialHeader />,
-        }}
-      />
-      {/* introductory + slides screens inherit transparent header */}
-    </Stack>
+    />
   );
 }

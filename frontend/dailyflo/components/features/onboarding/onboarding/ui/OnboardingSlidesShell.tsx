@@ -1,6 +1,7 @@
 /**
- * body shell under the native header — same horizontal inset as intro (`Paddings.screen` + `Paddings.screenSmall`)
- * so questionnaire copy lines up with `OnboardingIntroShell` and the intro crossfade title layer.
+ * body shell under the native transparent stack header (back + progress + skip).
+ * header does not reserve layout for the screen body, so we offset by `useHeaderHeight()` — same idea as
+ * intro’s `titleLayerTop={headerHeight + Paddings.screen}` — then keep horizontal inset like intro.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -9,15 +10,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Paddings } from '@/constants/Paddings';
 
-const GAP_UNDER_HEADER_BAR = Paddings.screen;
+/** small breathing room below the header row — matches intro title offset past chrome */
+const GAP_BELOW_HEADER = Paddings.screen;
 
 export type OnboardingSlidesShellProps = {
   children: React.ReactNode;
 };
 
 export function OnboardingSlidesShell({ children }: OnboardingSlidesShellProps) {
-  const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
   const bottomPadding = Math.max(insets.bottom, Paddings.screen) + 48;
 
   return (
@@ -26,7 +28,7 @@ export function OnboardingSlidesShell({ children }: OnboardingSlidesShellProps) 
         style={[
           styles.content,
           {
-            paddingTop: headerHeight + GAP_UNDER_HEADER_BAR,
+            paddingTop: headerHeight + GAP_BELOW_HEADER,
             paddingHorizontal: Paddings.screen + Paddings.screenSmall,
             paddingBottom: bottomPadding,
           },

@@ -1,13 +1,35 @@
 /**
- * post-intro questionnaire funnel — consumed by `app/(onboarding)/slides`; route hosts the horizontal pager.
+ * post-intro questionnaire funnel — consumed by `app/onboarding` and `app/(onboarding)/slides`.
  */
 
 export * from './constants';
-export { resolveOnboardingSlidesTextColor } from './onboardingSlidesThemeResolvers';
-export { useOnboardingSlidesHeader, type UseOnboardingSlidesHeaderOpts } from './hooks';
-export { OnboardingSlidesProgressBar, OnboardingSlidesShell } from './ui';
-export type { OnboardingSlidesProgressBarProps, OnboardingSlidesShellProps } from './ui';
-export { OnboardingSampleSlidePage } from './pages';
+export {
+  resolveOnboardingSlidesTextColor,
+  resolveOnboardingSlidesContinueButtonPaint,
+  resolveOnboardingSlidesProgressTrackColor,
+  resolveOnboardingSlidesBackgroundColor,
+  blendOnboardingSlidesColorAtProgress,
+} from './onboardingSlidesThemeResolvers';
+export {
+  useOnboardingSlidesHeader,
+  useQuestionnaireBlendProgress,
+  type UseOnboardingSlidesHeaderOpts,
+  type UseQuestionnaireBlendProgressResult,
+} from './hooks';
+export {
+  OnboardingSlidesProgressBar,
+  OnboardingSlidesShell,
+  OnboardingQuestionnaireHeadlineCrossfade,
+  OnboardingSlidesHeaderChrome,
+  OnboardingSlidesInitialHeader,
+} from './ui';
+export type {
+  OnboardingSlidesProgressBarProps,
+  OnboardingSlidesShellProps,
+  OnboardingQuestionnaireHeadlineCrossfadeProps,
+  OnboardingSlidesHeaderChromeProps,
+} from './ui';
+export { OnboardingSampleSlidePage, OnboardingQuestionnaireFlow } from './pages';
 export type { OnboardingSampleSlidePageProps } from './pages';
 export { OnboardingSlideSampleContent } from './sections';
 export type { OnboardingSlideSampleContentProps } from './sections';

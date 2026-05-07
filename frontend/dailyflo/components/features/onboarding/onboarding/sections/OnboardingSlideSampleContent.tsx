@@ -10,13 +10,21 @@ import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 
+import { ONBOARDING_SLIDES_PAGE_SLIDE_UI } from '../constants';
+import { resolveOnboardingSlidesContinueButtonPaint } from '../onboardingSlidesThemeResolvers';
+
 export type OnboardingSlideSampleContentProps = {
   pageIndex: number;
+  /** lerped continue fill while stepping — overrides row token when set */
+  accentFill?: string;
 };
 
-export function OnboardingSlideSampleContent({ pageIndex }: OnboardingSlideSampleContentProps) {
+export function OnboardingSlideSampleContent({ pageIndex, accentFill }: OnboardingSlideSampleContentProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
+  const uiRow = ONBOARDING_SLIDES_PAGE_SLIDE_UI[pageIndex] ?? ONBOARDING_SLIDES_PAGE_SLIDE_UI[0];
+  const accentFromRow = resolveOnboardingSlidesContinueButtonPaint(themeColors, uiRow.continueButtonBackground);
+  const accentFillResolved = accentFill ?? accentFromRow;
 
   return (
     <View style={styles.root}>
@@ -29,7 +37,7 @@ export function OnboardingSlideSampleContent({ pageIndex }: OnboardingSlideSampl
           { borderColor: themeColors.border.primary(), backgroundColor: themeColors.background.elevated() },
         ]}
       >
-        <View style={[styles.accent, { backgroundColor: themeColors.primaryButton.fill() }]} />
+        <View style={[styles.accent, { backgroundColor: accentFillResolved }]} />
         <Text style={[typography.getOnboardingTextStyle('heading-3'), { color: themeColors.text.primary() }]}>
           Sample slide · step {pageIndex + 1}
         </Text>

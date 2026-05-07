@@ -3,3 +3,12 @@ export {
   type OnboardingSlidesProgressBarProps,
 } from './OnboardingSlidesProgressBar';
 export { OnboardingSlidesShell, type OnboardingSlidesShellProps } from './OnboardingSlidesShell';
+export {
+  OnboardingQuestionnaireHeadlineCrossfade,
+  type OnboardingQuestionnaireHeadlineCrossfadeProps,
+} from './OnboardingQuestionnaireHeadlineCrossfade';
+export {
+  OnboardingSlidesHeaderChrome,
+  type OnboardingSlidesHeaderChromeProps,
+} from './OnboardingSlidesHeaderChrome';
+export { OnboardingSlidesInitialHeader } from './OnboardingSlidesInitialHeader';
