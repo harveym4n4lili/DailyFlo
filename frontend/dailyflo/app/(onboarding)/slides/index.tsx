@@ -37,7 +37,7 @@ export default function OnboardingSlidesScreen() {
   const [pageProgress, setPageProgress] = useState(0);
   const { completeAndExit, busy } = useCompleteOnboardingAndExit();
 
-  // text style + theme color come from `onboardingSlidesConstants` via `getOnboardingTextStyle` + color key
+  // text style + theme color from onboarding/constants (typography.ts + resolveOnboardingSlidesTextColor)
   const skipTextStyle = useMemo(
     () => [
       ONBOARDING_SLIDES_SKIP_TEXT_STYLE,

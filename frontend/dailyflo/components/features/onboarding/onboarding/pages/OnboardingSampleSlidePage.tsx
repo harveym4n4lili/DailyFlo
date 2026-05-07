@@ -26,7 +26,7 @@ export function OnboardingSampleSlidePage({ pageIndex = 0 }: OnboardingSampleSli
   const titleConfig = ONBOARDING_SLIDES_PAGE_TITLES[pageIndex];
   const caption = ONBOARDING_SLIDES_PAGE_CAPTIONS[pageIndex] ?? '';
 
-  // headline/caption typography baked in constants with `getOnboardingTextStyle` (see onboardingSlidesConstants.ts)
+  // headline/caption typography from onboarding/constants/typography.ts (`getOnboardingTextStyle`)
   const baseTitleStyle = [
     ONBOARDING_SLIDES_PAGE_TITLE_TEXT_STYLE,
     { color: themeColors.text.primary(), marginBottom: caption ? Paddings.touchTargetSmall : Paddings.touchTarget },

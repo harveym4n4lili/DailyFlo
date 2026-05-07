@@ -5,7 +5,7 @@
 import { resolveBrandStyleToken } from '@/constants/ColorPalette';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
-import type { OnboardingSlidesSlideTextColor } from './constants/onboardingSlidesConstants';
+import type { OnboardingSlidesSlideTextColor } from './constants/types';
 
 export function resolveOnboardingSlidesTextColor(
   themeColors: Pick<ReturnType<typeof useThemeColors>, 'text'>,
