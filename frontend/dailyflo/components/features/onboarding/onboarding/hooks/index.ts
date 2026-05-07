@@ -1,8 +1,1 @@
-export {
-  useOnboardingSlidesScrollTransition,
-  type UseOnboardingSlidesScrollTransitionResult,
-} from './useOnboardingSlidesScrollTransition';
-export {
-  useOnboardingSlidesHeader,
-  type UseOnboardingSlidesHeaderOpts,
-} from './useOnboardingSlidesHeader';
+export { useOnboardingSlidesHeader, type UseOnboardingSlidesHeaderOpts } from './useOnboardingSlidesHeader';
