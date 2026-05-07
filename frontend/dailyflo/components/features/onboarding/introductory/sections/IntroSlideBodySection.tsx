@@ -22,7 +22,8 @@ export function IntroSlideBodySection({ text, textColorKey = 'secondary' }: Intr
   return (
     <Text
       style={[
-        typography.getTextStyle('body-large'),
+        // onboarding funnel uses SF Pro Rounded on ios via getOnboardingTextStyle (see Typography.ts)
+        typography.getOnboardingTextStyle('body-large'),
         styles.body,
         { color: themeColors.text[textColorKey]() },
       ]}

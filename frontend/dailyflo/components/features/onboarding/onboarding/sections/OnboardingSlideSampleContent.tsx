@@ -20,7 +20,7 @@ export function OnboardingSlideSampleContent({ pageIndex }: OnboardingSlideSampl
 
   return (
     <View style={styles.root}>
-      <Text style={[typography.getTextStyle('body-small'), styles.hint, { color: themeColors.text.tertiary() }]}>
+      <Text style={[typography.getOnboardingTextStyle('body-small'), styles.hint, { color: themeColors.text.tertiary() }]}>
         Questionnaire placeholder — wire real controls in this section when you add fields per step.
       </Text>
       <View
@@ -30,7 +30,7 @@ export function OnboardingSlideSampleContent({ pageIndex }: OnboardingSlideSampl
         ]}
       >
         <View style={[styles.accent, { backgroundColor: themeColors.primaryButton.fill() }]} />
-        <Text style={[typography.getTextStyle('heading-3'), { color: themeColors.text.primary() }]}>
+        <Text style={[typography.getOnboardingTextStyle('heading-3'), { color: themeColors.text.primary() }]}>
           Sample slide · step {pageIndex + 1}
         </Text>
         <View style={styles.row}>

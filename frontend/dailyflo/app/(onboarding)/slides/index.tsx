@@ -16,10 +16,11 @@ import {
 
 import {
   ONBOARDING_SLIDES_PAGE_COUNT,
+  ONBOARDING_SLIDES_SKIP_TEXT_STYLE,
+  ONBOARDING_SLIDES_SKIP_TEXT_COLOR,
   ONBOARDING_SLIDES_SKIP_BUTTON_ACCESSIBILITY_LABEL,
   ONBOARDING_SLIDES_SKIP_BUTTON_HIT_SLOP,
   ONBOARDING_SLIDES_SKIP_BUTTON_LABEL,
-  ONBOARDING_SLIDES_TEXT_TOKENS,
   OnboardingSampleSlidePage,
   resolveOnboardingSlidesTextColor,
   useCompleteOnboardingAndExit,
@@ -28,23 +29,21 @@ import {
 } from '@/components/features/onboarding';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { useTypography } from '@/hooks/useTypography';
 
 export default function OnboardingSlidesScreen() {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const themeColors = useThemeColors();
-  const typography = useTypography();
   const router = useGuardedRouter();
   const [pageProgress, setPageProgress] = useState(0);
   const { completeAndExit, busy } = useCompleteOnboardingAndExit();
 
-  // typography + resolved secondary fill — tokens live in `onboarding/constants/onboardingSlidesConstants.ts`
+  // text style + theme color come from `onboardingSlidesConstants` via `getOnboardingTextStyle` + color key
   const skipTextStyle = useMemo(
     () => [
-      typography.getTextStyle(ONBOARDING_SLIDES_TEXT_TOKENS.skip.typography),
-      { color: resolveOnboardingSlidesTextColor(themeColors, ONBOARDING_SLIDES_TEXT_TOKENS.skip.color) },
+      ONBOARDING_SLIDES_SKIP_TEXT_STYLE,
+      { color: resolveOnboardingSlidesTextColor(themeColors, ONBOARDING_SLIDES_SKIP_TEXT_COLOR) },
     ],
-    [typography, themeColors],
+    [themeColors],
   );
 
   const { scrollRef, onScroll } = useOnboardingSlidesScrollTransition(

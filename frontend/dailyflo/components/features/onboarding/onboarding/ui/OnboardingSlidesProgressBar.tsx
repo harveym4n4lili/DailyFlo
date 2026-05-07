@@ -1,14 +1,11 @@
 /**
  * slim header progress track — normalized `progress` 0→1 fills left→right while you swipe carousel.
- * fill uses a bottom→top linear gradient so light reads as rising through the pill while width still tracks scroll.
  */
 
 import React from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { ONBOARDING_SLIDES_PROGRESS_BAR_HEIGHT } from '../constants';
-import { onboardingProgressGlowStops } from './onboardingSlidesProgressGlow';
 
 export type OnboardingSlidesProgressBarProps = {
   /** 0 = empty, 1 = full — driven by carousel scroll fraction */
@@ -19,7 +16,6 @@ export type OnboardingSlidesProgressBarProps = {
 
 export function OnboardingSlidesProgressBar({ progress, trackColor, fillColor }: OnboardingSlidesProgressBarProps) {
   const clamped = Math.min(Math.max(progress, 0), 1);
-  const glow = React.useMemo(() => onboardingProgressGlowStops(fillColor), [fillColor]);
 
   const widthAnim = React.useRef(new Animated.Value(clamped)).current;
   const [trackWidth, setTrackWidth] = React.useState(0);
@@ -52,15 +48,10 @@ export function OnboardingSlidesProgressBar({ progress, trackColor, fillColor }:
         text: `${Math.round(clamped * 100)}% complete`,
       }}
     >
-      <Animated.View pointerEvents="none" style={[styles.fillClip, { width: effectiveWidth }]}>
-        <LinearGradient
-          colors={glow.colors as [string, string, ...string[]]}
-          locations={glow.locations as [number, number, ...number[]]}
-          start={{ x: 0.5, y: 1 }}
-          end={{ x: 0.5, y: 0 }}
-          style={styles.glowGradient}
-        />
-      </Animated.View>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.fill, { width: effectiveWidth, backgroundColor: fillColor }]}
+      />
     </View>
   );
 }
@@ -73,15 +64,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     // no flex:1 — parent `barSlot` is a column; flex would stretch vertically and ignore height
   },
-  fillClip: {
+  fill: {
     height: '100%',
-    overflow: 'hidden',
-    borderRadius: ONBOARDING_SLIDES_PROGRESS_BAR_HEIGHT / 2,
-  },
-  glowGradient: {
-    flex: 1,
-    width: '100%',
-    minHeight: ONBOARDING_SLIDES_PROGRESS_BAR_HEIGHT,
     borderRadius: ONBOARDING_SLIDES_PROGRESS_BAR_HEIGHT / 2,
   },
 });

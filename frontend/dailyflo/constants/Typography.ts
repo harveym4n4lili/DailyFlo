@@ -1,3 +1,5 @@
+import type { TextStyle } from 'react-native';
+
 /**
  * Typography System Constants
  * 
@@ -28,13 +30,23 @@ export const FontFamily = {
   // fallback fonts for different platforms
   // these are used if the primary font fails to load
   fallback: {
-    // iOS fallback fonts - these are system fonts that look good on iOS
+    // iOS — SF Pro Rounded first so onboarding + system stacks can target the same name (`ONBOARDING_FONT_FAMILY.ios`).
     ios: ['SF Pro Rounded', '-apple-system'],
     // Android fallback fonts - these are system fonts that look good on Android
     android: ['Roboto', 'sans-serif'],
     // web fallback fonts - these are web-safe fonts
     web: ['system-ui', 'sans-serif'],
   },
+} as const;
+
+/**
+ * Onboarding funnel (intro + questionnaire) — one face per platform, aligned with `FontFamily.fallback`.
+ * ios uses SF Pro Rounded (system on apple devices); weights still come from each `TextStyles` token.
+ */
+export const ONBOARDING_FONT_FAMILY = {
+  ios: FontFamily.fallback.ios[0],
+  android: FontFamily.fallback.android[0],
+  web: FontFamily.fallback.web.join(', '),
 } as const;
 
 /**
@@ -208,6 +220,35 @@ export const ResponsiveTypography = {
  */
 export function getTextStyle(styleName: keyof typeof TextStyles) {
   return TextStyles[styleName];
+}
+
+/**
+ * Resolved font family for onboarding screens — SF Pro Rounded on ios (see `ONBOARDING_FONT_FAMILY`).
+ */
+export function getOnboardingFontFamily(platform: Platform = 'ios'): string {
+  if (platform === 'ios') {
+    return ONBOARDING_FONT_FAMILY.ios;
+  }
+  if (platform === 'android') {
+    return ONBOARDING_FONT_FAMILY.android;
+  }
+  return ONBOARDING_FONT_FAMILY.web;
+}
+
+/**
+ * Same sizes/weights as `getTextStyle`, but swaps in the onboarding font stack and drops embedded Inter names
+ * so tokens like `button-primary` still pick a single rounded/system face for the funnel.
+ */
+export function getOnboardingTextStyle(
+  styleName: keyof typeof TextStyles,
+  platform: Platform = 'ios',
+): TextStyle {
+  const raw = getTextStyle(styleName);
+  const { fontFamily: _omit, ...rest } = raw as TextStyle & { fontFamily?: string };
+  return {
+    ...rest,
+    fontFamily: getOnboardingFontFamily(platform),
+  };
 }
 
 // returns a token text style with the matching Inter family for the current platform
@@ -391,7 +432,10 @@ export default {
   LineHeight,
   LetterSpacing,
   ResponsiveTypography,
+  ONBOARDING_FONT_FAMILY,
   getTextStyle,
+  getOnboardingFontFamily,
+  getOnboardingTextStyle,
   getTypographyStyle,
   getFontFamily,
   getResponsiveFontSize,

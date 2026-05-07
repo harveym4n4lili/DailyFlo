@@ -110,8 +110,8 @@ export function IntroScrollCrossfadeTitleLayer({
 const styles = StyleSheet.create({
   headlineLayer: {
     position: 'absolute',
-    left: Paddings.screen + 16,
-    right: Paddings.screen + 16,
+    left: Paddings.screen + Paddings.screenSmall,
+    right: Paddings.screen + Paddings.screenSmall,
     height: INTRO_FIXED_HEADLINE_OVERLAY_HEIGHT,
     zIndex: 2,
   },
