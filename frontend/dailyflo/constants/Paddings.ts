@@ -41,9 +41,11 @@ export const Paddings = {
   // used by: OnboardingActions, SignInModal, EmailAuthModal
   buttonHorizontal: 32,
   // used by: OnboardingActions, SignInModal, SocialAuthActions, EmailAuthModal, EmailAuth, EmailAuthInputs
-  buttonVertical: 16,
+  buttonVertical:20,
   buttonSmallHorizontal: 24, // not yet used
   buttonSmallVertical: 12, // not yet used
+  /** full-width text continue CTA (`OnboardingContinueButton`) — corner radius */
+  continueButtonRadius: 28,
 
   // touch target padding - for interactive elements
   // used by: today/index, GroupHeader, CalendarView, TaskSummary, ScreenContainer, IconColorModal, TaskForm, WeekView, TimeDurationSelectScreen

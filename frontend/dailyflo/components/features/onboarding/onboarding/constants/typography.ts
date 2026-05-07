@@ -26,3 +26,9 @@ export const ONBOARDING_SLIDES_CAPTION_TEXT_STYLE = getOnboardingTextStyle(
   'body-large',
   ONBOARDING_SLIDES_TYPOGRAPHY_PLATFORM,
 );
+
+/** primary CTA label — same onboarding rounded/system stack as titles (`Typography.getOnboardingTextStyle`). */
+export const ONBOARDING_SLIDES_CONTINUE_BUTTON_TEXT_STYLE = getOnboardingTextStyle(
+  'button-primary',
+  ONBOARDING_SLIDES_TYPOGRAPHY_PLATFORM,
+);

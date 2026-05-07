@@ -50,4 +50,7 @@ export const ONBOARDING_SLIDES_PAGE_CAPTIONS: readonly string[] = [
   'Tasks are one-off to-dos; habits are things you want to repeat — you can tune both anytime.',
 ];
 
+/** bottom CTA — same label every step; screen readers still get the longer a11y hint on the last step. */
+export const ONBOARDING_SLIDES_CONTINUE_LABEL = 'Continue';
+
 export const ONBOARDING_SLIDES_PAGE_COUNT = ONBOARDING_SLIDES_PAGE_TITLES.length;

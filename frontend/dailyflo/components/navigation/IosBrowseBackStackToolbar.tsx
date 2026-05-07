@@ -14,7 +14,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 export function IosBrowseBackStackToolbar() {
   const router = useGuardedRouter();
   const themeColors = useThemeColors();
-  const tint = themeColors.text.primary();
+  const tint = themeColors.text.secondary();
 
   if (Platform.OS !== 'ios') {
     return null;

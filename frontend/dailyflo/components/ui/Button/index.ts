@@ -9,6 +9,9 @@
 export { ContinueButton } from './ContinueButton';
 export type { ContinueButtonProps } from './ContinueButton';
 
+export { OnboardingContinueButton } from './OnboardingContinueButton';
+export type { OnboardingContinueButtonProps } from './OnboardingContinueButton';
+
 // Export FloatingActionButton component
 export { FloatingActionButton, FAB_SCREEN_INSET } from './FloatingActionButton';
 export type { FloatingActionButtonProps } from './FloatingActionButton';

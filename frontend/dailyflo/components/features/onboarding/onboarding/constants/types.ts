@@ -61,12 +61,21 @@ export const ONBOARDING_SLIDES_THEME_TEXT_INVERTED_KEYS = [
 
 export type OnboardingSlidesPrimaryButtonColorKey = keyof typeof ThemeColors.light.primaryButton;
 
+export type OnboardingSlidesThemeBorderColorKey = keyof typeof ThemeColors.light.border;
+
 export type OnboardingSlidesThemeInteractiveColorKey = keyof typeof ThemeColors.light.interactive;
 
 export type OnboardingSlidesContinueButtonColorToken =
   | OnboardingSlidesPrimaryButtonColorKey
   | OnboardingSlidesThemeInteractiveColorKey
   | OnboardingSlidesSlideTextColor
+  | string;
+
+/** header progress pill — try border slot, then same rules as text (theme + brand strings). */
+export type OnboardingSlidesProgressTrackToken =
+  | OnboardingSlidesThemeBorderColorKey
+  | OnboardingSlidesSlideTextColor
+  | OnboardingSlidesBrandStyleToken
   | string;
 
 export const ONBOARDING_SLIDES_BRAND_COLORS = {
@@ -84,15 +93,23 @@ export const ONBOARDING_SLIDES_BRAND_COLORS = {
   },
 } as const;
 
-/** per-slide color tokens — rows live in slideUiTokens.ts */
+/** per-slide color tokens — rows live in slideUiTokens.ts (mirrors intro `IntroSlideUiConfig` + questionnaire chrome). */
 export type OnboardingSlidesSlideUiConfig = {
   background: OnboardingSlidesSlideBackgroundColor;
   titleColor: OnboardingSlidesSlideTextColor;
   titleHighlightColor?: OnboardingSlidesSlideTextColor;
   captionColor: OnboardingSlidesSlideTextColor;
   dotIndicatorColor: OnboardingSlidesSlideTextColor;
+  /** `OnboardingContinueButton`: glass tint + solid fill */
   continueButtonBackground: OnboardingSlidesContinueButtonColorToken;
+  /** `OnboardingContinueButton`: label + spinner (intro used this for chevron) */
   continueButtonIcon: OnboardingSlidesContinueButtonColorToken;
+  /** native header progress track (unfilled portion) */
+  progressBarTrack: OnboardingSlidesProgressTrackToken;
+  /** native header progress fill — same token family as `continueButtonBackground` (brand, `fill`, interactive, text, …). */
+  progressBarFill: OnboardingSlidesContinueButtonColorToken;
+  /** optional — back chevron; defaults to `themeColors.text.primary()` */
+  headerBackIconColor?: OnboardingSlidesSlideTextColor;
 };
 
 /** headline strings live in textValues.ts */
