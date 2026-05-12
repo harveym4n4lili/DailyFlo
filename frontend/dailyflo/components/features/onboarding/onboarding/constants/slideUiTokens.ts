@@ -1,14 +1,9 @@
 /**
- * questionnaire — one token row per step (order matches `textValues` titles/captions).
+ * questionnaire — token rows for chrome (core steps + habit/task branch steps).
  *
  * theme words vs brand ramps:
  * - `primary` / `secondary` on backgrounds, borders, text = app theme slots (not plant/moss/sage).
  * - `plant:500`, `moss:600`, `sage:300`, … = explicit ramps from ColorPalette (same strings as intro).
- *
- * progress bar: use a light brand shade for the unfilled track and a stronger shade for fill
- * (resolver tries brand strings first, then theme.border.*, then theme text).
- *
- * header back chevron: use theme text `secondary` so it stays quieter than headline brand shades.
  *
  * time wheel: set `timeWheelBrandRamp` on steps that show `OnboardingQuestionnaireTimeWheel` so spinner tint matches that slide’s plant/moss/sage chrome.
  */
@@ -18,7 +13,8 @@ import type {
   OnboardingSlidesTimeWheelBrandRamp,
 } from './types';
 
-export const ONBOARDING_SLIDES_PAGE_SLIDE_UI: readonly OnboardingSlidesSlideUiConfig[] = [
+/** first steps — indices align with `ONBOARDING_QUESTIONNAIRE_CORE_PAGE_TITLES` */
+export const ONBOARDING_QUESTIONNAIRE_CORE_PAGE_SLIDE_UI: readonly OnboardingSlidesSlideUiConfig[] = [
   {
     background: 'primary',
     titleColor: 'plant:800',
@@ -69,25 +65,105 @@ export const ONBOARDING_SLIDES_PAGE_SLIDE_UI: readonly OnboardingSlidesSlideUiCo
     progressBarFill: 'plant:500',
     headerBackIconColor: 'secondary',
   },
+];
+
+/** task branch — moss → sage → plant ×2 (no wheels) */
+export const ONBOARDING_QUESTIONNAIRE_TASK_BRANCH_SLIDE_UI: readonly OnboardingSlidesSlideUiConfig[] = [
   {
     background: 'primary',
     titleColor: 'moss:800',
     titleHighlightColor: 'moss:800',
-    captionColor: 'secondary',
+    captionColor: 'moss:700',
     dotIndicatorColor: 'moss:600',
-    continueButtonBackground: 'moss:600',
+    continueButtonBackground: 'moss:500',
     continueButtonIcon: 'moss:800',
     progressBarTrack: 'secondary',
     progressBarFill: 'moss:500',
     headerBackIconColor: 'secondary',
   },
+  {
+    background: 'primary',
+    titleColor: 'sage:800',
+    titleHighlightColor: 'sage:800',
+    captionColor: 'sage:700',
+    dotIndicatorColor: 'sage:600',
+    continueButtonBackground: 'sage:500',
+    continueButtonIcon: 'sage:800',
+    progressBarTrack: 'secondary',
+    progressBarFill: 'sage:500',
+    headerBackIconColor: 'secondary',
+  },
+  {
+    background: 'primary',
+    titleColor: 'plant:800',
+    titleHighlightColor: 'plant:800',
+    captionColor: 'plant:700',
+    dotIndicatorColor: 'plant:600',
+    continueButtonBackground: 'plant:500',
+    continueButtonIcon: 'plant:800',
+    progressBarTrack: 'secondary',
+    progressBarFill: 'plant:500',
+    headerBackIconColor: 'secondary',
+  },
+  {
+    background: 'primary',
+    titleColor: 'plant:800',
+    titleHighlightColor: 'plant:800',
+    captionColor: 'plant:700',
+    dotIndicatorColor: 'plant:600',
+    continueButtonBackground: 'plant:500',
+    continueButtonIcon: 'plant:800',
+    progressBarTrack: 'secondary',
+    progressBarFill: 'plant:500',
+    headerBackIconColor: 'secondary',
+  },
 ];
 
-/** resolves `timeWheelBrandRamp` for a slide — throws if the step shows a wheel but the token row forgot to set it */
+/** habit branch — moss → sage → plant */
+export const ONBOARDING_QUESTIONNAIRE_HABIT_BRANCH_SLIDE_UI: readonly OnboardingSlidesSlideUiConfig[] = [
+  {
+    background: 'primary',
+    titleColor: 'moss:800',
+    titleHighlightColor: 'moss:800',
+    captionColor: 'moss:700',
+    dotIndicatorColor: 'moss:600',
+    continueButtonBackground: 'moss:500',
+    continueButtonIcon: 'moss:800',
+    progressBarTrack: 'secondary',
+    progressBarFill: 'moss:500',
+    headerBackIconColor: 'secondary',
+  },
+  {
+    background: 'primary',
+    titleColor: 'sage:800',
+    titleHighlightColor: 'sage:800',
+    captionColor: 'sage:700',
+    dotIndicatorColor: 'sage:600',
+    continueButtonBackground: 'sage:500',
+    continueButtonIcon: 'sage:800',
+    progressBarTrack: 'secondary',
+    progressBarFill: 'sage:500',
+    headerBackIconColor: 'secondary',
+  },
+  {
+    background: 'primary',
+    titleColor: 'plant:800',
+    titleHighlightColor: 'plant:800',
+    captionColor: 'plant:700',
+    dotIndicatorColor: 'plant:600',
+    continueButtonBackground: 'plant:500',
+    continueButtonIcon: 'plant:800',
+    progressBarTrack: 'secondary',
+    progressBarFill: 'plant:500',
+    headerBackIconColor: 'secondary',
+  },
+];
+
+/** resolves `timeWheelBrandRamp` for wake/sleep slides — reads core row only (those indices stay in the fixed block) */
 export function getOnboardingQuestionnaireTimeWheelBrandRampForSlide(
   pageIndex: number,
 ): OnboardingSlidesTimeWheelBrandRamp {
-  const ramp = ONBOARDING_SLIDES_PAGE_SLIDE_UI[pageIndex]?.timeWheelBrandRamp;
+  const ramp = ONBOARDING_QUESTIONNAIRE_CORE_PAGE_SLIDE_UI[pageIndex]?.timeWheelBrandRamp;
   if (ramp == null) {
     throw new Error(
       `[DailyFlo onboarding] slide index ${pageIndex} has no timeWheelBrandRamp — set it in slideUiTokens next to that row.`,

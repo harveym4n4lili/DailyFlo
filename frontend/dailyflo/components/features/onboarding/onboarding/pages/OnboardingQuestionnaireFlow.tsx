@@ -1,6 +1,7 @@
 /**
  * post-intro questionnaire body — one step at a time (no horizontal swipe).
  * step changes animate `blendProgress` 0…n−1 like intro scroll so header bar + body colors rgb-lerp (`blendIntroContinueButtonColors`, etc.).
+ * after “pick next step”, extra slides depend on habit vs task (`getOnboardingQuestionnaireSlideModel`).
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
@@ -17,13 +18,14 @@ import { useCompleteOnboardingAndExit } from '../../introductory/hooks/useComple
 import {
   ONBOARDING_SLIDES_CONTINUE_BUTTON_TEXT_STYLE,
   ONBOARDING_SLIDES_CONTINUE_LABEL,
-  ONBOARDING_SLIDES_PAGE_COUNT,
-  ONBOARDING_SLIDES_PAGE_SLIDE_UI,
+  ONBOARDING_SLIDES_FINISH_SETUP_LABEL,
   ONBOARDING_SLIDES_SKIP_TEXT_STYLE,
   ONBOARDING_SLIDES_SKIP_TEXT_COLOR,
   ONBOARDING_SLIDES_SKIP_BUTTON_ACCESSIBILITY_LABEL,
   ONBOARDING_SLIDES_SKIP_BUTTON_HIT_SLOP,
   ONBOARDING_SLIDES_SKIP_BUTTON_LABEL,
+  type OnboardingQuestionnaireNextStepChoice,
+  getOnboardingQuestionnaireSlideModel,
 } from '../constants';
 import { useOnboardingSlidesHeader, useQuestionnaireBlendProgress } from '../hooks';
 import {
@@ -35,19 +37,10 @@ import {
 } from '../onboardingSlidesThemeResolvers';
 import { OnboardingSampleSlidePage } from './OnboardingSampleSlidePage';
 
-const LAST_STEP = Math.max(ONBOARDING_SLIDES_PAGE_COUNT - 1, 0);
-
-/** baseline questionnaire defaults — only hour/minute are meaningful */
-function initialWakeTime(): Date {
-  const d = new Date();
-  d.setHours(8, 0, 0, 0);
-  return d;
-}
-
-function initialSleepTime(): Date {
-  const d = new Date();
-  d.setHours(22, 0, 0, 0);
-  return d;
+/** when toggling habit/task on the picker step, clamp page index so we never sit past the new last slide */
+function clampPageIndex(pageIndex: number, choice: OnboardingQuestionnaireNextStepChoice): number {
+  const maxIdx = getOnboardingQuestionnaireSlideModel(choice).pageCount - 1;
+  return Math.min(pageIndex, Math.max(0, maxIdx));
 }
 
 export function OnboardingQuestionnaireFlow() {
@@ -55,9 +48,27 @@ export function OnboardingQuestionnaireFlow() {
   const insets = useSafeAreaInsets();
   const router = useGuardedRouter();
   const [pageIndex, setPageIndex] = useState(0);
-  const [wakeTime, setWakeTime] = useState(() => initialWakeTime());
-  const [sleepTime, setSleepTime] = useState(() => initialSleepTime());
+  const [wakeTime, setWakeTime] = useState(() => {
+    const d = new Date();
+    d.setHours(8, 0, 0, 0);
+    return d;
+  });
+  const [sleepTime, setSleepTime] = useState(() => {
+    const d = new Date();
+    d.setHours(22, 0, 0, 0);
+    return d;
+  });
+  const [nextStepChoice, setNextStepChoice] = useState<OnboardingQuestionnaireNextStepChoice>('habit');
   const { completeAndExit, busy } = useCompleteOnboardingAndExit();
+
+  const slideModel = useMemo(() => getOnboardingQuestionnaireSlideModel(nextStepChoice), [nextStepChoice]);
+
+  const lastStep = Math.max(0, slideModel.pageCount - 1);
+
+  const handleNextStepChoiceChange = useCallback((choice: OnboardingQuestionnaireNextStepChoice) => {
+    setNextStepChoice(choice);
+    setPageIndex((i) => clampPageIndex(i, choice));
+  }, []);
 
   const { blendProgress, blendProgressAnim } = useQuestionnaireBlendProgress(pageIndex);
 
@@ -71,45 +82,44 @@ export function OnboardingQuestionnaireFlow() {
 
   const trackColorsByPage = useMemo(
     () =>
-      ONBOARDING_SLIDES_PAGE_SLIDE_UI.map((row) =>
+      slideModel.pageSlideUi.map((row) =>
         resolveOnboardingSlidesProgressTrackColor(themeColors, row.progressBarTrack),
       ),
-    [themeColors],
+    [themeColors, slideModel.pageSlideUi],
   );
   const progressFillColorsByPage = useMemo(
     () =>
-      ONBOARDING_SLIDES_PAGE_SLIDE_UI.map((row) =>
+      slideModel.pageSlideUi.map((row) =>
         resolveOnboardingSlidesContinueButtonPaint(themeColors, row.progressBarFill),
       ),
-    [themeColors],
+    [themeColors, slideModel.pageSlideUi],
   );
   const backgroundColorsByPage = useMemo(
     () =>
-      ONBOARDING_SLIDES_PAGE_SLIDE_UI.map((row) =>
+      slideModel.pageSlideUi.map((row) =>
         resolveOnboardingSlidesBackgroundColor(themeColors, row.background),
       ),
-    [themeColors],
+    [themeColors, slideModel.pageSlideUi],
   );
 
   const continuePaintByPage = useMemo(
     () => ({
-      fills: ONBOARDING_SLIDES_PAGE_SLIDE_UI.map((row) =>
+      fills: slideModel.pageSlideUi.map((row) =>
         resolveOnboardingSlidesContinueButtonPaint(themeColors, row.continueButtonBackground),
       ),
-      icons: ONBOARDING_SLIDES_PAGE_SLIDE_UI.map((row) =>
+      icons: slideModel.pageSlideUi.map((row) =>
         resolveOnboardingSlidesContinueButtonPaint(themeColors, row.continueButtonIcon),
       ),
     }),
-    [themeColors],
+    [themeColors, slideModel.pageSlideUi],
   );
 
-  // back chevron uses text.secondary on every step — resolved per row so slideUiTokens stays the single source of truth
   const backIconColorsByPage = useMemo(
     () =>
-      ONBOARDING_SLIDES_PAGE_SLIDE_UI.map((row) =>
+      slideModel.pageSlideUi.map((row) =>
         resolveOnboardingSlidesTextColor(themeColors, row.headerBackIconColor ?? 'secondary'),
       ),
-    [themeColors],
+    [themeColors, slideModel.pageSlideUi],
   );
 
   const barTrack = useMemo(
@@ -169,7 +179,7 @@ export function OnboardingQuestionnaireFlow() {
 
   useOnboardingSlidesHeader({
     pageProgress: blendProgress,
-    totalPages: ONBOARDING_SLIDES_PAGE_COUNT,
+    totalPages: slideModel.pageCount,
     trackColor: barTrack,
     fillColor: barFill,
     backChevronColor,
@@ -179,23 +189,26 @@ export function OnboardingQuestionnaireFlow() {
   });
 
   const onContinue = useCallback(() => {
-    if (pageIndex < LAST_STEP) {
+    if (pageIndex < lastStep) {
       setPageIndex((i) => i + 1);
       return;
     }
     completeAndExit();
-  }, [pageIndex, completeAndExit]);
+  }, [pageIndex, lastStep, completeAndExit]);
 
   return (
     <View style={[styles.root, { backgroundColor: stepBackground }]}>
-      <View style={styles.step} key={pageIndex}>
+      <View style={styles.step}>
         <OnboardingSampleSlidePage
-          pageIndex={pageIndex}
+          slideModel={slideModel}
+          blendProgress={blendProgress}
           blendProgressAnim={blendProgressAnim}
           wakeTime={wakeTime}
           sleepTime={sleepTime}
           onWakeTimeChange={setWakeTime}
           onSleepTimeChange={setSleepTime}
+          nextStepChoice={nextStepChoice}
+          onNextStepChoiceChange={handleNextStepChoiceChange}
         />
       </View>
       <View
@@ -205,17 +218,16 @@ export function OnboardingQuestionnaireFlow() {
         ]}
         pointerEvents="box-none"
       >
-        {/* on ios 15+ the shared button wraps expo GlassView + slide tint; android/web use solid fill */}
         <OnboardingContinueButton
           onPress={onContinue}
           loading={busy}
           disabled={busy}
-          label={ONBOARDING_SLIDES_CONTINUE_LABEL}
+          label={pageIndex < lastStep ? ONBOARDING_SLIDES_CONTINUE_LABEL : ONBOARDING_SLIDES_FINISH_SETUP_LABEL}
           labelStyle={continueLabelStyle}
           tintColor={continueFill}
           labelColor={continueLabelColor}
           accessibilityLabel={
-            pageIndex < LAST_STEP ? 'Continue to next question' : 'Finish onboarding and go to the app'
+            pageIndex < lastStep ? 'Continue to next question' : 'Finish setup and go to the app'
           }
         />
       </View>

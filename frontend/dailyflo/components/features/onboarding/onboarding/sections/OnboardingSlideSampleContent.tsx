@@ -1,35 +1,57 @@
 /**
- * questionnaire body — wake/sleep steps show centered native time wheels; others stay empty for future UI.
+ * questionnaire body — wake/sleep show time wheels; last slide shows habit vs task cards; intro slide reserves space.
+ * mirrors headline crossfade: every slide’s body sits in an `Animated.View` opacity tied to `blendProgressAnim` so outgoing/incoming content overlap during transitions.
  */
 
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 
-import { getOnboardingQuestionnaireTimeWheelBrandRampForSlide } from '../constants/slideUiTokens';
+import { crossfadeInputRange, crossfadeOutputRange } from '../../introductory/scrollTransition';
 import {
+  ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT,
+  ONBOARDING_QUESTIONNAIRE_NEXT_STEP_SLIDE_INDEX,
   ONBOARDING_QUESTIONNAIRE_SLEEP_STEP_INDEX,
   ONBOARDING_QUESTIONNAIRE_WAKE_STEP_INDEX,
-} from '../constants/textValues';
-import { OnboardingQuestionnaireTimeWheel } from '../ui/OnboardingQuestionnaireTimeWheel';
+  type OnboardingQuestionnaireNextStepChoice,
+} from '../constants';
+import { getOnboardingQuestionnaireTimeWheelBrandRampForSlide } from '../constants/slideUiTokens';
+import { OnboardingNextStepChoiceCards, OnboardingQuestionnaireTimeWheel } from '../ui';
 
 export type OnboardingSlideSampleContentProps = {
-  pageIndex: number;
+  /** total questionnaire steps — habit vs task changes branch length */
+  pageCount: number;
+  /** numeric mirror of `blendProgressAnim` — picks which layer receives touches (`pointerEvents`) */
+  blendProgress: number;
+  /** fractional step index animation — same units as headline crossfade (`pageWidth` = 1) */
+  blendProgressAnim: Animated.Value;
   wakeTime: Date;
   sleepTime: Date;
   onWakeTimeChange: (next: Date) => void;
   onSleepTimeChange: (next: Date) => void;
+  nextStepChoice: OnboardingQuestionnaireNextStepChoice;
+  onNextStepChoiceChange: (next: OnboardingQuestionnaireNextStepChoice) => void;
 };
 
-export function OnboardingSlideSampleContent({
-  pageIndex,
+/** one slide’s body branch — unchanged behavior vs previous single-`pageIndex` implementation */
+function QuestionnaireBodySlot({
+  slideIndex,
   wakeTime,
   sleepTime,
   onWakeTimeChange,
   onSleepTimeChange,
-}: OnboardingSlideSampleContentProps) {
-  if (pageIndex === ONBOARDING_QUESTIONNAIRE_WAKE_STEP_INDEX) {
-    // brand ramp read from the same slide row as headline colors (`slideUiTokens` → `timeWheelBrandRamp`)
-    const brandRamp = getOnboardingQuestionnaireTimeWheelBrandRampForSlide(pageIndex);
+  nextStepChoice,
+  onNextStepChoiceChange,
+}: Pick<
+  OnboardingSlideSampleContentProps,
+  | 'wakeTime'
+  | 'sleepTime'
+  | 'onWakeTimeChange'
+  | 'onSleepTimeChange'
+  | 'nextStepChoice'
+  | 'onNextStepChoiceChange'
+> & { slideIndex: number }) {
+  if (slideIndex === ONBOARDING_QUESTIONNAIRE_WAKE_STEP_INDEX) {
+    const brandRamp = getOnboardingQuestionnaireTimeWheelBrandRampForSlide(slideIndex);
     return (
       <View style={styles.bodySlot} accessibilityLabel="Wake time question">
         <OnboardingQuestionnaireTimeWheel
@@ -42,8 +64,8 @@ export function OnboardingSlideSampleContent({
     );
   }
 
-  if (pageIndex === ONBOARDING_QUESTIONNAIRE_SLEEP_STEP_INDEX) {
-    const brandRamp = getOnboardingQuestionnaireTimeWheelBrandRampForSlide(pageIndex);
+  if (slideIndex === ONBOARDING_QUESTIONNAIRE_SLEEP_STEP_INDEX) {
+    const brandRamp = getOnboardingQuestionnaireTimeWheelBrandRampForSlide(slideIndex);
     return (
       <View style={styles.bodySlot} accessibilityLabel="Sleep time question">
         <OnboardingQuestionnaireTimeWheel
@@ -56,6 +78,22 @@ export function OnboardingSlideSampleContent({
     );
   }
 
+  if (slideIndex === ONBOARDING_QUESTIONNAIRE_NEXT_STEP_SLIDE_INDEX) {
+    return (
+      <View style={styles.bodySlot} accessibilityLabel="Next step choice">
+        <OnboardingNextStepChoiceCards value={nextStepChoice} onChange={onNextStepChoiceChange} />
+      </View>
+    );
+  }
+
+  if (slideIndex >= ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT) {
+    return (
+      <View style={styles.bodySlot} accessibilityLabel="Questionnaire body content">
+        {/* habit/task follow-up steps — inputs + artwork plug in here */}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.bodySlot} accessibilityLabel="Questionnaire body content">
       {/* future steps: illustrations / controls */}
@@ -63,7 +101,91 @@ export function OnboardingSlideSampleContent({
   );
 }
 
+export function OnboardingSlideSampleContent({
+  pageCount,
+  blendProgress,
+  blendProgressAnim,
+  wakeTime,
+  sleepTime,
+  onWakeTimeChange,
+  onSleepTimeChange,
+  nextStepChoice,
+  onNextStepChoiceChange,
+}: OnboardingSlideSampleContentProps) {
+  const count = pageCount;
+  const last = Math.max(count - 1, 0);
+  // nearest settled slide — only that layer stays interactive so faded wheels don’t steal taps
+  const touchIndex = Math.min(last, Math.max(0, Math.round(blendProgress)));
+
+  return (
+    <View style={styles.stack}>
+      {/* wake step holds the tallest body (time wheel) — reserves flex height like headline probe */}
+      <View
+        style={styles.heightProbe}
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <QuestionnaireBodySlot
+          slideIndex={ONBOARDING_QUESTIONNAIRE_WAKE_STEP_INDEX}
+          wakeTime={wakeTime}
+          sleepTime={sleepTime}
+          onWakeTimeChange={onWakeTimeChange}
+          onSleepTimeChange={onSleepTimeChange}
+          nextStepChoice={nextStepChoice}
+          onNextStepChoiceChange={onNextStepChoiceChange}
+        />
+      </View>
+
+      <View style={styles.crossfadeLayers} pointerEvents="box-none">
+        {Array.from({ length: count }, (_, i) => {
+          const opacity = blendProgressAnim.interpolate({
+            inputRange: crossfadeInputRange(i, 1, count),
+            outputRange: crossfadeOutputRange(i, count),
+            extrapolate: 'clamp',
+          });
+          return (
+            <Animated.View
+              key={i}
+              style={[styles.layer, { opacity }]}
+              pointerEvents={touchIndex === i ? 'auto' : 'none'}
+            >
+              <QuestionnaireBodySlot
+                slideIndex={i}
+                wakeTime={wakeTime}
+                sleepTime={sleepTime}
+                onWakeTimeChange={onWakeTimeChange}
+                onSleepTimeChange={onSleepTimeChange}
+                nextStepChoice={nextStepChoice}
+                onNextStepChoiceChange={onNextStepChoiceChange}
+              />
+            </Animated.View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  stack: {
+    flex: 1,
+    position: 'relative',
+    width: '100%',
+  },
+  heightProbe: {
+    opacity: 0,
+  },
+  crossfadeLayers: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  layer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   bodySlot: {
     flex: 1,
     width: '100%',

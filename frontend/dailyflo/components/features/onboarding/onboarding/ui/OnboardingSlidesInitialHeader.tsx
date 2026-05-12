@@ -11,8 +11,8 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 
 import { useCompleteOnboardingAndExit } from '../../introductory/hooks/useCompleteOnboardingAndExit';
 import {
-  ONBOARDING_SLIDES_PAGE_COUNT,
-  ONBOARDING_SLIDES_PAGE_SLIDE_UI,
+  ONBOARDING_QUESTIONNAIRE_CORE_PAGE_SLIDE_UI,
+  ONBOARDING_QUESTIONNAIRE_MAX_PAGE_COUNT,
   ONBOARDING_SLIDES_SKIP_BUTTON_ACCESSIBILITY_LABEL,
   ONBOARDING_SLIDES_SKIP_BUTTON_HIT_SLOP,
   ONBOARDING_SLIDES_SKIP_BUTTON_LABEL,
@@ -40,7 +40,7 @@ export function OnboardingSlidesInitialHeader() {
   );
 
   // step 0 tokens — matches questionnaire at pageIndex 0 before blend animations run
-  const row0 = ONBOARDING_SLIDES_PAGE_SLIDE_UI[0];
+  const row0 = ONBOARDING_QUESTIONNAIRE_CORE_PAGE_SLIDE_UI[0];
   const trackColor = row0
     ? resolveOnboardingSlidesProgressTrackColor(themeColors, row0.progressBarTrack)
     : resolveOnboardingSlidesProgressTrackColor(themeColors, 'secondary');
@@ -51,7 +51,8 @@ export function OnboardingSlidesInitialHeader() {
     themeColors,
     row0?.headerBackIconColor ?? 'secondary',
   );
-  const completionRatio = ONBOARDING_SLIDES_PAGE_COUNT <= 0 ? 0 : (0 + 1) / ONBOARDING_SLIDES_PAGE_COUNT;
+  const completionRatio =
+    ONBOARDING_QUESTIONNAIRE_MAX_PAGE_COUNT <= 0 ? 0 : (0 + 1) / ONBOARDING_QUESTIONNAIRE_MAX_PAGE_COUNT;
 
   const skip = useMemo(
     () => ({

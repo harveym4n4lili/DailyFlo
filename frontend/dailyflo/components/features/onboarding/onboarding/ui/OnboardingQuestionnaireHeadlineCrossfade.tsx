@@ -10,27 +10,40 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 
 import { useThemeColors } from '@/hooks/useColorPalette';
 
+// import typography + pager tokens directly — avoids pulling the whole `constants` barrel (and `questionnaireSlideModel`) while this module loads; reduces HMR circular-init glitches
+import { ONBOARDING_SLIDES_TITLE_SUBTEXT_GAP } from '../constants/pagerLayout';
 import {
   ONBOARDING_SLIDES_CAPTION_TEXT_STYLE,
-  ONBOARDING_SLIDES_PAGE_CAPTIONS,
-  ONBOARDING_SLIDES_PAGE_SLIDE_UI,
-  ONBOARDING_SLIDES_PAGE_TITLES,
   ONBOARDING_SLIDES_PAGE_TITLE_TEXT_STYLE,
-  ONBOARDING_SLIDES_TITLE_SUBTEXT_GAP,
-} from '../constants';
+} from '../constants/typography';
+import type { OnboardingSlidesPageTitleConfig, OnboardingSlidesSlideUiConfig } from '../constants/types';
 import { resolveOnboardingSlidesTextColor } from '../onboardingSlidesThemeResolvers';
 import { crossfadeInputRange, crossfadeOutputRange, splitIntroTitleHighlight } from '../../introductory/scrollTransition';
 
 export type OnboardingQuestionnaireHeadlineCrossfadeProps = {
   blendProgressAnim: Animated.Value;
+  pageTitles: readonly OnboardingSlidesPageTitleConfig[] | undefined;
+  pageCaptions: readonly string[] | undefined;
+  pageSlideUi: readonly OnboardingSlidesSlideUiConfig[] | undefined;
 };
 
+const EMPTY_TITLES: readonly OnboardingSlidesPageTitleConfig[] = [];
+const EMPTY_CAPTIONS: readonly string[] = [];
+const EMPTY_SLIDE_UI: readonly OnboardingSlidesSlideUiConfig[] = [];
+
 /** pick one slide index to drive layout height — longest title+caption tends to need the most vertical room */
-function questionnaireHeadlineHeightProbeIndex(): number {
+function questionnaireHeadlineHeightProbeIndex(
+  pageTitles: readonly OnboardingSlidesPageTitleConfig[] | undefined,
+  pageCaptions: readonly string[] | undefined,
+): number {
+  if (!pageTitles?.length) {
+    return 0;
+  }
+  const caps = pageCaptions ?? EMPTY_CAPTIONS;
   let best = 0;
   let maxScore = -1;
-  ONBOARDING_SLIDES_PAGE_TITLES.forEach((t, i) => {
-    const cap = ONBOARDING_SLIDES_PAGE_CAPTIONS[i] ?? '';
+  pageTitles.forEach((t, i) => {
+    const cap = caps[i] ?? '';
     const score = t.title.length + cap.length * 2;
     if (score > maxScore) {
       maxScore = score;
@@ -40,14 +53,22 @@ function questionnaireHeadlineHeightProbeIndex(): number {
   return best;
 }
 
-const QUESTIONNAIRE_HEADLINE_HEIGHT_PROBE_INDEX = questionnaireHeadlineHeightProbeIndex();
+type HeadlineSlideBodyProps = {
+  slideIndex: number;
+  pageTitles: readonly OnboardingSlidesPageTitleConfig[];
+  pageCaptions: readonly string[];
+  pageSlideUi: readonly OnboardingSlidesSlideUiConfig[];
+};
 
-type HeadlineSlideBodyProps = { slideIndex: number };
-
-function QuestionnaireHeadlineSlideBody({ slideIndex }: HeadlineSlideBodyProps) {
+function QuestionnaireHeadlineSlideBody({
+  slideIndex,
+  pageTitles,
+  pageCaptions,
+  pageSlideUi,
+}: HeadlineSlideBodyProps) {
   const themeColors = useThemeColors();
-  const titleConfig = ONBOARDING_SLIDES_PAGE_TITLES[slideIndex];
-  const slideUi = ONBOARDING_SLIDES_PAGE_SLIDE_UI[slideIndex];
+  const titleConfig = pageTitles[slideIndex];
+  const slideUi = pageSlideUi[slideIndex];
   if (!titleConfig || !slideUi) {
     return null;
   }
@@ -58,7 +79,7 @@ function QuestionnaireHeadlineSlideBody({ slideIndex }: HeadlineSlideBodyProps) 
     slideUi.titleHighlightColor ?? slideUi.titleColor,
   );
   const captionColor = resolveOnboardingSlidesTextColor(themeColors, slideUi.captionColor);
-  const caption = ONBOARDING_SLIDES_PAGE_CAPTIONS[slideIndex] ?? '';
+  const caption = pageCaptions[slideIndex] ?? '';
 
   return (
     <View style={styles.layerGap}>
@@ -89,17 +110,32 @@ function QuestionnaireHeadlineSlideBody({ slideIndex }: HeadlineSlideBodyProps) 
 
 export function OnboardingQuestionnaireHeadlineCrossfade({
   blendProgressAnim,
+  pageTitles,
+  pageCaptions,
+  pageSlideUi,
 }: OnboardingQuestionnaireHeadlineCrossfadeProps) {
-  const count = ONBOARDING_SLIDES_PAGE_TITLES.length;
+  const titles = pageTitles ?? EMPTY_TITLES;
+  const captions = pageCaptions ?? EMPTY_CAPTIONS;
+  const slideUiRows = pageSlideUi ?? EMPTY_SLIDE_UI;
+  const count = titles.length;
+
+  const probeIndex = useMemo(
+    () => questionnaireHeadlineHeightProbeIndex(titles, captions),
+    [titles, captions],
+  );
 
   const accessibilityLabels = useMemo(
     () =>
-      ONBOARDING_SLIDES_PAGE_TITLES.map((titleConfig, i) => {
-        const caption = ONBOARDING_SLIDES_PAGE_CAPTIONS[i] ?? '';
+      titles.map((titleConfig, i) => {
+        const caption = captions[i] ?? '';
         return caption ? `${titleConfig.title}. ${caption}` : titleConfig.title;
       }),
-    [],
+    [captions, titles],
   );
+
+  if (count === 0) {
+    return <View style={styles.stack} pointerEvents="none" />;
+  }
 
   return (
     <View style={styles.stack} pointerEvents="none">
@@ -110,12 +146,17 @@ export function OnboardingQuestionnaireHeadlineCrossfade({
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        <QuestionnaireHeadlineSlideBody slideIndex={QUESTIONNAIRE_HEADLINE_HEIGHT_PROBE_INDEX} />
+        <QuestionnaireHeadlineSlideBody
+          slideIndex={probeIndex}
+          pageTitles={titles}
+          pageCaptions={captions}
+          pageSlideUi={slideUiRows}
+        />
       </View>
 
       <View style={styles.crossfadeLayers} pointerEvents="none">
-        {ONBOARDING_SLIDES_PAGE_TITLES.map((_titleConfig, i) => {
-          const slideUi = ONBOARDING_SLIDES_PAGE_SLIDE_UI[i];
+        {titles.map((_titleConfig, i) => {
+          const slideUi = slideUiRows[i];
           if (!slideUi) {
             return null;
           }
@@ -132,7 +173,12 @@ export function OnboardingQuestionnaireHeadlineCrossfade({
               accessibilityRole="header"
               accessibilityLabel={accessibilityLabels[i]}
             >
-              <QuestionnaireHeadlineSlideBody slideIndex={i} />
+              <QuestionnaireHeadlineSlideBody
+                slideIndex={i}
+                pageTitles={titles}
+                pageCaptions={captions}
+                pageSlideUi={slideUiRows}
+              />
             </Animated.View>
           );
         })}
