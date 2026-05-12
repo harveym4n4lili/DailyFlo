@@ -1,11 +1,11 @@
 /**
- * maps questionnaire slide text tokens to `useThemeColors().text` — same rules as introductory `resolveIntroTextColor`.
+ * maps questionnaire slide text tokens to `useThemeColors().text` — same rules as auth `resolveIntroTextColor`.
  */
 
 import { resolveBrandStyleToken } from '@/constants/ColorPalette';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
-import { lerpIntroHexColor } from '../introductory/scrollTransition/introThemeResolvers';
+import { lerpIntroHexColor } from '../auth/scrollTransition/introThemeResolvers';
 
 import type {
   OnboardingSlidesContinueButtonColorToken,
@@ -21,7 +21,7 @@ type ThemeColorsForContinuePaint = Pick<
 
 type ThemeColorsForProgressTrack = Pick<ReturnType<typeof useThemeColors>, 'border' | 'text'>;
 
-/** page background — `plant:800` etc. via ColorPalette, or `primary` / `invertedPrimary` theme slots (same as intro). */
+/** page background — `plant:800` etc. via ColorPalette, or `primary` / `invertedPrimary` theme slots (same as auth landing). */
 export function resolveOnboardingSlidesBackgroundColor(
   themeColors: Pick<ReturnType<typeof useThemeColors>, 'background'>,
   colorKey: OnboardingSlidesSlideBackgroundColor,
@@ -55,7 +55,7 @@ export function resolveOnboardingSlidesProgressTrackColor(
 }
 
 /**
- * continue FAB tokens from questionnaire slide rows — same resolution rules as introductory `resolveIntroContinueButtonPaint`.
+ * continue FAB tokens from questionnaire slide rows — same resolution rules as auth `resolveIntroContinueButtonPaint`.
  */
 export function resolveOnboardingSlidesContinueButtonPaint(
   themeColors: ThemeColorsForContinuePaint,

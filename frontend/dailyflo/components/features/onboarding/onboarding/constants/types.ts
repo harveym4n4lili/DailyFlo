@@ -96,7 +96,7 @@ export const ONBOARDING_SLIDES_BRAND_COLORS = {
 /** which botanical ramp tints the questionnaire time wheel (matches keys of `ONBOARDING_SLIDES_BRAND_COLORS`) */
 export type OnboardingSlidesTimeWheelBrandRamp = keyof typeof ONBOARDING_SLIDES_BRAND_COLORS;
 
-/** per-slide color tokens — rows live in slideUiTokens.ts (mirrors intro `IntroSlideUiConfig` + questionnaire chrome). */
+/** per-slide color tokens — rows live in slideUiTokens.ts (mirrors auth `AuthSlideUiConfig` + questionnaire chrome). */
 export type OnboardingSlidesSlideUiConfig = {
   background: OnboardingSlidesSlideBackgroundColor;
   titleColor: OnboardingSlidesSlideTextColor;

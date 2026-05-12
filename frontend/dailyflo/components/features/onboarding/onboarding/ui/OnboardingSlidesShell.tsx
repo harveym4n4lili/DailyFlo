@@ -1,6 +1,6 @@
 /**
  * body shell under the native transparent stack header (back + progress + skip).
- * offsets body with `useHeaderHeight()` + `ONBOARDING_GAP_BELOW_HEADER` (same px as intro `INTRO_GAP_BELOW_HEADER`, see onboarding/constants/pagerLayout).
+ * offsets body with `useHeaderHeight()` + `ONBOARDING_GAP_BELOW_HEADER` (same px as auth `AUTH_GAP_BELOW_HEADER`, see onboarding/constants/pagerLayout).
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';

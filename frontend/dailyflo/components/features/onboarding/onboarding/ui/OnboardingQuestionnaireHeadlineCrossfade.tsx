@@ -1,6 +1,6 @@
 /**
  * questionnaire headline stack — opacity crossfade driven by `blendProgressAnim` (fractional page index 0…n−1).
- * uses the same `crossfadeInputRange(…, pageWidth: 1, …)` math as intro `IntroScrollCrossfadeTitleLayer` + scrollX/pageWidth.
+ * uses the same `crossfadeInputRange(…, pageWidth: 1, …)` math as the former auth carousel title layer + scrollX/pageWidth.
  *
  * vertical size: no fixed title/subtext “area” constants — an invisible probe renders the heaviest slide so the stack gets intrinsic height while crossfade layers stay absolutely stacked.
  */
@@ -18,7 +18,7 @@ import {
 } from '../constants/typography';
 import type { OnboardingSlidesPageTitleConfig, OnboardingSlidesSlideUiConfig } from '../constants/types';
 import { resolveOnboardingSlidesTextColor } from '../onboardingSlidesThemeResolvers';
-import { crossfadeInputRange, crossfadeOutputRange, splitIntroTitleHighlight } from '../../introductory/scrollTransition';
+import { crossfadeInputRange, crossfadeOutputRange, splitIntroTitleHighlight } from '../../auth/scrollTransition';
 
 export type OnboardingQuestionnaireHeadlineCrossfadeProps = {
   blendProgressAnim: Animated.Value;
