@@ -44,8 +44,8 @@ import {
   resolveIntroTextColor,
   resolveIntroContinueButtonPaint,
   blendIntroContinueButtonColors,
+  INTRO_GAP_BELOW_HEADER,
 } from '@/components/features/onboarding';
-import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import type { Href } from 'expo-router';
@@ -170,7 +170,7 @@ export default function OnboardingIntroductoryScreen() {
       <IntroScrollCrossfadeTitleLayer
         scrollX={scrollX}
         pageWidth={windowWidth}
-        titleLayerTop={headerHeight + Paddings.screen}
+        titleLayerTop={headerHeight + INTRO_GAP_BELOW_HEADER}
         titleConfigs={INTRO_PAGE_TITLES}
         captions={INTRO_PAGE_CAPTIONS}
         slideUiList={INTRO_PAGE_SLIDE_UI}

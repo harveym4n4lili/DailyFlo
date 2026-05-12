@@ -6,7 +6,9 @@
 
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, type Insets, type StyleProp, type TextStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+
+import { BackIcon } from '@/components/ui/Icon';
+import { Paddings } from '@/constants/Paddings';
 
 import { OnboardingSlidesProgressBar } from './OnboardingSlidesProgressBar';
 
@@ -40,12 +42,12 @@ export function OnboardingSlidesHeaderChrome({
     <View style={styles.titleRow} accessibilityElementsHidden={false}>
       <Pressable
         onPress={onBackPress}
-        hitSlop={12}
+        hitSlop={Paddings.onboardingSlidesHeaderBackHitSlop}
         accessibilityRole="button"
         accessibilityLabel={backAccessibilityLabel}
         style={({ pressed }) => [styles.backButton, pressed && styles.backPressed]}
       >
-        <Ionicons name="chevron-back" size={24} color={backChevronColor} />
+        <BackIcon size={24} color={backChevronColor} />
       </Pressable>
       <View style={styles.barSlot}>
         <OnboardingSlidesProgressBar progress={completionRatio} trackColor={trackColor} fillColor={fillColor} />
@@ -69,11 +71,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    gap: 8,
+    gap: Paddings.onboardingSlidesHeaderSectionGap,
   },
   backButton: {
-    paddingVertical: 4,
-    paddingRight: 4,
+    paddingVertical: Paddings.onboardingSlidesHeaderControlPadding,
+    paddingRight: Paddings.onboardingSlidesHeaderControlPadding,
   },
   backPressed: {
     opacity: 0.6,
@@ -84,8 +86,8 @@ const styles = StyleSheet.create({
     minHeight: 24,
   },
   skipTap: {
-    paddingVertical: 4,
-    paddingLeft: 4,
+    paddingVertical: Paddings.onboardingSlidesHeaderControlPadding,
+    paddingLeft: Paddings.onboardingSlidesHeaderControlPadding,
     justifyContent: 'center',
   },
   skipTapPressed: {

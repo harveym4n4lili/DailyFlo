@@ -4,6 +4,12 @@
 
 import { Paddings } from '@/constants/Paddings';
 
+/**
+ * space between transparent native header chrome and crossfade titles / shell body top.
+ * tighter than `Paddings.screen` so headlines sit closer to dots/skip chrome while clearing `useHeaderHeight()`.
+ */
+export const INTRO_GAP_BELOW_HEADER = 0;
+
 /** crossfade title stack — paired with INTRO_SUBTEXT_AREA_HEIGHT */
 export const INTRO_TITLE_AREA_HEIGHT = 120;
 

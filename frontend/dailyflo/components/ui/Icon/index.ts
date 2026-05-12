@@ -21,6 +21,9 @@ export type { ClockIconProps } from './icons/ClockIcon';
 export { BellIcon } from './icons/BellIcon';
 export type { BellIconProps } from './icons/BellIcon';
 
+export { BackIcon } from './icons/BackIcon';
+export type { BackIconProps } from './icons/BackIcon';
+
 export { BrowseIcon } from './icons/BrowseIcon';
 export type { BrowseIconProps } from './icons/BrowseIcon';
 

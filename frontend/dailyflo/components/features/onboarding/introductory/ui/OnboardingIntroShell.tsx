@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Paddings } from '@/constants/Paddings';
 
-const GAP_UNDER_HEADER_BAR = Paddings.screen;
+import { INTRO_GAP_BELOW_HEADER } from '../constants/pagerLayout';
 
 export type OnboardingIntroShellProps = {
   children: React.ReactNode;
@@ -29,7 +29,7 @@ export function OnboardingIntroShell({ children }: OnboardingIntroShellProps) {
         style={[
           styles.content,
           {
-            paddingTop: headerHeight + GAP_UNDER_HEADER_BAR,
+            paddingTop: headerHeight + INTRO_GAP_BELOW_HEADER,
             // `Paddings.screen` + `screenSmall` — same horizontal inset as `IntroScrollCrossfadeTitleLayer` and questionnaire shell
             paddingHorizontal: Paddings.screen + Paddings.screenSmall,
             paddingBottom: bottomPadding,

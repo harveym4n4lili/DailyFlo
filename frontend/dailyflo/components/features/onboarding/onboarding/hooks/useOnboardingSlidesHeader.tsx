@@ -8,8 +8,6 @@ import React, { useCallback, useLayoutEffect } from 'react';
 import { Platform, type Insets, type StyleProp, type TextStyle } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-import { useThemeColors } from '@/hooks/useColorPalette';
-
 import { OnboardingSlidesHeaderChrome } from '../ui/OnboardingSlidesHeaderChrome';
 
 export type UseOnboardingSlidesHeaderOpts = {
@@ -24,6 +22,8 @@ export type UseOnboardingSlidesHeaderOpts = {
   onBackPress: () => void;
   /** defaults to "Go back" — e.g. "Back to introduction" on slide 0 */
   backAccessibilityLabel?: string;
+  /** resolved css color — usually from `resolveOnboardingSlidesTextColor(..., row.headerBackIconColor ?? 'secondary')` */
+  backChevronColor: string;
   /** plain label in the header row — avoids headerRight chrome + avoids body overlays under the native header */
   skip: {
     label: string;
@@ -40,13 +40,12 @@ export function useOnboardingSlidesHeader({
   totalPages,
   trackColor,
   fillColor,
+  backChevronColor,
   onBackPress,
   backAccessibilityLabel = 'Go back',
   skip,
 }: UseOnboardingSlidesHeaderOpts): void {
   const navigation = useNavigation();
-  const themeColors = useThemeColors();
-  const backChevronColor = themeColors.text.secondary();
 
   const clampedProgress = Math.min(Math.max(pageProgress, 0), Math.max(totalPages - 1, 0));
   const completionRatio = totalPages <= 0 ? 0 : (clampedProgress + 1) / totalPages;

@@ -1,7 +1,6 @@
 /**
  * body shell under the native transparent stack header (back + progress + skip).
- * header does not reserve layout for the screen body, so we offset by `useHeaderHeight()` — same idea as
- * intro’s `titleLayerTop={headerHeight + Paddings.screen}` — then keep horizontal inset like intro.
+ * offsets body with `useHeaderHeight()` + `ONBOARDING_GAP_BELOW_HEADER` (same px as intro `INTRO_GAP_BELOW_HEADER`, see onboarding/constants/pagerLayout).
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -10,8 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Paddings } from '@/constants/Paddings';
 
-/** small breathing room below the header row — matches intro title offset past chrome */
-const GAP_BELOW_HEADER = Paddings.screen;
+import { ONBOARDING_GAP_BELOW_HEADER } from '../constants/pagerLayout';
 
 export type OnboardingSlidesShellProps = {
   children: React.ReactNode;
@@ -28,7 +26,7 @@ export function OnboardingSlidesShell({ children }: OnboardingSlidesShellProps) 
         style={[
           styles.content,
           {
-            paddingTop: headerHeight + GAP_BELOW_HEADER,
+            paddingTop: headerHeight + ONBOARDING_GAP_BELOW_HEADER,
             paddingHorizontal: Paddings.screen + Paddings.screenSmall,
             paddingBottom: bottomPadding,
           },

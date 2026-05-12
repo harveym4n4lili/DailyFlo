@@ -1,80 +1,29 @@
 /**
- * placeholder block that lives inside the horizontal carousel — moves on swipe so motion is obvious.
- * headline + subtext stay fixed above; only this (and backgrounds) ride the pager.
+ * intro carousel body — scrolls horizontally with each page while titles stay in the crossfade overlay.
+ * placeholder card UI removed; add per-slide art or hero content inside the shell region below the headline spacer.
  */
 
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-
-import { Paddings } from '@/constants/Paddings';
-import { useThemeColors } from '@/hooks/useColorPalette';
-import { useTypography } from '@/hooks/useTypography';
+import { StyleSheet, View } from 'react-native';
 
 export type IntroSlideSampleContentProps = {
-  /** 0-based index — used to vary the sample card slightly per slide */
+  /** 0-based slide — pick assets or layout variants per intro beat */
   pageIndex: number;
 };
 
-export function IntroSlideSampleContent({ pageIndex }: IntroSlideSampleContentProps) {
-  const themeColors = useThemeColors();
-  const typography = useTypography();
+export function IntroSlideSampleContent({ pageIndex: _pageIndex }: IntroSlideSampleContentProps) {
+  // `_pageIndex` reserved when each intro page gets distinct imagery or copy blocks here
 
   return (
-    <View style={styles.root}>
-      <Text style={[typography.getOnboardingTextStyle('body-small'), styles.hint, { color: themeColors.text.tertiary() }]}>
-        This block scrolls sideways with the slide — swipe to see it move.
-      </Text>
-      <View style={[styles.card, { borderColor: themeColors.border.primary(), backgroundColor: themeColors.background.elevated() }]}>
-        <View style={[styles.accent, { backgroundColor: themeColors.primaryButton.fill() }]} />
-        <Text style={[typography.getOnboardingTextStyle('heading-3'), { color: themeColors.text.primary() }]}>
-          Sample content · slide {pageIndex + 1}
-        </Text>
-        <View style={styles.row}>
-          <View style={[styles.pill, { backgroundColor: themeColors.background.tertiary() }]} />
-          <View style={[styles.pillWide, { backgroundColor: themeColors.background.secondary() }]} />
-        </View>
-        <View style={styles.row}>
-          <View style={[styles.pillWide, { backgroundColor: themeColors.background.secondary() }]} />
-          <View style={[styles.pill, { backgroundColor: themeColors.background.tertiary() }]} />
-        </View>
-      </View>
+    <View style={styles.bodySlot} accessibilityLabel="Intro slide body content">
+      {/* primary visuals / messaging blocks belong here — sits under INTRO_FIXED_HEADLINE_OVERLAY_HEIGHT spacer */}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  bodySlot: {
     flex: 1,
-    marginTop: Paddings.screen,
-    gap: 12,
-  },
-  hint: {
-    lineHeight: 20,
-  },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: Paddings.screen,
-    gap: 14,
-  },
-  accent: {
-    height: 4,
-    width: 48,
-    borderRadius: 2,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  pill: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-  },
-  pillWide: {
-    flex: 1,
-    height: 44,
-    borderRadius: 10,
+    width: '100%',
   },
 });

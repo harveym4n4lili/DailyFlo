@@ -19,8 +19,16 @@ import { Paddings } from '@/constants/Paddings';
 // build path avoids bad re-exports from package root (same as `ContinueButton`)
 import GlassView from 'expo-glass-effect/build/GlassView';
 
-/** min tap height from existing tokens only: inner vertical padding + touch slack so the row clears 44–48pt targets */
-const MIN_TAP_HEIGHT = Paddings.buttonVertical * 2 + Paddings.touchTarget * 2;
+/** min tap height — uses onboarding padding + hitSlop tokens from `Paddings` */
+const onboardingContinueMinHeight =
+  Paddings.onboardingContinueButtonPaddingVertical * 2 + Paddings.onboardingContinueButtonHitSlop * 2;
+
+const onboardingContinueHitSlop = {
+  top: Paddings.onboardingContinueButtonHitSlop,
+  bottom: Paddings.onboardingContinueButtonHitSlop,
+  left: Paddings.onboardingContinueButtonHitSlop,
+  right: Paddings.onboardingContinueButtonHitSlop,
+} as const;
 
 function getIOSMajor(): number {
   if (Platform.OS !== 'ios') return 0;
@@ -69,20 +77,15 @@ export function OnboardingContinueButton({
       disabled={inactive}
       style={({ pressed }) => ({
         width: '100%',
-        minHeight: MIN_TAP_HEIGHT,
+        minHeight: onboardingContinueMinHeight,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: Paddings.buttonVertical,
-        paddingHorizontal: Paddings.buttonHorizontal,
+        paddingVertical: Paddings.onboardingContinueButtonPaddingVertical,
+        paddingHorizontal: Paddings.onboardingContinueButtonPaddingHorizontal,
         borderRadius: Paddings.continueButtonRadius,
         opacity: inactive ? 0.75 : pressed ? 0.92 : 1,
       })}
-      hitSlop={{
-        top: Paddings.touchTarget,
-        bottom: Paddings.touchTarget,
-        left: Paddings.touchTarget,
-        right: Paddings.touchTarget,
-      }}
+      hitSlop={onboardingContinueHitSlop}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: inactive }}
@@ -104,7 +107,7 @@ export function OnboardingContinueButton({
 
   const surfaceStyle: ViewStyle = {
     width: '100%',
-    minHeight: MIN_TAP_HEIGHT,
+    minHeight: onboardingContinueMinHeight,
     borderRadius: Paddings.continueButtonRadius,
     overflow: 'visible',
   };
