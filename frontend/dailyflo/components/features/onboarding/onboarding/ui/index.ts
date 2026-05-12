@@ -16,3 +16,7 @@ export {
   OnboardingQuestionnaireTimeWheel,
   type OnboardingQuestionnaireTimeWheelProps,
 } from './OnboardingQuestionnaireTimeWheel';
+export {
+  OnboardingNextStepChoiceCards,
+  type OnboardingNextStepChoiceCardsProps,
+} from './OnboardingNextStepChoiceCards';

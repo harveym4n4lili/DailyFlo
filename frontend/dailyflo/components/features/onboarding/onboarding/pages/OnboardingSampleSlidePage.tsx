@@ -7,42 +7,62 @@ import { Animated, View } from 'react-native';
 
 import { Paddings } from '@/constants/Paddings';
 
+import type { OnboardingQuestionnaireNextStepChoice, OnboardingQuestionnaireSlideModel } from '../constants';
 import { OnboardingSlideSampleContent } from '../sections';
 import { OnboardingQuestionnaireHeadlineCrossfade, OnboardingSlidesShell } from '../ui';
 
 export type OnboardingSampleSlidePageProps = {
-  pageIndex?: number;
-  /** fractional step index animation — drives headline opacity crossfade between titles */
+  /** titles/captions/chrome rows for the active habit vs task branch */
+  slideModel: OnboardingQuestionnaireSlideModel;
+  /** fractional step 0…n−1 — drives chrome rgb lerp + headline/body crossfades */
+  blendProgress: number;
+  /** same curve as `blendProgress`, drives `Animated` opacities */
   blendProgressAnim: Animated.Value;
   wakeTime: Date;
   sleepTime: Date;
   onWakeTimeChange: (next: Date) => void;
   onSleepTimeChange: (next: Date) => void;
+  nextStepChoice: OnboardingQuestionnaireNextStepChoice;
+  onNextStepChoiceChange: (next: OnboardingQuestionnaireNextStepChoice) => void;
 };
 
 export function OnboardingSampleSlidePage({
-  pageIndex = 0,
+  slideModel,
+  blendProgress,
   blendProgressAnim,
   wakeTime,
   sleepTime,
   onWakeTimeChange,
   onSleepTimeChange,
+  nextStepChoice,
+  onNextStepChoiceChange,
 }: OnboardingSampleSlidePageProps) {
   return (
     <OnboardingSlidesShell>
-      {/* headline + caption crossfade — wired to token colors per step in OnboardingQuestionnaireHeadlineCrossfade */}
+      {/* headline + caption crossfade — tokens come from `slideModel` so branch slides stay in sync */}
       <View style={{ marginBottom: Paddings.touchTarget }}>
-        <OnboardingQuestionnaireHeadlineCrossfade blendProgressAnim={blendProgressAnim} />
+        <OnboardingQuestionnaireHeadlineCrossfade
+          blendProgressAnim={blendProgressAnim}
+          pageTitles={slideModel.pageTitles}
+          pageCaptions={slideModel.pageCaptions}
+          pageSlideUi={slideModel.pageSlideUi}
+        />
       </View>
 
-      {/* body: illustrations, form fields, and step chrome go in OnboardingSlideSampleContent (or replace that component) */}
-      <OnboardingSlideSampleContent
-        pageIndex={pageIndex}
-        wakeTime={wakeTime}
-        sleepTime={sleepTime}
-        onWakeTimeChange={onWakeTimeChange}
-        onSleepTimeChange={onSleepTimeChange}
-      />
+      {/* body stacks every slide with animated opacity so wheels/copy crossfade like headlines */}
+      <View style={{ flex: 1, width: '100%' }}>
+        <OnboardingSlideSampleContent
+          pageCount={slideModel.pageCount}
+          blendProgress={blendProgress}
+          blendProgressAnim={blendProgressAnim}
+          wakeTime={wakeTime}
+          sleepTime={sleepTime}
+          onWakeTimeChange={onWakeTimeChange}
+          onSleepTimeChange={onSleepTimeChange}
+          nextStepChoice={nextStepChoice}
+          onNextStepChoiceChange={onNextStepChoiceChange}
+        />
+      </View>
     </OnboardingSlidesShell>
   );
 }
