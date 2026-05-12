@@ -9,7 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import { useThemeColors } from '@/hooks/useColorPalette';
 
-import { useCompleteOnboardingAndExit } from '../../introductory/hooks/useCompleteOnboardingAndExit';
+import { useCompleteOnboardingAndExit } from '../../auth/hooks/useCompleteOnboardingAndExit';
 import {
   ONBOARDING_QUESTIONNAIRE_CORE_PAGE_SLIDE_UI,
   ONBOARDING_QUESTIONNAIRE_MAX_PAGE_COUNT,
@@ -73,7 +73,7 @@ export function OnboardingSlidesInitialHeader() {
       fillColor={fillColor}
       backChevronColor={backChevronColor}
       onBackPress={() => navigation.goBack()}
-      backAccessibilityLabel="Back to introduction"
+      backAccessibilityLabel="Back to DailyFlo"
       skip={skip}
     />
   );

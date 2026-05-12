@@ -1,26 +1,24 @@
 /**
- * one intro carousel slide content shell (body area under the header).
- * bg is now owned by the parent screen so it can fade between pages without moving on horizontal scroll.
+ * layout wrapper for auth landing body — no native header here, so top inset uses safe-area only.
+ * horizontal padding matches questionnaire shells so both funnels feel aligned.
  */
 
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Paddings } from '@/constants/Paddings';
 
-import { INTRO_GAP_BELOW_HEADER } from '../constants/pagerLayout';
+import { AUTH_GAP_BELOW_HEADER } from '../constants/pagerLayout';
 
-export type OnboardingIntroShellProps = {
+export type OnboardingAuthShellProps = {
   children: React.ReactNode;
 };
 
-export function OnboardingIntroShell({ children }: OnboardingIntroShellProps) {
-  const headerHeight = useHeaderHeight();
+export function OnboardingAuthShell({ children }: OnboardingAuthShellProps) {
   const insets = useSafeAreaInsets();
 
-  // space for floating Continue plus home indicator safe area
+  // room for absolute Continue FAB + home indicator — mirrors former intro shell bottom math
   const bottomPadding = Math.max(insets.bottom, Paddings.screen) + 96;
 
   return (
@@ -29,8 +27,7 @@ export function OnboardingIntroShell({ children }: OnboardingIntroShellProps) {
         style={[
           styles.content,
           {
-            paddingTop: headerHeight + INTRO_GAP_BELOW_HEADER,
-            // `Paddings.screen` + `screenSmall` — same horizontal inset as `IntroScrollCrossfadeTitleLayer` and questionnaire shell
+            paddingTop: insets.top + AUTH_GAP_BELOW_HEADER,
             paddingHorizontal: Paddings.screen + Paddings.screenSmall,
             paddingBottom: bottomPadding,
           },

@@ -1,5 +1,5 @@
 /**
- * onboarding stack — transparent native header; `introductory/` (dots), `slides/` (back + progress).
+ * onboarding stack — `auth/` hides header (full-bleed landing); `slides/` shows back + progress chrome.
  */
 
 import React from 'react';
@@ -53,6 +53,7 @@ export default function OnboardingLayout() {
         headerTransparent: true,
         headerShadowVisible: false,
         headerStyle: { backgroundColor: 'transparent' },}} />
+      <Stack.Screen name="auth" options={{ headerShown: false }} />
       {/* full header is configured before questionnaire body mounts — avoids route title / empty bar flash */}
       <Stack.Screen
         name="slides"
@@ -68,7 +69,7 @@ export default function OnboardingLayout() {
           headerTitle: () => <OnboardingSlidesInitialHeader />,
         }}
       />
-      {/* introductory + slides screens inherit transparent header */}
+      {/* slides inherits transparent header chrome above */}
     </Stack>
   );
 }

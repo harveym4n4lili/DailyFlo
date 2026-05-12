@@ -1,10 +1,11 @@
 /**
- * onboarding group entry — first stack screen points users at the introductory route.
+ * onboarding group entry — first stack screen sends users to the auth landing route.
  */
 
-import { Redirect } from 'expo-router';
+import { Redirect, type Href } from 'expo-router';
+
+const AUTH_HREF = '/(onboarding)/auth' as Href;
 
 export default function OnboardingEntryRedirect() {
-  // normalized url for expo-router typed hrefs (`introductory` → `introductory/index`)
-  return <Redirect href="/(onboarding)/introductory" />;
+  return <Redirect href={AUTH_HREF} />;
 }

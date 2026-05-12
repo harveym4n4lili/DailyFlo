@@ -9,12 +9,12 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { OnboardingContinueButton } from '@/components/ui/Button';
-import { blendIntroContinueButtonColors } from '../../introductory/scrollTransition/introThemeResolvers';
+import { blendIntroContinueButtonColors } from '../../auth/scrollTransition';
 import { Paddings } from '@/constants/Paddings';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
-import { useCompleteOnboardingAndExit } from '../../introductory/hooks/useCompleteOnboardingAndExit';
+import { useCompleteOnboardingAndExit } from '../../auth/hooks/useCompleteOnboardingAndExit';
 import {
   ONBOARDING_SLIDES_CONTINUE_BUTTON_TEXT_STYLE,
   ONBOARDING_SLIDES_CONTINUE_LABEL,

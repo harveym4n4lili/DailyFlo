@@ -1,5 +1,5 @@
 /**
- * questionnaire funnel — root stack screen (see `app/_layout.tsx`), pushed after introductory completes.
+ * questionnaire funnel — root stack screen (see `app/_layout.tsx`), pushed after auth landing completes.
  * native transparent header: back + progress bar (`useOnboardingSlidesHeader`).
  */
 

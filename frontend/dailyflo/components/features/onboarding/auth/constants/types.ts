@@ -1,5 +1,5 @@
 /**
- * intro funnel — typescript shapes + theme/brand token unions shared by text values + slide ui tokens.
+ * auth landing funnel — typescript shapes + theme/brand token unions shared by text values + slide ui tokens.
  */
 
 import type { TextStyle } from 'react-native';
@@ -40,7 +40,7 @@ export type IntroThemeBackgroundInvertedColorKey = Extract<
 >;
 
 /** background.inverted* names — picking dark bands / elevated cards */
-export const INTRO_THEME_BACKGROUND_INVERTED_KEYS = [
+export const AUTH_THEME_BACKGROUND_INVERTED_KEYS = [
   'invertedPrimary',
   'invertedSecondary',
   'invertedTertiary',
@@ -48,7 +48,7 @@ export const INTRO_THEME_BACKGROUND_INVERTED_KEYS = [
 ] as const satisfies readonly IntroThemeBackgroundInvertedColorKey[];
 
 /** text.inverted* — use on inverted backgrounds */
-export const INTRO_THEME_TEXT_INVERTED_KEYS = [
+export const AUTH_THEME_TEXT_INVERTED_KEYS = [
   'invertedPrimary',
   'invertedSecondary',
   'invertedTertiary',
@@ -64,10 +64,8 @@ export type IntroContinueButtonColorToken =
   | IntroSlideTextColor
   | string;
 
-/**
- * direct brand hex accents for illustration layers — not theme slots.
- */
-export const INTRO_BRAND_COLORS = {
+/** direct brand hex accents for illustration layers — not theme slots. */
+export const AUTH_BRAND_COLORS = {
   plant: {
     accent: getPlantBrandColor(500),
     soft: getPlantBrandColor(200),
@@ -82,19 +80,18 @@ export const INTRO_BRAND_COLORS = {
   },
 } as const;
 
-/** per-slide color tokens — rows live in slideUiTokens.ts */
-export type IntroSlideUiConfig = {
+/** single-row landing screen palette — lives in slideUiTokens.ts */
+export type AuthSlideUiConfig = {
   background: IntroSlideBackgroundColor;
   titleColor: IntroSlideTextColor;
   titleHighlightColor?: IntroSlideTextColor;
   captionColor: IntroSlideTextColor;
-  dotIndicatorColor: IntroSlideTextColor;
   continueButtonBackground: IntroContinueButtonColorToken;
   continueButtonIcon: IntroContinueButtonColorToken;
 };
 
-/** headline config — strings live in textValues.ts */
-export type IntroPageTitleConfig = {
+/** headline config — string lives in textValues.ts */
+export type AuthPageTitleConfig = {
   title: string;
   titleStyle?: TextStyle;
   highlight?: {

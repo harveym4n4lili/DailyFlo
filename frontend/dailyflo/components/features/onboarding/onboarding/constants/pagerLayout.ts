@@ -6,13 +6,12 @@
 
 import { Paddings } from '@/constants/Paddings';
 
-import { INTRO_GAP_BELOW_HEADER } from '../../introductory/constants/pagerLayout';
+import { AUTH_GAP_BELOW_HEADER } from '../../auth/constants/pagerLayout';
 
 /**
- * padding under native header before questionnaire titles — same value as intro `INTRO_GAP_BELOW_HEADER`
- * (defined once in introductory `pagerLayout.ts` so both funnels stay aligned).
+ * padding under native header before questionnaire titles — shared px with auth landing `AUTH_GAP_BELOW_HEADER`.
  */
-export const ONBOARDING_GAP_BELOW_HEADER = INTRO_GAP_BELOW_HEADER;
+export const ONBOARDING_GAP_BELOW_HEADER = AUTH_GAP_BELOW_HEADER;
 
 /** vertical gap between crossfade title and caption — caption still lays out under title via normal flow inside each layer */
 export const ONBOARDING_SLIDES_TITLE_SUBTEXT_GAP = Paddings.touchTargetSmall;

@@ -7,7 +7,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, type Href } from 'expo-router';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { StatusBar } from 'expo-status-bar';
@@ -34,6 +34,9 @@ import { logout, checkAuthStatus } from '@/store/slices/auth/authSlice';
 // storage key for tracking onboarding completion status
 // this key is used to check if the user has completed the onboarding flow
 const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
+
+// typed routes lag behind new files until expo regenerates — cast keeps router.push happy
+const ONBOARDING_AUTH_HREF = '/(onboarding)/auth' as Href;
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -105,7 +108,7 @@ export default function RootLayout() {
 
         const needsOnboarding = onboardingComplete !== 'true' || !authState.isAuthenticated;
         if (needsOnboarding) {
-          router.push('/(onboarding)/introductory');
+          router.push(ONBOARDING_AUTH_HREF);
         }
       } catch (error) {
         console.error('Failed to check onboarding status:', error);
@@ -118,7 +121,7 @@ export default function RootLayout() {
         }
 
         router.replace('/(tabs)/today');
-        router.push('/(onboarding)/introductory');
+        router.push(ONBOARDING_AUTH_HREF);
       } finally {
         setIsCheckingOnboarding(false);
       }

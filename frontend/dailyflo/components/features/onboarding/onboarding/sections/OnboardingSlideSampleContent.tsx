@@ -6,7 +6,7 @@
 import React from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
-import { crossfadeInputRange, crossfadeOutputRange } from '../../introductory/scrollTransition';
+import { crossfadeInputRange, crossfadeOutputRange } from '../../auth/scrollTransition';
 import {
   ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT,
   ONBOARDING_QUESTIONNAIRE_NEXT_STEP_SLIDE_INDEX,
