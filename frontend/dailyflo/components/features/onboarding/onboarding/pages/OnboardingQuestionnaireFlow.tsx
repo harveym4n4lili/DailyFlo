@@ -37,11 +37,26 @@ import { OnboardingSampleSlidePage } from './OnboardingSampleSlidePage';
 
 const LAST_STEP = Math.max(ONBOARDING_SLIDES_PAGE_COUNT - 1, 0);
 
+/** baseline questionnaire defaults — only hour/minute are meaningful */
+function initialWakeTime(): Date {
+  const d = new Date();
+  d.setHours(8, 0, 0, 0);
+  return d;
+}
+
+function initialSleepTime(): Date {
+  const d = new Date();
+  d.setHours(22, 0, 0, 0);
+  return d;
+}
+
 export function OnboardingQuestionnaireFlow() {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const router = useGuardedRouter();
   const [pageIndex, setPageIndex] = useState(0);
+  const [wakeTime, setWakeTime] = useState(() => initialWakeTime());
+  const [sleepTime, setSleepTime] = useState(() => initialSleepTime());
   const { completeAndExit, busy } = useCompleteOnboardingAndExit();
 
   const { blendProgress, blendProgressAnim } = useQuestionnaireBlendProgress(pageIndex);
@@ -88,6 +103,15 @@ export function OnboardingQuestionnaireFlow() {
     [themeColors],
   );
 
+  // back chevron uses text.secondary on every step — resolved per row so slideUiTokens stays the single source of truth
+  const backIconColorsByPage = useMemo(
+    () =>
+      ONBOARDING_SLIDES_PAGE_SLIDE_UI.map((row) =>
+        resolveOnboardingSlidesTextColor(themeColors, row.headerBackIconColor ?? 'secondary'),
+      ),
+    [themeColors],
+  );
+
   const barTrack = useMemo(
     () => blendOnboardingSlidesColorAtProgress(blendProgress, trackColorsByPage),
     [blendProgress, trackColorsByPage],
@@ -99,6 +123,11 @@ export function OnboardingQuestionnaireFlow() {
   const stepBackground = useMemo(
     () => blendOnboardingSlidesColorAtProgress(blendProgress, backgroundColorsByPage),
     [blendProgress, backgroundColorsByPage],
+  );
+
+  const backChevronColor = useMemo(
+    () => blendOnboardingSlidesColorAtProgress(blendProgress, backIconColorsByPage),
+    [blendProgress, backIconColorsByPage],
   );
 
   const continuePaint = useMemo(
@@ -143,6 +172,7 @@ export function OnboardingQuestionnaireFlow() {
     totalPages: ONBOARDING_SLIDES_PAGE_COUNT,
     trackColor: barTrack,
     fillColor: barFill,
+    backChevronColor,
     onBackPress: goBack,
     backAccessibilityLabel: pageIndex > 0 ? 'Previous questionnaire step' : 'Back to introduction',
     skip: slidesHeaderSkip,
@@ -162,7 +192,10 @@ export function OnboardingQuestionnaireFlow() {
         <OnboardingSampleSlidePage
           pageIndex={pageIndex}
           blendProgressAnim={blendProgressAnim}
-          blendedAccentFill={continueFill}
+          wakeTime={wakeTime}
+          sleepTime={sleepTime}
+          onWakeTimeChange={setWakeTime}
+          onSleepTimeChange={setSleepTime}
         />
       </View>
       <View

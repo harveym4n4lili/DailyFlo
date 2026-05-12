@@ -93,6 +93,9 @@ export const ONBOARDING_SLIDES_BRAND_COLORS = {
   },
 } as const;
 
+/** which botanical ramp tints the questionnaire time wheel (matches keys of `ONBOARDING_SLIDES_BRAND_COLORS`) */
+export type OnboardingSlidesTimeWheelBrandRamp = keyof typeof ONBOARDING_SLIDES_BRAND_COLORS;
+
 /** per-slide color tokens — rows live in slideUiTokens.ts (mirrors intro `IntroSlideUiConfig` + questionnaire chrome). */
 export type OnboardingSlidesSlideUiConfig = {
   background: OnboardingSlidesSlideBackgroundColor;
@@ -108,8 +111,12 @@ export type OnboardingSlidesSlideUiConfig = {
   progressBarTrack: OnboardingSlidesProgressTrackToken;
   /** native header progress fill — same token family as `continueButtonBackground` (brand, `fill`, interactive, text, …). */
   progressBarFill: OnboardingSlidesContinueButtonColorToken;
-  /** optional — back chevron; defaults to `themeColors.text.primary()` */
+  /** back chevron — theme text slot (`secondary` keeps the control quieter than body headlines) */
   headerBackIconColor?: OnboardingSlidesSlideTextColor;
+  /**
+   * steps that render `OnboardingQuestionnaireTimeWheel` must set this so spinner tint matches the slide’s headline ramp.
+   */
+  timeWheelBrandRamp?: OnboardingSlidesTimeWheelBrandRamp;
 };
 
 /** headline strings live in textValues.ts */

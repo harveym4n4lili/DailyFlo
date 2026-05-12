@@ -31,8 +31,6 @@ export function OnboardingSlidesInitialHeader() {
   const themeColors = useThemeColors();
   const { completeAndExit, busy } = useCompleteOnboardingAndExit();
 
-  const backChevronColor = themeColors.text.secondary();
-
   const skipTextStyle = useMemo(
     () => [
       ONBOARDING_SLIDES_SKIP_TEXT_STYLE,
@@ -43,8 +41,16 @@ export function OnboardingSlidesInitialHeader() {
 
   // step 0 tokens — matches questionnaire at pageIndex 0 before blend animations run
   const row0 = ONBOARDING_SLIDES_PAGE_SLIDE_UI[0];
-  const trackColor = resolveOnboardingSlidesProgressTrackColor(themeColors, row0.progressBarTrack);
-  const fillColor = resolveOnboardingSlidesContinueButtonPaint(themeColors, row0.progressBarFill);
+  const trackColor = row0
+    ? resolveOnboardingSlidesProgressTrackColor(themeColors, row0.progressBarTrack)
+    : resolveOnboardingSlidesProgressTrackColor(themeColors, 'secondary');
+  const fillColor = row0
+    ? resolveOnboardingSlidesContinueButtonPaint(themeColors, row0.progressBarFill)
+    : resolveOnboardingSlidesContinueButtonPaint(themeColors, 'fill');
+  const backChevronColor = resolveOnboardingSlidesTextColor(
+    themeColors,
+    row0?.headerBackIconColor ?? 'secondary',
+  );
   const completionRatio = ONBOARDING_SLIDES_PAGE_COUNT <= 0 ? 0 : (0 + 1) / ONBOARDING_SLIDES_PAGE_COUNT;
 
   const skip = useMemo(

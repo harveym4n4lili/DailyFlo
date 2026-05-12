@@ -12,3 +12,7 @@ export {
   type OnboardingSlidesHeaderChromeProps,
 } from './OnboardingSlidesHeaderChrome';
 export { OnboardingSlidesInitialHeader } from './OnboardingSlidesInitialHeader';
+export {
+  OnboardingQuestionnaireTimeWheel,
+  type OnboardingQuestionnaireTimeWheelProps,
+} from './OnboardingQuestionnaireTimeWheel';

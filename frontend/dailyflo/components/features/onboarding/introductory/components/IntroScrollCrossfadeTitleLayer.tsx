@@ -11,7 +11,6 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import {
   INTRO_FIXED_HEADLINE_OVERLAY_HEIGHT,
   INTRO_SUBTEXT_AREA_HEIGHT,
-  INTRO_TITLE_AREA_HEIGHT,
   INTRO_TITLE_SUBTEXT_GAP,
 } from '../constants';
 import type { IntroPageTitleConfig, IntroSlideUiConfig } from '../constants';
@@ -90,7 +89,7 @@ export function IntroScrollCrossfadeTitleLayer({
                 {parts.after}
               </Text>
             </View>
-            <View style={[styles.subtextBlock, { marginTop: INTRO_TITLE_SUBTEXT_GAP }]}>
+            <View style={styles.subtextBlock}>
               {caption.length > 0 ? (
                 <Text
                   style={[captionTypographyStyle, { color: captionColor }]}
@@ -120,9 +119,10 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
+    // fixed gap from last title line to caption — not tied to a 2-line minHeight title slot
+    gap: INTRO_TITLE_SUBTEXT_GAP,
   },
   titleBlock: {
-    minHeight: INTRO_TITLE_AREA_HEIGHT,
     justifyContent: 'flex-start',
   },
   subtextBlock: {

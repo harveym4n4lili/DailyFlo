@@ -84,12 +84,12 @@ export const TextStyles = {
     //fontFamily: 'Inter-Bold',
   },
   'heading-1': {
-    fontSize: 40,        // large title size
+    fontSize: 38,        // large title size
     fontWeight: FontWeight.bold,
     //fontFamily: 'Inter-semibold',
   },
   'heading-2': {
-    fontSize: 26,        // medium title size
+    fontSize: 24,        // medium title size
     fontWeight: FontWeight.semibold,
    // fontFamily: 'Inter-Bold',
   },

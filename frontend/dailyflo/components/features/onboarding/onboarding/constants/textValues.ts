@@ -23,19 +23,19 @@ export const ONBOARDING_SLIDES_PAGE_TITLES: readonly OnboardingSlidesPageTitleCo
   {
     title: 'What time do you wake up?',
     highlight: {
-      text: 'wake',
+      text: 'wake up',
       style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE,
     },
   },
   {
-    title: 'What time do you sleep?',
+    title: 'When do you go to sleep?',
     highlight: {
-      text: 'sleep',
+      text: 'go to sleep?',
       style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE,
     },
   },
   {
-    title: 'Are you making a task or a habit?',
+    title: 'Pick your next step.',
     highlight: {
       text: 'habit',
       style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE,
@@ -44,13 +44,18 @@ export const ONBOARDING_SLIDES_PAGE_TITLES: readonly OnboardingSlidesPageTitleCo
 ];
 
 export const ONBOARDING_SLIDES_PAGE_CAPTIONS: readonly string[] = [
-  'A couple of quick choices help DailyFlo line up your day with how you actually work.',
-  "We'll anchor your timeline around when your morning usually begins.",
-  'Wind-down time keeps evening blocks and reminders feeling realistic.',
-  'Tasks are one-off to-dos; habits are things you want to repeat — you can tune both anytime.',
+  'Just a few steps to get you started.',
+  "DailyFlo will anchor your timeline around your mornings.",
+  'Having a sleep schedule helps your body and mind.',
+  '',
 ];
 
 /** bottom CTA — same label every step; screen readers still get the longer a11y hint on the last step. */
 export const ONBOARDING_SLIDES_CONTINUE_LABEL = 'Continue';
 
 export const ONBOARDING_SLIDES_PAGE_COUNT = ONBOARDING_SLIDES_PAGE_TITLES.length;
+
+/** wake question slide — matches order of `ONBOARDING_SLIDES_PAGE_TITLES` */
+export const ONBOARDING_QUESTIONNAIRE_WAKE_STEP_INDEX = 1;
+/** sleep question slide */
+export const ONBOARDING_QUESTIONNAIRE_SLEEP_STEP_INDEX = 2;

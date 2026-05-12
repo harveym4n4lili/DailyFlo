@@ -44,8 +44,21 @@ export const Paddings = {
   buttonVertical:20,
   buttonSmallHorizontal: 24, // not yet used
   buttonSmallVertical: 12, // not yet used
-  /** full-width text continue CTA (`OnboardingContinueButton`) — corner radius */
+  /** full-width text continue CTA (`ContinueButton` FAB + `OnboardingContinueButton`) — corner radius */
   continueButtonRadius: 28,
+  /** questionnaire `OnboardingContinueButton` — inner vertical padding inside glass/solid pill */
+  onboardingContinueButtonPaddingVertical: 18,
+  /** questionnaire `OnboardingContinueButton` — inner horizontal padding */
+  onboardingContinueButtonPaddingHorizontal: 32,
+  /** questionnaire `OnboardingContinueButton` — hitSlop on each edge (extends tap past rounded bounds) */
+  onboardingContinueButtonHitSlop: 8,
+
+  /** slides funnel native header (`OnboardingSlidesHeaderChrome`) — horizontal gap between back, progress bar, skip */
+  onboardingSlidesHeaderSectionGap: 16,
+  /** extra tap expansion on back `Pressable` in slides header */
+  onboardingSlidesHeaderBackHitSlop: 12,
+  /** inner padding on back/skip header tap targets (keeps icon/text clear of neighbors beside section gap) */
+  onboardingSlidesHeaderControlPadding: 6,
 
   // touch target padding - for interactive elements
   // used by: today/index, GroupHeader, CalendarView, TaskSummary, ScreenContainer, IconColorModal, TaskForm, WeekView, TimeDurationSelectScreen

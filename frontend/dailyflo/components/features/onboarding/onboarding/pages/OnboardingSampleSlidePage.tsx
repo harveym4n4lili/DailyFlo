@@ -1,5 +1,5 @@
 /**
- * sample page for onboarding questionnaire — shell + crossfade headline/caption + demo card.
+ * one questionnaire step layout — shell + crossfade headline + empty body slot for art/controls.
  */
 
 import React from 'react';
@@ -12,23 +12,37 @@ import { OnboardingQuestionnaireHeadlineCrossfade, OnboardingSlidesShell } from 
 
 export type OnboardingSampleSlidePageProps = {
   pageIndex?: number;
-  /** same `Animated.Value` as `useQuestionnaireBlendProgress` — drives title crossfade */
+  /** fractional step index animation — drives headline opacity crossfade between titles */
   blendProgressAnim: Animated.Value;
-  /** lerped continue fill for sample card accent */
-  blendedAccentFill?: string;
+  wakeTime: Date;
+  sleepTime: Date;
+  onWakeTimeChange: (next: Date) => void;
+  onSleepTimeChange: (next: Date) => void;
 };
 
 export function OnboardingSampleSlidePage({
   pageIndex = 0,
   blendProgressAnim,
-  blendedAccentFill,
+  wakeTime,
+  sleepTime,
+  onWakeTimeChange,
+  onSleepTimeChange,
 }: OnboardingSampleSlidePageProps) {
   return (
     <OnboardingSlidesShell>
+      {/* headline + caption crossfade — wired to token colors per step in OnboardingQuestionnaireHeadlineCrossfade */}
       <View style={{ marginBottom: Paddings.touchTarget }}>
         <OnboardingQuestionnaireHeadlineCrossfade blendProgressAnim={blendProgressAnim} />
       </View>
-      <OnboardingSlideSampleContent pageIndex={pageIndex} accentFill={blendedAccentFill} />
+
+      {/* body: illustrations, form fields, and step chrome go in OnboardingSlideSampleContent (or replace that component) */}
+      <OnboardingSlideSampleContent
+        pageIndex={pageIndex}
+        wakeTime={wakeTime}
+        sleepTime={sleepTime}
+        onWakeTimeChange={onWakeTimeChange}
+        onSleepTimeChange={onSleepTimeChange}
+      />
     </OnboardingSlidesShell>
   );
 }

@@ -22,12 +22,14 @@ export {
   OnboardingQuestionnaireHeadlineCrossfade,
   OnboardingSlidesHeaderChrome,
   OnboardingSlidesInitialHeader,
+  OnboardingQuestionnaireTimeWheel,
 } from './ui';
 export type {
   OnboardingSlidesProgressBarProps,
   OnboardingSlidesShellProps,
   OnboardingQuestionnaireHeadlineCrossfadeProps,
   OnboardingSlidesHeaderChromeProps,
+  OnboardingQuestionnaireTimeWheelProps,
 } from './ui';
 export { OnboardingSampleSlidePage, OnboardingQuestionnaireFlow } from './pages';
 export type { OnboardingSampleSlidePageProps } from './pages';
