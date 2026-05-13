@@ -18,3 +18,6 @@ export const ONBOARDING_SLIDES_TITLE_SUBTEXT_GAP = Paddings.touchTargetSmall;
 
 /** ms — `OnboardingSlidesProgressBar` + questionnaire step-to-step rgb blends (see `useQuestionnaireBlendProgress`) */
 export const ONBOARDING_SLIDES_CONTROL_TRANSITION_MS = 320;
+
+/** corner radius for onboarding task-title preview — one step under 24px grouped cards; uses `Paddings.formDataPillRadius` (20). */
+export const ONBOARDING_TASK_TITLE_SURFACE_RADIUS = Paddings.formDataPillRadius;

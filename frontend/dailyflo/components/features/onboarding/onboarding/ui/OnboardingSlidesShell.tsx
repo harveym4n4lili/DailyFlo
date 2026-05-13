@@ -27,7 +27,7 @@ export function OnboardingSlidesShell({ children }: OnboardingSlidesShellProps) 
           styles.content,
           {
             paddingTop: headerHeight + ONBOARDING_GAP_BELOW_HEADER,
-            paddingHorizontal: Paddings.screen + Paddings.screenSmall,
+            paddingHorizontal: Paddings.screen + Paddings.touchTarget,
             paddingBottom: bottomPadding,
           },
         ]}

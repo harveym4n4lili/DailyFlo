@@ -7,7 +7,10 @@ import { Animated, View } from 'react-native';
 
 import { Paddings } from '@/constants/Paddings';
 
-import type { OnboardingQuestionnaireNextStepChoice, OnboardingQuestionnaireSlideModel } from '../constants';
+import {
+  type OnboardingQuestionnaireNextStepChoice,
+  type OnboardingQuestionnaireSlideModel,
+} from '../constants';
 import { OnboardingSlideSampleContent } from '../sections';
 import { OnboardingQuestionnaireHeadlineCrossfade, OnboardingSlidesShell } from '../ui';
 
@@ -24,6 +27,11 @@ export type OnboardingSampleSlidePageProps = {
   onSleepTimeChange: (next: Date) => void;
   nextStepChoice: OnboardingQuestionnaireNextStepChoice;
   onNextStepChoiceChange: (next: OnboardingQuestionnaireNextStepChoice) => void;
+  /** first task-branch slide — captured title + checkbox until wired into backend */
+  taskAgendaTitle: string;
+  onTaskAgendaTitleChange: (next: string) => void;
+  taskAgendaChecked: boolean;
+  onTaskAgendaCheckedChange: (next: boolean) => void;
 };
 
 export function OnboardingSampleSlidePage({
@@ -36,6 +44,10 @@ export function OnboardingSampleSlidePage({
   onSleepTimeChange,
   nextStepChoice,
   onNextStepChoiceChange,
+  taskAgendaTitle,
+  onTaskAgendaTitleChange,
+  taskAgendaChecked,
+  onTaskAgendaCheckedChange,
 }: OnboardingSampleSlidePageProps) {
   return (
     <OnboardingSlidesShell>
@@ -61,6 +73,10 @@ export function OnboardingSampleSlidePage({
           onSleepTimeChange={onSleepTimeChange}
           nextStepChoice={nextStepChoice}
           onNextStepChoiceChange={onNextStepChoiceChange}
+          taskAgendaTitle={taskAgendaTitle}
+          onTaskAgendaTitleChange={onTaskAgendaTitleChange}
+          taskAgendaChecked={taskAgendaChecked}
+          onTaskAgendaCheckedChange={onTaskAgendaCheckedChange}
         />
       </View>
     </OnboardingSlidesShell>
