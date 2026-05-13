@@ -39,6 +39,8 @@ export type OnboardingSlideSampleContentProps = {
   onTaskAgendaTitleChange: (next: string) => void;
   taskAgendaChecked: boolean;
   onTaskAgendaCheckedChange: (next: boolean) => void;
+  /** passed when parent is on task “agenda” step — yellow tint only that slide’s body slot */
+  taskAgendaLayoutDebug?: boolean;
 };
 
 /** one slide’s body branch — unchanged behavior vs previous single-`pageIndex` implementation */
@@ -54,6 +56,7 @@ function QuestionnaireBodySlot({
   onTaskAgendaTitleChange,
   taskAgendaChecked,
   onTaskAgendaCheckedChange,
+  taskAgendaLayoutDebug,
 }: Pick<
   OnboardingSlideSampleContentProps,
   | 'wakeTime'
@@ -66,6 +69,7 @@ function QuestionnaireBodySlot({
   | 'onTaskAgendaTitleChange'
   | 'taskAgendaChecked'
   | 'onTaskAgendaCheckedChange'
+  | 'taskAgendaLayoutDebug'
 > & { slideIndex: number }) {
   if (slideIndex === ONBOARDING_QUESTIONNAIRE_WAKE_STEP_INDEX) {
     const brandRamp = getOnboardingQuestionnaireTimeWheelBrandRampForSlide(slideIndex);
@@ -109,7 +113,14 @@ function QuestionnaireBodySlot({
   ) {
     return (
       // task agenda — fill crossfade layer height then pin row to bottom so headline/subtext breathe above empty space (same pattern as footer-aligned controls elsewhere)
-      <View style={[styles.bodySlot, styles.taskAgendaBodySlot]} accessibilityLabel="Task agenda title">
+      <View
+        style={[
+          styles.bodySlot,
+          styles.taskAgendaBodySlot,
+          taskAgendaLayoutDebug && styles.taskAgendaBodyDebug,
+        ]}
+        accessibilityLabel="Task agenda title"
+      >
         <OnboardingQuestionnaireTaskTitleRow
           title={taskAgendaTitle}
           onTitleChange={onTaskAgendaTitleChange}
@@ -149,6 +160,7 @@ export function OnboardingSlideSampleContent({
   onTaskAgendaTitleChange,
   taskAgendaChecked,
   onTaskAgendaCheckedChange,
+  taskAgendaLayoutDebug = false,
 }: OnboardingSlideSampleContentProps) {
   const count = pageCount;
   const last = Math.max(count - 1, 0);
@@ -176,6 +188,7 @@ export function OnboardingSlideSampleContent({
           onTaskAgendaTitleChange={onTaskAgendaTitleChange}
           taskAgendaChecked={taskAgendaChecked}
           onTaskAgendaCheckedChange={onTaskAgendaCheckedChange}
+          taskAgendaLayoutDebug={taskAgendaLayoutDebug}
         />
       </View>
 
@@ -204,6 +217,7 @@ export function OnboardingSlideSampleContent({
                 onTaskAgendaTitleChange={onTaskAgendaTitleChange}
                 taskAgendaChecked={taskAgendaChecked}
                 onTaskAgendaCheckedChange={onTaskAgendaCheckedChange}
+                taskAgendaLayoutDebug={taskAgendaLayoutDebug}
               />
             </Animated.View>
           );
@@ -238,5 +252,8 @@ const styles = StyleSheet.create({
   },
   taskAgendaBodySlot: {
     justifyContent: 'flex-end',
+  },
+  taskAgendaBodyDebug: {
+    backgroundColor: 'yellow',
   },
 });
