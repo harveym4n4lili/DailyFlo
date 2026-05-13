@@ -15,7 +15,11 @@ import {
   type OnboardingQuestionnaireNextStepChoice,
 } from '../constants';
 import { getOnboardingQuestionnaireTimeWheelBrandRampForSlide } from '../constants/slideUiTokens';
-import { OnboardingNextStepChoiceCards, OnboardingQuestionnaireTimeWheel } from '../ui';
+import {
+  OnboardingNextStepChoiceCards,
+  OnboardingQuestionnaireTaskTitleRow,
+  OnboardingQuestionnaireTimeWheel,
+} from '../ui';
 
 export type OnboardingSlideSampleContentProps = {
   /** total questionnaire steps — habit vs task changes branch length */
@@ -30,6 +34,11 @@ export type OnboardingSlideSampleContentProps = {
   onSleepTimeChange: (next: Date) => void;
   nextStepChoice: OnboardingQuestionnaireNextStepChoice;
   onNextStepChoiceChange: (next: OnboardingQuestionnaireNextStepChoice) => void;
+  /** task branch slide 1 — title row reads/writes questionnaire-local state until persistence exists */
+  taskAgendaTitle: string;
+  onTaskAgendaTitleChange: (next: string) => void;
+  taskAgendaChecked: boolean;
+  onTaskAgendaCheckedChange: (next: boolean) => void;
 };
 
 /** one slide’s body branch — unchanged behavior vs previous single-`pageIndex` implementation */
@@ -41,6 +50,10 @@ function QuestionnaireBodySlot({
   onSleepTimeChange,
   nextStepChoice,
   onNextStepChoiceChange,
+  taskAgendaTitle,
+  onTaskAgendaTitleChange,
+  taskAgendaChecked,
+  onTaskAgendaCheckedChange,
 }: Pick<
   OnboardingSlideSampleContentProps,
   | 'wakeTime'
@@ -49,6 +62,10 @@ function QuestionnaireBodySlot({
   | 'onSleepTimeChange'
   | 'nextStepChoice'
   | 'onNextStepChoiceChange'
+  | 'taskAgendaTitle'
+  | 'onTaskAgendaTitleChange'
+  | 'taskAgendaChecked'
+  | 'onTaskAgendaCheckedChange'
 > & { slideIndex: number }) {
   if (slideIndex === ONBOARDING_QUESTIONNAIRE_WAKE_STEP_INDEX) {
     const brandRamp = getOnboardingQuestionnaireTimeWheelBrandRampForSlide(slideIndex);
@@ -86,6 +103,23 @@ function QuestionnaireBodySlot({
     );
   }
 
+  if (
+    slideIndex === ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT &&
+    nextStepChoice === 'task'
+  ) {
+    return (
+      // task agenda — fill crossfade layer height then pin row to bottom so headline/subtext breathe above empty space (same pattern as footer-aligned controls elsewhere)
+      <View style={[styles.bodySlot, styles.taskAgendaBodySlot]} accessibilityLabel="Task agenda title">
+        <OnboardingQuestionnaireTaskTitleRow
+          title={taskAgendaTitle}
+          onTitleChange={onTaskAgendaTitleChange}
+          checked={taskAgendaChecked}
+          onCheckedChange={onTaskAgendaCheckedChange}
+        />
+      </View>
+    );
+  }
+
   if (slideIndex >= ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT) {
     return (
       <View style={styles.bodySlot} accessibilityLabel="Questionnaire body content">
@@ -111,6 +145,10 @@ export function OnboardingSlideSampleContent({
   onSleepTimeChange,
   nextStepChoice,
   onNextStepChoiceChange,
+  taskAgendaTitle,
+  onTaskAgendaTitleChange,
+  taskAgendaChecked,
+  onTaskAgendaCheckedChange,
 }: OnboardingSlideSampleContentProps) {
   const count = pageCount;
   const last = Math.max(count - 1, 0);
@@ -134,6 +172,10 @@ export function OnboardingSlideSampleContent({
           onSleepTimeChange={onSleepTimeChange}
           nextStepChoice={nextStepChoice}
           onNextStepChoiceChange={onNextStepChoiceChange}
+          taskAgendaTitle={taskAgendaTitle}
+          onTaskAgendaTitleChange={onTaskAgendaTitleChange}
+          taskAgendaChecked={taskAgendaChecked}
+          onTaskAgendaCheckedChange={onTaskAgendaCheckedChange}
         />
       </View>
 
@@ -158,6 +200,10 @@ export function OnboardingSlideSampleContent({
                 onSleepTimeChange={onSleepTimeChange}
                 nextStepChoice={nextStepChoice}
                 onNextStepChoiceChange={onNextStepChoiceChange}
+                taskAgendaTitle={taskAgendaTitle}
+                onTaskAgendaTitleChange={onTaskAgendaTitleChange}
+                taskAgendaChecked={taskAgendaChecked}
+                onTaskAgendaCheckedChange={onTaskAgendaCheckedChange}
               />
             </Animated.View>
           );
@@ -189,5 +235,8 @@ const styles = StyleSheet.create({
   bodySlot: {
     flex: 1,
     width: '100%',
+  },
+  taskAgendaBodySlot: {
+    justifyContent: 'flex-end',
   },
 });

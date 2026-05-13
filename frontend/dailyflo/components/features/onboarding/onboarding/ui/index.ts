@@ -20,3 +20,7 @@ export {
   OnboardingNextStepChoiceCards,
   type OnboardingNextStepChoiceCardsProps,
 } from './OnboardingNextStepChoiceCards';
+export {
+  OnboardingQuestionnaireTaskTitleRow,
+  type OnboardingQuestionnaireTaskTitleRowProps,
+} from './OnboardingQuestionnaireTaskTitleRow';

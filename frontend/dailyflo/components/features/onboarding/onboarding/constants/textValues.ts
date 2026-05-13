@@ -148,7 +148,12 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_FOLLOWUP_TITLES: readonly OnboardingS
 
 
 
-export const ONBOARDING_QUESTIONNAIRE_TASK_FOLLOWUP_CAPTIONS: readonly string[] = ['', '', '', ''];
+export const ONBOARDING_QUESTIONNAIRE_TASK_FOLLOWUP_CAPTIONS: readonly string[] = [
+  'Name a goal you want to achieve today.',
+  '',
+  '',
+  '',
+];
 
 
 

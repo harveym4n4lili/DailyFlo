@@ -59,6 +59,9 @@ export function OnboardingQuestionnaireFlow() {
     return d;
   });
   const [nextStepChoice, setNextStepChoice] = useState<OnboardingQuestionnaireNextStepChoice>('habit');
+  // holds what the user types on “what’s on the agenda?” — not saved yet; hook this into task create when backend wiring lands
+  const [taskAgendaTitle, setTaskAgendaTitle] = useState('');
+  const [taskAgendaChecked, setTaskAgendaChecked] = useState(false);
   const { completeAndExit, busy } = useCompleteOnboardingAndExit();
 
   const slideModel = useMemo(() => getOnboardingQuestionnaireSlideModel(nextStepChoice), [nextStepChoice]);
@@ -209,6 +212,10 @@ export function OnboardingQuestionnaireFlow() {
           onSleepTimeChange={setSleepTime}
           nextStepChoice={nextStepChoice}
           onNextStepChoiceChange={handleNextStepChoiceChange}
+          taskAgendaTitle={taskAgendaTitle}
+          onTaskAgendaTitleChange={setTaskAgendaTitle}
+          taskAgendaChecked={taskAgendaChecked}
+          onTaskAgendaCheckedChange={setTaskAgendaChecked}
         />
       </View>
       <View
