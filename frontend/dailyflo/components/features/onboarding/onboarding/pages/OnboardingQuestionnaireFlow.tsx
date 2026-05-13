@@ -16,6 +16,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 
 import { useCompleteOnboardingAndExit } from '../../auth/hooks/useCompleteOnboardingAndExit';
 import {
+  ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT,
   ONBOARDING_SLIDES_CONTINUE_BUTTON_TEXT_STYLE,
   ONBOARDING_SLIDES_CONTINUE_LABEL,
   ONBOARDING_SLIDES_FINISH_SETUP_LABEL,
@@ -199,6 +200,10 @@ export function OnboardingQuestionnaireFlow() {
     completeAndExit();
   }, [pageIndex, lastStep, completeAndExit]);
 
+  // visual-only: tint chrome regions on “what’s on the agenda?” so layout boundaries are obvious — remove before shipping
+  const taskAgendaLayoutDebug =
+    nextStepChoice === 'task' && pageIndex === ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT;
+
   return (
     <View style={[styles.root, { backgroundColor: stepBackground }]}>
       <View style={styles.step}>
@@ -216,11 +221,14 @@ export function OnboardingQuestionnaireFlow() {
           onTaskAgendaTitleChange={setTaskAgendaTitle}
           taskAgendaChecked={taskAgendaChecked}
           onTaskAgendaCheckedChange={setTaskAgendaChecked}
+          taskAgendaLayoutDebug={taskAgendaLayoutDebug}
         />
       </View>
       <View
         style={[
           styles.continueFooter,
+          taskAgendaLayoutDebug && styles.continueFooterAgendaDebug,
+          taskAgendaLayoutDebug && styles.continueFooterAgendaFlushTop,
           { paddingBottom: Math.max(insets.bottom, Paddings.screen) },
         ]}
         pointerEvents="box-none"
@@ -254,5 +262,12 @@ const styles = StyleSheet.create({
     paddingTop: Paddings.touchTarget,
     zIndex: 10,
     elevation: 10,
+  },
+  continueFooterAgendaDebug: {
+    backgroundColor: 'green',
+  },
+  // agenda debug: shell drops bottom pad — remove top pad here so yellow body meets green footer
+  continueFooterAgendaFlushTop: {
+    paddingTop: 0,
   },
 });
