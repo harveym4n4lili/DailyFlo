@@ -54,9 +54,10 @@ export function OnboardingSampleSlidePage({
   taskAgendaLayoutDebug = false,
 }: OnboardingSampleSlidePageProps) {
   const { height: windowHeight } = useWindowDimensions();
-  // rn keyboard events → pixel height; 0 means hidden — we only allow scrolling then so headline + task row stay locked until typing needs room
+  // keyboard listeners — gate agenda scroll so it only turns on while the keyboard is visible
   const keyboardHeight = useKeyboardHeight();
-  const agendaScrollEnabled = taskAgendaLayoutDebug && keyboardHeight > 0;
+  // only allow vertical scroll while the keyboard is up — avoids accidental scroll / indicator when the layout is static
+  const agendaScrollEnabled = keyboardHeight > 0;
   // scrollview gives children unbounded height on the vertical axis — approximate half the window so absolute-fill questionnaire layers still get a stable box (same rough fill as flex:1 in the non-scroll branch)
   const agendaScrollBodyMinHeight = Math.round(windowHeight * 0.52);
 
@@ -110,18 +111,22 @@ export function OnboardingSampleSlidePage({
   );
 
   return (
-    <OnboardingSlidesShell flushBottomWithExternalFooter={taskAgendaLayoutDebug}>
+    <OnboardingSlidesShell
+      flushBottomWithExternalFooter={taskAgendaLayoutDebug}
+      omitHorizontalPadding={taskAgendaLayoutDebug}
+    >
       {taskAgendaLayoutDebug ? (
-        // agenda debug step: single vertical scroller wraps red headline band + yellow task slot — scroll only while keyboard is up so taps aren’t eaten when idle
+        // agenda step: scrollview is full width so the vertical indicator hugs the screen edge; inner column uses screen padding only (shell skips its usual h inset here)
         <ScrollView
           style={styles.agendaScroll}
           contentContainerStyle={styles.agendaScrollContent}
           scrollEnabled={agendaScrollEnabled}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={agendaScrollEnabled}
+          indicatorStyle="default"
           bounces={agendaScrollEnabled}
         >
-          <View style={styles.agendaScrollInner}>
+          <View style={[styles.agendaScrollInner, styles.agendaScrollInnerScreenPad]}>
             {headlineBlock}
             {bodyAgendaScroll}
           </View>
@@ -158,5 +163,8 @@ const styles = StyleSheet.create({
   agendaScrollInner: {
     flexGrow: 1,
     width: '100%',
+  },
+  agendaScrollInnerScreenPad: {
+    paddingHorizontal: Paddings.screen,
   },
 });

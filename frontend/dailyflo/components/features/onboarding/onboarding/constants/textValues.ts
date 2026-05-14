@@ -199,6 +199,15 @@ export const ONBOARDING_SLIDES_CONTINUE_LABEL = 'Continue';
 /** last questionnaire step — primary label before exiting onboarding */
 export const ONBOARDING_SLIDES_FINISH_SETUP_LABEL = 'Finish Setup';
 
+/** static copy for `OnboardingTaskAgendaExamplePreview` — sits under the editable task row in the same body container */
+export const ONBOARDING_TASK_AGENDA_EXAMPLE_SECTION_TITLE = 'Later today';
+
+export const ONBOARDING_TASK_AGENDA_EXAMPLE_LINES: readonly string[] = [
+  '• Morning standup — 9:00',
+  '• Focus block — 10:30',
+  '• Walk — 12:15',
+];
+
 
 
 /** wake question slide — index inside `ONBOARDING_QUESTIONNAIRE_CORE_PAGE_TITLES` */

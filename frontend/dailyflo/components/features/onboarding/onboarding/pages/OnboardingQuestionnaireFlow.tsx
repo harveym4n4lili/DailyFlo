@@ -4,8 +4,15 @@
  * after “pick next step”, extra slides depend on habit vs task (`getOnboardingQuestionnaireSlideModel`).
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedKeyboard,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { OnboardingContinueButton } from '@/components/ui/Button';
@@ -16,6 +23,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 
 import { useCompleteOnboardingAndExit } from '../../auth/hooks/useCompleteOnboardingAndExit';
 import {
+  ONBOARDING_CONTINUE_FOOTER_KEYBOARD_FINAL_Y_OFFSET_PX,
   ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT,
   ONBOARDING_SLIDES_CONTINUE_BUTTON_TEXT_STYLE,
   ONBOARDING_SLIDES_CONTINUE_LABEL,
@@ -25,6 +33,7 @@ import {
   ONBOARDING_SLIDES_SKIP_BUTTON_ACCESSIBILITY_LABEL,
   ONBOARDING_SLIDES_SKIP_BUTTON_HIT_SLOP,
   ONBOARDING_SLIDES_SKIP_BUTTON_LABEL,
+  ONBOARDING_TASK_AGENDA_KEYBOARD_FINAL_Y_BLEND_REFERENCE_HEIGHT_PX,
   type OnboardingQuestionnaireNextStepChoice,
   getOnboardingQuestionnaireSlideModel,
 } from '../constants';
@@ -204,9 +213,45 @@ export function OnboardingQuestionnaireFlow() {
   const taskAgendaLayoutDebug =
     nextStepChoice === 'task' && pageIndex === ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT;
 
+  // agenda step only: lift the green strip with keyboard; tail offset uses the same height→blend curve as the agenda body so both tracks stay in sync
+  const agendaFooterLiftActive = useSharedValue(0);
+  useEffect(() => {
+    agendaFooterLiftActive.value = taskAgendaLayoutDebug ? 1 : 0;
+  }, [agendaFooterLiftActive, taskAgendaLayoutDebug]);
+  const keyboard = useAnimatedKeyboard();
+  const agendaFooterKeyboardStyle = useAnimatedStyle(() => {
+    const kb = keyboard.height.value;
+    const active = agendaFooterLiftActive.value;
+    const baseLift = -kb * active;
+    const tailOffset =
+      active *
+      interpolate(
+        kb,
+        [0, ONBOARDING_TASK_AGENDA_KEYBOARD_FINAL_Y_BLEND_REFERENCE_HEIGHT_PX],
+        [0, ONBOARDING_CONTINUE_FOOTER_KEYBOARD_FINAL_Y_OFFSET_PX],
+        Extrapolation.CLAMP,
+      );
+    return {
+      transform: [{ translateY: baseLift + tailOffset }],
+    };
+  });
+  // match footer motion: translateY = -kb + tail → top edge rises by (kb - tail); pad step so scroll area ends there on the agenda step
+  const stepAgendaKeyboardPadStyle = useAnimatedStyle(() => {
+    const kb = keyboard.height.value;
+    const active = agendaFooterLiftActive.value;
+    const tailFoot = interpolate(
+      kb,
+      [0, ONBOARDING_TASK_AGENDA_KEYBOARD_FINAL_Y_BLEND_REFERENCE_HEIGHT_PX],
+      [0, ONBOARDING_CONTINUE_FOOTER_KEYBOARD_FINAL_Y_OFFSET_PX],
+      Extrapolation.CLAMP,
+    );
+    const pad = active * Math.max(0, kb - tailFoot);
+    return { paddingBottom: pad };
+  });
+
   return (
     <View style={[styles.root, { backgroundColor: stepBackground }]}>
-      <View style={styles.step}>
+      <Animated.View style={[styles.step, stepAgendaKeyboardPadStyle]}>
         <OnboardingSampleSlidePage
           slideModel={slideModel}
           blendProgress={blendProgress}
@@ -223,13 +268,14 @@ export function OnboardingQuestionnaireFlow() {
           onTaskAgendaCheckedChange={setTaskAgendaChecked}
           taskAgendaLayoutDebug={taskAgendaLayoutDebug}
         />
-      </View>
-      <View
+      </Animated.View>
+      <Animated.View
         style={[
           styles.continueFooter,
           taskAgendaLayoutDebug && styles.continueFooterAgendaDebug,
           taskAgendaLayoutDebug && styles.continueFooterAgendaFlushTop,
           { paddingBottom: Math.max(insets.bottom, Paddings.screen) },
+          agendaFooterKeyboardStyle,
         ]}
         pointerEvents="box-none"
       >
@@ -245,7 +291,7 @@ export function OnboardingQuestionnaireFlow() {
             pageIndex < lastStep ? 'Continue to next question' : 'Finish setup and go to the app'
           }
         />
-      </View>
+      </Animated.View>
     </View>
   );
 }
