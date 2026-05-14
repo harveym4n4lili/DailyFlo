@@ -14,16 +14,30 @@ export type QuickAddLabelOnlyPillProps = {
   label: string;
   onPress: () => void;
   accessibilityLabel?: string;
+  /**
+   * `outlined` — quick-add style (hairline ring, transparent fill).
+   * `primarySecondaryBlend` — solid fill, no border. Defaults to `primarySecondaryBlend` theme surfaces; optional `blendSurfaceColor` / `blendLabelColor` override (e.g. questionnaire slide–blended brand paints).
+   */
+  variant?: 'outlined' | 'primarySecondaryBlend';
+  /** only applies when `variant === 'primarySecondaryBlend'` */
+  blendSurfaceColor?: string;
+  /** only applies when `variant === 'primarySecondaryBlend'` */
+  blendLabelColor?: string;
 };
 
 export function QuickAddLabelOnlyPill({
   label,
   onPress,
   accessibilityLabel = label,
+  variant = 'outlined',
+  blendSurfaceColor,
+  blendLabelColor,
 }: QuickAddLabelOnlyPillProps) {
   const themeColors = useThemeColors();
-  // same default label tone as unset quick-add filter chips (`pillChromeDefaultColor`)
-  const textColor = themeColors.interactive.active();
+  const defaultBlendFill = themeColors.background.primarySecondaryBlend();
+  const isBlend = variant === 'primarySecondaryBlend';
+  const surfaceColor = isBlend ? (blendSurfaceColor ?? defaultBlendFill) : undefined;
+  const textColor = isBlend ? (blendLabelColor ?? themeColors.text.primary()) : themeColors.interactive.active();
   const borderColor = themeColors.border.secondary();
 
   return (
@@ -34,18 +48,20 @@ export function QuickAddLabelOnlyPill({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
-      <View style={pillStyles.shell}>
-        <View
-          pointerEvents="none"
-          style={[
-            pillStyles.ring,
-            {
-              borderWidth: QUICK_ADD_PILL_BORDER_WIDTH,
-              borderColor,
-            },
-          ]}
-        />
-        <View style={[pillStyles.inner, { backgroundColor: 'transparent' }]}>
+      <View style={[pillStyles.shell, isBlend ? { backgroundColor: surfaceColor } : null]}>
+        {!isBlend ? (
+          <View
+            pointerEvents="none"
+            style={[
+              pillStyles.ring,
+              {
+                borderWidth: QUICK_ADD_PILL_BORDER_WIDTH,
+                borderColor,
+              },
+            ]}
+          />
+        ) : null}
+        <View style={[pillStyles.inner, !isBlend && { backgroundColor: 'transparent' }]}>
           <Text style={[pillStyles.label, getTextStyle('body-large'), { color: textColor }]} numberOfLines={1}>
             {label}
           </Text>

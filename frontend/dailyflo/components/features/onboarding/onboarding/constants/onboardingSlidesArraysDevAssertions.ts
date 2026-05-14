@@ -72,3 +72,22 @@ if (__DEV__) {
     }
   }
 }
+
+// first task-branch step is the task agenda — `taskAgendaBody` should list colors, suggestions heading string, and pill labels
+if (__DEV__) {
+  const agendaUi = ONBOARDING_QUESTIONNAIRE_TASK_BRANCH_SLIDE_UI[0]?.taskAgendaBody;
+  if (!agendaUi?.taskTitleInput || !agendaUi.pencilIcon || !agendaUi.suggestionsSectionTitle) {
+    console.warn(
+      '[onboarding] ONBOARDING_QUESTIONNAIRE_TASK_BRANCH_SLIDE_UI[0] should define taskTitleInput, pencilIcon, suggestionsSectionTitle on taskAgendaBody (see types.ts).',
+    );
+  }
+  if (
+    !agendaUi?.suggestionsSectionHeading ||
+    !agendaUi.suggestionPillLabels ||
+    agendaUi.suggestionPillLabels.length === 0
+  ) {
+    console.warn(
+      '[onboarding] ONBOARDING_QUESTIONNAIRE_TASK_BRANCH_SLIDE_UI[0] taskAgendaBody should define suggestionsSectionHeading and non-empty suggestionPillLabels.',
+    );
+  }
+}

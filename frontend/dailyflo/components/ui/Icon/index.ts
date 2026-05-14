@@ -69,5 +69,8 @@ export type { LeafIconProps } from './icons/LeafIcon';
 export { PencilIcon } from './icons/PencilIcon';
 export type { PencilIconProps } from './icons/PencilIcon';
 
+export { PencilFillIcon } from './icons/PencilFillIcon';
+export type { PencilFillIconProps } from './icons/PencilFillIcon';
+
 export { SFSymbolIcon } from './SFSymbolIcon';
 export type { SFSymbolIconProps } from './SFSymbolIcon';

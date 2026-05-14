@@ -12,6 +12,7 @@ import {
   type OnboardingQuestionnaireNextStepChoice,
   type OnboardingQuestionnaireSlideModel,
 } from '../constants';
+import { ONBOARDING_TASK_AGENDA_INNER_HORIZONTAL_PAD } from '../constants/pagerLayout';
 import { OnboardingSlideSampleContent } from '../sections';
 import { OnboardingQuestionnaireHeadlineCrossfade, OnboardingSlidesShell } from '../ui';
 
@@ -91,6 +92,7 @@ export function OnboardingSampleSlidePage({
       taskAgendaChecked={taskAgendaChecked}
       onTaskAgendaCheckedChange={onTaskAgendaCheckedChange}
       taskAgendaLayoutDebug={taskAgendaLayoutDebug}
+      pageSlideUi={slideModel.pageSlideUi}
     />
   );
 
@@ -110,7 +112,7 @@ export function OnboardingSampleSlidePage({
       omitHorizontalPadding={taskAgendaLayoutDebug}
     >
       {taskAgendaLayoutDebug ? (
-        // agenda step: scrollview is full width so the vertical indicator hugs the screen edge; inner column uses screen padding only (shell skips its usual h inset here)
+        // agenda step: scrollview is full width so the vertical indicator hugs the screen edge; inner column uses the same horizontal inset as the shell’s default questionnaire padding (`ONBOARDING_TASK_AGENDA_INNER_HORIZONTAL_PAD`)
         <ScrollView
           style={styles.agendaScroll}
           contentContainerStyle={styles.agendaScrollContent}
@@ -156,6 +158,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   agendaScrollInnerScreenPad: {
-    paddingHorizontal: Paddings.screen,
+    paddingHorizontal: ONBOARDING_TASK_AGENDA_INNER_HORIZONTAL_PAD,
   },
 });
