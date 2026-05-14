@@ -51,17 +51,17 @@ export const PrimaryColors = {
   },
   dark: {
     // root dark canvas; FAB icon color; inverted dark header/toolbar bands in light mode
-    25: '#16171A',
+    25: '#161618',
     // subtle blend between two dark regions
-    50: '#1E1E24',
+    50: '#232327',
     // cards, sheets, secondary dark surfaces; ghost controls on dark
-    100: '#23232C',
+    100: '#2B2B31',
     // nested panels, dividers, disabled fills; dark strips behind inverted light UI
-    200: '#30313C',
+    200: '#38393F',
     // tertiary labels, disabled text, muted chips on dark
-    300: '#3C3E4B',
+    300: '#3C3D46',
     // secondary text, helper copy; secondary / outline buttons on dark
-    400: '#4E5164',
+    400: '#4F515F',
     // not wired into the theme yet (reserved)
     500: '#ADBBD5',
     // focus outline on dark UI; focus on light-on-dark strips

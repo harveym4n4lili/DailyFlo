@@ -203,16 +203,25 @@ export function OnboardingQuestionnaireFlow() {
   });
 
   const onContinue = useCallback(() => {
+    const onTaskAgendaStep =
+      nextStepChoice === 'task' && pageIndex === ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT;
+    if (onTaskAgendaStep && taskAgendaTitle.trim().length === 0) {
+      return;
+    }
     if (pageIndex < lastStep) {
       setPageIndex((i) => i + 1);
       return;
     }
     completeAndExit();
-  }, [pageIndex, lastStep, completeAndExit]);
+  }, [pageIndex, lastStep, completeAndExit, nextStepChoice, taskAgendaTitle]);
 
   // task-agenda step: enable keyboard-lifted footer and step padding so the scroll area tracks the continue bar
   const taskAgendaLayoutDebug =
     nextStepChoice === 'task' && pageIndex === ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT;
+
+  // initial agenda title is ''; typing or a suggestion chip fills it — empty trimmed string blocks continue
+  const taskAgendaContinueBlocked =
+    taskAgendaLayoutDebug && taskAgendaTitle.trim().length === 0;
 
   // layout height of the continue row below the flex step — keyboard only overlaps the scroll body by (keyboard height − this), so paddingBottom = that gap pins the scrollview bottom to the keyboard top
   const agendaContinueFooterLayoutHeightPx = useMemo(
@@ -282,7 +291,7 @@ export function OnboardingQuestionnaireFlow() {
         <OnboardingContinueButton
           onPress={onContinue}
           loading={busy}
-          disabled={busy}
+          disabled={busy || taskAgendaContinueBlocked}
           label={pageIndex < lastStep ? ONBOARDING_SLIDES_CONTINUE_LABEL : ONBOARDING_SLIDES_FINISH_SETUP_LABEL}
           labelStyle={continueLabelStyle}
           tintColor={continueFill}

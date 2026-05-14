@@ -1,6 +1,6 @@
 /**
  * PencilIcon — lucide-style pencil-with-underline (pencil-line).
- * Used in Browse (Manage Projects) and onboarding task title hint.
+ * Used in Browse (Manage Projects). Onboarding task agenda uses `PencilFillIcon`.
  */
 
 import React from 'react';

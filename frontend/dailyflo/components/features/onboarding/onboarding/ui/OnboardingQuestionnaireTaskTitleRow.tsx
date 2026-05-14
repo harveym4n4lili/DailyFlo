@@ -1,35 +1,37 @@
 /**
  * onboarding “what’s on the agenda?” row — top band: checkbox vertically centered with title + pencil; second band: solid rule only under the title column (spacers mimic checkbox + pencil widths so the line never sits beneath the pencil).
- * surface uses `primarySecondaryBlend()` + radius + equal vertical inset (`Paddings.card`).
+ * surface uses `primarySecondaryBlend()` + radius + equal vertical inset (`Paddings.card`); no outer ring — suggestion chips keep the stroke.
+ * layout tokens live in `taskAgendaTitleRowLayout.ts` so suggestion chips share icon-column width with this row’s checkbox (chips show sparkles instead).
  * state still flows from `OnboardingQuestionnaireFlow` via props (no task entity / redux here).
  */
 
 import React from 'react';
-import { DynamicColorIOS, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { DynamicColorIOS, Platform, TextInput, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { Checkbox, CHECKBOX_SIZE_DEFAULT } from '@/components/ui/Button';
+import { Checkbox } from '@/components/ui/Button';
 import { SolidSeparator } from '@/components/ui/borders';
-import { PencilIcon } from '@/components/ui/Icon';
-import { Paddings } from '@/constants/Paddings';
+import { PencilFillIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 
 import { ONBOARDING_TASK_TITLE_SURFACE_RADIUS } from '../constants/pagerLayout';
-
-/** horizontal space reserved left of title row — mirrors `checkboxColumn` (box + gap before title) */
-const TASK_ROW_CHECKBOX_GAP_WIDTH = CHECKBOX_SIZE_DEFAULT + 12;
-
-const PENCIL_ICON_SIZE = 22;
-
-/** reserve same width as `pencilWrap` margin + icon so separator row clears the pencil */
-const TASK_ROW_PENCIL_SLOT_WIDTH = 12 + PENCIL_ICON_SIZE;
+import {
+  TASK_AGENDA_TITLE_ROW_CHECKBOX_GAP_WIDTH,
+  TASK_AGENDA_TITLE_ROW_PENCIL_ICON_SIZE,
+  TASK_AGENDA_TITLE_ROW_PENCIL_SLOT_WIDTH,
+  taskAgendaTitleRowLayoutStyles as L,
+} from './taskAgendaTitleRowLayout';
 
 export type OnboardingQuestionnaireTaskTitleRowProps = {
   title: string;
   onTitleChange: (next: string) => void;
   checked: boolean;
   onCheckedChange: (next: boolean) => void;
+  /** when set, `TextInput` uses slide `taskAgendaBody.taskTitleInput` (or `titleColor`) blended with questionnaire progress */
+  titleInputColor?: string;
+  /** when set (task agenda + slide-blended chrome), tints the edit pencil with the step’s `captionColor` ramp */
+  pencilIconColor?: string;
 };
 
 export function OnboardingQuestionnaireTaskTitleRow({
@@ -37,11 +39,15 @@ export function OnboardingQuestionnaireTaskTitleRow({
   onTitleChange,
   checked,
   onCheckedChange,
+  titleInputColor,
+  pencilIconColor,
 }: OnboardingQuestionnaireTaskTitleRowProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
 
   const primaryTint = themeColors.primaryButton.fill();
+  const pencilColor = pencilIconColor ?? themeColors.text.tertiary();
+  const inputTextColor = titleInputColor ?? themeColors.text.primary();
   // ios: tint drives caret — no alignSelf stretch here; parent row uses stretch + justifyContent center so glyphs line up with checkbox + pencil
   const titleTintWrapperStyle =
     Platform.OS === 'ios'
@@ -54,20 +60,20 @@ export function OnboardingQuestionnaireTaskTitleRow({
       : {};
 
   return (
-    <View style={styles.root}>
+    <View style={L.root}>
       <View
         style={[
-          styles.surfaceShell,
+          L.surfaceShell,
           {
             backgroundColor: themeColors.background.primarySecondaryBlend(),
             borderRadius: ONBOARDING_TASK_TITLE_SURFACE_RADIUS,
           },
         ]}
       >
-        <View style={styles.surfaceInner}>
+        <View style={L.surfaceInner}>
           {/* band 1 — checkbox centered with input + pencil only (separator is separate band) */}
-          <View style={styles.topBand}>
-            <View style={styles.checkboxColumn}>
+          <View style={L.topBand}>
+            <View style={L.checkboxColumn}>
               <Checkbox
                 checked={checked}
                 expandTapArea
@@ -78,8 +84,8 @@ export function OnboardingQuestionnaireTaskTitleRow({
               />
             </View>
 
-            <View style={styles.titleAndPencilRow}>
-              <View style={[styles.titleInputGrow, titleTintWrapperStyle]}>
+            <View style={L.titleAndPencilRow}>
+              <View style={[L.titleInputGrow, titleTintWrapperStyle]}>
                 <TextInput
                   value={title}
                   onChangeText={onTitleChange}
@@ -90,9 +96,9 @@ export function OnboardingQuestionnaireTaskTitleRow({
                   underlineColorAndroid="transparent"
                   style={[
                     typography.getTextStyle('heading-4'),
-                    styles.titleInput,
+                    L.titleInput,
                     {
-                      color: themeColors.text.primary(),
+                      color: inputTextColor,
                       ...(Platform.OS === 'android'
                         ? {
                             textAlignVertical: 'center',
@@ -107,88 +113,26 @@ export function OnboardingQuestionnaireTaskTitleRow({
                   accessibilityLabel="Task title field"
                 />
               </View>
-              <View style={styles.pencilWrap} accessibilityElementsHidden>
-                <PencilIcon size={PENCIL_ICON_SIZE} color={themeColors.text.tertiary()} />
+              <View style={L.pencilWrap} accessibilityElementsHidden>
+                <PencilFillIcon size={TASK_AGENDA_TITLE_ROW_PENCIL_ICON_SIZE} color={pencilColor} />
               </View>
             </View>
           </View>
 
           {/* band 2 — rule width = title column only (same horizontal gutters as band 1) */}
-          <View style={styles.separatorBand}>
-            <View style={{ width: TASK_ROW_CHECKBOX_GAP_WIDTH }} />
-            <View style={styles.separatorUnderTitle}>
+          <View style={L.separatorBand}>
+            <View style={{ width: TASK_AGENDA_TITLE_ROW_CHECKBOX_GAP_WIDTH }} />
+            <View style={L.separatorUnderTitle}>
               <SolidSeparator
                 paddingLeft={0}
                 paddingRight={0}
                 color={themeColors.background.secondary()}
               />
             </View>
-            <View style={{ width: TASK_ROW_PENCIL_SLOT_WIDTH }} />
+            <View style={{ width: TASK_AGENDA_TITLE_ROW_PENCIL_SLOT_WIDTH }} />
           </View>
         </View>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    width: '100%',
-    alignItems: 'stretch',
-  },
-  surfaceShell: {
-    width: '100%',
-    overflow: 'hidden',
-  },
-  surfaceInner: {
-    width: '100%',
-    paddingVertical: Paddings.card,
-    paddingHorizontal: Paddings.card,
-  },
-  topBand: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    width: '100%',
-  },
-  checkboxColumn: {
-    width: CHECKBOX_SIZE_DEFAULT,
-    marginRight: 12,
-    flexShrink: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  titleAndPencilRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    minWidth: 0,
-  },
-  titleInputGrow: {
-    flex: 1,
-    minWidth: 0,
-    justifyContent: 'center',
-  },
-  pencilWrap: {
-    marginLeft: 12,
-    flexShrink: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'stretch',
-  },
-  separatorBand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    marginTop: Paddings.touchTarget,
-  },
-  separatorUnderTitle: {
-    flex: 1,
-    minWidth: 0,
-  },
-  titleInput: {
-    paddingTop: Paddings.none,
-    paddingBottom: Paddings.none,
-    paddingHorizontal: Paddings.none,
-    marginVertical: Paddings.none,
-  },
-});

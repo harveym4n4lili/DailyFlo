@@ -24,3 +24,7 @@ export {
   OnboardingQuestionnaireTaskTitleRow,
   type OnboardingQuestionnaireTaskTitleRowProps,
 } from './OnboardingQuestionnaireTaskTitleRow';
+export {
+  OnboardingTaskAgendaSuggestionRow,
+  type OnboardingTaskAgendaSuggestionRowProps,
+} from './OnboardingTaskAgendaSuggestionRow';

@@ -117,6 +117,22 @@ export type OnboardingSlidesSlideUiConfig = {
    * steps that render `OnboardingQuestionnaireTimeWheel` must set this so spinner tint matches the slide’s headline ramp.
    */
   timeWheelBrandRamp?: OnboardingSlidesTimeWheelBrandRamp;
+  /**
+   * task questionnaire only — “what’s on the agenda?” body (`OnboardingQuestionnaireTaskTitleRow` + `OnboardingTaskAgendaSuggestionsSection`).
+   * omit on non–task-agenda rows. first task-branch slide should set every field: colors, suggestions heading copy, and pill labels.
+   */
+  taskAgendaBody?: {
+    /** `TextInput` + suggestion chip label color — default: `titleColor` */
+    taskTitleInput?: OnboardingSlidesSlideTextColor;
+    /** pencil icon — default: `captionColor` */
+    pencilIcon?: OnboardingSlidesSlideTextColor;
+    /** suggestions block heading color — default: `titleColor` */
+    suggestionsSectionTitle?: OnboardingSlidesSlideTextColor;
+    /** literal “Here are some suggestions:” line above the chip rows */
+    suggestionsSectionHeading?: string;
+    /** sideways chip labels (order = two horizontal rows after split) */
+    suggestionPillLabels?: readonly string[];
+  };
 };
 
 /** headline strings live in textValues.ts */
