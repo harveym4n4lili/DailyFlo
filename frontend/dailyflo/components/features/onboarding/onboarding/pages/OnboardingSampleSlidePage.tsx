@@ -33,7 +33,7 @@ export type OnboardingSampleSlidePageProps = {
   onTaskAgendaTitleChange: (next: string) => void;
   taskAgendaChecked: boolean;
   onTaskAgendaCheckedChange: (next: boolean) => void;
-  /** when true (task branch + agenda step), paints debug backgrounds so regions line up — temporary */
+  /** when true (task branch + agenda step), use full-bleed scroll + keyboard/synced footer layout */
   taskAgendaLayoutDebug?: boolean;
 };
 
@@ -64,13 +64,7 @@ export function OnboardingSampleSlidePage({
   const headlineBlock = (
     <>
       {/* headline + caption crossfade — tokens come from `slideModel` so branch slides stay in sync */}
-      {/* red wrap only when debugging agenda layout — shows title/subtext bounds vs yellow body */}
-      <View
-        style={[
-          { marginBottom: Paddings.touchTarget },
-          taskAgendaLayoutDebug && styles.headlineAgendaDebug,
-        ]}
-      >
+      <View style={{ marginBottom: Paddings.touchTarget }}>
         <OnboardingQuestionnaireHeadlineCrossfade
           blendProgressAnim={blendProgressAnim}
           pageTitles={slideModel.pageTitles}
@@ -142,9 +136,6 @@ export function OnboardingSampleSlidePage({
 }
 
 const styles = StyleSheet.create({
-  headlineAgendaDebug: {
-    backgroundColor: 'red',
-  },
   bodySlotFlex: {
     flex: 1,
     width: '100%',

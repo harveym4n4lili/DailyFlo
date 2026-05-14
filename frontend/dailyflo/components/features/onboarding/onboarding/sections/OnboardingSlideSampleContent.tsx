@@ -55,7 +55,7 @@ export type OnboardingSlideSampleContentProps = {
   onTaskAgendaTitleChange: (next: string) => void;
   taskAgendaChecked: boolean;
   onTaskAgendaCheckedChange: (next: boolean) => void;
-  /** passed when parent is on task “agenda” step — yellow tint only that slide’s body slot */
+  // passed when parent is on task “agenda” step — flushes footer reserve for keyboard lift (scroll/shell use same flag)
   taskAgendaLayoutDebug?: boolean;
 };
 
@@ -89,7 +89,7 @@ function QuestionnaireBodySlot({
   | 'taskAgendaLayoutDebug'
 > & {
   slideIndex: number;
-  /** reanimated translateY — lifts the whole agenda content column (task row + example below it) with the keyboard; yellow shell stays fixed */
+  /** reanimated translateY — lifts the whole agenda content column (task row + example) with the keyboard; outer body shell stays fixed */
   taskAgendaRowLiftStyle: AnimatedStyle<ViewStyle>;
 }) {
   if (slideIndex === ONBOARDING_QUESTIONNAIRE_WAKE_STEP_INDEX) {
@@ -133,15 +133,8 @@ function QuestionnaireBodySlot({
     nextStepChoice === 'task'
   ) {
     return (
-      // task agenda layout: yellow = outer shell (flex, debug tint) → content wrapper = task row + example (same box for both)
-      <View
-        style={[
-          styles.bodySlot,
-          styles.taskAgendaYellowShell,
-          taskAgendaLayoutDebug && styles.taskAgendaYellowShellDebug,
-        ]}
-        accessibilityLabel="Task agenda body"
-      >
+      // task agenda: outer shell (flex) + content wrapper = task row + example (both keyboard-lifted together)
+      <View style={[styles.bodySlot, styles.taskAgendaBodyShell]} accessibilityLabel="Task agenda body">
         <View style={styles.taskAgendaContentContainer} accessibilityLabel="Task agenda content">
           {/* one lift so the example block travels with the task row and stays directly under it while the keyboard is open */}
           <Reanimated.View style={taskAgendaRowLiftStyle}>
@@ -205,7 +198,7 @@ export function OnboardingSlideSampleContent({
     });
   }, [footerLayoutReservePx, insets.bottom, taskAgendaLayoutDebug]);
 
-  // ios keyboard height — translateY lifts the stacked task row + example together; yellow shell stays put
+  // ios keyboard height — translateY lifts the stacked task row + example together; outer shell stays fixed
   const keyboardMotion = useAnimatedKeyboard();
   const taskAgendaRowLiftStyle = useAnimatedStyle(() => {
     const kb = keyboardMotion.height.value;
@@ -308,11 +301,8 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
-  taskAgendaYellowShell: {
+  taskAgendaBodyShell: {
     justifyContent: 'flex-end',
-  },
-  taskAgendaYellowShellDebug: {
-    backgroundColor: 'yellow',
   },
   taskAgendaContentContainer: {
     width: '100%',
