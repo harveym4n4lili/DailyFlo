@@ -54,7 +54,7 @@ export const ONBOARDING_TASK_AGENDA_KEYBOARD_FINAL_Y_BLEND_REFERENCE_HEIGHT_PX =
  * End value of the keyboard-blended tweak on the **agenda** stack (`translateY` in `OnboardingSlideSampleContent`).
  * **Increase** → block ends **lower** when the keyboard is up. **Decrease** or negative → **higher**. At `keyboard.height` 0 the blend is **0**.
  */
-export const ONBOARDING_TASK_AGENDA_KEYBOARD_FINAL_Y_OFFSET_PX = 64;
+export const ONBOARDING_TASK_AGENDA_KEYBOARD_FINAL_Y_OFFSET_PX = Paddings.screen;
 
 /**
  * End value of the keyboard-blended tweak on the **green continue footer** (`OnboardingQuestionnaireFlow`); same `interpolate` pattern and blend reference as the agenda row.

@@ -35,6 +35,7 @@ import {
   ONBOARDING_SLIDES_SKIP_BUTTON_LABEL,
   ONBOARDING_TASK_AGENDA_KEYBOARD_FINAL_Y_BLEND_REFERENCE_HEIGHT_PX,
   type OnboardingQuestionnaireNextStepChoice,
+  getOnboardingQuestionnaireContinueFooterLayoutHeight,
   getOnboardingQuestionnaireSlideModel,
 } from '../constants';
 import { useOnboardingSlidesHeader, useQuestionnaireBlendProgress } from '../hooks';
@@ -209,11 +210,17 @@ export function OnboardingQuestionnaireFlow() {
     completeAndExit();
   }, [pageIndex, lastStep, completeAndExit]);
 
-  // visual-only: tint chrome regions on “what’s on the agenda?” so layout boundaries are obvious — remove before shipping
+  // task-agenda step: enable keyboard-lifted footer and step padding so the scroll area tracks the continue bar
   const taskAgendaLayoutDebug =
     nextStepChoice === 'task' && pageIndex === ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT;
 
-  // agenda step only: lift the green strip with keyboard; tail offset uses the same height→blend curve as the agenda body so both tracks stay in sync
+  // layout height of the continue row below the flex step — keyboard only overlaps the scroll body by (keyboard height − this), so paddingBottom = that gap pins the scrollview bottom to the keyboard top
+  const agendaContinueFooterLayoutHeightPx = useMemo(
+    () => getOnboardingQuestionnaireContinueFooterLayoutHeight(insets.bottom, { flushFooterTop: true }),
+    [insets.bottom],
+  );
+
+  // agenda step only: lift the continue strip with keyboard; tail offset uses the same height→blend curve as the agenda body so both tracks stay in sync
   const agendaFooterLiftActive = useSharedValue(0);
   useEffect(() => {
     agendaFooterLiftActive.value = taskAgendaLayoutDebug ? 1 : 0;
@@ -235,17 +242,11 @@ export function OnboardingQuestionnaireFlow() {
       transform: [{ translateY: baseLift + tailOffset }],
     };
   });
-  // match footer motion: translateY = -kb + tail → top edge rises by (kb - tail); pad step so scroll area ends there on the agenda step
+  // agenda scroll: pad the flex step so the scrollview’s bottom edge sits on the keyboard top (not on the continue footer’s layout top — that’s kb − footer layout height)
   const stepAgendaKeyboardPadStyle = useAnimatedStyle(() => {
     const kb = keyboard.height.value;
     const active = agendaFooterLiftActive.value;
-    const tailFoot = interpolate(
-      kb,
-      [0, ONBOARDING_TASK_AGENDA_KEYBOARD_FINAL_Y_BLEND_REFERENCE_HEIGHT_PX],
-      [0, ONBOARDING_CONTINUE_FOOTER_KEYBOARD_FINAL_Y_OFFSET_PX],
-      Extrapolation.CLAMP,
-    );
-    const pad = active * Math.max(0, kb - tailFoot);
+    const pad = active * Math.max(0, kb - agendaContinueFooterLayoutHeightPx);
     return { paddingBottom: pad };
   });
 
@@ -272,7 +273,6 @@ export function OnboardingQuestionnaireFlow() {
       <Animated.View
         style={[
           styles.continueFooter,
-          taskAgendaLayoutDebug && styles.continueFooterAgendaDebug,
           taskAgendaLayoutDebug && styles.continueFooterAgendaFlushTop,
           { paddingBottom: Math.max(insets.bottom, Paddings.screen) },
           agendaFooterKeyboardStyle,
@@ -304,15 +304,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   continueFooter: {
+    backgroundColor: 'transparent',
     paddingHorizontal: Paddings.screen,
     paddingTop: Paddings.touchTarget,
     zIndex: 10,
     elevation: 10,
   },
-  continueFooterAgendaDebug: {
-    backgroundColor: 'green',
-  },
-  // agenda debug: shell drops bottom pad — remove top pad here so yellow body meets green footer
+  // agenda: remove top pad so the body can sit flush against the continue row when the shell drops bottom inset
   continueFooterAgendaFlushTop: {
     paddingTop: 0,
   },
