@@ -18,15 +18,22 @@ export type OnboardingSlidesShellProps = {
    * set true on steps where body should meet that footer flush (debug / tight layouts).
    */
   flushBottomWithExternalFooter?: boolean;
+  /**
+   * when true, no horizontal inset on this wrapper — use for full-bleed scrollviews so the system scroll indicator sits on the screen edge; add `Paddings.screen` on the scroll body yourself.
+   */
+  omitHorizontalPadding?: boolean;
 };
 
 export function OnboardingSlidesShell({
   children,
   flushBottomWithExternalFooter = false,
+  omitHorizontalPadding = false,
 }: OnboardingSlidesShellProps) {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const bottomPadding = Math.max(insets.bottom, Paddings.screen) + 48;
+  // default questionnaire inset is screen + touch target; full-bleed scroll paths set omitHorizontalPadding and pad inside the scroll body instead
+  const horizontalContentPad = omitHorizontalPadding ? 0 : Paddings.screen + Paddings.touchTarget;
 
   return (
     <View style={styles.column}>
@@ -35,7 +42,7 @@ export function OnboardingSlidesShell({
           styles.content,
           {
             paddingTop: headerHeight + ONBOARDING_GAP_BELOW_HEADER,
-            paddingHorizontal: Paddings.screen + Paddings.touchTarget,
+            paddingHorizontal: horizontalContentPad,
             paddingBottom: flushBottomWithExternalFooter ? 0 : bottomPadding,
           },
         ]}

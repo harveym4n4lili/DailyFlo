@@ -187,7 +187,7 @@ export function OnboardingQuestionnaireHeadlineCrossfade({
   );
 }
 
-// headline matches shell horizontal inset — parent `OnboardingSlidesShell` already pads; layer is full width of content
+// headline is full width of its parent column (shell pads by default; agenda scroll omits shell h pad and uses screen padding on the scroll body instead)
 const styles = StyleSheet.create({
   stack: {
     position: 'relative',
