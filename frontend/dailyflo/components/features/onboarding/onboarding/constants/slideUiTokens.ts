@@ -119,6 +119,7 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_BRANCH_SLIDE_UI: readonly OnboardingS
     progressBarTrack: { scope: 'track', token: 'primarySecondaryBlend' },
     progressBarFill: { scope: 'button', token: 'marple:500' },
     headerBackIconColor: { scope: 'text', token: 'secondary' },
+    timeWheelBrandRamp: 'marple',
   },
   {
     background: { scope: 'background', token: 'primary' },
