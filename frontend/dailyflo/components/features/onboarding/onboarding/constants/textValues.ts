@@ -151,7 +151,7 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_FOLLOWUP_TITLES: readonly OnboardingS
 export const ONBOARDING_QUESTIONNAIRE_TASK_FOLLOWUP_CAPTIONS: readonly string[] = [
   'Name a goal you want to achieve today.',
   'Choose when this task sits on your timeline.',
-  '',
+  'Slide to set how long you want to spend on this task.',
   '',
 ];
 
@@ -227,7 +227,9 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX = ONBOARDING_QUESTION
 
 export const ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX = ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT + 1;
 
+/** task branch — “for how long?” (same body strip as WOTA + AWT; timer crossfades to duration slider) */
 
+export const ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX = ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT + 2;
 
 export type OnboardingQuestionnaireNextStepChoice = 'habit' | 'task';
 

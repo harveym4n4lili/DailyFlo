@@ -38,6 +38,9 @@ export type OnboardingSampleSlidePageProps = {
   taskAgendaLayoutDebug?: boolean;
   taskEventTime: Date;
   onTaskEventTimeChange: (next: Date) => void;
+  /** picked on the duration sub-step — same overlay as WOTA/AWT; state is local until task create is wired */
+  taskDurationMinutes: number;
+  onTaskDurationMinutesChange: (next: number) => void;
 };
 
 export function OnboardingSampleSlidePage({
@@ -57,6 +60,8 @@ export function OnboardingSampleSlidePage({
   taskAgendaLayoutDebug = false,
   taskEventTime,
   onTaskEventTimeChange,
+  taskDurationMinutes,
+  onTaskDurationMinutesChange,
 }: OnboardingSampleSlidePageProps) {
   const { height: windowHeight } = useWindowDimensions();
   // keyboard listeners — gate agenda scroll so it only turns on while the keyboard is visible
@@ -99,6 +104,8 @@ export function OnboardingSampleSlidePage({
       pageSlideUi={slideModel.pageSlideUi}
       taskEventTime={taskEventTime}
       onTaskEventTimeChange={onTaskEventTimeChange}
+      taskDurationMinutes={taskDurationMinutes}
+      onTaskDurationMinutesChange={onTaskDurationMinutesChange}
     />
   );
 

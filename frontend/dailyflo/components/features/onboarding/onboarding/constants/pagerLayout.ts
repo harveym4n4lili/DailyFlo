@@ -79,7 +79,8 @@ export const ONBOARDING_TASK_WOTA_AWT_REPLACE_SLOT_MIN_HEIGHT_PX = Math.max(
     ONBOARDING_TASK_AGENDA_SUGGESTIONS_INTER_ROW_GAP,
   ONBOARDING_TASK_AGENDA_SUGGESTIONS_TO_TIME_WHEEL_GAP +
     ONBOARDING_TASK_AGENDA_TIME_WHEEL_SECTION_BOTTOM_PADDING +
-    204,
+    // duration step replaces the wheel with a glass slider + tick labels — needs a bit more vertical room than the picker alone
+    268,
 );
 
 /**
@@ -127,3 +128,21 @@ export const ONBOARDING_CONTINUE_FOOTER_KEYBOARD_FINAL_Y_OFFSET_PX = Paddings.sc
  * tune for headline / time wheel clearance — pairs with the WOTA→AWT `blendProgress` sub-step inside `OnboardingSlideSampleContent`.
  */
 export const ONBOARDING_TASK_WOTA_TO_TIME_ROW_LIFT_PX = 100;
+
+/**
+ * “for how long?” duration pill slider — rail + thumb sizes (same replace slot as wota/awt). rail fill uses `themeColors.background.primarySecondaryBlend()` in the component.
+ */
+export const ONBOARDING_DURATION_SLIDER_TRACK_HEIGHT_PX = 52;
+
+export const ONBOARDING_DURATION_SLIDER_THUMB_WIDTH_PX = 60;
+
+export const ONBOARDING_DURATION_SLIDER_THUMB_HEIGHT_PX = 44;
+
+/** reanimated spring when snapping the thumb to a preset — lower stiffness + higher mass = slower ease-in */
+export const ONBOARDING_DURATION_SLIDER_SNAP_SPRING = {
+  damping: 26,
+  stiffness: 95,
+  mass: 0.55,
+} as const;
+
+export const ONBOARDING_DURATION_SLIDER_THUMB_PADDING_HORIZONTAL_PX = 6;
