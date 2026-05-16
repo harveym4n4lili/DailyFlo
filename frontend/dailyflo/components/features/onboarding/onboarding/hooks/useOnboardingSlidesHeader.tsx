@@ -1,6 +1,6 @@
 /**
- * native stack header for post-intro slides — back (left) + progress bar + plain-text skip (right).
- * skip lives in this custom `headerTitle` row — not in `headerRight` (liquid glass) — and not overlaid
+ * native stack header for post-intro slides — back (left) + progress bar; optional plain-text action (right, e.g. skip).
+ * chrome lives in this custom `headerTitle` row — not in `headerRight` (liquid glass) — and not overlaid
  * on the screen body (the native header would paint the bar above a body overlay and hide taps).
  */
 
@@ -25,7 +25,7 @@ export type UseOnboardingSlidesHeaderOpts = {
   /** resolved css color — usually from `resolveOnboardingSlidesTextColor(..., row.headerBackIconColor ?? 'secondary')` */
   backChevronColor: string;
   /** plain label in the header row — avoids headerRight chrome + avoids body overlays under the native header */
-  skip: {
+  skip?: {
     label: string;
     accessibilityLabel: string;
     hitSlop: Insets;

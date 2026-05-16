@@ -53,11 +53,11 @@ export const Paddings = {
   /** questionnaire `OnboardingContinueButton` — hitSlop on each edge (extends tap past rounded bounds) */
   onboardingContinueButtonHitSlop: 8,
 
-  /** slides funnel native header (`OnboardingSlidesHeaderChrome`) — horizontal gap between back, progress bar, skip */
+  /** slides funnel native header (`OnboardingSlidesHeaderChrome`) — horizontal gap between back and progress bar (and optional right action) */
   onboardingSlidesHeaderSectionGap: 16,
   /** extra tap expansion on back `Pressable` in slides header */
   onboardingSlidesHeaderBackHitSlop: 12,
-  /** inner padding on back/skip header tap targets (keeps icon/text clear of neighbors beside section gap) */
+  /** inner padding on back/header tap targets (keeps icon/text clear of neighbors beside section gap) */
   onboardingSlidesHeaderControlPadding: 6,
 
   // touch target padding - for interactive elements

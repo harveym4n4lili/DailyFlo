@@ -1,5 +1,5 @@
 /**
- * onboarding stack — `auth/` hides header (full-bleed landing); `slides/` shows back + progress chrome.
+ * onboarding stack — `auth/` hides header (full-bleed landing); `slides/` shows back + progress chrome (no skip).
  */
 
 import React from 'react';

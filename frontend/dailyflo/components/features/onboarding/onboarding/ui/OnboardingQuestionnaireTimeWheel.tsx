@@ -209,13 +209,15 @@ export function OnboardingQuestionnaireTimeWheel({
   brandRamp,
   ...rest
 }: OnboardingQuestionnaireTimeWheelProps) {
-  const { getPlantBrandColor, getMossBrandColor, getSageBrandColor } = useBrandColors();
+  const { getPlantBrandColor, getMossBrandColor, getSageBrandColor, getMarpleBrandColor } = useBrandColors();
   const wheelLabelColor =
     brandRamp === 'plant'
       ? getPlantBrandColor(700)
       : brandRamp === 'moss'
         ? getMossBrandColor(700)
-        : getSageBrandColor(700);
+        : brandRamp === 'marple'
+          ? getMarpleBrandColor(700)
+          : getSageBrandColor(700);
 
   if (Platform.OS === 'web') {
     return <QuarterHourWebFallback wheelLabelColor={wheelLabelColor} {...rest} />;

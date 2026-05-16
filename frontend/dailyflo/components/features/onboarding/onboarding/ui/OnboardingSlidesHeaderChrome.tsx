@@ -1,5 +1,5 @@
 /**
- * presentational row for the slides native header (back + progress + skip).
+ * presentational row for the slides native header (back + progress bar; optional skip).
  * shared by `useOnboardingSlidesHeader` and `OnboardingSlidesInitialHeader` so static route options
  * can paint the same chrome immediately — avoids a blank header / route title flash before the flow mounts.
  */
@@ -19,7 +19,8 @@ export type OnboardingSlidesHeaderChromeProps = {
   backChevronColor: string;
   onBackPress: () => void;
   backAccessibilityLabel?: string;
-  skip: {
+  /** when set, shows a text action on the right (e.g. skip onboarding); omitted on current slides funnel */
+  skip?: {
     label: string;
     accessibilityLabel: string;
     hitSlop: Insets;
@@ -52,16 +53,18 @@ export function OnboardingSlidesHeaderChrome({
       <View style={styles.barSlot}>
         <OnboardingSlidesProgressBar progress={completionRatio} trackColor={trackColor} fillColor={fillColor} />
       </View>
-      <Pressable
-        onPress={skip.onPress}
-        disabled={skip.disabled}
-        hitSlop={skip.hitSlop}
-        accessibilityRole="button"
-        accessibilityLabel={skip.accessibilityLabel}
-        style={({ pressed }) => [styles.skipTap, pressed && styles.skipTapPressed]}
-      >
-        <Text style={skip.textStyle}>{skip.label}</Text>
-      </Pressable>
+      {skip ? (
+        <Pressable
+          onPress={skip.onPress}
+          disabled={skip.disabled}
+          hitSlop={skip.hitSlop}
+          accessibilityRole="button"
+          accessibilityLabel={skip.accessibilityLabel}
+          style={({ pressed }) => [styles.skipTap, pressed && styles.skipTapPressed]}
+        >
+          <Text style={skip.textStyle}>{skip.label}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

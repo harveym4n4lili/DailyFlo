@@ -44,8 +44,8 @@ import {
 } from '../ui';
 import {
   blendOnboardingSlidesColorAtProgress,
-  resolveOnboardingSlidesContinueButtonPaint,
-  resolveOnboardingSlidesTextColor,
+  resolveOnboardingSlidesSlideUiButton,
+  resolveOnboardingSlidesSlideUiText,
 } from '../onboardingSlidesThemeResolvers';
 import { OnboardingTaskAgendaSuggestionsSection, type OnboardingTaskAgendaSuggestionBrandChrome } from './OnboardingTaskAgendaSuggestionsSection';
 
@@ -275,16 +275,16 @@ export function OnboardingSlideSampleContent({
   // lerp task-agenda chrome + slide continue fill (`plant:500` on task-branch steps) for selected suggestion pills
   const taskAgendaSuggestionBrandChrome = useMemo((): OnboardingTaskAgendaSuggestionBrandChrome => {
     const taskTitlePaints = pageSlideUi.map((row) =>
-      resolveOnboardingSlidesTextColor(themeColors, row.taskAgendaBody?.taskTitleInput ?? row.titleColor),
+      resolveOnboardingSlidesSlideUiText(themeColors, row.taskAgendaBody?.taskTitleInput ?? row.titleColor),
     );
     const titlePaints = pageSlideUi.map((row) =>
-      resolveOnboardingSlidesTextColor(themeColors, row.taskAgendaBody?.suggestionsSectionTitle ?? row.titleColor),
+      resolveOnboardingSlidesSlideUiText(themeColors, row.taskAgendaBody?.suggestionsSectionTitle ?? row.titleColor),
     );
     const captionPaints = pageSlideUi.map((row) =>
-      resolveOnboardingSlidesTextColor(themeColors, row.taskAgendaBody?.pencilIcon ?? row.captionColor),
+      resolveOnboardingSlidesSlideUiText(themeColors, row.taskAgendaBody?.pencilIcon ?? row.captionColor),
     );
     const continueFillPaints = pageSlideUi.map((row) =>
-      resolveOnboardingSlidesContinueButtonPaint(themeColors, row.continueButtonBackground),
+      resolveOnboardingSlidesSlideUiButton(themeColors, row.continueButtonBackground),
     );
     return {
       taskTitleInputColor: blendOnboardingSlidesColorAtProgress(blendProgress, taskTitlePaints),
