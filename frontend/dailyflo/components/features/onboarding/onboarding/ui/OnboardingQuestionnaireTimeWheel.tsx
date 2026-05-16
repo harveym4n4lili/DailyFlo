@@ -22,6 +22,7 @@ import {
 
 import { useBrandColors } from '@/hooks/useColorPalette';
 
+import { ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_BAND_MIN_HEIGHT_PX } from '../constants/pagerLayout';
 import type { OnboardingSlidesTimeWheelBrandRamp } from '../constants/types';
 
 export type OnboardingQuestionnaireTimeWheelProps = {
@@ -245,12 +246,12 @@ const styles = StyleSheet.create({
   pickerClipIOS: {
     width: '100%',
     maxWidth: 320,
-    height: 216,
+    height: ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_BAND_MIN_HEIGHT_PX,
   },
   pickerClipAndroid: {
     width: '100%',
     maxWidth: 320,
-    minHeight: 180,
+    minHeight: ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_BAND_MIN_HEIGHT_PX,
   },
   row: {
     height: ROW_HEIGHT,

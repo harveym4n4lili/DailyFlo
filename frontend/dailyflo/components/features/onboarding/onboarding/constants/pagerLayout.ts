@@ -4,6 +4,8 @@
  * headline block height is **not** reserved here: `OnboardingQuestionnaireHeadlineCrossfade` measures copy with an invisible probe slide so title + caption stack naturally.
  */
 
+import { Platform } from 'react-native';
+
 import { Paddings } from '@/constants/Paddings';
 
 import { AUTH_GAP_BELOW_HEADER } from '../../auth/constants/pagerLayout';
@@ -44,13 +46,11 @@ export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_INTER_ROW_GAP = Paddings.screen 
 /** horizontal gap between suggestion chips inside each sideways row */
 export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_ROW_GAP = Paddings.formDataPillRowGap;
 
-/** vertical gap between the task title row surface and the suggestions block — extra room so the two sections don’t feel stacked */
-export const ONBOARDING_TASK_AGENDA_TASK_TO_SUGGESTIONS_GAP =
-  Paddings.screen * 2 + Paddings.touchTarget + Paddings.touchTargetSmall;
+/** vertical gap between the task title row surface and the suggestions / replace slot (wheel + duration share this slot) */
+export const ONBOARDING_TASK_AGENDA_TASK_TO_SUGGESTIONS_GAP = Paddings.screen + Paddings.touchTargetSmall;
 
-/** vertical gap reserved in **layout math** (replace-slot `minHeight`) between chip band and wheel band — keeps column height stable with `flex-end` shell */
-export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_TO_TIME_WHEEL_GAP =
-  Paddings.screen * 2 + Paddings.touchTargetSmall;
+/** vertical gap reserved in replace-slot `minHeight` math between chip band and wheel/slider bands */
+export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_TO_TIME_WHEEL_GAP = Paddings.screen + Paddings.touchTargetSmall;
 
 /**
  * padding above the native spinner in the wheel layer — kept small; extra lift uses `ONBOARDING_TASK_AGENDA_TIME_WHEEL_NUDGE_UP_PX` so replace-slot `minHeight` (task row via `flex-end`) stays unchanged.
@@ -68,6 +68,12 @@ export const ONBOARDING_TASK_AGENDA_TIME_WHEEL_NUDGE_UP_PX = Paddings.screen * 5
 export const ONBOARDING_TASK_AGENDA_TIME_WHEEL_SECTION_BOTTOM_PADDING = Paddings.screen;
 
 /**
+ * vertical band for the native time spinner + the centered duration slider — matches `OnboardingQuestionnaireTimeWheel` picker clip / web wheel window so both layers share the same midline.
+ */
+export const ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_BAND_MIN_HEIGHT_PX =
+  Platform.OS === 'android' ? 180 : Platform.OS === 'ios' ? 216 : 240;
+
+/**
  * min height for the wota↔awt replace slot (absolute chip + wheel layers).
  * `taskAgendaBodyShell` uses `justifyContent: 'flex-end'`, so an oversized `minHeight` inflates the whole column and pushes the **task row + suggestions upward**. keep this at the tighter of: ~natural suggestion block height, vs wheel + wheel-layer padding.
  */
@@ -79,15 +85,14 @@ export const ONBOARDING_TASK_WOTA_AWT_REPLACE_SLOT_MIN_HEIGHT_PX = Math.max(
     ONBOARDING_TASK_AGENDA_SUGGESTIONS_INTER_ROW_GAP,
   ONBOARDING_TASK_AGENDA_SUGGESTIONS_TO_TIME_WHEEL_GAP +
     ONBOARDING_TASK_AGENDA_TIME_WHEEL_SECTION_BOTTOM_PADDING +
-    // duration step replaces the wheel with a glass slider + tick labels — needs a bit more vertical room than the picker alone
-    268,
+    // duration row: ~track + tight inner pad — keep this branch close to spinner height so `minHeight` doesn’t over-lift the task row
+    196,
 );
 
 /**
- * padding under the last sideways chip row before the scroll viewport / continue footer — same px as `ONBOARDING_TASK_AGENDA_SUGGESTIONS_INTER_ROW_GAP`
- * so the gutter row2→continue matches the gutter between the two horizontal `ScrollView` rows.
+ * padding under the last sideways chip row in the task-agenda replace slot — keep modest so the block doesn’t leave a tall dead band above the time wheel / duration (layers share `top: 0`).
  */
-export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_BASE_BOTTOM_GAP = ONBOARDING_TASK_AGENDA_SUGGESTIONS_INTER_ROW_GAP;
+export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_BASE_BOTTOM_GAP = Paddings.touchTargetSmall;
 
 /**
  * layout height of the questionnaire continue footer (`OnboardingQuestionnaireFlow`).
@@ -127,7 +132,7 @@ export const ONBOARDING_CONTINUE_FOOTER_KEYBOARD_FINAL_Y_OFFSET_PX = Paddings.sc
  * after WOTA → AWT: extra `translateY` (negative = up) on the task title row while suggestions fade out.
  * tune for headline / time wheel clearance — pairs with the WOTA→AWT `blendProgress` sub-step inside `OnboardingSlideSampleContent`.
  */
-export const ONBOARDING_TASK_WOTA_TO_TIME_ROW_LIFT_PX = 100;
+export const ONBOARDING_TASK_WOTA_TO_TIME_ROW_LIFT_PX = 160;
 
 /**
  * “for how long?” duration pill slider — rail + thumb sizes (same replace slot as wota/awt). rail fill uses `themeColors.background.primarySecondaryBlend()` in the component.
@@ -146,3 +151,7 @@ export const ONBOARDING_DURATION_SLIDER_SNAP_SPRING = {
 } as const;
 
 export const ONBOARDING_DURATION_SLIDER_THUMB_PADDING_HORIZONTAL_PX = 6;
+
+/** vertical space under the preset rail before “custom duration” — matches chip→time spacing in the same replace slot (`ONBOARDING_TASK_AGENDA_SUGGESTIONS_TO_TIME_WHEEL_GAP`) */
+export const ONBOARDING_DURATION_SLIDER_TO_CUSTOM_PILL_GAP_PX =
+  Paddings.screen + Paddings.touchTargetSmall;

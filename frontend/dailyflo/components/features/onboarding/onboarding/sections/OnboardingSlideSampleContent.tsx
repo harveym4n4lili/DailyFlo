@@ -17,6 +17,8 @@ import Reanimated, {
   useSharedValue,
 } from 'react-native-reanimated';
 
+import { QuickAddLabelOnlyPill } from '@/components/features/tasks/quickAdd';
+import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import {
   ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT,
@@ -39,7 +41,9 @@ import {
   ONBOARDING_TASK_AGENDA_TASK_TO_SUGGESTIONS_GAP,
   ONBOARDING_TASK_AGENDA_TIME_WHEEL_NUDGE_UP_PX,
   ONBOARDING_TASK_AGENDA_TIME_WHEEL_SECTION_BOTTOM_PADDING,
+  ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_BAND_MIN_HEIGHT_PX,
   ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_TOP_INSET_PX,
+  ONBOARDING_DURATION_SLIDER_TO_CUSTOM_PILL_GAP_PX,
   ONBOARDING_TASK_WOTA_AWT_REPLACE_SLOT_MIN_HEIGHT_PX,
   ONBOARDING_TASK_WOTA_TO_TIME_ROW_LIFT_PX,
   getOnboardingQuestionnaireContinueFooterLayoutHeight,
@@ -236,6 +240,8 @@ type TaskWotaTimeCombinedLayerProps = {
   durationTintColor: string;
   durationLabelColor: string;
   pointerEvents: 'box-none' | 'none';
+  /** AWT + duration — title field won’t focus / open keyboard; checkbox + rest of row unchanged */
+  suppressTaskAgendaTitleKeyboard: boolean;
 };
 
 function TaskWotaTimeCombinedLayer({
@@ -254,7 +260,12 @@ function TaskWotaTimeCombinedLayer({
   durationTintColor,
   durationLabelColor,
   pointerEvents: pointerEventsMode,
+  suppressTaskAgendaTitleKeyboard,
 }: TaskWotaTimeCombinedLayerProps) {
+  const themeColors = useThemeColors();
+  // same treatment as preset numerals on the duration rail (`text.secondary` + 0.85 opacity)
+  const durationRailLabelColor = themeColors.withOpacity(themeColors.text.secondary(), 0.85);
+
   const taskAgendaUi = pageSlideUi[ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX]?.taskAgendaBody;
   const timeRamp: OnboardingSlidesTimeWheelBrandRamp =
     pageSlideUi[ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX]?.timeWheelBrandRamp ?? 'marple';
@@ -344,6 +355,7 @@ function TaskWotaTimeCombinedLayer({
                 onCheckedChange={onTaskAgendaCheckedChange}
                 titleInputColor={taskAgendaSuggestionBrandChrome.taskTitleInputColor}
                 pencilIconColor={taskAgendaSuggestionBrandChrome.pencilIconColor}
+                suppressTitleKeyboard={suppressTaskAgendaTitleKeyboard}
               />
             </Reanimated.View>
             {/* one measured slot: chips ↔ wheel crossfade (opacity only). never clip with animated maxHeight + overflow — that paints a black layer over the native picker on some devices */}
@@ -368,13 +380,24 @@ function TaskWotaTimeCombinedLayer({
                 />
               </Reanimated.View>
               <Reanimated.View style={[styles.taskWotaAwtReplaceLayer, styles.taskWotaDurationLayer, durationSliderStyle]}>
-                <OnboardingQuestionnaireDurationGlassSlider
-                  valueMinutes={taskDurationMinutes}
-                  onChange={onTaskDurationMinutesChange}
-                  tintColor={durationTintColor}
-                  labelColor={durationLabelColor}
-                  accessibilityLabel="How long to spend on this task"
-                />
+                <View style={styles.taskWotaDurationSliderBlock}>
+                  <OnboardingQuestionnaireDurationGlassSlider
+                    valueMinutes={taskDurationMinutes}
+                    onChange={onTaskDurationMinutesChange}
+                    tintColor={durationTintColor}
+                    labelColor={durationLabelColor}
+                    accessibilityLabel="How long to spend on this task"
+                  />
+                  {/* custom duration — solid blend surface like task row; hook `onPress` when the flow adds a picker or sheet */}
+                  <View style={styles.taskWotaDurationCustomPillRow}>
+                    <QuickAddLabelOnlyPill
+                      label="Custom duration?"
+                      variant="primarySecondaryBlend"
+                      blendLabelColor={durationRailLabelColor}
+                      onPress={() => undefined}
+                    />
+                  </View>
+                </View>
               </Reanimated.View>
             </View>
           </Reanimated.View>
@@ -463,6 +486,12 @@ export function OnboardingSlideSampleContent({
   const taskWotaTimeBandActive =
     nextStepChoice === 'task' &&
     blendProgress >= ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX &&
+    blendProgress < ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX + 1;
+
+  // title field: no keyboard on AWT + duration so time wheel / duration controls stay primary (checkbox still toggles)
+  const suppressTaskAgendaTitleKeyboard =
+    nextStepChoice === 'task' &&
+    blendProgress >= ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX &&
     blendProgress < ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX + 1;
 
   const layerIsTouchTarget = (layerIndex: number) =>
@@ -612,6 +641,7 @@ export function OnboardingSlideSampleContent({
           onTaskDurationMinutesChange={onTaskDurationMinutesChange}
           durationTintColor={taskAgendaSuggestionBrandChrome.selectedSlideBrandColor}
           durationLabelColor={taskAgendaSuggestionBrandChrome.selectedSlideBrandIconColor}
+          suppressTaskAgendaTitleKeyboard={suppressTaskAgendaTitleKeyboard}
           pointerEvents={taskWotaTimeBandActive ? 'box-none' : 'none'}
         />
       ) : null}
@@ -673,9 +703,26 @@ const styles = StyleSheet.create({
     paddingBottom: ONBOARDING_TASK_AGENDA_TIME_WHEEL_SECTION_BOTTOM_PADDING,
     transform: [{ translateY: -ONBOARDING_TASK_AGENDA_TIME_WHEEL_NUDGE_UP_PX }],
   },
-  /** glass duration row — no negative nudge (unlike native wheel) so the capsule sits naturally above the footer */
+  /**
+   * duration row — same pad + `translateY` as the wheel layer, same spinner-band min height (`pagerLayout` matches `OnboardingQuestionnaireTimeWheel` clip).
+   * `justifyContent: center` vertically centers the slider + custom pill stack with the native spinner midline.
+   */
   taskWotaDurationLayer: {
     paddingTop: ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_TOP_INSET_PX,
     paddingBottom: ONBOARDING_TASK_AGENDA_TIME_WHEEL_SECTION_BOTTOM_PADDING,
+    transform: [{ translateY: -ONBOARDING_TASK_AGENDA_TIME_WHEEL_NUDGE_UP_PX }],
+    minHeight: ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_BAND_MIN_HEIGHT_PX,
+    justifyContent: 'center',
+  },
+  /** left-align stack; pill uses `marginStart` to match `OnboardingQuestionnaireDurationGlassSlider` inner horizontal pad so rail + pill leading edges line up */
+  taskWotaDurationSliderBlock: {
+    width: '100%',
+    alignItems: 'flex-start',
+    gap: ONBOARDING_DURATION_SLIDER_TO_CUSTOM_PILL_GAP_PX,
+  },
+  /** same inset as duration slider `innerPad` (`Paddings.touchTargetSmall`) — aligns pill with the track, not the full-bleed slider root */
+  taskWotaDurationCustomPillRow: {
+    alignSelf: 'flex-start',
+    marginStart: Paddings.touchTargetSmall,
   },
 });

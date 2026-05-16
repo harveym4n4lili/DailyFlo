@@ -1,5 +1,5 @@
 /**
- * onboarding “for how long?” — pill track with preset labels inside the rail; rail uses `primarySecondaryBlend` + layout tokens from `pagerLayout`. knob uses continue `tintColor` / `labelColor`.
+ * onboarding “for how long?” — track bed uses `primarySecondaryBlend`; secondary pill-band matches thumb height/radius and is inset from the rail by the same px as top/bottom; labels + thumb stack above.
  */
 
 import * as Haptics from 'expo-haptics';
@@ -39,6 +39,8 @@ const TRACK_HEIGHT = ONBOARDING_DURATION_SLIDER_TRACK_HEIGHT_PX;
 const THUMB_WIDTH = ONBOARDING_DURATION_SLIDER_THUMB_WIDTH_PX;
 const THUMB_HEIGHT = ONBOARDING_DURATION_SLIDER_THUMB_HEIGHT_PX;
 const THUMB_TOP = (TRACK_HEIGHT - THUMB_HEIGHT) / 2;
+/** same inset left/right as above/below the shorter pill+trail band inside the taller track rail */
+const TRACK_CONTENT_INSET_PX = THUMB_TOP;
 
 const SNAP_SPRING = ONBOARDING_DURATION_SLIDER_SNAP_SPRING;
 
@@ -136,7 +138,9 @@ export function OnboardingQuestionnaireDurationGlassSlider({
     .onUpdate((event) => {
       'worklet';
       const w = sliderWidthSV.value;
-      const travel = Math.max(w - THUMB_WIDTH, 1);
+      const inset = TRACK_CONTENT_INSET_PX;
+      const innerW = w - 2 * inset;
+      const travel = Math.max(innerW - THUMB_WIDTH, 1);
       const next = Math.max(0, Math.min(1, startPosition.value + event.translationX / travel));
       sliderPosition.value = next;
       const nearest = Math.round(next * (PRESETS.length - 1));
@@ -156,15 +160,31 @@ export function OnboardingQuestionnaireDurationGlassSlider({
 
   const thumbStyle = useAnimatedStyle(() => {
     const w = sliderWidthSV.value;
-    const travel = Math.max(w - THUMB_WIDTH, 0);
+    const inset = TRACK_CONTENT_INSET_PX;
+    const innerW = w - 2 * inset;
+    const travel = Math.max(innerW - THUMB_WIDTH, 0);
     return {
-      left: sliderPosition.value * travel,
+      left: inset + sliderPosition.value * travel,
+    };
+  });
+
+  // secondary trail from the inset edge through the thumb — same horizontal breathing room as the vertical band gap
+  const secondaryTrailBehindPillStyle = useAnimatedStyle(() => {
+    const w = sliderWidthSV.value;
+    const inset = TRACK_CONTENT_INSET_PX;
+    const innerW = w - 2 * inset;
+    const travel = Math.max(innerW - THUMB_WIDTH, 0);
+    const filledW = sliderPosition.value * travel + THUMB_WIDTH;
+    return {
+      width: Math.min(innerW, filledW),
     };
   });
 
   const inTrackLabels = PRESETS.map((preset, index) => {
     const position = index / (PRESETS.length - 1);
-    const centerX = THUMB_WIDTH / 2 + position * Math.max(trackWidth - THUMB_WIDTH, 0);
+    const innerW = Math.max(trackWidth - 2 * TRACK_CONTENT_INSET_PX, 0);
+    const travel = Math.max(innerW - THUMB_WIDTH, 0);
+    const centerX = TRACK_CONTENT_INSET_PX + THUMB_WIDTH / 2 + position * travel;
     const obscured = preset.min === valueMinutes;
     return (
       <View
@@ -224,7 +244,16 @@ export function OnboardingQuestionnaireDurationGlassSlider({
                 }
               }}
             >
-              {inTrackLabels}
+              <Animated.View
+                style={[
+                  styles.trackSecondaryTrailBehindPill,
+                  { backgroundColor: themeColors.background.secondary() },
+                  secondaryTrailBehindPillStyle,
+                ]}
+              />
+              <View style={styles.trackLabelsLayer} pointerEvents="none">
+                {inTrackLabels}
+              </View>
               <Animated.View style={[styles.thumbAbsolute, thumbStyle]}>{thumbBody}</Animated.View>
             </View>
           </View>
@@ -238,9 +267,9 @@ const styles = StyleSheet.create({
   root: {
     width: '100%',
   },
+  // vertical centering comes from parent (`taskWotaDurationLayer` `justifyContent: 'center'` + spinner band height); keep horizontal inset only
   innerPad: {
     paddingHorizontal: Paddings.touchTargetSmall,
-    paddingVertical: Paddings.screen,
     width: '100%',
   },
   trackHitBox: {
@@ -251,8 +280,20 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: TRACK_HEIGHT / 2,
     overflow: 'hidden',
-    justifyContent: 'center',
     position: 'relative',
+  },
+  /** secondary strip matches thumb height + radius so the rail capsule lines up with the sliding pill */
+  trackSecondaryTrailBehindPill: {
+    position: 'absolute',
+    left: TRACK_CONTENT_INSET_PX,
+    top: THUMB_TOP,
+    height: THUMB_HEIGHT,
+    borderRadius: THUMB_HEIGHT / 2,
+    zIndex: 0,
+  },
+  trackLabelsLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2,
   },
   inTrackLabelWrap: {
     position: 'absolute',
