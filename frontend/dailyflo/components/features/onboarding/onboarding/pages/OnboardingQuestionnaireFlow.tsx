@@ -5,7 +5,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Keyboard, StyleSheet, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -24,7 +24,8 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useCompleteOnboardingAndExit } from '../../auth/hooks/useCompleteOnboardingAndExit';
 import {
   ONBOARDING_CONTINUE_FOOTER_KEYBOARD_FINAL_Y_OFFSET_PX,
-  ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT,
+  ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX,
+  ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX,
   ONBOARDING_SLIDES_CONTINUE_BUTTON_TEXT_STYLE,
   ONBOARDING_SLIDES_CONTINUE_LABEL,
   ONBOARDING_SLIDES_FINISH_SETUP_LABEL,
@@ -70,6 +71,13 @@ export function OnboardingQuestionnaireFlow() {
   const [taskAgendaChecked, setTaskAgendaChecked] = useState(false);
   const { completeAndExit, busy } = useCompleteOnboardingAndExit();
 
+  const [taskEventTime, setTaskEventTime] = useState(() => {
+    const d = new Date();
+    d.setHours(9, 0, 0, 0);
+    return d;
+  });
+  const [pendingWotaToTimeAdvance, setPendingWotaToTimeAdvance] = useState(false);
+
   const slideModel = useMemo(() => getOnboardingQuestionnaireSlideModel(nextStepChoice), [nextStepChoice]);
 
   const lastStep = Math.max(0, slideModel.pageCount - 1);
@@ -80,6 +88,26 @@ export function OnboardingQuestionnaireFlow() {
   }, []);
 
   const { blendProgress, blendProgressAnim } = useQuestionnaireBlendProgress(pageIndex);
+
+  // after wota continue: wait for keyboard to hide so the row snaps to baseline, then advance to awt (drives headline + body sub-animation)
+  useEffect(() => {
+    if (!pendingWotaToTimeAdvance) return undefined;
+    let didRun = false;
+    const advance = () => {
+      if (didRun) return;
+      didRun = true;
+      setPageIndex((i) =>
+        i === ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX ? i + 1 : i,
+      );
+      setPendingWotaToTimeAdvance(false);
+    };
+    const sub = Keyboard.addListener('keyboardDidHide', advance);
+    const t = setTimeout(advance, 450);
+    return () => {
+      sub.remove();
+      clearTimeout(t);
+    };
+  }, [pendingWotaToTimeAdvance]);
 
   const trackColorsByPage = useMemo(
     () =>
@@ -157,6 +185,7 @@ export function OnboardingQuestionnaireFlow() {
   );
 
   const goBack = useCallback(() => {
+    setPendingWotaToTimeAdvance(false);
     if (pageIndex > 0) {
       setPageIndex((i) => i - 1);
       return;
@@ -175,9 +204,18 @@ export function OnboardingQuestionnaireFlow() {
   });
 
   const onContinue = useCallback(() => {
-    const onTaskAgendaStep =
-      nextStepChoice === 'task' && pageIndex === ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT;
-    if (onTaskAgendaStep && taskAgendaTitle.trim().length === 0) {
+    if (
+      nextStepChoice === 'task' &&
+      pageIndex === ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX &&
+      taskAgendaTitle.trim().length === 0
+    ) {
+      return;
+    }
+    if (nextStepChoice === 'task' && pageIndex === ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX) {
+      if (pendingWotaToTimeAdvance) return;
+      // blur inputs + collapse keyboard so the shared body layer returns to y=0 before `blendProgress` runs 4→5 (wota→awt)
+      Keyboard.dismiss();
+      setPendingWotaToTimeAdvance(true);
       return;
     }
     if (pageIndex < lastStep) {
@@ -185,15 +223,25 @@ export function OnboardingQuestionnaireFlow() {
       return;
     }
     completeAndExit();
-  }, [pageIndex, lastStep, completeAndExit, nextStepChoice, taskAgendaTitle]);
+  }, [
+    pageIndex,
+    lastStep,
+    completeAndExit,
+    nextStepChoice,
+    taskAgendaTitle,
+    pendingWotaToTimeAdvance,
+  ]);
 
-  // task-agenda step: enable keyboard-lifted footer and step padding so the scroll area tracks the continue bar
+  // task wota + awt: same scroll/keyboard footer treatment on both sub-steps (one shared body layer)
   const taskAgendaLayoutDebug =
-    nextStepChoice === 'task' && pageIndex === ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT;
+    nextStepChoice === 'task' &&
+    pageIndex >= ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX &&
+    pageIndex <= ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX;
 
-  // initial agenda title is ''; typing or a suggestion chip fills it — empty trimmed string blocks continue
   const taskAgendaContinueBlocked =
-    taskAgendaLayoutDebug && taskAgendaTitle.trim().length === 0;
+    nextStepChoice === 'task' &&
+    pageIndex === ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX &&
+    taskAgendaTitle.trim().length === 0;
 
   // layout height of the continue row below the flex step — keyboard only overlaps the scroll body by (keyboard height − this), so paddingBottom = that gap pins the scrollview bottom to the keyboard top
   const agendaContinueFooterLayoutHeightPx = useMemo(
@@ -249,6 +297,8 @@ export function OnboardingQuestionnaireFlow() {
           taskAgendaChecked={taskAgendaChecked}
           onTaskAgendaCheckedChange={setTaskAgendaChecked}
           taskAgendaLayoutDebug={taskAgendaLayoutDebug}
+          taskEventTime={taskEventTime}
+          onTaskEventTimeChange={setTaskEventTime}
         />
       </Animated.View>
       <Animated.View

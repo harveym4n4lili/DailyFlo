@@ -150,7 +150,7 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_FOLLOWUP_TITLES: readonly OnboardingS
 
 export const ONBOARDING_QUESTIONNAIRE_TASK_FOLLOWUP_CAPTIONS: readonly string[] = [
   'Name a goal you want to achieve today.',
-  '',
+  'Choose when this task sits on your timeline.',
   '',
   '',
 ];
@@ -218,6 +218,14 @@ export const ONBOARDING_QUESTIONNAIRE_SLEEP_STEP_INDEX = 2;
 /** habit vs task picker — last index of the fixed core (branch slides start at index + 1) */
 
 export const ONBOARDING_QUESTIONNAIRE_NEXT_STEP_SLIDE_INDEX = ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT - 1;
+
+/** task branch — “what’s on the agenda?” (keyboard + suggestions) */
+
+export const ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX = ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT;
+
+/** task branch — “at what time?” (shares task row position with WOTA; separate progress tick) */
+
+export const ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX = ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT + 1;
 
 
 

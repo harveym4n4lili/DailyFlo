@@ -48,6 +48,40 @@ export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_ROW_GAP = Paddings.formDataPillR
 export const ONBOARDING_TASK_AGENDA_TASK_TO_SUGGESTIONS_GAP =
   Paddings.screen * 2 + Paddings.touchTarget + Paddings.touchTargetSmall;
 
+/** vertical gap reserved in **layout math** (replace-slot `minHeight`) between chip band and wheel band — keeps column height stable with `flex-end` shell */
+export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_TO_TIME_WHEEL_GAP =
+  Paddings.screen * 2 + Paddings.touchTargetSmall;
+
+/**
+ * padding above the native spinner in the wheel layer — kept small; extra lift uses `ONBOARDING_TASK_AGENDA_TIME_WHEEL_NUDGE_UP_PX` so replace-slot `minHeight` (task row via `flex-end`) stays unchanged.
+ */
+export const ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_TOP_INSET_PX = Paddings.touchTargetSmall;
+
+/**
+ * raises the time wheel inside the replace slot (`translateY: -n`) — does not change slot `minHeight`, so the task row baseline stays the same.
+ */
+export const ONBOARDING_TASK_AGENDA_TIME_WHEEL_NUDGE_UP_PX = Paddings.screen * 5 + Paddings.touchTargetSmall;
+
+/**
+ * light padding under the time wheel inside the wota/awt replace slot — keep modest so the picker doesn’t read pinned to the footer (`paddingBottom` on the wheel layer).
+ */
+export const ONBOARDING_TASK_AGENDA_TIME_WHEEL_SECTION_BOTTOM_PADDING = Paddings.screen;
+
+/**
+ * min height for the wota↔awt replace slot (absolute chip + wheel layers).
+ * `taskAgendaBodyShell` uses `justifyContent: 'flex-end'`, so an oversized `minHeight` inflates the whole column and pushes the **task row + suggestions upward**. keep this at the tighter of: ~natural suggestion block height, vs wheel + wheel-layer padding.
+ */
+export const ONBOARDING_TASK_WOTA_AWT_REPLACE_SLOT_MIN_HEIGHT_PX = Math.max(
+  Paddings.screen +
+    Paddings.touchTargetSmall +
+    ONBOARDING_TASK_AGENDA_SUGGESTIONS_TITLE_CHIP_GAP +
+    ONBOARDING_TASK_AGENDA_SUGGESTIONS_INTER_ROW_GAP * 5 +
+    ONBOARDING_TASK_AGENDA_SUGGESTIONS_INTER_ROW_GAP,
+  ONBOARDING_TASK_AGENDA_SUGGESTIONS_TO_TIME_WHEEL_GAP +
+    ONBOARDING_TASK_AGENDA_TIME_WHEEL_SECTION_BOTTOM_PADDING +
+    204,
+);
+
 /**
  * padding under the last sideways chip row before the scroll viewport / continue footer — same px as `ONBOARDING_TASK_AGENDA_SUGGESTIONS_INTER_ROW_GAP`
  * so the gutter row2→continue matches the gutter between the two horizontal `ScrollView` rows.
@@ -87,3 +121,9 @@ export const ONBOARDING_TASK_AGENDA_KEYBOARD_FINAL_Y_OFFSET_PX = 180;
  * **Increase** → footer rides **lower** when the keyboard is up (closer to keys). **Decrease** or negative → **higher**.
  */
 export const ONBOARDING_CONTINUE_FOOTER_KEYBOARD_FINAL_Y_OFFSET_PX = Paddings.screen;
+
+/**
+ * after WOTA → AWT: extra `translateY` (negative = up) on the task title row while suggestions fade out.
+ * tune for headline / time wheel clearance — pairs with the WOTA→AWT `blendProgress` sub-step inside `OnboardingSlideSampleContent`.
+ */
+export const ONBOARDING_TASK_WOTA_TO_TIME_ROW_LIFT_PX = 100;

@@ -34,8 +34,10 @@ export type OnboardingSampleSlidePageProps = {
   onTaskAgendaTitleChange: (next: string) => void;
   taskAgendaChecked: boolean;
   onTaskAgendaCheckedChange: (next: boolean) => void;
-  /** when true (task branch + agenda step), use full-bleed scroll + keyboard/synced footer layout */
+  /** when true (task branch wota+awt), use full-bleed scroll + keyboard/synced footer layout */
   taskAgendaLayoutDebug?: boolean;
+  taskEventTime: Date;
+  onTaskEventTimeChange: (next: Date) => void;
 };
 
 export function OnboardingSampleSlidePage({
@@ -53,6 +55,8 @@ export function OnboardingSampleSlidePage({
   taskAgendaChecked,
   onTaskAgendaCheckedChange,
   taskAgendaLayoutDebug = false,
+  taskEventTime,
+  onTaskEventTimeChange,
 }: OnboardingSampleSlidePageProps) {
   const { height: windowHeight } = useWindowDimensions();
   // keyboard listeners — gate agenda scroll so it only turns on while the keyboard is visible
@@ -93,6 +97,8 @@ export function OnboardingSampleSlidePage({
       onTaskAgendaCheckedChange={onTaskAgendaCheckedChange}
       taskAgendaLayoutDebug={taskAgendaLayoutDebug}
       pageSlideUi={slideModel.pageSlideUi}
+      taskEventTime={taskEventTime}
+      onTaskEventTimeChange={onTaskEventTimeChange}
     />
   );
 

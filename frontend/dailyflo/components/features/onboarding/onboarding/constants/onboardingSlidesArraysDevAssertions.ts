@@ -71,6 +71,12 @@ if (__DEV__) {
       );
     }
   }
+  const awtRamp = ONBOARDING_QUESTIONNAIRE_TASK_BRANCH_SLIDE_UI[1]?.timeWheelBrandRamp;
+  if (!awtRamp) {
+    console.warn(
+      '[onboarding] task branch slide 1 (AWT) should set timeWheelBrandRamp in slideUiTokens.ts for the native time wheel tint.',
+    );
+  }
 }
 
 // first task-branch step is the task agenda — `taskAgendaBody` should list colors, suggestions heading string, and pill labels
