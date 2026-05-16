@@ -32,6 +32,8 @@ export type OnboardingQuestionnaireTaskTitleRowProps = {
   titleInputColor?: string;
   /** when set (task agenda + slide-blended chrome), tints the edit pencil with the step’s `captionColor` ramp */
   pencilIconColor?: string;
+  /** when true, title stays read-only so taps don’t focus / open the keyboard (checkbox still works) */
+  suppressTitleKeyboard?: boolean;
 };
 
 export function OnboardingQuestionnaireTaskTitleRow({
@@ -41,6 +43,7 @@ export function OnboardingQuestionnaireTaskTitleRow({
   onCheckedChange,
   titleInputColor,
   pencilIconColor,
+  suppressTitleKeyboard = false,
 }: OnboardingQuestionnaireTaskTitleRowProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -89,6 +92,7 @@ export function OnboardingQuestionnaireTaskTitleRow({
                 <TextInput
                   value={title}
                   onChangeText={onTitleChange}
+                  editable={!suppressTitleKeyboard}
                   placeholder="Create a task"
                   placeholderTextColor={themeColors.text.tertiary()}
                   selectionColor={primaryTint}
