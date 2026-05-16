@@ -24,6 +24,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useCompleteOnboardingAndExit } from '../../auth/hooks/useCompleteOnboardingAndExit';
 import {
   ONBOARDING_CONTINUE_FOOTER_KEYBOARD_FINAL_Y_OFFSET_PX,
+  ONBOARDING_QUESTIONNAIRE_HABIT_GOAL_STEP_INDEX,
   ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX,
   ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX,
   ONBOARDING_SLIDES_CONTINUE_BUTTON_TEXT_STYLE,
@@ -31,9 +32,11 @@ import {
   ONBOARDING_SLIDES_FINISH_SETUP_LABEL,
   ONBOARDING_TASK_AGENDA_KEYBOARD_FINAL_Y_BLEND_REFERENCE_HEIGHT_PX,
   type OnboardingQuestionnaireNextStepChoice,
+  buildOnboardingQuestionnaireStoredAnswers,
   getOnboardingQuestionnaireContinueFooterLayoutHeight,
   getOnboardingQuestionnaireSlideModel,
 } from '../constants';
+import { ONBOARDING_HABIT_FREQUENCY_OPTIONS } from '../constants/onboardingQuestionnaireAnswers';
 import { useOnboardingSlidesHeader, useQuestionnaireBlendProgress } from '../hooks';
 import {
   blendOnboardingSlidesColorAtProgress,
@@ -79,6 +82,9 @@ export function OnboardingQuestionnaireFlow() {
   // default matches common focus block; glass slider snaps to same preset list as task duration elsewhere
   const [taskDurationMinutes, setTaskDurationMinutes] = useState(30);
   const [pendingWotaToTimeAdvance, setPendingWotaToTimeAdvance] = useState(false);
+  /** habit branch — goal + frequency ids end up in `buildOnboardingQuestionnaireStoredAnswers` on finish */
+  const [habitGoalTitle, setHabitGoalTitle] = useState('');
+  const [habitFrequencyId, setHabitFrequencyId] = useState(() => ONBOARDING_HABIT_FREQUENCY_OPTIONS[0].id);
 
   const slideModel = useMemo(() => getOnboardingQuestionnaireSlideModel(nextStepChoice), [nextStepChoice]);
 
@@ -224,7 +230,22 @@ export function OnboardingQuestionnaireFlow() {
       setPageIndex((i) => i + 1);
       return;
     }
-    completeAndExit();
+    const answers = buildOnboardingQuestionnaireStoredAnswers({
+      branch: nextStepChoice,
+      wakeTime,
+      sleepTime,
+      task: {
+        title: taskAgendaTitle,
+        completed: taskAgendaChecked,
+        eventTime: taskEventTime,
+        durationMinutes: taskDurationMinutes,
+      },
+      habit: {
+        goalTitle: habitGoalTitle,
+        frequencyId: habitFrequencyId,
+      },
+    });
+    void completeAndExit(answers);
   }, [
     pageIndex,
     lastStep,
@@ -232,6 +253,13 @@ export function OnboardingQuestionnaireFlow() {
     nextStepChoice,
     taskAgendaTitle,
     pendingWotaToTimeAdvance,
+    wakeTime,
+    sleepTime,
+    taskAgendaChecked,
+    taskEventTime,
+    taskDurationMinutes,
+    habitGoalTitle,
+    habitFrequencyId,
   ]);
 
   // task wota + awt: same scroll/keyboard footer treatment on both sub-steps (one shared body layer)
@@ -244,6 +272,11 @@ export function OnboardingQuestionnaireFlow() {
     nextStepChoice === 'task' &&
     pageIndex === ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX &&
     taskAgendaTitle.trim().length === 0;
+
+  const habitGoalContinueBlocked =
+    nextStepChoice === 'habit' &&
+    pageIndex === ONBOARDING_QUESTIONNAIRE_HABIT_GOAL_STEP_INDEX &&
+    habitGoalTitle.trim().length === 0;
 
   // layout height of the continue row below the flex step — keyboard only overlaps the scroll body by (keyboard height − this), so paddingBottom = that gap pins the scrollview bottom to the keyboard top
   const agendaContinueFooterLayoutHeightPx = useMemo(
@@ -303,6 +336,10 @@ export function OnboardingQuestionnaireFlow() {
           onTaskEventTimeChange={setTaskEventTime}
           taskDurationMinutes={taskDurationMinutes}
           onTaskDurationMinutesChange={setTaskDurationMinutes}
+          habitGoalTitle={habitGoalTitle}
+          onHabitGoalTitleChange={setHabitGoalTitle}
+          habitFrequencyId={habitFrequencyId}
+          onHabitFrequencyIdChange={setHabitFrequencyId}
         />
       </Animated.View>
       <Animated.View
@@ -317,7 +354,7 @@ export function OnboardingQuestionnaireFlow() {
         <OnboardingContinueButton
           onPress={onContinue}
           loading={busy}
-          disabled={busy || taskAgendaContinueBlocked}
+          disabled={busy || taskAgendaContinueBlocked || habitGoalContinueBlocked}
           label={pageIndex < lastStep ? ONBOARDING_SLIDES_CONTINUE_LABEL : ONBOARDING_SLIDES_FINISH_SETUP_LABEL}
           labelStyle={continueLabelStyle}
           tintColor={continueFill}

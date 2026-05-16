@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
-import { Animated, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, Text, TextInput, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Reanimated, {
   type AnimatedStyle,
@@ -20,8 +20,11 @@ import Reanimated, {
 import { QuickAddLabelOnlyPill } from '@/components/features/tasks/quickAdd';
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
+import { useTypography } from '@/hooks/useTypography';
 import {
   ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT,
+  ONBOARDING_QUESTIONNAIRE_HABIT_FREQUENCY_STEP_INDEX,
+  ONBOARDING_QUESTIONNAIRE_HABIT_GOAL_STEP_INDEX,
   ONBOARDING_QUESTIONNAIRE_NEXT_STEP_SLIDE_INDEX,
   ONBOARDING_QUESTIONNAIRE_SLEEP_STEP_INDEX,
   ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX,
@@ -30,6 +33,7 @@ import {
   ONBOARDING_QUESTIONNAIRE_WAKE_STEP_INDEX,
   type OnboardingQuestionnaireNextStepChoice,
 } from '../constants';
+import { ONBOARDING_HABIT_FREQUENCY_OPTIONS } from '../constants/onboardingQuestionnaireAnswers';
 import {
   ONBOARDING_TASK_AGENDA_SUGGESTION_PILLS,
   ONBOARDING_TASK_AGENDA_SUGGESTIONS_SECTION_TITLE,
@@ -46,6 +50,7 @@ import {
   ONBOARDING_DURATION_SLIDER_TO_CUSTOM_PILL_GAP_PX,
   ONBOARDING_TASK_WOTA_AWT_REPLACE_SLOT_MIN_HEIGHT_PX,
   ONBOARDING_TASK_WOTA_TO_TIME_ROW_LIFT_PX,
+  ONBOARDING_TASK_TITLE_SURFACE_RADIUS,
   getOnboardingQuestionnaireContinueFooterLayoutHeight,
 } from '../constants/pagerLayout';
 import type { OnboardingSlidesSlideUiConfig, OnboardingSlidesTimeWheelBrandRamp } from '../constants/types';
@@ -61,6 +66,78 @@ import {
   resolveOnboardingSlidesSlideUiText,
 } from '../onboardingSlidesThemeResolvers';
 import { OnboardingTaskAgendaSuggestionsSection, type OnboardingTaskAgendaSuggestionBrandChrome } from './OnboardingTaskAgendaSuggestionsSection';
+
+/** habit branch — single-line goal; state lives in `OnboardingQuestionnaireFlow` until finish writes AsyncStorage snapshot */
+function OnboardingHabitGoalField({ value, onChange }: { value: string; onChange: (next: string) => void }) {
+  const themeColors = useThemeColors();
+  const typography = useTypography();
+  const primaryTint = themeColors.primaryButton.fill();
+  return (
+    <TextInput
+      value={value}
+      onChangeText={onChange}
+      placeholder="e.g. Morning stretch"
+      placeholderTextColor={themeColors.text.tertiary()}
+      selectionColor={primaryTint}
+      cursorColor={primaryTint}
+      underlineColorAndroid="transparent"
+      returnKeyType="done"
+      accessibilityLabel="Habit goal"
+      style={[
+        typography.getTextStyle('heading-4'),
+        {
+          width: '100%',
+          paddingVertical: Paddings.card,
+          paddingHorizontal: Paddings.card,
+          backgroundColor: themeColors.background.primarySecondaryBlend(),
+          borderRadius: ONBOARDING_TASK_TITLE_SURFACE_RADIUS,
+          color: themeColors.text.primary(),
+          ...(Platform.OS === 'android' ? { textAlignVertical: 'center' as const, includeFontPadding: false } : {}),
+        },
+      ]}
+    />
+  );
+}
+
+/** habit branch — frequency picks a stable `id` string stored in the questionnaire JSON */
+function OnboardingHabitFrequencyField({
+  valueId,
+  onChange,
+}: {
+  valueId: string;
+  onChange: (nextId: string) => void;
+}) {
+  const themeColors = useThemeColors();
+  const typography = useTypography();
+  return (
+    <View style={{ width: '100%', gap: Paddings.touchTargetSmall }}>
+      {ONBOARDING_HABIT_FREQUENCY_OPTIONS.map((opt) => {
+        const selected = opt.id === valueId;
+        return (
+          <Pressable
+            key={opt.id}
+            onPress={() => onChange(opt.id)}
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
+            accessibilityLabel={opt.label}
+            style={{
+              paddingVertical: Paddings.touchTargetSmall,
+              paddingHorizontal: Paddings.screen,
+              borderRadius: Paddings.formDataPillRadius,
+              backgroundColor: selected
+                ? themeColors.background.secondary()
+                : themeColors.background.primarySecondaryBlend(),
+            }}
+          >
+            <Text style={[typography.getTextStyle('body-large'), { color: themeColors.text.primary() }]}>
+              {opt.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 export type OnboardingSlideSampleContentProps = {
   /** total questionnaire steps — habit vs task changes branch length */
@@ -90,6 +167,11 @@ export type OnboardingSlideSampleContentProps = {
   /** task branch — duration minutes for “for how long?” (same strip as WOTA/AWT; wheel crossfades into glass slider) */
   taskDurationMinutes: number;
   onTaskDurationMinutesChange: (next: number) => void;
+  /** habit branch — mirrors task title storage until JSON is written on finish */
+  habitGoalTitle: string;
+  onHabitGoalTitleChange: (next: string) => void;
+  habitFrequencyId: string;
+  onHabitFrequencyIdChange: (next: string) => void;
 };
 
 /** one slide’s body branch — unchanged behavior vs previous single-`pageIndex` implementation */
@@ -109,6 +191,10 @@ function QuestionnaireBodySlot({
   pageSlideUi,
   taskAgendaRowLiftStyle,
   taskAgendaSuggestionBrandChrome,
+  habitGoalTitle,
+  onHabitGoalTitleChange,
+  habitFrequencyId,
+  onHabitFrequencyIdChange,
 }: Pick<
   OnboardingSlideSampleContentProps,
   | 'wakeTime'
@@ -123,6 +209,10 @@ function QuestionnaireBodySlot({
   | 'onTaskAgendaCheckedChange'
   | 'taskAgendaLayoutDebug'
   | 'pageSlideUi'
+  | 'habitGoalTitle'
+  | 'onHabitGoalTitleChange'
+  | 'habitFrequencyId'
+  | 'onHabitFrequencyIdChange'
 > & {
   slideIndex: number;
   taskAgendaSuggestionBrandChrome: OnboardingTaskAgendaSuggestionBrandChrome;
@@ -178,6 +268,28 @@ function QuestionnaireBodySlot({
     return (
       <View style={styles.bodySlot} accessibilityLabel="Next step choice">
         <OnboardingNextStepChoiceCards value={nextStepChoice} onChange={onNextStepChoiceChange} />
+      </View>
+    );
+  }
+
+  if (
+    nextStepChoice === 'habit' &&
+    slideIndex === ONBOARDING_QUESTIONNAIRE_HABIT_GOAL_STEP_INDEX
+  ) {
+    return (
+      <View style={styles.bodySlot} accessibilityLabel="Habit goal question">
+        <OnboardingHabitGoalField value={habitGoalTitle} onChange={onHabitGoalTitleChange} />
+      </View>
+    );
+  }
+
+  if (
+    nextStepChoice === 'habit' &&
+    slideIndex === ONBOARDING_QUESTIONNAIRE_HABIT_FREQUENCY_STEP_INDEX
+  ) {
+    return (
+      <View style={styles.bodySlot} accessibilityLabel="Habit frequency question">
+        <OnboardingHabitFrequencyField valueId={habitFrequencyId} onChange={onHabitFrequencyIdChange} />
       </View>
     );
   }
@@ -476,6 +588,10 @@ export function OnboardingSlideSampleContent({
   onTaskEventTimeChange,
   taskDurationMinutes,
   onTaskDurationMinutesChange,
+  habitGoalTitle,
+  onHabitGoalTitleChange,
+  habitFrequencyId,
+  onHabitFrequencyIdChange,
 }: OnboardingSlideSampleContentProps) {
   const count = pageCount;
   const last = Math.max(count - 1, 0);
@@ -596,6 +712,10 @@ export function OnboardingSlideSampleContent({
           pageSlideUi={pageSlideUi}
           taskAgendaRowLiftStyle={taskAgendaRowLiftStyle}
           taskAgendaSuggestionBrandChrome={taskAgendaSuggestionBrandChrome}
+          habitGoalTitle={habitGoalTitle}
+          onHabitGoalTitleChange={onHabitGoalTitleChange}
+          habitFrequencyId={habitFrequencyId}
+          onHabitFrequencyIdChange={onHabitFrequencyIdChange}
         />
       </View>
 
@@ -621,6 +741,10 @@ export function OnboardingSlideSampleContent({
             pageSlideUi={pageSlideUi}
             taskAgendaRowLiftStyle={taskAgendaRowLiftStyle}
             taskAgendaSuggestionBrandChrome={taskAgendaSuggestionBrandChrome}
+            habitGoalTitle={habitGoalTitle}
+            onHabitGoalTitleChange={onHabitGoalTitleChange}
+            habitFrequencyId={habitFrequencyId}
+            onHabitFrequencyIdChange={onHabitFrequencyIdChange}
           />
         ))}
       </View>
