@@ -24,7 +24,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useCompleteOnboardingAndExit } from '../../auth/hooks/useCompleteOnboardingAndExit';
 import {
   ONBOARDING_CONTINUE_FOOTER_KEYBOARD_FINAL_Y_OFFSET_PX,
-  ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX,
+  ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX,
   ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX,
   ONBOARDING_SLIDES_CONTINUE_BUTTON_TEXT_STYLE,
   ONBOARDING_SLIDES_CONTINUE_LABEL,
@@ -76,6 +76,8 @@ export function OnboardingQuestionnaireFlow() {
     d.setHours(9, 0, 0, 0);
     return d;
   });
+  // default matches common focus block; glass slider snaps to same preset list as task duration elsewhere
+  const [taskDurationMinutes, setTaskDurationMinutes] = useState(30);
   const [pendingWotaToTimeAdvance, setPendingWotaToTimeAdvance] = useState(false);
 
   const slideModel = useMemo(() => getOnboardingQuestionnaireSlideModel(nextStepChoice), [nextStepChoice]);
@@ -236,7 +238,7 @@ export function OnboardingQuestionnaireFlow() {
   const taskAgendaLayoutDebug =
     nextStepChoice === 'task' &&
     pageIndex >= ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX &&
-    pageIndex <= ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX;
+    pageIndex <= ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX;
 
   const taskAgendaContinueBlocked =
     nextStepChoice === 'task' &&
@@ -299,6 +301,8 @@ export function OnboardingQuestionnaireFlow() {
           taskAgendaLayoutDebug={taskAgendaLayoutDebug}
           taskEventTime={taskEventTime}
           onTaskEventTimeChange={setTaskEventTime}
+          taskDurationMinutes={taskDurationMinutes}
+          onTaskDurationMinutesChange={setTaskDurationMinutes}
         />
       </Animated.View>
       <Animated.View

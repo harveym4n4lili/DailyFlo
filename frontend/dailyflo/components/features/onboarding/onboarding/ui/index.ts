@@ -25,6 +25,10 @@ export {
   type OnboardingQuestionnaireTaskTitleRowProps,
 } from './OnboardingQuestionnaireTaskTitleRow';
 export {
+  OnboardingQuestionnaireDurationGlassSlider,
+  type OnboardingQuestionnaireDurationGlassSliderProps,
+} from './OnboardingQuestionnaireDurationGlassSlider';
+export {
   OnboardingTaskAgendaSuggestionRow,
   type OnboardingTaskAgendaSuggestionRowProps,
 } from './OnboardingTaskAgendaSuggestionRow';

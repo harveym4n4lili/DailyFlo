@@ -22,6 +22,7 @@ import {
   ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT,
   ONBOARDING_QUESTIONNAIRE_NEXT_STEP_SLIDE_INDEX,
   ONBOARDING_QUESTIONNAIRE_SLEEP_STEP_INDEX,
+  ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX,
   ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX,
   ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX,
   ONBOARDING_QUESTIONNAIRE_WAKE_STEP_INDEX,
@@ -46,6 +47,7 @@ import {
 import type { OnboardingSlidesSlideUiConfig, OnboardingSlidesTimeWheelBrandRamp } from '../constants/types';
 import {
   OnboardingNextStepChoiceCards,
+  OnboardingQuestionnaireDurationGlassSlider,
   OnboardingQuestionnaireTaskTitleRow,
   OnboardingQuestionnaireTimeWheel,
 } from '../ui';
@@ -76,11 +78,14 @@ export type OnboardingSlideSampleContentProps = {
   onTaskAgendaCheckedChange: (next: boolean) => void;
   /** per-step chrome rows — same array as headline crossfade; blended for task-agenda body (task row + suggestion rows) */
   pageSlideUi: readonly OnboardingSlidesSlideUiConfig[];
-  // passed when parent is on task WOTA or AWT — scroll shell + keyboard lift (`flushFooterTop`) stay aligned on both sub-steps
+  // passed when parent is on the shared task-agenda strip (WOTA, AWT, duration) — scroll shell + keyboard lift (`flushFooterTop`) stay aligned
   taskAgendaLayoutDebug?: boolean;
   /** task branch — native time wheel value for the AWT sub-step (same body layer as WOTA) */
   taskEventTime: Date;
   onTaskEventTimeChange: (next: Date) => void;
+  /** task branch — duration minutes for “for how long?” (same strip as WOTA/AWT; wheel crossfades into glass slider) */
+  taskDurationMinutes: number;
+  onTaskDurationMinutesChange: (next: number) => void;
 };
 
 /** one slide’s body branch — unchanged behavior vs previous single-`pageIndex` implementation */
@@ -151,7 +156,8 @@ function QuestionnaireBodySlot({
   if (
     nextStepChoice === 'task' &&
     (slideIndex === ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX ||
-      slideIndex === ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX)
+      slideIndex === ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX ||
+      slideIndex === ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX)
   ) {
     // real WOTA+AWT UI lives in `TaskWotaTimeCombinedLayer` so the task row can animate across both progress ticks
     return (
@@ -199,8 +205,20 @@ function wotaToAwtTransitionUnit(progress: number): number {
 }
 
 /**
- * task branch only — one physical layer for WOTA + AWT so the task row stays continuous while `blendProgress` crosses two progress ticks.
- * chips + wheel **crossfade in one replace slot** (opacity + z-index only) — avoids `maxHeight`/`overflow: hidden` clipping the native picker (black box). wheel gets `paddingTop`/`paddingBottom` inside that slot for spacing from chips and above the footer.
+ * after AWT settles (`TASK_TIME_STEP_INDEX`), `blendProgress` runs time→duration — 0 on the time step, 1 on the duration step.
+ * used only to crossfade the native wheel into the glass duration slider (same replace slot as chips↔wheel).
+ */
+function awtToDurationTransitionUnit(progress: number): number {
+  'worklet';
+  if (progress < ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX) {
+    return 0;
+  }
+  return Math.min(Math.max(progress - ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX, 0), 1);
+}
+
+/**
+ * task branch only — one physical layer for WOTA + AWT + duration so the task row + replace slot stay continuous across three progress ticks.
+ * chips + wheel + duration slider **crossfade in one replace slot** (opacity + z-index only) — avoids `maxHeight`/`overflow: hidden` clipping the native picker (black box).
  */
 type TaskWotaTimeCombinedLayerProps = {
   blendProgressSv: SharedValue<number>;
@@ -213,6 +231,10 @@ type TaskWotaTimeCombinedLayerProps = {
   onTaskAgendaCheckedChange: (next: boolean) => void;
   taskEventTime: Date;
   onTaskEventTimeChange: (next: Date) => void;
+  taskDurationMinutes: number;
+  onTaskDurationMinutesChange: (next: number) => void;
+  durationTintColor: string;
+  durationLabelColor: string;
   pointerEvents: 'box-none' | 'none';
 };
 
@@ -227,6 +249,10 @@ function TaskWotaTimeCombinedLayer({
   onTaskAgendaCheckedChange,
   taskEventTime,
   onTaskEventTimeChange,
+  taskDurationMinutes,
+  onTaskDurationMinutesChange,
+  durationTintColor,
+  durationLabelColor,
   pointerEvents: pointerEventsMode,
 }: TaskWotaTimeCombinedLayerProps) {
   const taskAgendaUi = pageSlideUi[ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX]?.taskAgendaBody;
@@ -235,19 +261,19 @@ function TaskWotaTimeCombinedLayer({
 
   const rootStyle = useAnimatedStyle(() => {
     const p = blendProgressSv.value;
-    // off before wota, full during wota→awt, then fades out while the “for how long?” layer fades in
+    // off before wota; stays visible through WOTA + AWT + duration so one strip carries task row + replace slot; fades toward the “in flow” slide only after duration
     if (p < ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX) {
       return { opacity: 0 };
     }
-    if (p < ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX) {
+    if (p < ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX + 1) {
       return { opacity: 1 };
     }
     return {
       opacity: interpolate(
         p,
         [
-          ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX,
-          ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX + 1,
+          ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX,
+          ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX + 1,
         ],
         [1, 0],
         Extrapolation.CLAMP,
@@ -281,10 +307,23 @@ function TaskWotaTimeCombinedLayer({
   });
 
   const timeWheelStyle = useAnimatedStyle(() => {
-    const t = wotaToAwtTransitionUnit(blendProgressSv.value);
+    const p = blendProgressSv.value;
+    const wotaT = wotaToAwtTransitionUnit(p);
+    const wheelBase = interpolate(wotaT, [0.12, 0.68], [0, 1], Extrapolation.CLAMP);
+    const durT = awtToDurationTransitionUnit(p);
+    // overlap the fades so the wheel eases out while the glass slider eases in (same slot)
+    const durFadeOut = interpolate(durT, [0, 0.5], [1, 0], Extrapolation.CLAMP);
     return {
-      opacity: interpolate(t, [0.12, 0.68], [0, 1], Extrapolation.CLAMP),
-      zIndex: t < 0.45 ? 0 : 2,
+      opacity: wheelBase * durFadeOut,
+      zIndex: durT < 0.45 ? 2 : 0,
+    };
+  });
+
+  const durationSliderStyle = useAnimatedStyle(() => {
+    const durT = awtToDurationTransitionUnit(blendProgressSv.value);
+    return {
+      opacity: interpolate(durT, [0.25, 0.85], [0, 1], Extrapolation.CLAMP),
+      zIndex: durT > 0.45 ? 2 : 0,
     };
   });
 
@@ -292,7 +331,7 @@ function TaskWotaTimeCombinedLayer({
     <Reanimated.View
       style={[styles.layer, styles.taskWotaTimeCombinedRoot, rootStyle]}
       pointerEvents={pointerEventsMode}
-      accessibilityLabel="Task agenda and time"
+      accessibilityLabel="Task agenda, time, and duration"
     >
       <View style={[styles.bodySlot, styles.taskAgendaBodyShell]}>
         <View style={styles.taskAgendaContentContainer}>
@@ -326,6 +365,15 @@ function TaskWotaTimeCombinedLayer({
                   value={taskEventTime}
                   onChange={onTaskEventTimeChange}
                   accessibilityLabel="Task time on your timeline"
+                />
+              </Reanimated.View>
+              <Reanimated.View style={[styles.taskWotaAwtReplaceLayer, styles.taskWotaDurationLayer, durationSliderStyle]}>
+                <OnboardingQuestionnaireDurationGlassSlider
+                  valueMinutes={taskDurationMinutes}
+                  onChange={onTaskDurationMinutesChange}
+                  tintColor={durationTintColor}
+                  labelColor={durationLabelColor}
+                  accessibilityLabel="How long to spend on this task"
                 />
               </Reanimated.View>
             </View>
@@ -403,24 +451,27 @@ export function OnboardingSlideSampleContent({
   taskAgendaLayoutDebug = false,
   taskEventTime,
   onTaskEventTimeChange,
+  taskDurationMinutes,
+  onTaskDurationMinutesChange,
 }: OnboardingSlideSampleContentProps) {
   const count = pageCount;
   const last = Math.max(count - 1, 0);
   // nearest settled slide — only that layer stays interactive so faded wheels don’t steal taps
   const touchIndex = Math.min(last, Math.max(0, Math.round(blendProgress)));
 
-  // wota+awt share one overlay — disable pointer hit-testing on the empty placeholder layers 4/5 while that strip is active
+  // wota + awt + duration share one overlay — disable hit-testing on the empty placeholder layers while that strip is active
   const taskWotaTimeBandActive =
     nextStepChoice === 'task' &&
     blendProgress >= ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX &&
-    blendProgress < ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX + 1;
+    blendProgress < ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX + 1;
 
   const layerIsTouchTarget = (layerIndex: number) =>
     touchIndex === layerIndex &&
     !(
       taskWotaTimeBandActive &&
       (layerIndex === ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX ||
-        layerIndex === ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX)
+        layerIndex === ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX ||
+        layerIndex === ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX)
     );
 
   const themeColors = useThemeColors();
@@ -438,11 +489,15 @@ export function OnboardingSlideSampleContent({
     const continueFillPaints = pageSlideUi.map((row) =>
       resolveOnboardingSlidesSlideUiButton(themeColors, row.continueButtonBackground),
     );
+    const continueIconPaints = pageSlideUi.map((row) =>
+      resolveOnboardingSlidesSlideUiButton(themeColors, row.continueButtonIcon),
+    );
     return {
       taskTitleInputColor: blendOnboardingSlidesColorAtProgress(blendProgress, taskTitlePaints),
       sectionTitleColor: blendOnboardingSlidesColorAtProgress(blendProgress, titlePaints),
       pencilIconColor: blendOnboardingSlidesColorAtProgress(blendProgress, captionPaints),
       selectedSlideBrandColor: blendOnboardingSlidesColorAtProgress(blendProgress, continueFillPaints),
+      selectedSlideBrandIconColor: blendOnboardingSlidesColorAtProgress(blendProgress, continueIconPaints),
     };
   }, [blendProgress, pageSlideUi, themeColors]);
 
@@ -553,6 +608,10 @@ export function OnboardingSlideSampleContent({
           onTaskAgendaCheckedChange={onTaskAgendaCheckedChange}
           taskEventTime={taskEventTime}
           onTaskEventTimeChange={onTaskEventTimeChange}
+          taskDurationMinutes={taskDurationMinutes}
+          onTaskDurationMinutesChange={onTaskDurationMinutesChange}
+          durationTintColor={taskAgendaSuggestionBrandChrome.selectedSlideBrandColor}
+          durationLabelColor={taskAgendaSuggestionBrandChrome.selectedSlideBrandIconColor}
           pointerEvents={taskWotaTimeBandActive ? 'box-none' : 'none'}
         />
       ) : null}
@@ -613,5 +672,10 @@ const styles = StyleSheet.create({
     paddingTop: ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_TOP_INSET_PX,
     paddingBottom: ONBOARDING_TASK_AGENDA_TIME_WHEEL_SECTION_BOTTOM_PADDING,
     transform: [{ translateY: -ONBOARDING_TASK_AGENDA_TIME_WHEEL_NUDGE_UP_PX }],
+  },
+  /** glass duration row — no negative nudge (unlike native wheel) so the capsule sits naturally above the footer */
+  taskWotaDurationLayer: {
+    paddingTop: ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_TOP_INSET_PX,
+    paddingBottom: ONBOARDING_TASK_AGENDA_TIME_WHEEL_SECTION_BOTTOM_PADDING,
   },
 });

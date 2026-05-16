@@ -32,6 +32,8 @@ export type OnboardingTaskAgendaSuggestionBrandChrome = {
   pencilIconColor: string;
   /** blended `continueButtonBackground` per step (task branch uses `plant:500`) — selected pill border + sparkles, not global `primaryButton` */
   selectedSlideBrandColor: string;
+  /** blended `continueButtonIcon` — same as full-width continue label / circular chevron color */
+  selectedSlideBrandIconColor: string;
 };
 
 export type OnboardingTaskAgendaSuggestionsSectionProps = {
