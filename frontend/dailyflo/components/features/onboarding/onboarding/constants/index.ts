@@ -11,3 +11,4 @@ export * from './typography';
 export * from './topSection';
 export * from './pagerLayout';
 export * from './questionnaireSlideModel';
+export * from './onboardingQuestionnaireAnswers';

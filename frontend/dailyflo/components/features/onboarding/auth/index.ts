@@ -30,6 +30,8 @@ export { OnboardingAuthShell } from './ui';
 export type { OnboardingAuthShellProps } from './ui';
 
 export { ONBOARDING_COMPLETE_STORAGE_KEY, useCompleteOnboardingAndExit } from './hooks';
+export type { OnboardingQuestionnaireStoredAnswersV1 } from '../onboarding/constants/onboardingQuestionnaireAnswers';
+export { ONBOARDING_QUESTIONNAIRE_ANSWERS_STORAGE_KEY } from '../onboarding/constants/onboardingQuestionnaireAnswers';
 
 export {
   blendIntroContinueButtonColors,

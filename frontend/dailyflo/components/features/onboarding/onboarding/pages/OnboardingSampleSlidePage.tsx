@@ -41,6 +41,10 @@ export type OnboardingSampleSlidePageProps = {
   /** picked on the duration sub-step — same overlay as WOTA/AWT; state is local until task create is wired */
   taskDurationMinutes: number;
   onTaskDurationMinutesChange: (next: number) => void;
+  habitGoalTitle: string;
+  onHabitGoalTitleChange: (next: string) => void;
+  habitFrequencyId: string;
+  onHabitFrequencyIdChange: (next: string) => void;
 };
 
 export function OnboardingSampleSlidePage({
@@ -62,6 +66,10 @@ export function OnboardingSampleSlidePage({
   onTaskEventTimeChange,
   taskDurationMinutes,
   onTaskDurationMinutesChange,
+  habitGoalTitle,
+  onHabitGoalTitleChange,
+  habitFrequencyId,
+  onHabitFrequencyIdChange,
 }: OnboardingSampleSlidePageProps) {
   const { height: windowHeight } = useWindowDimensions();
   // keyboard listeners — gate agenda scroll so it only turns on while the keyboard is visible
@@ -106,6 +114,10 @@ export function OnboardingSampleSlidePage({
       onTaskEventTimeChange={onTaskEventTimeChange}
       taskDurationMinutes={taskDurationMinutes}
       onTaskDurationMinutesChange={onTaskDurationMinutesChange}
+      habitGoalTitle={habitGoalTitle}
+      onHabitGoalTitleChange={onHabitGoalTitleChange}
+      habitFrequencyId={habitFrequencyId}
+      onHabitFrequencyIdChange={onHabitFrequencyIdChange}
     />
   );
 
