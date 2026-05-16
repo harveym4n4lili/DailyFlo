@@ -7,6 +7,7 @@ import type { TextStyle } from 'react-native';
 import {
   PlantBrandColors,
   ThemeColors,
+  getMarpleBrandColor,
   getMossBrandColor,
   getPlantBrandColor,
   getSageBrandColor,
@@ -22,6 +23,7 @@ export type OnboardingSlidesBrandStyleToken =
   | `brand:${OnboardingSlidesBrandColorShade}`
   | `plant:${OnboardingSlidesBrandColorShade}`
   | `sage:${OnboardingSlidesBrandColorShade}`
+  | `marple:${OnboardingSlidesBrandColorShade}`
   | `moss:${OnboardingSlidesBrandColorShade}`;
 
 export type OnboardingSlidesBrandBackgroundToken = OnboardingSlidesBrandStyleToken;
@@ -63,6 +65,12 @@ export type OnboardingSlidesPrimaryButtonColorKey = keyof typeof ThemeColors.lig
 
 export type OnboardingSlidesThemeBorderColorKey = keyof typeof ThemeColors.light.border;
 
+/** `useThemeColors().border.*` + brand strings for `scope: 'border'` */
+export type OnboardingSlidesBorderColorToken =
+  | OnboardingSlidesThemeBorderColorKey
+  | OnboardingSlidesBrandStyleToken
+  | string;
+
 export type OnboardingSlidesThemeInteractiveColorKey = keyof typeof ThemeColors.light.interactive;
 
 export type OnboardingSlidesContinueButtonColorToken =
@@ -71,12 +79,61 @@ export type OnboardingSlidesContinueButtonColorToken =
   | OnboardingSlidesSlideTextColor
   | string;
 
-/** header progress pill — try border slot, then same rules as text (theme + brand strings). */
+/** header progress pill — `primarySecondaryBlend` (theme backgrounds), else border / brand / text rules. */
 export type OnboardingSlidesProgressTrackToken =
+  /** 50% blend of theme `background.primary` + `background.secondary` — empty / unfilled portion of the header bar */
+  | 'primarySecondaryBlend'
   | OnboardingSlidesThemeBorderColorKey
   | OnboardingSlidesSlideTextColor
   | OnboardingSlidesBrandStyleToken
   | string;
+
+/**
+ * explicit track-only semantic — same pixels as legacy string `'primarySecondaryBlend'`, but scoped like other chrome.
+ */
+export type OnboardingSlidesProgressTrackBlendToken = 'primarySecondaryBlend';
+
+/**
+ * which `useThemeColors()` bucket resolves the inner `token` for general slide chrome fields.
+ * (progress track also allows `scope: 'track'` — see `OnboardingSlidesScopedProgressTrackColor`.)
+ * - `background` → page wash slots + brand hex
+ * - `text` → typography slots + brand hex
+ * - `button` → FAB / interactive / text / brand (same as continue paint)
+ * - `border` → border slots + brand hex
+ */
+export type OnboardingSlidesColorScope = 'background' | 'text' | 'button' | 'border';
+
+/** explicit `{ scope, token }` — any slide color field can use any scope (e.g. title from `background.primary`) */
+export type OnboardingSlidesScopedSlideColor =
+  | { readonly scope: 'background'; readonly token: OnboardingSlidesSlideBackgroundColor }
+  | { readonly scope: 'text'; readonly token: OnboardingSlidesSlideTextColor }
+  | { readonly scope: 'button'; readonly token: OnboardingSlidesContinueButtonColorToken }
+  | { readonly scope: 'border'; readonly token: OnboardingSlidesBorderColorToken };
+
+/** progress bar track — slide’s four scopes plus `track` for the background primary/secondary lerp */
+export type OnboardingSlidesScopedProgressTrackColor =
+  | OnboardingSlidesScopedSlideColor
+  | { readonly scope: 'track'; readonly token: OnboardingSlidesProgressTrackBlendToken };
+
+/**
+ * shorthand string on a field — still resolved using that field’s default scope (background field → background, …).
+ * prefer `{ scope, token }` for theme keys (`primary`, `secondary`, …) so you state text vs background vs border vs button explicitly.
+ */
+export type OnboardingSlidesSlideUiColorInput =
+  | OnboardingSlidesScopedSlideColor
+  | OnboardingSlidesSlideBackgroundColor
+  | OnboardingSlidesSlideTextColor
+  | OnboardingSlidesContinueButtonColorToken
+  | OnboardingSlidesBorderColorToken;
+
+/** progress track only — `scope: 'track'` for blend + any slide scope + legacy plain strings */
+export type OnboardingSlidesSlideUiProgressTrackInput =
+  | OnboardingSlidesScopedProgressTrackColor
+  | OnboardingSlidesProgressTrackToken;
+
+export type OnboardingSlidesSlideUiBackgroundInput = OnboardingSlidesSlideUiColorInput;
+export type OnboardingSlidesSlideUiTextInput = OnboardingSlidesSlideUiColorInput;
+export type OnboardingSlidesSlideUiButtonInput = OnboardingSlidesSlideUiColorInput;
 
 export const ONBOARDING_SLIDES_BRAND_COLORS = {
   plant: {
@@ -86,6 +143,10 @@ export const ONBOARDING_SLIDES_BRAND_COLORS = {
   sage: {
     accent: getSageBrandColor(500),
     soft: getSageBrandColor(200),
+  },
+  marple: {
+    accent: getMarpleBrandColor(500),
+    soft: getMarpleBrandColor(200),
   },
   moss: {
     accent: getMossBrandColor(500),
@@ -98,21 +159,18 @@ export type OnboardingSlidesTimeWheelBrandRamp = keyof typeof ONBOARDING_SLIDES_
 
 /** per-slide color tokens — rows live in slideUiTokens.ts (mirrors auth `AuthSlideUiConfig` + questionnaire chrome). */
 export type OnboardingSlidesSlideUiConfig = {
-  background: OnboardingSlidesSlideBackgroundColor;
-  titleColor: OnboardingSlidesSlideTextColor;
-  titleHighlightColor?: OnboardingSlidesSlideTextColor;
-  captionColor: OnboardingSlidesSlideTextColor;
-  dotIndicatorColor: OnboardingSlidesSlideTextColor;
-  /** `OnboardingContinueButton`: glass tint + solid fill */
-  continueButtonBackground: OnboardingSlidesContinueButtonColorToken;
-  /** `OnboardingContinueButton`: label + spinner (intro used this for chevron) */
-  continueButtonIcon: OnboardingSlidesContinueButtonColorToken;
-  /** native header progress track (unfilled portion) */
-  progressBarTrack: OnboardingSlidesProgressTrackToken;
-  /** native header progress fill — same token family as `continueButtonBackground` (brand, `fill`, interactive, text, …). */
-  progressBarFill: OnboardingSlidesContinueButtonColorToken;
-  /** back chevron — theme text slot (`secondary` keeps the control quieter than body headlines) */
-  headerBackIconColor?: OnboardingSlidesSlideTextColor;
+  /** page wash — default resolver background; any `OnboardingSlidesSlideUiColorInput` allowed */
+  background: OnboardingSlidesSlideUiColorInput;
+  titleColor: OnboardingSlidesSlideUiColorInput;
+  titleHighlightColor?: OnboardingSlidesSlideUiColorInput;
+  captionColor: OnboardingSlidesSlideUiColorInput;
+  dotIndicatorColor: OnboardingSlidesSlideUiColorInput;
+  continueButtonBackground: OnboardingSlidesSlideUiColorInput;
+  continueButtonIcon: OnboardingSlidesSlideUiColorInput;
+  /** native header progress unfilled segment — `{ scope: 'track', token: 'primarySecondaryBlend' }` or any slide `{ scope, token }`; legacy strings still supported */
+  progressBarTrack: OnboardingSlidesSlideUiProgressTrackInput;
+  progressBarFill: OnboardingSlidesSlideUiColorInput;
+  headerBackIconColor?: OnboardingSlidesSlideUiColorInput;
   /**
    * steps that render `OnboardingQuestionnaireTimeWheel` must set this so spinner tint matches the slide’s headline ramp.
    */
@@ -123,11 +181,11 @@ export type OnboardingSlidesSlideUiConfig = {
    */
   taskAgendaBody?: {
     /** `TextInput` + suggestion chip label color — default: `titleColor` */
-    taskTitleInput?: OnboardingSlidesSlideTextColor;
+    taskTitleInput?: OnboardingSlidesSlideUiColorInput;
     /** pencil icon — default: `captionColor` */
-    pencilIcon?: OnboardingSlidesSlideTextColor;
+    pencilIcon?: OnboardingSlidesSlideUiColorInput;
     /** suggestions block heading color — default: `titleColor` */
-    suggestionsSectionTitle?: OnboardingSlidesSlideTextColor;
+    suggestionsSectionTitle?: OnboardingSlidesSlideUiColorInput;
     /** literal “Here are some suggestions:” line above the chip rows */
     suggestionsSectionHeading?: string;
     /** sideways chip labels (order = two horizontal rows after split) */

@@ -8,7 +8,15 @@ export {
   resolveOnboardingSlidesContinueButtonPaint,
   resolveOnboardingSlidesProgressTrackColor,
   resolveOnboardingSlidesBackgroundColor,
+  resolveOnboardingSlidesBorderColor,
+  resolveOnboardingSlidesSlideUiField,
+  resolveOnboardingSlidesSlideUiBackground,
+  resolveOnboardingSlidesSlideUiText,
+  resolveOnboardingSlidesSlideUiButton,
+  isOnboardingSlidesScopedSlideColor,
+  isOnboardingSlidesScopedProgressTrackColor,
   blendOnboardingSlidesColorAtProgress,
+  type OnboardingSlideThemeColors,
 } from './onboardingSlidesThemeResolvers';
 export {
   useOnboardingSlidesHeader,

@@ -15,6 +15,7 @@ import {
   PrimaryColors,
   PlantBrandColors,
   SageBrandColors,
+  MarpleBrandColors,
   MossBrandColors,
   SemanticColors,
   TaskCategoryColors,
@@ -26,10 +27,10 @@ import {
   getBrandPaletteColor,
   getPlantBrandColor,
   getSageBrandColor,
+  getMarpleBrandColor,
   getMossBrandColor,
   getThemeColor,
   withOpacity,
-  type PrimaryColorShade,
   type BrandColorShade,
   type BrandPaletteId,
   type SemanticColorName,
@@ -53,6 +54,7 @@ export interface ColorPaletteReturn {
   brand: typeof PlantBrandColors;
   plantBrand: typeof PlantBrandColors;
   sageBrand: typeof SageBrandColors;
+  marpleBrand: typeof MarpleBrandColors;
   mossBrand: typeof MossBrandColors;
   semantic: typeof SemanticColors;
   taskCategory: typeof TaskCategoryColors;
@@ -62,11 +64,12 @@ export interface ColorPaletteReturn {
   // utility functions
   getSemanticColor: (color: SemanticColorName, shade?: keyof typeof SemanticColors.success) => string;
   getTaskCategoryColor: (color: TaskCategoryColorName, shade?: keyof typeof TaskCategoryColors.red) => string;
-  /** default product accent — **plant** ramp; use `getSageBrandColor` / `getMossBrandColor` for other greens */
+  /** default product accent — **plant** ramp; use `getSageBrandColor` / `getMarpleBrandColor` / `getMossBrandColor` for other greens */
   getBrandColor: (shade?: BrandColorShade) => string;
   getBrandPaletteColor: (palette: BrandPaletteId, shade?: BrandColorShade) => string;
   getPlantBrandColor: (shade?: BrandColorShade) => string;
   getSageBrandColor: (shade?: BrandColorShade) => string;
+  getMarpleBrandColor: (shade?: BrandColorShade) => string;
   getMossBrandColor: (shade?: BrandColorShade) => string;
   getThemeColor: (category: ThemeColorCategory, variant: ThemeColorVariant) => string;
   withOpacity: (color: string, opacity: number) => string;
@@ -102,6 +105,7 @@ export function useColorPalette(): ColorPaletteReturn {
     brand,
     plantBrand: PlantBrandColors,
     sageBrand: SageBrandColors,
+    marpleBrand: MarpleBrandColors,
     mossBrand: MossBrandColors,
     semantic: SemanticColors,
     taskCategory: TaskCategoryColors,
@@ -120,6 +124,7 @@ export function useColorPalette(): ColorPaletteReturn {
       getBrandPaletteColor(palette, shade),
     getPlantBrandColor: (shade: BrandColorShade = 500) => getPlantBrandColor(shade),
     getSageBrandColor: (shade: BrandColorShade = 500) => getSageBrandColor(shade),
+    getMarpleBrandColor: (shade: BrandColorShade = 500) => getMarpleBrandColor(shade),
     getMossBrandColor: (shade: BrandColorShade = 500) => getMossBrandColor(shade),
     
     getThemeColor: (category: ThemeColorCategory, variant: ThemeColorVariant) => 
@@ -184,7 +189,7 @@ export function useTaskColors() {
 /**
  * useBrandColors Hook
  *
- * Three botanical green ramps (plant / sage / moss); **plant** is also exposed as `brand` for the default accent.
+ * Three botanical green ramps (plant / sage / marple / moss); **plant** is also exposed as `brand` for the default accent.
  * Same step keys as neutrals (25 … 900). Default UI still prefers `useThemeColors()` for surfaces and text.
  */
 export function useBrandColors() {
@@ -193,11 +198,13 @@ export function useBrandColors() {
     brand,
     plantBrand,
     sageBrand,
+    marpleBrand,
     mossBrand,
     getBrandColor,
     getBrandPaletteColor,
     getPlantBrandColor,
     getSageBrandColor,
+    getMarpleBrandColor,
     getMossBrandColor,
     withOpacity,
   } = useColorPalette();
@@ -207,6 +214,7 @@ export function useBrandColors() {
     brand,
     plantBrand,
     sageBrand,
+    marpleBrand,
     mossBrand,
     /** default step 500 — same as primary CTA fill (plant ramp) */
     accent: (shade: BrandColorShade = 500) => getBrandColor(shade),
@@ -214,6 +222,7 @@ export function useBrandColors() {
     getBrandPaletteColor,
     getPlantBrandColor,
     getSageBrandColor,
+    getMarpleBrandColor,
     getMossBrandColor,
     withOpacity,
   };

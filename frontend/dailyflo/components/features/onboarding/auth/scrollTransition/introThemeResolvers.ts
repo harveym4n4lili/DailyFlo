@@ -11,7 +11,7 @@ import type {
   IntroSlideTextColor,
 } from '../constants';
 
-// `brand:` / `plant:` / `sage:` / `moss:` strings (see `resolveBrandStyleToken` in ColorPalette) -> hex at parse time.
+// `brand:` / `plant:` / `sage:` / `marple:` / `moss:` strings (see `resolveBrandStyleToken` in ColorPalette) -> hex at parse time.
 
 export function resolveIntroTextColor(
   themeColors: Pick<ReturnType<typeof useThemeColors>, 'text'>,

@@ -1,5 +1,5 @@
 /**
- * questionnaire funnel — skip touch targets + header progress chrome sizing.
+ * questionnaire funnel — optional header skip action tokens + progress chrome sizing (`OnboardingSlidesHeaderChrome.skip`).
  */
 
 import { Paddings } from '@/constants/Paddings';
@@ -16,8 +16,7 @@ export const ONBOARDING_SLIDES_SKIP_BUTTON_ACCESSIBILITY_LABEL = 'Skip onboardin
 export const ONBOARDING_SLIDES_SKIP_BUTTON_LABEL = 'Skip';
 
 /**
- * mirrors intro overlay skip geometry — kept for parity / alternate placements.
- * primary slides funnel mounts skip inside useOnboardingSlidesHeader instead.
+ * mirrors intro overlay skip geometry — kept for parity / alternate placements if `skip` is passed again.
  */
 export const ONBOARDING_SLIDES_SKIP_BUTTON_ABSOLUTE_LAYOUT = {
   offsetRight: Paddings.screenSmall,

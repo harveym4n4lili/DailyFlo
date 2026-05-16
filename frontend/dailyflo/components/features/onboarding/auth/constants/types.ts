@@ -7,6 +7,7 @@ import type { TextStyle } from 'react-native';
 import {
   PlantBrandColors,
   ThemeColors,
+  getMarpleBrandColor,
   getMossBrandColor,
   getPlantBrandColor,
   getSageBrandColor,
@@ -25,6 +26,7 @@ export type IntroBrandStyleToken =
   | `brand:${IntroBrandColorShade}`
   | `plant:${IntroBrandColorShade}`
   | `sage:${IntroBrandColorShade}`
+  | `marple:${IntroBrandColorShade}`
   | `moss:${IntroBrandColorShade}`;
 
 export type IntroBrandBackgroundToken = IntroBrandStyleToken;
@@ -73,6 +75,10 @@ export const AUTH_BRAND_COLORS = {
   sage: {
     accent: getSageBrandColor(500),
     soft: getSageBrandColor(200),
+  },
+  marple: {
+    accent: getMarpleBrandColor(500),
+    soft: getMarpleBrandColor(200),
   },
   moss: {
     accent: getMossBrandColor(500),

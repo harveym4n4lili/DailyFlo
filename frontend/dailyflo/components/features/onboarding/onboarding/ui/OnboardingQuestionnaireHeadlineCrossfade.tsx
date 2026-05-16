@@ -17,7 +17,7 @@ import {
   ONBOARDING_SLIDES_PAGE_TITLE_TEXT_STYLE,
 } from '../constants/typography';
 import type { OnboardingSlidesPageTitleConfig, OnboardingSlidesSlideUiConfig } from '../constants/types';
-import { resolveOnboardingSlidesTextColor } from '../onboardingSlidesThemeResolvers';
+import { resolveOnboardingSlidesSlideUiText } from '../onboardingSlidesThemeResolvers';
 import { crossfadeInputRange, crossfadeOutputRange, splitIntroTitleHighlight } from '../../auth/scrollTransition';
 
 export type OnboardingQuestionnaireHeadlineCrossfadeProps = {
@@ -73,12 +73,12 @@ function QuestionnaireHeadlineSlideBody({
     return null;
   }
   const parts = splitIntroTitleHighlight(titleConfig.title, titleConfig.highlight?.text);
-  const titleColor = resolveOnboardingSlidesTextColor(themeColors, slideUi.titleColor);
-  const highlightColor = resolveOnboardingSlidesTextColor(
+  const titleColor = resolveOnboardingSlidesSlideUiText(themeColors, slideUi.titleColor);
+  const highlightColor = resolveOnboardingSlidesSlideUiText(
     themeColors,
     slideUi.titleHighlightColor ?? slideUi.titleColor,
   );
-  const captionColor = resolveOnboardingSlidesTextColor(themeColors, slideUi.captionColor);
+  const captionColor = resolveOnboardingSlidesSlideUiText(themeColors, slideUi.captionColor);
   const caption = pageCaptions[slideIndex] ?? '';
 
   return (

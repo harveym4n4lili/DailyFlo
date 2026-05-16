@@ -28,11 +28,6 @@ import {
   ONBOARDING_SLIDES_CONTINUE_BUTTON_TEXT_STYLE,
   ONBOARDING_SLIDES_CONTINUE_LABEL,
   ONBOARDING_SLIDES_FINISH_SETUP_LABEL,
-  ONBOARDING_SLIDES_SKIP_TEXT_STYLE,
-  ONBOARDING_SLIDES_SKIP_TEXT_COLOR,
-  ONBOARDING_SLIDES_SKIP_BUTTON_ACCESSIBILITY_LABEL,
-  ONBOARDING_SLIDES_SKIP_BUTTON_HIT_SLOP,
-  ONBOARDING_SLIDES_SKIP_BUTTON_LABEL,
   ONBOARDING_TASK_AGENDA_KEYBOARD_FINAL_Y_BLEND_REFERENCE_HEIGHT_PX,
   type OnboardingQuestionnaireNextStepChoice,
   getOnboardingQuestionnaireContinueFooterLayoutHeight,
@@ -41,10 +36,10 @@ import {
 import { useOnboardingSlidesHeader, useQuestionnaireBlendProgress } from '../hooks';
 import {
   blendOnboardingSlidesColorAtProgress,
-  resolveOnboardingSlidesBackgroundColor,
-  resolveOnboardingSlidesContinueButtonPaint,
   resolveOnboardingSlidesProgressTrackColor,
-  resolveOnboardingSlidesTextColor,
+  resolveOnboardingSlidesSlideUiBackground,
+  resolveOnboardingSlidesSlideUiButton,
+  resolveOnboardingSlidesSlideUiText,
 } from '../onboardingSlidesThemeResolvers';
 import { OnboardingSampleSlidePage } from './OnboardingSampleSlidePage';
 
@@ -86,14 +81,6 @@ export function OnboardingQuestionnaireFlow() {
 
   const { blendProgress, blendProgressAnim } = useQuestionnaireBlendProgress(pageIndex);
 
-  const skipTextStyle = useMemo(
-    () => [
-      ONBOARDING_SLIDES_SKIP_TEXT_STYLE,
-      { color: resolveOnboardingSlidesTextColor(themeColors, ONBOARDING_SLIDES_SKIP_TEXT_COLOR) },
-    ],
-    [themeColors],
-  );
-
   const trackColorsByPage = useMemo(
     () =>
       slideModel.pageSlideUi.map((row) =>
@@ -103,15 +90,13 @@ export function OnboardingQuestionnaireFlow() {
   );
   const progressFillColorsByPage = useMemo(
     () =>
-      slideModel.pageSlideUi.map((row) =>
-        resolveOnboardingSlidesContinueButtonPaint(themeColors, row.progressBarFill),
-      ),
+      slideModel.pageSlideUi.map((row) => resolveOnboardingSlidesSlideUiButton(themeColors, row.progressBarFill)),
     [themeColors, slideModel.pageSlideUi],
   );
   const backgroundColorsByPage = useMemo(
     () =>
       slideModel.pageSlideUi.map((row) =>
-        resolveOnboardingSlidesBackgroundColor(themeColors, row.background),
+        resolveOnboardingSlidesSlideUiBackground(themeColors, row.background),
       ),
     [themeColors, slideModel.pageSlideUi],
   );
@@ -119,10 +104,10 @@ export function OnboardingQuestionnaireFlow() {
   const continuePaintByPage = useMemo(
     () => ({
       fills: slideModel.pageSlideUi.map((row) =>
-        resolveOnboardingSlidesContinueButtonPaint(themeColors, row.continueButtonBackground),
+        resolveOnboardingSlidesSlideUiButton(themeColors, row.continueButtonBackground),
       ),
       icons: slideModel.pageSlideUi.map((row) =>
-        resolveOnboardingSlidesContinueButtonPaint(themeColors, row.continueButtonIcon),
+        resolveOnboardingSlidesSlideUiButton(themeColors, row.continueButtonIcon),
       ),
     }),
     [themeColors, slideModel.pageSlideUi],
@@ -131,7 +116,7 @@ export function OnboardingQuestionnaireFlow() {
   const backIconColorsByPage = useMemo(
     () =>
       slideModel.pageSlideUi.map((row) =>
-        resolveOnboardingSlidesTextColor(themeColors, row.headerBackIconColor ?? 'secondary'),
+        resolveOnboardingSlidesSlideUiText(themeColors, row.headerBackIconColor ?? 'secondary'),
       ),
     [themeColors, slideModel.pageSlideUi],
   );
@@ -179,18 +164,6 @@ export function OnboardingQuestionnaireFlow() {
     router.back();
   }, [pageIndex, router]);
 
-  const slidesHeaderSkip = useMemo(
-    () => ({
-      label: ONBOARDING_SLIDES_SKIP_BUTTON_LABEL,
-      accessibilityLabel: ONBOARDING_SLIDES_SKIP_BUTTON_ACCESSIBILITY_LABEL,
-      hitSlop: ONBOARDING_SLIDES_SKIP_BUTTON_HIT_SLOP,
-      textStyle: skipTextStyle,
-      onPress: completeAndExit,
-      disabled: busy,
-    }),
-    [busy, completeAndExit, skipTextStyle],
-  );
-
   useOnboardingSlidesHeader({
     pageProgress: blendProgress,
     totalPages: slideModel.pageCount,
@@ -199,7 +172,6 @@ export function OnboardingQuestionnaireFlow() {
     backChevronColor,
     onBackPress: goBack,
     backAccessibilityLabel: pageIndex > 0 ? 'Previous questionnaire step' : 'Back to introduction',
-    skip: slidesHeaderSkip,
   });
 
   const onContinue = useCallback(() => {
