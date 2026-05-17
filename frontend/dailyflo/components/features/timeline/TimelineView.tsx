@@ -22,7 +22,16 @@ import { OverlappingTaskCard } from './OverlappingTaskCard';
 import DragOverlay from './DragOverlay';
 import { DashedVerticalLine } from '@/components/ui/borders';
 import { SparklesIcon } from '@/components/ui/Icon';
-import { calculateTaskPosition, generateTimeSlots, snapToNearestTime, timeToMinutes, minutesToTime, calculateTaskHeight, calculateTaskRenderProperties, useTimelineDrag, getTaskCardHeight } from './timelineUtils';
+import {
+  generateTimeSlots,
+  timeToMinutes,
+  minutesToTime,
+  calculateTaskRenderProperties,
+  useTimelineDrag,
+  getTaskCardHeight,
+} from './timelineUtils';
+import { getTimelineTaskGapPx } from './timelineSpacing';
+import { FREE_TIME_BREAK_MESSAGES, formatMinutesToDuration } from './timelineFreeTime';
 
 // layout transition for planner: footer + timeline slide up together when task is checked
 // duration-based linear transition so both animate in sync (no delay)
@@ -40,6 +49,7 @@ interface CombinedOverlappingTask {
   duration: number; // calculated duration from start of first to end of last
   dueDate: string; // due date (from first task in the array)
 }
+
 
 interface TimelineViewProps {
   // array of tasks to display on the timeline
@@ -68,6 +78,8 @@ interface TimelineViewProps {
   selectionMode?: boolean;
   selectedTaskIds?: string[];
   onToggleTaskSelection?: (taskId: string) => void;
+  /** false disables scroll (embedded timelines) */
+  scrollEnabled?: boolean;
 }
 
 /**
@@ -91,6 +103,7 @@ export default function TimelineView({
   selectionMode = false,
   selectedTaskIds = [],
   onToggleTaskSelection,
+  scrollEnabled = true,
 }: TimelineViewProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -325,46 +338,6 @@ export default function TimelineView({
     return generateTimeSlots(effectiveStartHour, effectiveEndHour, timeInterval);
   }, [dynamicStartHour, startHour, endHour, timeInterval, tasksWithTime]);
 
-  // spacing constants - adjust these to change spacing between tasks
-  const SPACING_LESS_THAN_30_MIN = 20;
-  const SPACING_30_MIN_TO_2_HOURS = 84;
-  const SPACING_MORE_THAN_2_HOURS = 140;
-  
-  // calculate spacing between tasks based on time difference
-  const getTaskSpacing = (timeDifferenceMinutes: number): number => {
-    if (timeDifferenceMinutes < 30) {
-      return SPACING_LESS_THAN_30_MIN;
-    } else if (timeDifferenceMinutes <= 120) {
-      return SPACING_30_MIN_TO_2_HOURS;
-    } else {
-      return SPACING_MORE_THAN_2_HOURS;
-    }
-  };
-
-  // 20 messages for 30 min to 2 hours free time segments - short, about enjoying a break (max 6-7 words)
-  const FREE_TIME_BREAK_MESSAGES = [
-    'Take a moment to breathe.',
-    'You deserve a little rest.',
-    'Enjoy this pocket of calm.',
-    'Stretch and unwind a bit.',
-    'Step outside for fresh air.',
-    'Grab a drink and relax.',
-    'Let your mind wander free.',
-    'Quick recharge before what\'s next.',
-    'Sit back and take it in.',
-    'A brief pause does wonders.',
-    'Ease into this quiet moment.',
-    'Reset before the next task.',
-    'Savor this small slice of time.',
-    'Unplug for a few minutes.',
-    'Allow yourself to slow down.',
-    'A short break, well earned.',
-    'Breathe deep and feel ease.',
-    'Enjoy the empty space.',
-    'Nice little pocket of peace.',
-    'Pause and appreciate the quiet.',
-  ];
-
   // sort tasks by time to calculate equal spacing positions
   const sortedTasks = useMemo(() => {
     return [...tasksWithTime].sort((a, b) => {
@@ -379,9 +352,9 @@ export default function TimelineView({
   const equalSpacingPositions = useMemo(() => {
     const positions = new Map<string, { equalSpacingPosition: number; cardHeight: number }>();
     if (sortedTasks.length === 0) return positions;
-    
+
     let currentPosition = 0; // start at top
-    
+
     sortedTasks.forEach((task, index) => {
       if (!task.time) return;
       
@@ -444,7 +417,7 @@ export default function TimelineView({
         } else {
           // non-overlapping tasks: use spacing constants
           const timeDifference = nextTaskMinutes - taskEndMinutes;
-          const gapSpacing = getTaskSpacing(timeDifference);
+          const gapSpacing = getTimelineTaskGapPx(timeDifference);
           
           // calculate next task position: current top + current height + gap
           const currentTop = currentPosition - (cardHeight / 2);
@@ -520,13 +493,6 @@ export default function TimelineView({
     return segments;
   }, [sortedTasks, equalSpacingPositions]);
 
-  // format minutes as "Xh Ym" for free time duration display
-  const formatMinutesToDuration = (minutes: number): string => {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return `${h}h ${m}m`;
-  };
-
   // calculate dynamic pixelsPerMinute for each segment between tasks
   // returns a map of segment index -> pixelsPerMinute
   const segmentPixelsPerMinute = useMemo(() => {
@@ -551,7 +517,7 @@ export default function TimelineView({
       if (timeDifference <= 0) continue;
       
       // get dynamic spacing for this time difference
-      const spacing = getTaskSpacing(timeDifference);
+      const spacing = getTimelineTaskGapPx(timeDifference);
       
       // pixelsPerMinute = spacing / timeDifferenceInMinutes
       const pixelsPerMin = spacing / timeDifference;
@@ -569,7 +535,7 @@ export default function TimelineView({
     
     sortedTasks.forEach((task) => {
       if (!task.time) return;
-      
+
       const duration = task.duration || 0;
       const equalSpacing = equalSpacingPositions.get(task.id);
       if (!equalSpacing) return;
@@ -597,10 +563,9 @@ export default function TimelineView({
   // accounts for task spacing and overlapping tasks
   const calculatePositionWithOffsets = useCallback((time: string): number => {
     const timeMinutes = timeToMinutes(time);
-    
-    // if no tasks, return 0
+
     if (sortedTasks.length === 0) return 0;
-    
+
     // find which segment this time falls into
     for (let i = 0; i < sortedTasks.length; i++) {
       const task = sortedTasks[i];
@@ -1758,7 +1723,7 @@ export default function TimelineView({
             : []),
         ]}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={true}
+        scrollEnabled={scrollEnabled}
       >
         {/* ListCard + timeline as one stack - layout enabled after mount so they appear in final position */}
         <AnimatedReanimated.View
@@ -1849,12 +1814,11 @@ export default function TimelineView({
             ]}
           />
 
-          {/* free time blocks - rendered in the gap between non-overlapping tasks (30+ min only) */}
+          {/* free time blocks - gaps between non-overlapping tasks; short gaps (<30m) still get a compact line so spacing rows feel consistent */}
           {freeTimeSegments
-            .filter((seg) => seg.timeDifferenceMinutes >= 30)
+            .filter((seg) => seg.timeDifferenceMinutes > 0)
             .map((seg, i) => {
               const isLongBreak = seg.timeDifferenceMinutes > 120;
-              const isMediumBreak = seg.timeDifferenceMinutes >= 30 && seg.timeDifferenceMinutes <= 120;
               return (
                 <View
                   key={`free-time-${i}`}
@@ -1873,9 +1837,14 @@ export default function TimelineView({
                         </Text>
                         {' '}of free time!
                       </Text>
-                    ) : (
+                    ) : seg.timeDifferenceMinutes >= 30 ? (
                       <Text style={[styles.freeTimeTextSegments, { color: themeColors.background.tertiary() }]}>
                         {FREE_TIME_BREAK_MESSAGES[i % FREE_TIME_BREAK_MESSAGES.length]}
+                      </Text>
+                    ) : (
+                      <Text style={[styles.freeTimeTextSegments, { color: themeColors.background.tertiary() }]}>
+                        <Text style={styles.freeTimeDurationBold}>{seg.timeDifferenceMinutes} min</Text> free before
+                        what&apos;s next.
                       </Text>
                     )}
                   </View>
@@ -2062,7 +2031,7 @@ export default function TimelineView({
                 measuredHeight,
                 taskPpm
               );
-              
+
               return (
                 <TimelineItem
                   key={task.id}

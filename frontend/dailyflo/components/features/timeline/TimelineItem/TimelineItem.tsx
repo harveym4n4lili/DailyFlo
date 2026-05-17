@@ -30,7 +30,7 @@ import { Task } from '@/types';
 import { getTaskColorValue } from '@/utils/taskColors';
 import TaskIcon from '@/components/ui/Card/TaskCard/TaskIcon';
 import { RepeatIcon } from '@/components/ui/Icon';
-import { Checkbox, CHECKBOX_SIZE_DEFAULT, CHECKBOX_SIZE_SMALL } from '@/components/ui/Button';
+import { Checkbox, CHECKBOX_SIZE_DEFAULT, CHECKBOX_SIZE_SMALL, CHECKBOX_SIZE_TASK_VIEW } from '@/components/ui/Button';
 import { getTaskCardHeight, formatTimeRange } from '../timelineUtils';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
 import { TimelineCheckbox } from './sections';
@@ -108,6 +108,19 @@ interface TimelineItemProps {
   // selection mode - when true, show selection checkbox and tap toggles selection
   selectionMode?: boolean;
   isSelected?: boolean;
+  /**
+   * when set, replaces the default checkbox + title card with this node (same absolute row shell as other timeline tasks).
+   * used for onboarding preview: questionnaire title row must stay tappable without long-press drag stealing touches.
+   */
+  children?: React.ReactNode;
+  /**
+   * when set (and `children` is not), renders this instead of `TimelineCheckbox` in the leading slot — e.g. wake/sun + sleep/moon icons on onboarding.
+   */
+  leadingAccessory?: React.ReactNode;
+  /**
+   * when true (and `children` is not), row width hugs title + leading column instead of stretching to the tasks column — onboarding wake/sleep only.
+   */
+  hugContent?: boolean;
 }
 
 // compare by value so sibling Redux updates don't interrupt checkbox/animations
@@ -122,6 +135,9 @@ function timelineItemPropsAreEqual(prev: TimelineItemProps, next: TimelineItemPr
   if (prev.overlapPosition !== next.overlapPosition) return false;
   if (prev.selectionMode !== next.selectionMode) return false;
   if (prev.isSelected !== next.isSelected) return false;
+  if (prev.children !== next.children) return false;
+  if (prev.leadingAccessory !== next.leadingAccessory) return false;
+  if (prev.hugContent !== next.hugContent) return false;
   return true;
 }
 
@@ -149,6 +165,9 @@ const TimelineItem = React.memo(function TimelineItem({
   overlapPosition,
   selectionMode = false,
   isSelected = false,
+  children,
+  leadingAccessory,
+  hugContent = false,
 }: TimelineItemProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -437,7 +456,7 @@ const TimelineItem = React.memo(function TimelineItem({
   useEffect(() => {
     setMeasuredContentHeight(null);
     lastReportedHeight.value = null;
-  }, [task.title, duration, task.id]);
+  }, [task.title, duration, task.id, children]);
 
   // update center position when prop changes (e.g. when task above expands) - animates smooth move
   // when only THIS task's height changes, centerPosition prop is unchanged so this effect doesn't run = no slide
@@ -690,69 +709,90 @@ const TimelineItem = React.memo(function TimelineItem({
   // when selectionMode: disable drag - use empty gesture so tap still works via TouchableOpacity
   const combinedGesture = selectionMode ? Gesture.Tap() : Gesture.Simultaneous(longPressGesture, panGesture);
 
-  return (
-    <GestureDetector gesture={combinedGesture}>
+  // hug width only for the default task card — full-width `children` (e.g. onboarding task row) ignores `hugContent`
+  const useHugRow = hugContent && children == null;
+
+  // custom body: skip gesture detector so text inputs / nested taps are not eaten by pan/long-press
+  const itemOuter = (
+    <AnimatedReanimated.View
+      style={[
+        styles.container,
+        useHugRow ? styles.containerHugContent : styles.containerFullWidth,
+        styles.containerPadding,
+        animatedContainerStyle, // animated position, drag transform, and fade - runs on native thread
+        {
+          // apply higher z-index when this task is being dragged so it appears above all others
+          // reset to default (undefined) when drag ends
+          // isDraggedTask prop comes from parent to track which task should be on top layer
+          zIndex: isDraggedTask ? 1000 : undefined,
+        },
+      ]}
+    >
+      {/* icon container - separate background for the icon */}
+      {/* positioned on the left side in the row layout */}
+      {/* height is fixed at base height */}
+      {/* background color is task color, icon color is primary */}
+      {task.icon && (
+        <AnimatedReanimated.View style={[styles.iconContainer, styles.iconContainerPadding, { height: minCardHeight }, overlapBorderRadius, animatedDragIndicatorStyle]}>
+          <TaskIcon icon={task.icon} color={themeColors.background.invertedPrimary()} size={20} />
+        </AnimatedReanimated.View>
+      )}
+
+      {/* content column - contains task content */}
       <AnimatedReanimated.View
         style={[
-          styles.container,
-          styles.containerPadding,
-          animatedContainerStyle, // animated position, drag transform, and fade - runs on native thread
-          {
-            // apply higher z-index when this task is being dragged so it appears above all others
-            // reset to default (undefined) when drag ends
-            // isDraggedTask prop comes from parent to track which task should be on top layer
-            zIndex: isDraggedTask ? 1000 : undefined,
-          },
+          styles.content,
+          useHugRow ? styles.contentHug : null,
+          overlapBorderRadius,
+          animatedContentStyle,
+          animatedDragIndicatorStyle,
         ]}
+        onLayout={children != null ? undefined : handleContentLayout}
       >
-        {/* icon container - separate background for the icon */}
-        {/* positioned on the left side in the row layout */}
-        {/* height is fixed at base height */}
-        {/* background color is task color, icon color is primary */}
-        {task.icon && (
-          <AnimatedReanimated.View style={[styles.iconContainer, styles.iconContainerPadding, { height: minCardHeight }, overlapBorderRadius, animatedDragIndicatorStyle]}>
-            <TaskIcon icon={task.icon} color={themeColors.background.invertedPrimary()} size={20} />
-          </AnimatedReanimated.View>
-        )}
-
-        {/* content column - contains task content */}
-        <AnimatedReanimated.View
-          style={[
-            styles.content,
-            overlapBorderRadius,
-            animatedContentStyle,
-            animatedDragIndicatorStyle,
-          ]}
-          onLayout={handleContentLayout}
-        >
-          <Animated.View style={[styles.combinedContainer, styles.combinedContainerPadding, { height: minCardHeight }, overlapBorderRadius]}>
+        {children != null ? (
+          <View style={styles.customBodyMeasure} onLayout={handleContentLayout}>
+            {children}
+          </View>
+        ) : (
+          <Animated.View
+            style={[
+              styles.combinedContainer,
+              useHugRow ? null : styles.combinedContainerFullWidth,
+              styles.combinedContainerPadding,
+              { height: minCardHeight },
+              overlapBorderRadius,
+            ]}
+          >
             <TouchableOpacity
-              style={styles.touchableContent}
+              style={[styles.touchableContent, useHugRow ? styles.touchableContentHug : null]}
               onPress={handleTaskPress}
               activeOpacity={0.7}
             >
-              <View style={styles.checkboxWrapper}>
-                {/* single TimelineCheckbox: completion when !selectionMode, selection when selectionMode; animates shape on enter/exit */}
-                <TimelineCheckbox
-                  task={task}
-                  onTaskComplete={onTaskComplete}
-                  onTaskCompleteImmediate={onTaskCompleteImmediate}
-                  onDisplayChange={setDisplayCompleted}
-                  selectionMode={selectionMode}
-                  isSelected={isSelected}
-                  onSelect={selectionMode ? onPress : undefined}
-                />
+              <View style={[styles.checkboxWrapper, leadingAccessory != null ? styles.checkboxWrapperLeadingSlot : null]}>
+                {leadingAccessory != null ? (
+                  leadingAccessory
+                ) : (
+                  <TimelineCheckbox
+                    task={task}
+                    onTaskComplete={onTaskComplete}
+                    onTaskCompleteImmediate={onTaskCompleteImmediate}
+                    onDisplayChange={setDisplayCompleted}
+                    selectionMode={selectionMode}
+                    isSelected={isSelected}
+                    onSelect={selectionMode ? onPress : undefined}
+                  />
+                )}
               </View>
-              <View style={styles.taskContent}>
+              <View style={[styles.taskContent, useHugRow ? styles.taskContentHug : null]}>
                 {/* time display above title - only when in overlapping tasks */}
                 {timeRangeText ? (
                   <View style={styles.timeRangeRow}>
                     <Text style={styles.timeRange}>{timeRangeText}</Text>
                   </View>
                 ) : null}
-                <View style={styles.titleRow}>
+                <View style={[styles.titleRow, useHugRow ? styles.titleRowHug : null]}>
                   <AnimatedText
-                    style={[styles.title, titleAnimatedStyle]}
+                    style={[styles.title, titleAnimatedStyle, useHugRow ? styles.titleHug : null]}
                     numberOfLines={1}
                     ellipsizeMode="tail"
                     onTextLayout={handleTitleLayout}
@@ -798,10 +838,16 @@ const TimelineItem = React.memo(function TimelineItem({
               </View>
             </TouchableOpacity>
           </Animated.View>
-        </AnimatedReanimated.View>
+        )}
       </AnimatedReanimated.View>
-    </GestureDetector>
+    </AnimatedReanimated.View>
   );
+
+  if (children != null) {
+    return itemOuter;
+  }
+
+  return <GestureDetector gesture={combinedGesture}>{itemOuter}</GestureDetector>;
 }, timelineItemPropsAreEqual);
 
 // create dynamic styles using theme colors and typography
@@ -816,9 +862,15 @@ const createStyles = (
   container: {
     position: 'absolute',
     left: 0,
-    right: 0,
     flexDirection: 'row',
     alignItems: 'flex-start',
+  },
+  containerFullWidth: {
+    right: 0,
+  },
+  containerHugContent: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
   },
 
   // icon container - separate background for the icon
@@ -841,16 +893,27 @@ const createStyles = (
     overflow: 'visible',
     borderRadius: 24, // outer border radius for the entire card
   },
+  contentHug: {
+    flex: 0,
+    alignSelf: 'flex-start',
+  },
+
+  // full-width shell for optional `children` so onLayout height matches the planner row
+  customBodyMeasure: {
+    width: '100%',
+  },
   
   // combined container for task content - fixed height, stays at top
   // borderRadius here so corners render
   combinedContainer: {
     flexDirection: 'row',
-    width: '100%',
     alignItems: 'stretch',
     position: 'relative',
     backgroundColor: themeColors.background.primarySecondaryBlend(),
     borderRadius: 24,
+  },
+  combinedContainerFullWidth: {
+    width: '100%',
   },
   
   // touchable content area - row: checkbox on left, task content on right (matches TaskCard layout)
@@ -860,6 +923,9 @@ const createStyles = (
     alignItems: 'center',
     gap: 12, // checkbox-to-title spacing - matches TaskCard checkboxWrapper marginRight: 12
   },
+  touchableContentHug: {
+    flex: 0,
+  },
 
   // checkbox wrapper - left of task content
   checkboxWrapper: {
@@ -868,12 +934,20 @@ const createStyles = (
     alignItems: 'center',
     justifyContent: 'center',
   },
+  /** onboarding sun/moon (and any custom leading slot) can use the larger task-view checkbox step so svg isn’t clipped */
+  checkboxWrapperLeadingSlot: {
+    width: CHECKBOX_SIZE_TASK_VIEW,
+    height: CHECKBOX_SIZE_TASK_VIEW,
+  },
 
   // task content container - title and indicators, right of checkbox
   taskContent: {
     flex: 1,
     position: 'relative',
     justifyContent: 'center',
+  },
+  taskContentHug: {
+    flex: 0,
   },
 
   // time range row - above title when in overlapping tasks (matches DragOverlay)
@@ -891,6 +965,10 @@ const createStyles = (
     gap: 12,
     flex: 1,
     minWidth: 0,
+  },
+  titleRowHug: {
+    flex: 0,
+    justifyContent: 'flex-start',
   },
 
   // indicators on the right - subtask count and recurrence label
@@ -957,6 +1035,10 @@ const createStyles = (
     flex: 1,
     flexShrink: 1,
     minWidth: 0,
+  },
+  titleHug: {
+    flex: 0,
+    flexShrink: 1,
   },
   subtaskCount: {
     ...typography.getTextStyle('body-medium'),
