@@ -37,7 +37,7 @@ export function resolveIntroBackgroundColor(
 
 type ThemeColorsForContinuePaint = Pick<
   ReturnType<typeof useThemeColors>,
-  'primaryButton' | 'interactive' | 'text'
+  'primaryButton' | 'interactive' | 'text' | 'background'
 >;
 
 /**
@@ -66,6 +66,14 @@ export function resolveIntroContinueButtonPaint(
   const tk = value as keyof typeof themeColors.text;
   if (tk in themeColors.text) {
     const fn = themeColors.text[tk];
+    if (typeof fn === 'function') {
+      return (fn as () => string)();
+    }
+  }
+  // questionnaire continue icons use `themeColors.background.primarySecondaryBlend` — same tokens as onboarding slides
+  const bk = value as keyof typeof themeColors.background;
+  if (bk in themeColors.background) {
+    const fn = themeColors.background[bk];
     if (typeof fn === 'function') {
       return (fn as () => string)();
     }

@@ -6,11 +6,8 @@ import type { AuthSlideUiConfig } from './types';
 
 export const AUTH_PAGE_SLIDE_UI: readonly AuthSlideUiConfig[] = [
   {
-    background: 'plant:800',
-    titleColor: 'plant:300',
-    titleHighlightColor: 'plant:300',
-    captionColor: 'secondary',
-    continueButtonBackground: 'plant:500',
-    continueButtonIcon: 'plant:700',
+    // same surface as the rest of the app: `resolveIntroBackgroundColor` turns `primary` into `themeColors.background.primary()`
+    background: 'primary',
+    continueButtonBackground: 'marple:500',
   },
 ];

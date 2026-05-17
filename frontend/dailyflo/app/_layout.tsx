@@ -56,16 +56,19 @@ export default function RootLayout() {
   // this prevents the useEffect from running multiple times and causing flashing
   const hasNavigatedRef = useRef(false);
   
-  // load all the fonts we need for the app
-  // this tells expo-font to load the Inter font files (18pt optical size for UI)
-  // each font gets a name that we can use in our typography system
-  // load Inter fonts from @expo-google-fonts/inter (no local font files needed)
+  // inter: app-wide — satoshi (auth landing): prefer **.otf** from `assets/fonts` (`useFonts` keys must match `getSatoshiFontFamilyWithWeight` in `constants/Typography.ts`)
   const [loaded] = useFonts({
     'Inter': Inter_400Regular,
     'Inter-Light': Inter_300Light,
     'Inter-Medium': Inter_500Medium,
     'Inter-SemiBold': Inter_600SemiBold,
     'Inter-Bold': Inter_700Bold,
+    'Satoshi-Light': require('../assets/fonts/Satoshi-Light.otf'),
+    'Satoshi-Regular': require('../assets/fonts/Satoshi-Regular.otf'),
+    'Satoshi-Medium': require('../assets/fonts/Satoshi-Medium.otf'),
+    'Satoshi-Bold': require('../assets/fonts/Satoshi-Bold.otf'),
+    // your kit may only include black as `.ttf`; switch to `Satoshi-Black.otf` when that file is in this folder
+    'Satoshi-Black': require('../assets/fonts/Satoshi-Black.ttf'),
   });
 
   /**

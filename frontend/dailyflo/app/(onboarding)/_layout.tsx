@@ -1,5 +1,5 @@
 /**
- * onboarding stack — `auth/` hides header (full-bleed landing); `slides/` shows back + progress chrome (no skip).
+ * onboarding stack — `auth/` and `slides/` are *folder + index only* (no `auth/_layout` / `slides/_layout`), so expo registers them as `auth/index` and `slides/index`, not `auth` / `slides`. `Stack.Screen name` must match that or options never apply (auth showed `auth/index` as title; slides lost the header when the default was `headerShown: false`).
  */
 
 import React from 'react';
@@ -20,6 +20,18 @@ function TransparentHeaderBackground() {
     <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: 'transparent' }]} />
   );
 }
+
+const SLIDES_HEADER_OPTIONS = {
+  title: '',
+  headerBackVisible: true,
+  headerShown: true,
+  headerTransparent: true,
+  headerShadowVisible: false,
+  headerStyle: { backgroundColor: 'transparent' },
+  headerLeft: () => null,
+  headerRight: () => null,
+  headerTitle: () => <OnboardingSlidesInitialHeader />,
+} as const;
 
 export default function OnboardingLayout() {
   const iosHeaderNoChromeFade =
@@ -48,28 +60,9 @@ export default function OnboardingLayout() {
         ...iosHeaderNoChromeFade,
       }}
     >
-      {/* redirect-only route — suppress header so onboarding never flashes chrome here */}
-      <Stack.Screen name="index" options={{ headerShown: true,
-        headerTransparent: true,
-        headerShadowVisible: false,
-        headerStyle: { backgroundColor: 'transparent' },}} />
-      <Stack.Screen name="auth" options={{ headerShown: false }} />
-      {/* full header is configured before questionnaire body mounts — avoids route title / empty bar flash */}
-      <Stack.Screen
-        name="slides"
-        options={{
-          title: '',
-          headerBackVisible: true,
-          headerShown: true,
-          headerTransparent: true,
-          headerShadowVisible: false,
-          headerStyle: { backgroundColor: 'transparent' },
-          headerLeft: () => null,
-          headerRight: () => null,
-          headerTitle: () => <OnboardingSlidesInitialHeader />,
-        }}
-      />
-      {/* slides inherits transparent header chrome above */}
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/index" options={{ headerShown: false }} />
+      <Stack.Screen name="slides/index" options={SLIDES_HEADER_OPTIONS} />
     </Stack>
   );
 }

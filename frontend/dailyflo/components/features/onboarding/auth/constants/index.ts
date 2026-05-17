@@ -5,7 +5,6 @@
 import './authSlideArraysDevAssertions';
 
 export * from './types';
+export * from './authLandingDailyFloTitle';
 export * from './slideUiTokens';
-export * from './textValues';
-export * from './typography';
 export * from './pagerLayout';

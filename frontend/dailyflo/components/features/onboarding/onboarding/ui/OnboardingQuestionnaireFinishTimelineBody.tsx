@@ -28,14 +28,20 @@ export function OnboardingQuestionnaireFinishTimelineBody({
 }: OnboardingQuestionnaireFinishTimelineBodyProps) {
   return (
     <View style={styles.root} accessibilityLabel="Task timeline preview">
-      <OnboardingPlannerTimeline {...timelineProps} onScrollBodyHeightChange={onScrollBodyHeightChange} />
+      <OnboardingPlannerTimeline
+        {...timelineProps}
+        scrollBody
+        onScrollBodyHeightChange={onScrollBodyHeightChange}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // no `flex: 1` — the strip’s height comes from `OnboardingPlannerTimeline` content; `flex` here was shrinking it inside the crossfade `absoluteFill` layer
+  // `flex: 1` + `minHeight: 0` — crossfade layer is absolute-fill; this wrapper must claim the box so the inner `ScrollView` (`scrollBody`) gets a bounded height. without minHeight 0, flex children won’t shrink and scrolling breaks on some layouts.
   root: {
     width: '100%',
+    flex: 1,
+    minHeight: 0,
   },
 });

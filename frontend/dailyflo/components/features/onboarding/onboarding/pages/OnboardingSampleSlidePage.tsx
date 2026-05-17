@@ -73,7 +73,7 @@ export function OnboardingSampleSlidePage({
   onHabitFrequencyIdChange,
 }: OnboardingSampleSlidePageProps) {
   const { height: windowHeight } = useWindowDimensions();
-  // finish slide: timeline is taller than the wake step — the default flex column caps `absoluteFill` body layers and `OnboardingSlidesShell` adds horizontal + bottom inset that squishes the strip; we scroll + go flush with the external continue footer like the agenda debug path
+  // finish slide: tall timeline scrolls inside `OnboardingPlannerTimeline` (`scrollBody`); shell goes full-bleed + flush footer like agenda debug, headline gets explicit horizontal pad below
   const isTaskFinishTimelineStep =
     nextStepChoice === 'task' && blendProgress > ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX;
   const finishTimelineBodyMinHeight = Math.round(Math.max(windowHeight * 0.68, 440));
@@ -85,17 +85,22 @@ export function OnboardingSampleSlidePage({
   const agendaScrollBodyMinHeight = Math.round(windowHeight * 0.52);
 
   const headlineBlock = (
-    <>
-      {/* headline + caption crossfade — tokens come from `slideModel` so branch slides stay in sync */}
-      <View style={{ marginBottom: Paddings.touchTarget }}>
-        <OnboardingQuestionnaireHeadlineCrossfade
-          blendProgressAnim={blendProgressAnim}
-          pageTitles={slideModel.pageTitles}
-          pageCaptions={slideModel.pageCaptions}
-          pageSlideUi={slideModel.pageSlideUi}
-        />
-      </View>
-    </>
+    // headline + caption crossfade — same wrapper tree as every non-debug step so duration→finish doesn’t remount the headline (keeps crossfade in sync with the body stack). finish adds horizontal inset because the shell goes full-bleed.
+    <View
+      style={[
+        { marginBottom: Paddings.touchTarget },
+        isTaskFinishTimelineStep && {
+          paddingHorizontal: Paddings.screen + Paddings.touchTarget,
+        },
+      ]}
+    >
+      <OnboardingQuestionnaireHeadlineCrossfade
+        blendProgressAnim={blendProgressAnim}
+        pageTitles={slideModel.pageTitles}
+        pageCaptions={slideModel.pageCaptions}
+        pageSlideUi={slideModel.pageSlideUi}
+      />
+    </View>
   );
 
   const slideBody = (
@@ -127,7 +132,14 @@ export function OnboardingSampleSlidePage({
   );
 
   const bodyNonScroll = (
-    <View style={styles.bodySlotFlex}>{slideBody}</View>
+    <View
+      style={[
+        styles.bodySlotFlex,
+        isTaskFinishTimelineStep && { minHeight: finishTimelineBodyMinHeight },
+      ]}
+    >
+      {slideBody}
+    </View>
   );
 
   const bodyAgendaScroll = (
@@ -158,19 +170,6 @@ export function OnboardingSampleSlidePage({
           <View style={[styles.agendaScrollInner, styles.agendaScrollInnerScreenPad]}>
             {headlineBlock}
             {bodyAgendaScroll}
-          </View>
-        </ScrollView>
-      ) : isTaskFinishTimelineStep ? (
-        <ScrollView
-          style={styles.finishTimelineScroll}
-          contentContainerStyle={styles.finishTimelineScrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator
-          bounces
-        >
-          <View style={styles.finishTimelineHeadlinePad}>{headlineBlock}</View>
-          <View style={[styles.finishTimelineBodySlot, { minHeight: finishTimelineBodyMinHeight }]}>
-            {slideBody}
           </View>
         </ScrollView>
       ) : (
@@ -205,20 +204,5 @@ const styles = StyleSheet.create({
   },
   agendaScrollInnerScreenPad: {
     paddingHorizontal: ONBOARDING_TASK_AGENDA_INNER_HORIZONTAL_PAD,
-  },
-  finishTimelineScroll: {
-    flex: 1,
-    width: '100%',
-  },
-  finishTimelineScrollContent: {
-    flexGrow: 1,
-  },
-  /** same horizontal rhythm as the default shell — only the headline uses it when the shell is full-bleed for the timeline */
-  finishTimelineHeadlinePad: {
-    paddingHorizontal: Paddings.screen + Paddings.touchTarget,
-  },
-  finishTimelineBodySlot: {
-    width: '100%',
-    flexGrow: 1,
   },
 });
