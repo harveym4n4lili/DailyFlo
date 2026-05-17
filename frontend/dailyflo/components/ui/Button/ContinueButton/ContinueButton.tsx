@@ -10,7 +10,7 @@
  * tint uses theme `primaryButton.fill` (PrimaryButtonColors in ColorPalette — app primary red).
  */
 
-import React from 'react';
+import React, { type ReactNode } from 'react';
 import { ActivityIndicator, Platform, Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,8 +37,8 @@ export interface ContinueButtonProps {
    * inline — no absolute frame; use in toolbars or custom rows.
    */
   layout?: 'absolute' | 'inline';
-  /** merged outer wrapper; for absolute layout, applied after base positioning so you can tweak if needed */
-  style?: StyleProp<ViewStyle>;
+  /** when set, replaces default chevron — `iconColor` is passed as the only argument (stroke/fill for your SVG). */
+  renderIcon?: (iconColor: string) => ReactNode;
 }
 
 function getIOSMajor(): number {
@@ -57,6 +57,7 @@ export function ContinueButton({
   style,
   fillColor: fillColorProp,
   iconColor: iconColorProp,
+  renderIcon,
 }: ContinueButtonProps) {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
@@ -85,6 +86,8 @@ export function ContinueButton({
 
   const innerContent = loading ? (
     <ActivityIndicator color={iconColor} size="small" />
+  ) : renderIcon ? (
+    renderIcon(iconColor)
   ) : (
     <Ionicons name="chevron-forward" size={26} color={iconColor} />
   );

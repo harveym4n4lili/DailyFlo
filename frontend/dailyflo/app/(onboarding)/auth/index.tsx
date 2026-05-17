@@ -14,6 +14,7 @@ import {
   resolveIntroContinueButtonPaint,
 } from '@/components/features/onboarding';
 import { ContinueButton } from '@/components/ui/Button';
+import { ArrowLongRightIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import type { Href } from 'expo-router';
@@ -36,11 +37,6 @@ export default function OnboardingAuthScreen() {
     [row.continueButtonBackground, themeColors],
   );
 
-  const iconColor = useMemo(
-    () => resolveIntroContinueButtonPaint(themeColors, row.continueButtonIcon),
-    [row.continueButtonIcon, themeColors],
-  );
-
   const onContinue = useCallback(() => {
     router.push(SLIDES_HREF);
   }, [router]);
@@ -52,10 +48,12 @@ export default function OnboardingAuthScreen() {
       </OnboardingAuthShell>
 
       <View style={[StyleSheet.absoluteFillObject, { zIndex: 10, elevation: 10 }]} pointerEvents="box-none">
+        {/* icon uses same hex as root background (`row.background`) */}
         <ContinueButton
           onPress={onContinue}
           fillColor={fillColor}
-          iconColor={iconColor}
+          iconColor={backgroundColor}
+          renderIcon={(c) => <ArrowLongRightIcon size={22} color={c} />}
           accessibilityLabel="Continue to onboarding"
         />
       </View>

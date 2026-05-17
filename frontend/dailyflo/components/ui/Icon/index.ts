@@ -24,6 +24,12 @@ export type { BellIconProps } from './icons/BellIcon';
 export { BackIcon } from './icons/BackIcon';
 export type { BackIconProps } from './icons/BackIcon';
 
+export { AppIcon } from './icons/AppIcon';
+export type { AppIconProps } from './icons/AppIcon';
+
+export { ArrowLongRightIcon } from './icons/ArrowLongRightIcon';
+export type { ArrowLongRightIconProps } from './icons/ArrowLongRightIcon';
+
 export { BrowseIcon } from './icons/BrowseIcon';
 export type { BrowseIconProps } from './icons/BrowseIcon';
 
@@ -44,6 +50,9 @@ export type { TickIconProps } from './icons/TickIcon';
 
 export { SparklesIcon } from './icons/SparklesIcon';
 export type { SparklesIconProps } from './icons/SparklesIcon';
+
+export { Sparkles2Icon } from './icons/Sparkles2Icon';
+export type { Sparkles2IconProps } from './icons/Sparkles2Icon';
 
 export { RepeatIcon } from './icons/RepeatIcon';
 export type { RepeatIconProps } from './icons/RepeatIcon';

@@ -242,6 +242,15 @@ function createStyles(themeColors: PlannerTimelineThemeColors) {
       paddingHorizontal: ONBOARDING_TIMELINE_ROOT_HORIZONTAL_PAD,
       backgroundColor: themeColors.background.primary(),
     },
+    /** when `scrollBody` is on — fill the crossfade shell so `ScrollView` gets a real max height and can scroll content taller than the viewport */
+    rootWhenScrollBody: {
+      flex: 1,
+      minHeight: 0,
+    },
+    scrollBodyFill: {
+      flex: 1,
+      minHeight: 0,
+    },
     // no `flexGrow`: height follows the wake→sleep column so parents don’t squeeze the strip
     scrollContent: {
       paddingTop: ONBOARDING_PLANNER_TIMELINE_SCROLL_PADDING_TOP_PX,
@@ -293,6 +302,10 @@ export type OnboardingPlannerTimelineProps = {
    * the questionnaire crossfade stack uses this so its invisible `heightProbe` matches the strip and the sleep anchor isn’t clipped.
    */
   onScrollBodyHeightChange?: (heightPx: number) => void;
+  /**
+   * finish slide: enable vertical scroll when the strip sits in a flex-limited crossfade shell (outer page no longer wraps a separate `ScrollView`).
+   */
+  scrollBody?: boolean;
 };
 
 export function OnboardingPlannerTimeline({
@@ -307,6 +320,7 @@ export function OnboardingPlannerTimeline({
   titleInputColor,
   pencilIconColor,
   onScrollBodyHeightChange,
+  scrollBody = false,
 }: OnboardingPlannerTimelineProps) {
   const themeColors = useThemeColors();
   const colorPalette = useColorPalette();
@@ -393,8 +407,18 @@ export function OnboardingPlannerTimeline({
   const sleepCenterY = layout.sleepTop + anchorRowHeight / 2;
 
   return (
-    <View style={styles.root} accessibilityLabel="Planner-style day preview">
-      <ScrollView scrollEnabled={false} contentContainerStyle={styles.scrollContent}>
+    <View
+      style={[styles.root, scrollBody && styles.rootWhenScrollBody]}
+      accessibilityLabel="Planner-style day preview"
+    >
+      <ScrollView
+        style={scrollBody ? styles.scrollBodyFill : undefined}
+        scrollEnabled={scrollBody}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={scrollBody}
+        bounces={scrollBody}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={[styles.timelineRow, { minHeight: layout.totalHeight }]}>
           <View style={[styles.timeLabelsContainer, { minHeight: layout.totalHeight }]}>
             <TimeLabel time={layout.wakeHm} position={layout.wakeTop} />

@@ -1,8 +1,6 @@
 /**
- * auth landing funnel — typescript shapes + theme/brand token unions shared by text values + slide ui tokens.
+ * auth landing funnel — typescript shapes + theme/brand token unions shared by slide ui tokens.
  */
-
-import type { TextStyle } from 'react-native';
 
 import {
   PlantBrandColors,
@@ -64,6 +62,7 @@ export type IntroContinueButtonColorToken =
   | IntroPrimaryButtonColorKey
   | IntroThemeInteractiveColorKey
   | IntroSlideTextColor
+  | IntroThemeBackgroundColorKey
   | string;
 
 /** direct brand hex accents for illustration layers — not theme slots. */
@@ -86,22 +85,10 @@ export const AUTH_BRAND_COLORS = {
   },
 } as const;
 
-/** single-row landing screen palette — lives in slideUiTokens.ts */
+/** single-row landing screen palette — lives in slideUiTokens.ts (wordmark typography/color: authLandingDailyFloTitle.ts) */
 export type AuthSlideUiConfig = {
   background: IntroSlideBackgroundColor;
-  titleColor: IntroSlideTextColor;
-  titleHighlightColor?: IntroSlideTextColor;
-  captionColor: IntroSlideTextColor;
   continueButtonBackground: IntroContinueButtonColorToken;
-  continueButtonIcon: IntroContinueButtonColorToken;
-};
-
-/** headline config — string lives in textValues.ts */
-export type AuthPageTitleConfig = {
-  title: string;
-  titleStyle?: TextStyle;
-  highlight?: {
-    text: string;
-    style?: TextStyle;
-  };
+  /** optional — landing route uses `background` for FAB icon stroke so it always matches the page surface */
+  continueButtonIcon?: IntroContinueButtonColorToken;
 };

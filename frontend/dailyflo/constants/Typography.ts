@@ -1,4 +1,5 @@
 import type { TextStyle } from 'react-native';
+import { Platform as RNPlatform } from 'react-native';
 
 /**
  * Typography System Constants
@@ -154,6 +155,15 @@ export const TextStyles = {
    
     fontWeight: FontWeight.semibold,
     //fontFamily: 'Inter-Medium',
+  },
+
+  /**
+   * `/(onboarding)/auth` landing wordmark (“dailyflo”) — metrics here; **Satoshi** via `getSatoshiTypographyStyle('auth-landing-title', platform)` (**.otf** / `useFonts` keys in `app/_layout`).
+   */
+  'auth-landing-title': {
+    fontSize: 54,
+    letterSpacing: 0.5,
+    fontWeight: 600,
   },
 } as const;
 
@@ -311,6 +321,63 @@ export function getFontFamilyWithWeight(weight: 'light' | 'regular' | 'medium' |
   return weightMap[weight] || FontFamily.primary;
 }
 
+// satoshi: bundled in `assets/fonts` + registered in `app/_layout` — mirrors `getFontFamilyWithWeight` but uses satoshi **.otf** (one react-native `fontFamily` string per file; black may still be `.ttf` if your kit doesn’t ship black otf)
+export function getSatoshiFontFamilyWithWeight(
+  weight: 'light' | 'regular' | 'medium' | 'semibold' | 'bold',
+  platform: 'ios' | 'android' | 'web' = 'ios',
+): string {
+  if (platform === 'web') {
+    return FontFamily.fallback.web.join(', ');
+  }
+  const weightMap = {
+    light: 'Satoshi-Light',
+    regular: 'Satoshi-Regular',
+    medium: 'Satoshi-Medium',
+    semibold: 'Satoshi-Bold',
+    bold: 'Satoshi-Black',
+  };
+  return weightMap[weight];
+}
+
+// same weight resolution as `getTypographyStyle`, but satoshi files + no `fontWeight` on ios/android so react-native doesn’t fake-thin the glyphs on top of a named font file
+export function getSatoshiTypographyStyle(
+  styleName: keyof typeof TextStyles,
+  platform: 'ios' | 'android' | 'web' = 'ios',
+): TextStyle {
+  const style = getTextStyle(styleName);
+  const fontWeight = `${style.fontWeight ?? FontWeight.regular}`;
+  const matchedWeight = (
+    Object.entries(FontWeight).find(([, value]) => value === fontWeight)?.[0] ?? 'regular'
+  ) as keyof typeof FontWeight;
+
+  const fontFamily = getSatoshiFontFamilyWithWeight(matchedWeight, platform);
+  const { fontWeight: _w, fontFamily: _f, ...rest } = style as TextStyle & { fontFamily?: string };
+
+  if (platform === 'web') {
+    return { ...style, fontFamily };
+  }
+  return { ...rest, fontFamily };
+}
+
+/** resolved once at load from `RNPlatform.OS` — prefer `getAuthLandingPageTitleTextStyle(platform)` when platform must be exact */
+export const AUTH_LANDING_PAGE_TITLE_TEXT_STYLE: TextStyle = getSatoshiTypographyStyle(
+  'auth-landing-title',
+  RNPlatform.OS === 'android' ? 'android' : RNPlatform.OS === 'web' ? 'web' : 'ios',
+);
+
+/** `/(onboarding)/auth` “dailyflo” headline — satoshi via `getSatoshiTypographyStyle('auth-landing-title', …)` */
+export function getAuthLandingPageTitleTextStyle(
+  platform: 'ios' | 'android' | 'web' = 'ios',
+): TextStyle {
+  return getSatoshiTypographyStyle('auth-landing-title', platform);
+}
+
+/** legacy alias — same object as `AUTH_LANDING_PAGE_TITLE_TEXT_STYLE` (some bundles/tools still resolve this name) */
+export const AUTH_LANDING_TITLE_TEXT_STYLE: TextStyle = AUTH_LANDING_PAGE_TITLE_TEXT_STYLE;
+
+/** legacy alias — same object as `AUTH_LANDING_PAGE_TITLE_TEXT_STYLE` */
+export const AUTH_HEADLINE_TEXT_STYLE: TextStyle = AUTH_LANDING_PAGE_TITLE_TEXT_STYLE;
+
 /**
  * Get responsive font size
  * @param baseSize - The base font size
@@ -437,6 +504,12 @@ export default {
   getOnboardingFontFamily,
   getOnboardingTextStyle,
   getTypographyStyle,
+  getSatoshiFontFamilyWithWeight,
+  getSatoshiTypographyStyle,
+  getAuthLandingPageTitleTextStyle,
+  AUTH_LANDING_PAGE_TITLE_TEXT_STYLE,
+  AUTH_LANDING_TITLE_TEXT_STYLE,
+  AUTH_HEADLINE_TEXT_STYLE,
   getFontFamily,
   getResponsiveFontSize,
   createTextStyle,
