@@ -4,8 +4,8 @@
  * layers use reanimated opacity (not rn `Animated.View`) so the task-agenda keyboard lift (`Reanimated.View` inside) still fades with its parent — mixing drivers often drops opacity on native views.
  */
 
-import React, { useEffect, useMemo } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, Text, TextInput, View, type ViewStyle } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Animated, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Reanimated, {
   type AnimatedStyle,
@@ -18,6 +18,7 @@ import Reanimated, {
 } from 'react-native-reanimated';
 
 import { QuickAddLabelOnlyPill } from '@/components/features/tasks/quickAdd';
+import { getTaskCardHeight } from '@/components/features/timeline/timelineUtils';
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -28,11 +29,13 @@ import {
   ONBOARDING_QUESTIONNAIRE_NEXT_STEP_SLIDE_INDEX,
   ONBOARDING_QUESTIONNAIRE_SLEEP_STEP_INDEX,
   ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX,
+  ONBOARDING_QUESTIONNAIRE_TASK_FINISH_STEP_INDEX,
   ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX,
   ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX,
   ONBOARDING_QUESTIONNAIRE_WAKE_STEP_INDEX,
   type OnboardingQuestionnaireNextStepChoice,
 } from '../constants';
+import { getOnboardingPlannerTimelineMinScrollBodyHeightPx } from '../ui/OnboardingPlannerTimeline';
 import { ONBOARDING_HABIT_FREQUENCY_OPTIONS } from '../constants/onboardingQuestionnaireAnswers';
 import {
   ONBOARDING_TASK_AGENDA_SUGGESTION_PILLS,
@@ -57,6 +60,7 @@ import type { OnboardingSlidesSlideUiConfig, OnboardingSlidesTimeWheelBrandRamp 
 import {
   OnboardingNextStepChoiceCards,
   OnboardingQuestionnaireDurationGlassSlider,
+  OnboardingQuestionnaireFinishTimelineBody,
   OnboardingQuestionnaireTaskTitleRow,
   OnboardingQuestionnaireTimeWheel,
 } from '../ui';
@@ -191,10 +195,13 @@ function QuestionnaireBodySlot({
   pageSlideUi,
   taskAgendaRowLiftStyle,
   taskAgendaSuggestionBrandChrome,
+  taskEventTime,
+  taskDurationMinutes,
   habitGoalTitle,
   onHabitGoalTitleChange,
   habitFrequencyId,
   onHabitFrequencyIdChange,
+  onFinishTimelineScrollBodyHeightChange,
 }: Pick<
   OnboardingSlideSampleContentProps,
   | 'wakeTime'
@@ -207,6 +214,8 @@ function QuestionnaireBodySlot({
   | 'onTaskAgendaTitleChange'
   | 'taskAgendaChecked'
   | 'onTaskAgendaCheckedChange'
+  | 'taskEventTime'
+  | 'taskDurationMinutes'
   | 'taskAgendaLayoutDebug'
   | 'pageSlideUi'
   | 'habitGoalTitle'
@@ -218,6 +227,8 @@ function QuestionnaireBodySlot({
   taskAgendaSuggestionBrandChrome: OnboardingTaskAgendaSuggestionBrandChrome;
   /** reanimated translateY — lifts the whole agenda content column (task row + suggestions) with the keyboard; outer body shell stays fixed */
   taskAgendaRowLiftStyle: AnimatedStyle<ViewStyle>;
+  /** finish slide — timeline reports real scroll-body height after `onLayout` so the crossfade stack’s probe isn’t short vs the task row */
+  onFinishTimelineScrollBodyHeightChange?: (heightPx: number) => void;
 }) {
   if (slideIndex === ONBOARDING_QUESTIONNAIRE_WAKE_STEP_INDEX) {
     const brandRamp = getOnboardingQuestionnaireTimeWheelBrandRampForSlide(slideIndex);
@@ -290,6 +301,26 @@ function QuestionnaireBodySlot({
     return (
       <View style={styles.bodySlot} accessibilityLabel="Habit frequency question">
         <OnboardingHabitFrequencyField valueId={habitFrequencyId} onChange={onHabitFrequencyIdChange} />
+      </View>
+    );
+  }
+
+  if (nextStepChoice === 'task' && slideIndex === ONBOARDING_QUESTIONNAIRE_TASK_FINISH_STEP_INDEX) {
+    return (
+      <View style={styles.bodySlot} accessibilityLabel="Task timeline preview">
+        <OnboardingQuestionnaireFinishTimelineBody
+          wakeTime={wakeTime}
+          sleepTime={sleepTime}
+          taskEventTime={taskEventTime}
+          taskDurationMinutes={taskDurationMinutes}
+          taskAgendaTitle={taskAgendaTitle}
+          onTaskAgendaTitleChange={onTaskAgendaTitleChange}
+          taskAgendaChecked={taskAgendaChecked}
+          onTaskAgendaCheckedChange={onTaskAgendaCheckedChange}
+          titleInputColor={taskAgendaSuggestionBrandChrome.taskTitleInputColor}
+          pencilIconColor={taskAgendaSuggestionBrandChrome.pencilIconColor}
+          onScrollBodyHeightChange={onFinishTimelineScrollBodyHeightChange}
+        />
       </View>
     );
   }
@@ -593,6 +624,7 @@ export function OnboardingSlideSampleContent({
   habitFrequencyId,
   onHabitFrequencyIdChange,
 }: OnboardingSlideSampleContentProps) {
+  const { height: windowHeight } = useWindowDimensions();
   const count = pageCount;
   const last = Math.max(count - 1, 0);
   // nearest settled slide — only that layer stays interactive so faded wheels don’t steal taps
@@ -609,6 +641,44 @@ export function OnboardingSlideSampleContent({
     nextStepChoice === 'task' &&
     blendProgress >= ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX &&
     blendProgress < ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX + 1;
+
+  // invisible wake slot sets stack height, but crossfade layers are `absoluteFill` — so they inherit that height only. past the duration step we bump the probe. `getTaskCardHeight` alone is often shorter than the real title row, so we also take `onScrollBodyHeightChange` from `OnboardingPlannerTimeline` (see `finishTimelineMeasuredScrollBodyHeight`).
+  const [finishTimelineMeasuredScrollBodyHeight, setFinishTimelineMeasuredScrollBodyHeight] = useState(0);
+
+  const reportFinishTimelineScrollBodyHeight = useCallback((px: number) => {
+    setFinishTimelineMeasuredScrollBodyHeight((prev) => (prev === px ? prev : px));
+  }, []);
+
+  useEffect(() => {
+    if (nextStepChoice !== 'task' || blendProgress <= ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX) {
+      setFinishTimelineMeasuredScrollBodyHeight(0);
+    }
+  }, [nextStepChoice, blendProgress]);
+
+  const finishTimelineProbeEstimate = useMemo(() => {
+    if (nextStepChoice !== 'task' || blendProgress <= ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX) {
+      return 0;
+    }
+    return getOnboardingPlannerTimelineMinScrollBodyHeightPx(
+      wakeTime,
+      sleepTime,
+      taskEventTime,
+      taskDurationMinutes,
+      getTaskCardHeight(taskDurationMinutes),
+    );
+  }, [
+    nextStepChoice,
+    blendProgress,
+    wakeTime,
+    sleepTime,
+    taskEventTime,
+    taskDurationMinutes,
+  ]);
+
+  const finishTimelineProbeMinHeight =
+    finishTimelineProbeEstimate > 0
+      ? Math.max(finishTimelineProbeEstimate, finishTimelineMeasuredScrollBodyHeight)
+      : 0;
 
   const layerIsTouchTarget = (layerIndex: number) =>
     touchIndex === layerIndex &&
@@ -688,10 +758,18 @@ export function OnboardingSlideSampleContent({
   });
 
   return (
-    <View style={styles.stack}>
+    <View
+      style={[
+        styles.stack,
+        nextStepChoice === 'task' && { minHeight: Math.round(Math.max(380, windowHeight * 0.42)) },
+      ]}
+    >
       {/* wake step holds the tallest body (time wheel) — reserves flex height like headline probe */}
       <View
-        style={styles.heightProbe}
+        style={[
+          styles.heightProbe,
+          finishTimelineProbeMinHeight > 0 ? { minHeight: finishTimelineProbeMinHeight } : null,
+        ]}
         pointerEvents="none"
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
@@ -712,6 +790,8 @@ export function OnboardingSlideSampleContent({
           pageSlideUi={pageSlideUi}
           taskAgendaRowLiftStyle={taskAgendaRowLiftStyle}
           taskAgendaSuggestionBrandChrome={taskAgendaSuggestionBrandChrome}
+          taskEventTime={taskEventTime}
+          taskDurationMinutes={taskDurationMinutes}
           habitGoalTitle={habitGoalTitle}
           onHabitGoalTitleChange={onHabitGoalTitleChange}
           habitFrequencyId={habitFrequencyId}
@@ -741,10 +821,13 @@ export function OnboardingSlideSampleContent({
             pageSlideUi={pageSlideUi}
             taskAgendaRowLiftStyle={taskAgendaRowLiftStyle}
             taskAgendaSuggestionBrandChrome={taskAgendaSuggestionBrandChrome}
+            taskEventTime={taskEventTime}
+            taskDurationMinutes={taskDurationMinutes}
             habitGoalTitle={habitGoalTitle}
             onHabitGoalTitleChange={onHabitGoalTitleChange}
             habitFrequencyId={habitFrequencyId}
             onHabitFrequencyIdChange={onHabitFrequencyIdChange}
+            onFinishTimelineScrollBodyHeightChange={reportFinishTimelineScrollBodyHeight}
           />
         ))}
       </View>

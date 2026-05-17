@@ -32,3 +32,8 @@ export {
   OnboardingTaskAgendaSuggestionRow,
   type OnboardingTaskAgendaSuggestionRowProps,
 } from './OnboardingTaskAgendaSuggestionRow';
+export { OnboardingPlannerTimeline, type OnboardingPlannerTimelineProps } from './OnboardingPlannerTimeline';
+export {
+  OnboardingQuestionnaireFinishTimelineBody,
+  type OnboardingQuestionnaireFinishTimelineBodyProps,
+} from './OnboardingQuestionnaireFinishTimelineBody';

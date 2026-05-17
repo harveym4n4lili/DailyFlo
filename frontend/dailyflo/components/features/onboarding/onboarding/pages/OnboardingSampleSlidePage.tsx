@@ -9,6 +9,7 @@ import { useKeyboardHeight } from '@/components/layout/ScreenLayout/Keyboard';
 import { Paddings } from '@/constants/Paddings';
 
 import {
+  ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX,
   type OnboardingQuestionnaireNextStepChoice,
   type OnboardingQuestionnaireSlideModel,
 } from '../constants';
@@ -72,6 +73,10 @@ export function OnboardingSampleSlidePage({
   onHabitFrequencyIdChange,
 }: OnboardingSampleSlidePageProps) {
   const { height: windowHeight } = useWindowDimensions();
+  // finish slide: timeline is taller than the wake step — the default flex column caps `absoluteFill` body layers and `OnboardingSlidesShell` adds horizontal + bottom inset that squishes the strip; we scroll + go flush with the external continue footer like the agenda debug path
+  const isTaskFinishTimelineStep =
+    nextStepChoice === 'task' && blendProgress > ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX;
+  const finishTimelineBodyMinHeight = Math.round(Math.max(windowHeight * 0.68, 440));
   // keyboard listeners — gate agenda scroll so it only turns on while the keyboard is visible
   const keyboardHeight = useKeyboardHeight();
   // only allow vertical scroll while the keyboard is up — avoids accidental scroll / indicator when the layout is static
@@ -131,10 +136,13 @@ export function OnboardingSampleSlidePage({
     </View>
   );
 
+  const shellFlushBottom = taskAgendaLayoutDebug || isTaskFinishTimelineStep;
+  const shellOmitHorizontalPad = taskAgendaLayoutDebug || isTaskFinishTimelineStep;
+
   return (
     <OnboardingSlidesShell
-      flushBottomWithExternalFooter={taskAgendaLayoutDebug}
-      omitHorizontalPadding={taskAgendaLayoutDebug}
+      flushBottomWithExternalFooter={shellFlushBottom}
+      omitHorizontalPadding={shellOmitHorizontalPad}
     >
       {taskAgendaLayoutDebug ? (
         // agenda step: scrollview is full width so the vertical indicator hugs the screen edge; inner column uses the same horizontal inset as the shell’s default questionnaire padding (`ONBOARDING_TASK_AGENDA_INNER_HORIZONTAL_PAD`)
@@ -150,6 +158,19 @@ export function OnboardingSampleSlidePage({
           <View style={[styles.agendaScrollInner, styles.agendaScrollInnerScreenPad]}>
             {headlineBlock}
             {bodyAgendaScroll}
+          </View>
+        </ScrollView>
+      ) : isTaskFinishTimelineStep ? (
+        <ScrollView
+          style={styles.finishTimelineScroll}
+          contentContainerStyle={styles.finishTimelineScrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator
+          bounces
+        >
+          <View style={styles.finishTimelineHeadlinePad}>{headlineBlock}</View>
+          <View style={[styles.finishTimelineBodySlot, { minHeight: finishTimelineBodyMinHeight }]}>
+            {slideBody}
           </View>
         </ScrollView>
       ) : (
@@ -184,5 +205,20 @@ const styles = StyleSheet.create({
   },
   agendaScrollInnerScreenPad: {
     paddingHorizontal: ONBOARDING_TASK_AGENDA_INNER_HORIZONTAL_PAD,
+  },
+  finishTimelineScroll: {
+    flex: 1,
+    width: '100%',
+  },
+  finishTimelineScrollContent: {
+    flexGrow: 1,
+  },
+  /** same horizontal rhythm as the default shell — only the headline uses it when the shell is full-bleed for the timeline */
+  finishTimelineHeadlinePad: {
+    paddingHorizontal: Paddings.screen + Paddings.touchTarget,
+  },
+  finishTimelineBodySlot: {
+    width: '100%',
+    flexGrow: 1,
   },
 });

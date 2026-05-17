@@ -66,6 +66,12 @@ export type { HashtagIconProps } from './icons/HashtagIcon';
 export { LeafIcon } from './icons/LeafIcon';
 export type { LeafIconProps } from './icons/LeafIcon';
 
+export { MoonFillIcon } from './icons/MoonFillIcon';
+export type { MoonFillIconProps } from './icons/MoonFillIcon';
+
+export { SunshineFillIcon } from './icons/SunshineFillIcon';
+export type { SunshineFillIconProps } from './icons/SunshineFillIcon';
+
 export { PencilIcon } from './icons/PencilIcon';
 export type { PencilIconProps } from './icons/PencilIcon';
 

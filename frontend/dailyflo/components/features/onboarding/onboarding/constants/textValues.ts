@@ -152,7 +152,7 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_FOLLOWUP_CAPTIONS: readonly string[] 
   'Name a goal you want to achieve today.',
   'Choose when this task sits on your timeline.',
   'Slide to set how long you want to spend on this task.',
-  '',
+  'Wake and sleep frame your day — here is your task on the timeline.',
 ];
 
 
@@ -230,6 +230,10 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_TIME_STEP_INDEX = ONBOARDING_QUESTION
 /** task branch — “for how long?” (same body strip as WOTA + AWT; timer crossfades to duration slider) */
 
 export const ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX = ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT + 2;
+
+/** task branch — finish: timeline preview (wake/sleep + task row on real `TimelineView`) */
+
+export const ONBOARDING_QUESTIONNAIRE_TASK_FINISH_STEP_INDEX = ONBOARDING_QUESTIONNAIRE_TASK_DURATION_STEP_INDEX + 1;
 
 /** habit branch — “what is our goal?” */
 
