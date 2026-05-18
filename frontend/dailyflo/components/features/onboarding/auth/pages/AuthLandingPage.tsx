@@ -78,7 +78,7 @@ export function AuthLandingPage() {
       <View style={styles.headerCluster}>
         <View style={styles.sloganRow} accessibilityRole="header" accessible accessibilityLabel="slogan">
           <View style={styles.sloganLeadMiddleWrap}>
-            <Text>
+            <Text style={styles.sloganLineText}>
               <Text style={[satoshiTitleTypography, { color: emphasisColor }]}>{AUTH_LANDING_SLOGAN_LEAD}</Text>
               {' '}
               <Text style={[middleHeadingTypography, { color: middleColor }]}>{AUTH_LANDING_SLOGAN_MIDDLE_LEAD}</Text>
@@ -110,19 +110,24 @@ const styles = StyleSheet.create({
   },
   headerCluster: {
     alignSelf: 'stretch',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   sloganRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    alignSelf: 'stretch',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    maxWidth: '100%',
   },
   /** “Flow … through …” only — intrinsic width + can shrink when the row wraps on small screens */
   sloganLeadMiddleWrap: {
     flexShrink: 1,
     maxWidth: '100%',
+  },
+  /** keeps rag centered when the lead line spans the full width */
+  sloganLineText: {
+    textAlign: 'center',
   },
   /** **matters,** + **to you.** + wordmark — one flex row; `flexShrink: 0` keeps them from splitting awkwardly */
   tailAndIconRow: {

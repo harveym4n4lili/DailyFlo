@@ -60,6 +60,9 @@ export type { RepeatIconProps } from './icons/RepeatIcon';
 export { EllipsisIcon } from './icons/EllipsisIcon';
 export type { EllipsisIconProps } from './icons/EllipsisIcon';
 
+export { GoogleMarkIcon } from './icons/GoogleMarkIcon';
+export type { GoogleMarkIconProps } from './icons/GoogleMarkIcon';
+
 export { GearIcon } from './icons/GearIcon';
 export type { GearIconProps } from './icons/GearIcon';
 

@@ -17,3 +17,12 @@ export const AUTH_LANDING_SLOGAN_MIDDLE = AUTH_LANDING_SLOGAN_MIDDLE_LEAD + AUTH
 
 /** trailing satoshi hit */
 export const AUTH_LANDING_SLOGAN_TAIL = 'to you.';
+
+/** primary auth CTAs — labels only until handlers wire to `services/auth` */
+export const AUTH_LANDING_CONTINUE_WITH_EMAIL_LABEL = 'Continue with email';
+export const AUTH_LANDING_CONTINUE_WITH_APPLE_LABEL = 'Continue with Apple';
+export const AUTH_LANDING_CONTINUE_WITH_GOOGLE_LABEL = 'Continue with Google';
+
+/** dev-only footer link — skips OAuth (`__DEV__`); shown under social rows */
+export const AUTH_LANDING_DEV_CONTINUE_WITHOUT_SIGN_IN_LABEL =
+  'Continue without sign-in for dev mode';
