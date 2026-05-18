@@ -5,7 +5,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Keyboard, StyleSheet, View } from 'react-native';
+import { Alert, Keyboard, StyleSheet, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -211,7 +211,7 @@ export function OnboardingQuestionnaireFlow() {
     backAccessibilityLabel: pageIndex > 0 ? 'Previous questionnaire step' : 'Back to introduction',
   });
 
-  const onContinue = useCallback(() => {
+  const onContinue = useCallback(async () => {
     if (
       nextStepChoice === 'task' &&
       pageIndex === ONBOARDING_QUESTIONNAIRE_TASK_WOTA_STEP_INDEX &&
@@ -245,7 +245,17 @@ export function OnboardingQuestionnaireFlow() {
         frequencyId: habitFrequencyId,
       },
     });
-    void completeAndExit(answers);
+    try {
+      await completeAndExit(answers);
+    } catch (err: unknown) {
+      const msg =
+        typeof err === 'string'
+          ? err
+          : err && typeof err === 'object' && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : 'Something went wrong saving your setup.';
+      Alert.alert('Could not finish setup', msg);
+    }
   }, [
     pageIndex,
     lastStep,

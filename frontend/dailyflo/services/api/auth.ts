@@ -74,16 +74,21 @@ class AuthApiService {
   }
 
   /**
-   * Social authentication (Google, Apple, Facebook)
-   * This is like using a third-party ID (like a driver's license) to prove who you are
-   * 
-   * @param data - Social authentication data (provider, tokens, etc.)
-   * @returns Promise with user data and authentication tokens
+   * Social authentication (Google, Apple)
+   * Django's SocialAuthSerializer expects snake_case on the wire: provider, id_token, optional first_name / last_name.
+   *
+   * @param body - Must match the serializer (use snake_case here; Swift/TS callers map from camelCase before calling).
+   * @returns Same envelope as register: message, tokens { access, refresh }, user
    */
-  async socialLogin(data: any): Promise<any> {
+  async socialLogin(body: {
+    provider: 'google' | 'apple';
+    id_token: string;
+    first_name?: string;
+    last_name?: string;
+  }): Promise<any> {
     try {
       // Send a POST request to the /accounts/auth/social/ endpoint
-      const response = await apiClient.post('/accounts/auth/social/', data);
+      const response = await apiClient.post('/accounts/auth/social/', body);
       
       return response.data;
     } catch (error) {

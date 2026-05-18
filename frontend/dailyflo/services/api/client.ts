@@ -76,11 +76,13 @@ const createApiClient = (): AxiosInstance => {
    */
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-      // Don't add auth token for login/register/refresh endpoints
-      // These endpoints don't require authentication and would fail with auth headers
-      const isAuthEndpoint = config.url?.includes('/auth/login/') || 
-                             config.url?.includes('/auth/register/') || 
-                             config.url?.includes('/auth/refresh/');
+      // don't add bearer for auth endpoints — social login must stay unauthenticated on the wire
+      // (a stale access token here causes 401 → refresh interceptor → "no refresh token available")
+      const isAuthEndpoint =
+        config.url?.includes('/auth/login/') ||
+        config.url?.includes('/auth/register/') ||
+        config.url?.includes('/auth/social/') ||
+        config.url?.includes('/auth/refresh/');
       
       if (!isAuthEndpoint) {
         // Get the access token from secure storage
@@ -121,11 +123,12 @@ const createApiClient = (): AxiosInstance => {
     async (error: AxiosError) => {
       const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
       
-      // Don't try to refresh tokens for login/register/refresh endpoints
-      // These endpoints can return 401 for invalid credentials, not expired tokens
-      const isAuthEndpoint = originalRequest?.url?.includes('/auth/login/') || 
-                             originalRequest?.url?.includes('/auth/register/') || 
-                             originalRequest?.url?.includes('/auth/refresh/');
+      // don't treat 401 on social/register/login as "expired access" — no dailyflo refresh cookie yet
+      const isAuthEndpoint =
+        originalRequest?.url?.includes('/auth/login/') ||
+        originalRequest?.url?.includes('/auth/register/') ||
+        originalRequest?.url?.includes('/auth/social/') ||
+        originalRequest?.url?.includes('/auth/refresh/');
       
       // Handle 401 Unauthorized - This means "your login has expired"
       // When we get a 401, the access token has likely expired, so we try to refresh it

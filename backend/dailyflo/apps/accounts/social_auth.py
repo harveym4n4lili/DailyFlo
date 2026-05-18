@@ -86,15 +86,13 @@ def verify_google_id_token(token: str) -> dict:
         raise ValueError('GOOGLE_CLIENT_ID is not configured')
 
     try:
-        # scenario: token was issued for your ios oauth client — verify_oauth2_token confirms signature + aud + exp.
-        # scenario: someone pasted a token from oauth playground tied to a *different* client id → audience mismatch.
-        # verify_oauth2_token: validates signature using google's keys, checks exp/iss/aud in one call.
-        # arg2 Request() is required — google-auth uses it internally for metadata fetch/cache.
-        # audience= must match the oauth client id configured for your ios/android app or verification fails.
+        # clock_skew: phones + google use ntp-synchronized-ish time; windows dev hosts often drift by 1–2s and
+        # google-auth would raise "Token used too early" (iat/nbf vs server time). small leeway is normal in prod too.
         claims = google_id_token.verify_oauth2_token(
             token,
             google_requests.Request(),
             audience=settings.GOOGLE_CLIENT_ID,
+            clock_skew_in_seconds=60,
         )
         return claims
     except Exception as exc:
