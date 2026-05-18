@@ -42,8 +42,12 @@ export type {
 
 export { AuthLandingPage } from './pages';
 
-export { OnboardingAuthShell } from './ui';
-export type { OnboardingAuthShellProps } from './ui';
+export {
+  AuthLandingAuthMethodsSection,
+  OnboardingAuthShell,
+  type AuthLandingAuthMethodsSectionProps,
+  type OnboardingAuthShellProps,
+} from './ui';
 
 export { ONBOARDING_COMPLETE_STORAGE_KEY, useCompleteOnboardingAndExit } from './hooks';
 export type { OnboardingQuestionnaireStoredAnswersV1 } from '../onboarding/constants/onboardingQuestionnaireAnswers';

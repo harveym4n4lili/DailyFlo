@@ -12,8 +12,15 @@ import {
   type Platform as TypographyPlatform,
   type TextStyleName,
 } from '@/constants/Typography';
+
 /** resolved from `RNPlatform.OS` for modules that do not have a component `Platform` hook */
 export const AUTH_LANDING_TYPOGRAPHY_PLATFORM = Platform.OS as TypographyPlatform;
+
+/** dev skip link under social auth — onboarding `body-medium` + underline */
+export const AUTH_LANDING_DEV_SKIP_SUBTEXT_STYLE: TextStyle = {
+  ...getOnboardingTextStyle('body-medium', AUTH_LANDING_TYPOGRAPHY_PLATFORM),
+  textDecorationLine: 'underline',
+};
 
 /**
  * middle phrase — `TextStyles` key in `constants/Typography.ts` (`auth-landing-middle-custom`, `heading-2`, …).

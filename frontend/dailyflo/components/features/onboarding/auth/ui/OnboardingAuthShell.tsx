@@ -1,6 +1,7 @@
 /**
  * layout wrapper for auth landing body — no native header here, so top inset uses safe-area only.
  * horizontal inset matches `OnboardingSlidesShell` (one `screen + touchTarget` gutter only; `AuthLandingPage` must not add a second).
+ * bottom pad clears the home indicator only — auth CTAs render in the route footer (`app/(onboarding)/auth`).
  */
 
 import React from 'react';
@@ -18,8 +19,8 @@ export type OnboardingAuthShellProps = {
 export function OnboardingAuthShell({ children }: OnboardingAuthShellProps) {
   const insets = useSafeAreaInsets();
 
-  // room for absolute Continue FAB + home indicator — mirrors former intro shell bottom math
-  const bottomPadding = Math.max(insets.bottom, Paddings.screen) + 96;
+  // safe-area bottom only — auth CTAs live in the route footer (`app/(onboarding)/auth`)
+  const bottomPadding = Math.max(insets.bottom, Paddings.screen);
 
   return (
     <View style={styles.column}>
