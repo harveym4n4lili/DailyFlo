@@ -9,7 +9,8 @@
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { useTypography } from '@/hooks/useTypography';
+import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
+import { ONBOARDING_SLIDES_PLANNER_FREE_TIME_BODY_TEXT_STYLE } from '../constants/typography';
 import TimeLabel from '@/components/features/timeline/TimeLabel';
 import TimelineItem from '@/components/features/timeline/TimelineItem';
 import { getTimelineTaskGapPx } from '@/components/features/timeline/timelineSpacing';
@@ -24,7 +25,6 @@ import { DashedVerticalLine } from '@/components/ui/borders';
 import { MoonFillIcon, SparklesIcon, SunshineFillIcon } from '@/components/ui/Icon';
 import { CHECKBOX_SIZE_DEFAULT, CHECKBOX_SIZE_TASK_VIEW } from '@/constants/Checkbox';
 import { Paddings } from '@/constants/Paddings';
-import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import type { Task, TaskColor } from '@/types';
 
 import { OnboardingQuestionnaireTaskTitleRow } from './OnboardingQuestionnaireTaskTitleRow';
@@ -44,7 +44,6 @@ function OnboardingPlannerFreeTimeGap({
   messageRotateIndex: number;
 }) {
   const themeColors = useThemeColors();
-  const typography = useTypography();
   const s = useMemo(
     () =>
       StyleSheet.create({
@@ -59,10 +58,10 @@ function OnboardingPlannerFreeTimeGap({
           zIndex: 0,
         },
         row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-        text: { ...typography.getTextStyle('body-small'), color: themeColors.background.tertiary() },
-        bold: { ...typography.getTextStyle('body-small'), color: themeColors.text.primary() },
+        text: { ...ONBOARDING_SLIDES_PLANNER_FREE_TIME_BODY_TEXT_STYLE, color: themeColors.background.tertiary() },
+        bold: { ...ONBOARDING_SLIDES_PLANNER_FREE_TIME_BODY_TEXT_STYLE, color: themeColors.text.primary() },
       }),
-    [themeColors, typography],
+    [themeColors],
   );
 
   if (height <= 0) return null;

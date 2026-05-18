@@ -158,11 +158,21 @@ export const TextStyles = {
   },
 
   /**
+   * `/(onboarding)/auth` slogan middle phrase — base size/weight; **face** comes from `getAuthLandingSloganMiddleTextStyle` in `auth/constants/typography.ts` (not Satoshi).
+   * tweak here for app-wide definition; use `AUTH_LANDING_SLOGAN_MIDDLE_STYLE_OVERRIDES` in that file for funnel-only nudges without editing this table.
+   */
+  'auth-landing-middle-custom': {
+    fontSize: 28,
+
+    fontWeight: FontWeight.semibold,
+  },
+
+  /**
    * `/(onboarding)/auth` landing wordmark (“dailyflo”) — metrics here; **Satoshi** via `getSatoshiTypographyStyle('auth-landing-title', platform)` (**.otf** / `useFonts` keys in `app/_layout`).
    */
   'auth-landing-title': {
-    fontSize: 54,
-    letterSpacing: 0.5,
+    fontSize: 39,
+    letterSpacing: 0,
     fontWeight: 600,
   },
 } as const;
@@ -372,6 +382,15 @@ export function getAuthLandingPageTitleTextStyle(
   return getSatoshiTypographyStyle('auth-landing-title', platform);
 }
 
+/**
+ * legacy helper — landing headline now uses `getAuthLandingPageTitleTextStyle`; kept for older imports / HMR bundles.
+ */
+export function getAuthLandingSloganTextStyle(
+  platform: 'ios' | 'android' | 'web' = 'ios',
+): TextStyle {
+  return getTypographyStyle('body-large', platform);
+}
+
 /** legacy alias — same object as `AUTH_LANDING_PAGE_TITLE_TEXT_STYLE` (some bundles/tools still resolve this name) */
 export const AUTH_LANDING_TITLE_TEXT_STYLE: TextStyle = AUTH_LANDING_PAGE_TITLE_TEXT_STYLE;
 
@@ -507,6 +526,7 @@ export default {
   getSatoshiFontFamilyWithWeight,
   getSatoshiTypographyStyle,
   getAuthLandingPageTitleTextStyle,
+  getAuthLandingSloganTextStyle,
   AUTH_LANDING_PAGE_TITLE_TEXT_STYLE,
   AUTH_LANDING_TITLE_TEXT_STYLE,
   AUTH_HEADLINE_TEXT_STYLE,

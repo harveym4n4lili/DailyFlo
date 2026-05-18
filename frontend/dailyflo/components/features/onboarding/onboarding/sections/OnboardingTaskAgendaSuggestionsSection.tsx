@@ -15,13 +15,14 @@ import {
 import {
   ONBOARDING_TASK_AGENDA_SUGGESTION_PILLS,
   ONBOARDING_TASK_AGENDA_SUGGESTIONS_SECTION_TITLE,
+  ONBOARDING_TASK_AGENDA_SUGGESTIONS_SECTION_TITLE_FALLBACK_COLOR,
 } from '../constants/slideUiTokens';
-import { ONBOARDING_SLIDES_CAPTION_TEXT_STYLE } from '../constants/typography';
+import { ONBOARDING_SLIDES_TASK_AGENDA_SUGGESTIONS_SECTION_TITLE_TEXT_STYLE } from '../constants/typography';
 import type { OnboardingSlidesSlideTextColor } from '../constants/types';
 import { resolveOnboardingSlidesTextColor } from '../onboardingSlidesThemeResolvers';
 import { OnboardingTaskAgendaSuggestionRow } from '../ui';
 
-const TITLE_SEMANTIC: OnboardingSlidesSlideTextColor = 'primary';
+const TITLE_FALLBACK: OnboardingSlidesSlideTextColor = ONBOARDING_TASK_AGENDA_SUGGESTIONS_SECTION_TITLE_FALLBACK_COLOR;
 
 export type OnboardingTaskAgendaSuggestionBrandChrome = {
   /** blended `taskAgendaBody.taskTitleInput` or `titleColor` — matches main task field + suggestion labels */
@@ -69,7 +70,7 @@ export function OnboardingTaskAgendaSuggestionsSection({
   brandChrome,
 }: OnboardingTaskAgendaSuggestionsSectionProps) {
   const themeColors = useThemeColors();
-  const titleColor = brandChrome?.sectionTitleColor ?? resolveOnboardingSlidesTextColor(themeColors, TITLE_SEMANTIC);
+  const titleColor = brandChrome?.sectionTitleColor ?? resolveOnboardingSlidesTextColor(themeColors, TITLE_FALLBACK);
   const rowTitleColor = brandChrome?.taskTitleInputColor ?? themeColors.text.primary();
   // selected chip accent follows slide continue FAB (`plant:500` on task-branch steps); fallback if section ever mounts without chrome
   const selectedBrandColor = brandChrome?.selectedSlideBrandColor ?? themeColors.primaryButton.fill();
@@ -80,7 +81,7 @@ export function OnboardingTaskAgendaSuggestionsSection({
 
   return (
     <View style={styles.sectionRoot} accessibilityRole="none" accessibilityLabel="Suggested task titles">
-      <Text style={[ONBOARDING_SLIDES_CAPTION_TEXT_STYLE, styles.sectionTitle, { color: titleColor }]}>
+      <Text style={[ONBOARDING_SLIDES_TASK_AGENDA_SUGGESTIONS_SECTION_TITLE_TEXT_STYLE, styles.sectionTitle, { color: titleColor }]}>
         {sectionTitle}
       </Text>
       {/* one bleed wrapper; two independent horizontal scrolls so each row scrolls on its own (nested in the agenda vertical scroll on android) */}
@@ -137,7 +138,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: ONBOARDING_TASK_AGENDA_SUGGESTIONS_TITLE_CHIP_GAP,
-    fontWeight: '600',
   },
   chipScrollBleed: {
     marginHorizontal: -ONBOARDING_TASK_AGENDA_INNER_HORIZONTAL_PAD,

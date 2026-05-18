@@ -162,7 +162,10 @@ export type OnboardingSlidesSlideUiConfig = {
   /** page wash — default resolver background; any `OnboardingSlidesSlideUiColorInput` allowed */
   background: OnboardingSlidesSlideUiColorInput;
   titleColor: OnboardingSlidesSlideUiColorInput;
+  /** accent span inside the headline — falls back to `titleColor` when omitted */
   titleHighlightColor?: OnboardingSlidesSlideUiColorInput;
+  /** optional per-slide font tweaks for that accent span — merged after `ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_TEXT_STYLE`, before each title’s `highlight.style` in `textValues` */
+  titleHighlightTypographyOverrides?: Partial<TextStyle>;
   captionColor: OnboardingSlidesSlideUiColorInput;
   dotIndicatorColor: OnboardingSlidesSlideUiColorInput;
   continueButtonBackground: OnboardingSlidesSlideUiColorInput;
@@ -175,6 +178,10 @@ export type OnboardingSlidesSlideUiConfig = {
    * steps that render `OnboardingQuestionnaireTimeWheel` must set this so spinner tint matches the slide’s headline ramp.
    */
   timeWheelBrandRamp?: OnboardingSlidesTimeWheelBrandRamp;
+  /**
+   * habit/task picker only — card titles on `OnboardingNextStepChoiceCards` (`resolveOnboardingSlidesSlideUiText`).
+   */
+  nextStepChoiceCardTitleColor?: OnboardingSlidesSlideUiColorInput;
   /**
    * task questionnaire only — “what’s on the agenda?” body (`OnboardingQuestionnaireTaskTitleRow` + `OnboardingTaskAgendaSuggestionsSection`).
    * omit on non–task-agenda rows. first task-branch slide should set every field: colors, suggestions heading copy, and pill labels.

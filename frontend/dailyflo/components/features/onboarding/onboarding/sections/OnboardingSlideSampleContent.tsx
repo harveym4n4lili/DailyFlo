@@ -21,7 +21,6 @@ import { QuickAddLabelOnlyPill } from '@/components/features/tasks/quickAdd';
 import { getTaskCardHeight } from '@/components/features/timeline/timelineUtils';
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { useTypography } from '@/hooks/useTypography';
 import {
   ONBOARDING_QUESTIONNAIRE_CORE_PAGE_COUNT,
   ONBOARDING_QUESTIONNAIRE_HABIT_FREQUENCY_STEP_INDEX,
@@ -37,6 +36,10 @@ import {
 } from '../constants';
 import { getOnboardingPlannerTimelineMinScrollBodyHeightPx } from '../ui/OnboardingPlannerTimeline';
 import { ONBOARDING_HABIT_FREQUENCY_OPTIONS } from '../constants/onboardingQuestionnaireAnswers';
+import {
+  ONBOARDING_SLIDES_HABIT_FREQUENCY_OPTION_TEXT_STYLE,
+  ONBOARDING_SLIDES_TASK_AND_HABIT_FIELD_TITLE_TEXT_STYLE,
+} from '../constants/typography';
 import {
   ONBOARDING_TASK_AGENDA_SUGGESTION_PILLS,
   ONBOARDING_TASK_AGENDA_SUGGESTIONS_SECTION_TITLE,
@@ -74,7 +77,6 @@ import { OnboardingTaskAgendaSuggestionsSection, type OnboardingTaskAgendaSugges
 /** habit branch — single-line goal; state lives in `OnboardingQuestionnaireFlow` until finish writes AsyncStorage snapshot */
 function OnboardingHabitGoalField({ value, onChange }: { value: string; onChange: (next: string) => void }) {
   const themeColors = useThemeColors();
-  const typography = useTypography();
   const primaryTint = themeColors.primaryButton.fill();
   return (
     <TextInput
@@ -88,7 +90,7 @@ function OnboardingHabitGoalField({ value, onChange }: { value: string; onChange
       returnKeyType="done"
       accessibilityLabel="Habit goal"
       style={[
-        typography.getTextStyle('heading-4'),
+        ONBOARDING_SLIDES_TASK_AND_HABIT_FIELD_TITLE_TEXT_STYLE,
         {
           width: '100%',
           paddingVertical: Paddings.card,
@@ -112,7 +114,6 @@ function OnboardingHabitFrequencyField({
   onChange: (nextId: string) => void;
 }) {
   const themeColors = useThemeColors();
-  const typography = useTypography();
   return (
     <View style={{ width: '100%', gap: Paddings.touchTargetSmall }}>
       {ONBOARDING_HABIT_FREQUENCY_OPTIONS.map((opt) => {
@@ -133,7 +134,7 @@ function OnboardingHabitFrequencyField({
                 : themeColors.background.primarySecondaryBlend(),
             }}
           >
-            <Text style={[typography.getTextStyle('body-large'), { color: themeColors.text.primary() }]}>
+            <Text style={[ONBOARDING_SLIDES_HABIT_FREQUENCY_OPTION_TEXT_STYLE, { color: themeColors.text.primary() }]}>
               {opt.label}
             </Text>
           </Pressable>
@@ -230,6 +231,13 @@ function QuestionnaireBodySlot({
   /** finish slide — timeline reports real scroll-body height after `onLayout` so the crossfade stack’s probe isn’t short vs the task row */
   onFinishTimelineScrollBodyHeightChange?: (heightPx: number) => void;
 }) {
+  const themeColors = useThemeColors();
+  const nextStepCardTitleColor = useMemo(() => {
+    const row = pageSlideUi[ONBOARDING_QUESTIONNAIRE_NEXT_STEP_SLIDE_INDEX];
+    const token = row?.nextStepChoiceCardTitleColor ?? { scope: 'text', token: 'plant:700' };
+    return resolveOnboardingSlidesSlideUiText(themeColors, token);
+  }, [pageSlideUi, themeColors]);
+
   if (slideIndex === ONBOARDING_QUESTIONNAIRE_WAKE_STEP_INDEX) {
     const brandRamp = getOnboardingQuestionnaireTimeWheelBrandRampForSlide(slideIndex);
     return (
@@ -278,7 +286,11 @@ function QuestionnaireBodySlot({
   if (slideIndex === ONBOARDING_QUESTIONNAIRE_NEXT_STEP_SLIDE_INDEX) {
     return (
       <View style={styles.bodySlot} accessibilityLabel="Next step choice">
-        <OnboardingNextStepChoiceCards value={nextStepChoice} onChange={onNextStepChoiceChange} />
+        <OnboardingNextStepChoiceCards
+          cardTitleColor={nextStepCardTitleColor}
+          value={nextStepChoice}
+          onChange={onNextStepChoiceChange}
+        />
       </View>
     );
   }

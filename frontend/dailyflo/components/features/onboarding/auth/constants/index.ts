@@ -1,10 +1,12 @@
 /**
- * auth onboarding constants — split by concern; import from this barrel only.
+ * auth onboarding constants — split like questionnaire onboarding:
+ * `slideUiTokens` (colors), `textValues` (copy), `typography` (faces + overrides), `pagerLayout` (spacing / non-color chrome metrics).
  */
 
 import './authSlideArraysDevAssertions';
 
 export * from './types';
-export * from './authLandingDailyFloTitle';
 export * from './slideUiTokens';
+export * from './textValues';
+export * from './typography';
 export * from './pagerLayout';

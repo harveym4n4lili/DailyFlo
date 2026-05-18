@@ -14,7 +14,6 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Paddings } from '@/constants/Paddings';
-import { getOnboardingTextStyle, type Platform as TypographyPlatform } from '@/constants/Typography';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
 import {
@@ -24,6 +23,10 @@ import {
   ONBOARDING_DURATION_SLIDER_THUMB_WIDTH_PX,
   ONBOARDING_DURATION_SLIDER_TRACK_HEIGHT_PX,
 } from '../constants/pagerLayout';
+import {
+  ONBOARDING_SLIDES_DURATION_PILL_TEXT_STYLE,
+  ONBOARDING_SLIDES_DURATION_RAIL_TEXT_STYLE,
+} from '../constants/typography';
 
 /** onboarding preset stops — rail shows minutes plain + `h` for hours; pill adds `m` only for sub-hour picks */
 const PRESETS: readonly { min: number; trackLabel: string; pillLabel: string }[] = [
@@ -77,10 +80,6 @@ export function OnboardingQuestionnaireDurationGlassSlider({
   accessibilityLabel = 'Task duration',
 }: OnboardingQuestionnaireDurationGlassSliderProps) {
   const themeColors = useThemeColors();
-  const typoPlatform = Platform.OS as TypographyPlatform;
-  // same rounded/system stack as slide titles + continue (`getOnboardingTextStyle`)
-  const durationTrackTextStyle = useMemo(() => getOnboardingTextStyle('body-small', typoPlatform), [typoPlatform]);
-  const durationPillTextStyle = useMemo(() => getOnboardingTextStyle('body-medium', typoPlatform), [typoPlatform]);
 
   const draggingRef = useRef(false);
   const didInitPositionRef = useRef(false);
@@ -194,7 +193,7 @@ export function OnboardingQuestionnaireDurationGlassSlider({
       >
         <Text
           style={[
-            durationTrackTextStyle,
+            ONBOARDING_SLIDES_DURATION_RAIL_TEXT_STYLE,
             styles.inTrackLabelText,
             {
               color: obscured
@@ -214,7 +213,7 @@ export function OnboardingQuestionnaireDurationGlassSlider({
   const thumbBody = (
     <View style={[styles.thumbSolid, { backgroundColor: tintColor }]}>
       <Text
-        style={[durationPillTextStyle, styles.thumbLabelText, { color: labelColor }]}
+        style={[ONBOARDING_SLIDES_DURATION_PILL_TEXT_STYLE, styles.thumbLabelText, { color: labelColor }]}
         numberOfLines={1}
       >
         {selectedPillLabel}

@@ -23,6 +23,7 @@ import {
 import { useBrandColors } from '@/hooks/useColorPalette';
 
 import { ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_BAND_MIN_HEIGHT_PX } from '../constants/pagerLayout';
+import { ONBOARDING_SLIDES_TIME_WHEEL_ROW_LABEL_TEXT_STYLE } from '../constants/typography';
 import type { OnboardingSlidesTimeWheelBrandRamp } from '../constants/types';
 
 export type OnboardingQuestionnaireTimeWheelProps = {
@@ -116,7 +117,7 @@ function QuarterHourWebFallback({
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<Date>) => (
       <View style={styles.row} accessibilityLabel={formatQuarterHourLabel(item)}>
-        <Text style={[styles.rowLabel, { color: wheelLabelColor }]}>{formatQuarterHourLabel(item)}</Text>
+        <Text style={[ONBOARDING_SLIDES_TIME_WHEEL_ROW_LABEL_TEXT_STYLE, { color: wheelLabelColor }]}>{formatQuarterHourLabel(item)}</Text>
       </View>
     ),
     [wheelLabelColor],
@@ -257,9 +258,5 @@ const styles = StyleSheet.create({
     height: ROW_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  rowLabel: {
-    fontSize: 22,
-    fontVariant: ['tabular-nums'],
   },
 });
