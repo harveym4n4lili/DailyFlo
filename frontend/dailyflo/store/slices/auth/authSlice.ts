@@ -569,64 +569,86 @@ export const registerUser = createAsyncThunk(
   }
 );
 
-// Social authentication (Google, Apple, Facebook)
+// Social authentication — google/apple id_token verified by django, then same jwt session as email login
 export const socialAuth = createAsyncThunk(
   'auth/socialAuth',
   async (authData: SocialAuthInput, { rejectWithValue }) => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.socialAuth(authData);
-      // return response.data;
-      
-      // For now, create a mock user
-      const mockUser: User = {
-        id: Date.now().toString(),
-        email: authData.email,
-        authProvider: authData.authProvider,
-        authProviderId: authData.authProviderId,
-        firstName: authData.firstName || '',
-        lastName: authData.lastName || '',
-        avatarUrl: authData.avatarUrl || null,
-        isEmailVerified: true,
-        lastLogin: new Date(),
-        preferences: {
-          theme: 'light',
-          notifications: {
-            enabled: true,
-            dueDateReminders: true,
-            routineReminders: true,
-            pushNotifications: true,
-            emailNotifications: false,
-          },
-          defaultPriority: 3,
-          defaultColor: 'blue',
-          defaultListView: 'list',
-          timezone: 'UTC',
-          dateFormat: 'MM/DD/YYYY',
-          timeFormat: '12h',
-          autoArchiveCompleted: false,
-          showCompletedTasks: true,
-          sortTasksBy: 'dueDate',
-          analyticsEnabled: true,
-          crashReportingEnabled: true,
-        },
-        softDeleted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      const mockTokens = {
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-      };
-      
+      // django expects snake_case field names matching SocialAuthSerializer
+      const response = await authApiService.socialLogin({
+        provider: authData.provider,
+        id_token: authData.idToken,
+        first_name: authData.firstName ?? '',
+        last_name: authData.lastName ?? '',
+      });
+
+      const accessToken =
+        response.tokens?.access || response.access || response.data?.tokens?.access || response.data?.access;
+      const refreshToken =
+        response.tokens?.refresh ||
+        response.refresh ||
+        response.data?.tokens?.refresh ||
+        response.data?.refresh;
+
+      if (!accessToken || !refreshToken) {
+        console.error('Social auth: tokens missing from response', Object.keys(response || {}));
+        throw new Error('Tokens not received from server');
+      }
+
+      // same as loginUser — apiClient reads the bearer token from SecureStore on later calls
+      await storeAccessToken(accessToken);
+      await storeRefreshToken(refreshToken);
+
+      const user: User = transformApiUserToUser(response.user);
+      const expiryTime = Date.now() + 15 * 60 * 1000;
+      await storeTokenExpiry(expiryTime);
+
       return {
-        user: mockUser,
-        ...mockTokens,
+        user,
+        accessToken,
+        refreshToken,
+        expiresAt: new Date(expiryTime),
       };
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Social authentication failed');
+    } catch (error: any) {
+      let errorMessage = 'Sign in failed. Please try again.';
+
+      if (error.response) {
+        const status = error.response.status;
+        const data = error.response.data;
+
+        if (status === 400 && data) {
+          if (data.non_field_errors) {
+            errorMessage = Array.isArray(data.non_field_errors)
+              ? data.non_field_errors[0]
+              : data.non_field_errors;
+          } else if (data.id_token) {
+            errorMessage = Array.isArray(data.id_token) ? data.id_token[0] : String(data.id_token);
+          } else if (data.provider) {
+            errorMessage = Array.isArray(data.provider) ? data.provider[0] : String(data.provider);
+          } else {
+            const firstKey = Object.keys(data)[0];
+            if (firstKey) {
+              const v = data[firstKey];
+              errorMessage = `${firstKey}: ${Array.isArray(v) ? v[0] : v}`;
+            } else {
+              errorMessage = data.message || data.detail || errorMessage;
+            }
+          }
+        } else if (status === 401) {
+          errorMessage = typeof data?.error === 'string' ? data.error : 'Could not verify your account. Try again.';
+        } else if (status === 409) {
+          errorMessage =
+            typeof data?.message === 'string' ? data.message : 'An account with this email already uses another sign-in method.';
+        } else if (status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+      } else if (error.request) {
+        errorMessage = 'Network error. Please check your connection.';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -901,14 +923,7 @@ const authSlice = createSlice({
         state.tokenExpiry = action.payload.expiresAt.getTime();
         state.authMethod = action.payload.user.authProvider;
         state.lastLoginTime = Date.now();
-        
-        // Store tokens if remember me is enabled
-        if (state.rememberMe) {
-          localStorage.setItem('accessToken', action.payload.accessToken);
-          localStorage.setItem('refreshToken', action.payload.refreshToken);
-          localStorage.setItem('user', JSON.stringify(action.payload.user));
-          localStorage.setItem('tokenExpiry', action.payload.expiresAt.getTime().toString());
-        }
+        // tokens already persisted in the thunk via SecureStore (same pattern as loginUser)
       })
       .addCase(socialAuth.rejected, (state, action) => {
         state.isLoggingIn = false;

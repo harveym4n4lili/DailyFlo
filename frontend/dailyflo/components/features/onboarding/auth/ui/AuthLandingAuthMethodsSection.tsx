@@ -25,6 +25,7 @@ import {
   AUTH_LANDING_DEV_CONTINUE_WITHOUT_SIGN_IN_LABEL,
 } from '../constants/textValues';
 import { AUTH_LANDING_DEV_SKIP_SUBTEXT_STYLE } from '../constants/typography';
+import { useGoogleAuthOnboarding } from '../hooks/useGoogleAuthOnboarding';
 import { resolveIntroContinueButtonPaint } from '../scrollTransition';
 
 /** questionnaire entry — same target the former auth continue FAB used */
@@ -62,6 +63,9 @@ type GlassAuthRowProps = {
   accessibilityLabel: string;
   tintColor: string;
   labelColor: string;
+  /** wired for google first; email/apple noop until those flows exist */
+  onPress?: () => void;
+  disabled?: boolean;
 } & (
   | { icon: React.ComponentProps<typeof Ionicons>['name']; leading?: never }
   | { icon?: never; leading: React.ReactNode }
@@ -74,6 +78,8 @@ function AuthLandingGlassAuthRow({
   accessibilityLabel,
   tintColor,
   labelColor,
+  onPress,
+  disabled = false,
 }: GlassAuthRowProps) {
   const isNewerIOS = getIOSMajor() >= 15;
   const glassAvailable = Platform.OS === 'ios';
@@ -83,7 +89,8 @@ function AuthLandingGlassAuthRow({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      onPress={() => {}}
+      onPress={onPress ?? (() => {})}
+      disabled={disabled}
       hitSlop={onboardingContinueHitSlop}
       style={({ pressed }) => ({
         width: '100%',
@@ -95,7 +102,7 @@ function AuthLandingGlassAuthRow({
         paddingHorizontal: Paddings.onboardingContinueButtonPaddingHorizontal,
         borderRadius: Paddings.continueButtonRadius,
         gap: 10,
-        opacity: pressed ? 0.92 : 1,
+        opacity: disabled ? 0.5 : pressed ? 0.92 : 1,
       })}
     >
       {leading ?? <Ionicons name={icon!} size={ICON_SIZE} color={labelColor} />}
@@ -142,6 +149,7 @@ export type AuthLandingAuthMethodsSectionProps = {
 export function AuthLandingAuthMethodsSection({ variant = 'belowHeadline' }: AuthLandingAuthMethodsSectionProps) {
   const themeColors = useThemeColors();
   const router = useGuardedRouter();
+  const { onGooglePress, googleBusy, googleReady } = useGoogleAuthOnboarding();
 
   const onDevContinueWithoutSignIn = useCallback(() => {
     router.push(SLIDES_HREF);
@@ -191,6 +199,8 @@ export function AuthLandingAuthMethodsSection({ variant = 'belowHeadline' }: Aut
           accessibilityLabel={AUTH_LANDING_CONTINUE_WITH_GOOGLE_LABEL}
           tintColor={googleTintColor}
           labelColor={googleLabelColor}
+          onPress={onGooglePress}
+          disabled={!googleReady || googleBusy}
         />
       </View>
       {__DEV__ ? (

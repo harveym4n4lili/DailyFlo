@@ -1,86 +1,71 @@
 /**
- * Social login triggers — google uses oauth via browser + redirect back into the app;
- * apple uses the native sign-in-with-apple sheet. Both return a jwt **identity/id token**
- * string your backend verifies (`social_auth.py`). Redux thunk sends that token to django —
- * same payload shape you tested with postman.
+ * Social login triggers — apple uses expo-apple-authentication; google uses **native** `@react-native-google-signin/google-signin`
+ * (needs a dev/EAS build with the config plugin — not Expo Go). Both return an identity **id_token** jwt that django verifies.
+ * Redux `socialAuth` thunk posts that token to `/accounts/auth/social/`.
  */
 
 // Apple's expo wrapper around ios native apis — opens system ui, returns jwt + optional name once.
 import * as AppleAuthentication from 'expo-apple-authentication';
-// Google's oauth/openid flow in react native — builds redirect uri, runs browser prompt, parses tokens.
-import * as AuthSession from 'expo-auth-session';
-// Opens oauth in an in-app browser tab — expo-auth-session relies on this for the redirect handshake.
-import * as WebBrowser from 'expo-web-browser';
+import {
+  GoogleSignin,
+  isCancelledResponse,
+  isSuccessResponse,
+} from '@react-native-google-signin/google-signin';
+import { Platform } from 'react-native';
 
 /**
- * Run once when this module loads. After google redirects to dailyflo://... with oauth params,
- * this finishes closing the browser tab so the user lands cleanly back in the app.
- * Required pairing when using `promptAsync` (see expo-auth-session docs).
+ * Reads `frontend/dailyflo/.env` at bundle time (`EXPO_PUBLIC_*`).
+ * Use the **DailyFlo iOS** OAuth client id from Google Cloud — must match django `GOOGLE_CLIENT_ID` (jwt `aud`).
+ * If unset, `GoogleService-Info.plist` (via `ios.googleServicesFile` + prebuild) still supplies the iOS client for the native sdk.
  */
-WebBrowser.maybeCompleteAuthSession();
+const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+
+let googleNativeConfigureOnce = false;
 
 /**
- * Reads `frontend/dailyflo/.env` at **bundle/build time** (only vars prefixed `EXPO_PUBLIC_`).
- * Same oauth client id as google cloud console (typically ios bundle client's id string when signing in from app).
- * Matches django `GOOGLE_CLIENT_ID` for verifying tokens minted for **this** audience.
+ * Tell the native Google sdk which app/keys to use — safe to call once per app lifetime.
  */
-const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
-
-/**
- * Where google may redirect after login — computed per platform by expo-auth-session.
- * Uses `scheme: 'dailyflo'` which must match `expo.scheme` in app.json so the os routes the callback to dailyflo.
- * You must register this exact uri (or list variants) as an **authorized redirect uri** on that google oauth client.
- */
-const googleRedirectUri = AuthSession.makeRedirectUri({ scheme: 'dailyflo' });
-
-/**
- * Opens google sign-in and resolves with the raw **openid id_token** jwt string.
- *
- * @param discovery — OIDC discovery doc usually from `AuthSession.useAutoDiscovery('https://accounts.google.com')`
- *   in the screen component; describes authorize/token endpoints google exposes. Passed in so this file stays a plain
- *   async helper (no hooks inside).
- */
-export async function triggerGoogleSignIn(
-  discovery: AuthSession.DiscoveryDocument | null
-): Promise<{ idToken: string }> {
-  if (!discovery) {
-    throw new Error('Google discovery not ready');
-  }
-  if (!googleClientId) {
-    throw new Error('EXPO_PUBLIC_GOOGLE_CLIENT_ID is not set');
-  }
-
-  /**
-   * AuthRequest config object — describes **one** oauth authorization request to google:
-   * - clientId: which google cloud oauth client this login is for (must match token `aud` django checks).
-   * - scopes: openid issues id_token; profile/email ask for standard claims inside it.
-   * - redirectUri: must match an allowed redirect uri on that client (see `googleRedirectUri` above).
-   * - responseType IdToken: implicit-style response — google returns id_token in redirect params (what we need for django).
-   */
-  const request = new AuthSession.AuthRequest({
-    clientId: googleClientId,
-    scopes: ['openid', 'profile', 'email'],
-    redirectUri: googleRedirectUri,
-    responseType: AuthSession.ResponseType.IdToken,
+function ensureGoogleNativeConfigured(): void {
+  if (googleNativeConfigureOnce) return;
+  GoogleSignin.configure({
+    // explicit ios client keeps local/dev parity when plist is missing from the repo
+    ...(googleIosClientId ? { iosClientId: googleIosClientId } : {}),
+    offlineAccess: false,
   });
+  googleNativeConfigureOnce = true;
+}
 
-  /**
-   * Opens browser / ASWebAuthenticationSession; user signs in on google; redirect hits app with fragment/query params.
-   * Result union: `success` includes `params` (oauth fields); `cancel`, `error`, etc. otherwise.
-   */
-  const result = await request.promptAsync(discovery);
-
-  if (result.type !== 'success') {
-    throw new Error('Google sign-in was cancelled or failed');
+/**
+ * Native google sign-in sheet → returns **id_token** for django (`SocialAuthView`).
+ * On iOS the token’s `aud` is the **iOS** OAuth client when that’s what you configured above / in plist.
+ */
+export async function triggerGoogleSignIn(): Promise<{ idToken: string }> {
+  if (Platform.OS === 'web') {
+    throw new Error('Google Sign-In is not available on web in DailyFlo');
   }
 
-  /**
-   * On success, google passes tokens as string keys on `params` (OAuth2 implicit-style).
-   * `id_token` is the jwt string django's `verify_google_id_token` validates.
-   */
-  const idToken =
-    typeof result.params.id_token === 'string' ? result.params.id_token : undefined;
+  ensureGoogleNativeConfigured();
 
+  // android: play services must exist before the modal; ios: resolves immediately
+  if (Platform.OS === 'android') {
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+  }
+
+  const response = await GoogleSignin.signIn();
+
+  if (isCancelledResponse(response)) {
+    throw new Error('Google sign-in was cancelled');
+  }
+  if (!isSuccessResponse(response)) {
+    throw new Error('Google sign-in failed');
+  }
+
+  // sometimes `user.idToken` is null until you call `getTokens()` — both paths yield the same jwt django needs
+  let idToken = response.data.idToken;
+  if (!idToken) {
+    const tokens = await GoogleSignin.getTokens();
+    idToken = tokens.idToken;
+  }
   if (!idToken) {
     throw new Error('No ID token received from Google');
   }
@@ -89,7 +74,7 @@ export async function triggerGoogleSignIn(
 }
 
 /**
- * Native apple flow — no google-style discovery doc; apple ids are tied to your app's bundle id / services id on backend.
+ * Native apple flow — no google-style native module; apple ids are tied to your app's bundle id / services id on backend.
  * Returns identity jwt plus optional name fields (apple only sends full name on **first** authorization).
  */
 export async function triggerAppleSignIn(): Promise<{

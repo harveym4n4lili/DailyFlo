@@ -50,6 +50,7 @@ export {
 } from './ui';
 
 export { ONBOARDING_COMPLETE_STORAGE_KEY, useCompleteOnboardingAndExit } from './hooks';
+export { useGoogleAuthOnboarding } from './hooks/useGoogleAuthOnboarding';
 export type { OnboardingQuestionnaireStoredAnswersV1 } from '../onboarding/constants/onboardingQuestionnaireAnswers';
 
 export {

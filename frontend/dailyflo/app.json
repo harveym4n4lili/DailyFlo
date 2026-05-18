@@ -17,7 +17,6 @@
       }
     },
     "android": {
-      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -44,7 +43,8 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-apple-authentication",
-      "expo-image"
+      "expo-image",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true
