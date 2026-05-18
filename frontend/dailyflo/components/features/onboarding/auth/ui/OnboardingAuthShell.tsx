@@ -1,6 +1,6 @@
 /**
  * layout wrapper for auth landing body — no native header here, so top inset uses safe-area only.
- * horizontal padding matches questionnaire shells so both funnels feel aligned.
+ * horizontal inset matches `OnboardingSlidesShell` (one `screen + touchTarget` gutter only; `AuthLandingPage` must not add a second).
  */
 
 import React from 'react';
@@ -28,7 +28,7 @@ export function OnboardingAuthShell({ children }: OnboardingAuthShellProps) {
           styles.content,
           {
             paddingTop: insets.top + AUTH_GAP_BELOW_HEADER,
-            paddingHorizontal: Paddings.screen + Paddings.screenSmall,
+            paddingHorizontal: Paddings.screen + Paddings.touchTarget,
             paddingBottom: bottomPadding,
           },
         ]}

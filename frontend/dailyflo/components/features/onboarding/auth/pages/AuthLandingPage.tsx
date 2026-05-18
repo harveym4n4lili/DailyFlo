@@ -1,10 +1,7 @@
 /**
- * brand title on the auth landing route — vertically aligned with questionnaire body tops (`OnboardingSlidesShell` uses
- * `useHeaderHeight()`; auth has no native header, so we add `getDefaultHeaderHeight(...) - insets.top` on top of the shell’s safe-area pad).
- * type: `TextStyles['auth-landing-title']` + `getAuthLandingPageTitleTextStyle` (Satoshi) in `@/constants/Typography`.
+ * auth landing — **Flow** (satoshi) + middle heading in the lead wrap; **matters,** + **to you.** (satoshi) + marple wordmark in `tailAndIconRow`.
  */
 
-import { getAuthLandingPageTitleTextStyle } from '@/constants/Typography';
 import { getDefaultHeaderHeight } from '@react-navigation/elements';
 import React, { useMemo } from 'react';
 import { Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -13,14 +10,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
+import { getAuthLandingPageTitleTextStyle } from '@/constants/Typography';
+
 import {
   AUTH_GAP_BELOW_HEADER,
-  AUTH_LANDING_DAILYFLO_TITLE,
-  AUTH_LANDING_DAILYFLO_TITLE_COLOR_TOKEN,
+  AUTH_LANDING_SLIDE_UI,
+  AUTH_LANDING_SLOGAN_LEAD,
+  AUTH_LANDING_SLOGAN_MIDDLE_BEFORE_TAIL,
+  AUTH_LANDING_SLOGAN_MIDDLE_LEAD,
+  AUTH_LANDING_SLOGAN_TAIL,
   AUTH_LANDING_WORDMARK_APP_ICON_RADIUS_RATIO,
   AUTH_LANDING_WORDMARK_ICON_SIZE,
-  AUTH_LANDING_WORDMARK_ICON_TITLE_GAP,
-  AUTH_LANDING_WORDMARK_MARK_COLOR_TOKEN,
+  getAuthLandingSloganMiddleTextStyle,
 } from '../constants';
 import { resolveIntroTextColor } from '../scrollTransition';
 import { AuthLandingWordmarkIcon } from '../ui';
@@ -30,7 +31,9 @@ export function AuthLandingPage() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
 
-  // same total top band as native stack + status bar on `slides/index` — `(onboarding)` is `fullScreenModal` on ios, so we pass modal header (56pt + status) to match `useHeaderHeight()` there. shell already applies `insets.top`; subtract so we don’t double-count safe area.
+  const typoPlatform =
+    Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
+
   const stackHeaderTotalPx = getDefaultHeaderHeight(
     { width, height },
     Platform.OS === 'ios',
@@ -39,20 +42,27 @@ export function AuthLandingPage() {
   const titleTopPad =
     Math.max(0, stackHeaderTotalPx - insets.top) +
     AUTH_GAP_BELOW_HEADER +
-    // breathing room past the “invisible” stack bar — ties to full-screen padding + slides header row gap so it matches questionnaire density
     Paddings.screen +
     Paddings.onboardingSlidesHeaderSectionGap;
 
-  const wordmarkColor = useMemo(
-    () => resolveIntroTextColor(themeColors, AUTH_LANDING_DAILYFLO_TITLE_COLOR_TOKEN),
-    [themeColors],
-  );
+  const slideUi = AUTH_LANDING_SLIDE_UI;
 
-  // satoshi face + metrics from `TextStyles['auth-landing-title']` — pass runtime platform so the correct loaded ttf name is used
-  const titleStyle = [
-    getAuthLandingPageTitleTextStyle(Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios'),
-    { color: wordmarkColor },
-  ];
+  const emphasisColor = useMemo(
+    () => resolveIntroTextColor(themeColors, slideUi.sloganEmphasisColor),
+    [slideUi.sloganEmphasisColor, themeColors],
+  );
+  const middleColor = useMemo(
+    () => resolveIntroTextColor(themeColors, slideUi.sloganMiddleColor),
+    [slideUi.sloganMiddleColor, themeColors],
+  );
+  // wordmark tick paths default to background.primary — pass so it stays the page wash next to marple
+  const wordmarkTickFill = useMemo(() => themeColors.background.primary(), [themeColors]);
+
+  const satoshiTitleTypography = getAuthLandingPageTitleTextStyle(typoPlatform);
+  const middleHeadingTypography = useMemo(
+    () => getAuthLandingSloganMiddleTextStyle(typoPlatform),
+    [typoPlatform],
+  );
 
   const wordmarkBorderRadius = useMemo(
     () =>
@@ -65,13 +75,28 @@ export function AuthLandingPage() {
 
   return (
     <View style={[styles.topAligned, { paddingTop: titleTopPad }]}>
-      <View style={styles.wordmarkRow}>
-        <AuthLandingWordmarkIcon
-          size={AUTH_LANDING_WORDMARK_ICON_SIZE}
-          borderRadius={wordmarkBorderRadius}
-          markColorToken={AUTH_LANDING_WORDMARK_MARK_COLOR_TOKEN}
-        />
-        <Text style={titleStyle}>{AUTH_LANDING_DAILYFLO_TITLE.title}</Text>
+      <View style={styles.headerCluster}>
+        <View style={styles.sloganRow} accessibilityRole="header" accessible accessibilityLabel="slogan">
+          <View style={styles.sloganLeadMiddleWrap}>
+            <Text>
+              <Text style={[satoshiTitleTypography, { color: emphasisColor }]}>{AUTH_LANDING_SLOGAN_LEAD}</Text>
+              {' '}
+              <Text style={[middleHeadingTypography, { color: middleColor }]}>{AUTH_LANDING_SLOGAN_MIDDLE_LEAD}</Text>
+            </Text>
+          </View>
+          <View style={styles.tailAndIconRow}>
+            <Text style={[middleHeadingTypography, { color: middleColor }]}>{AUTH_LANDING_SLOGAN_MIDDLE_BEFORE_TAIL}</Text>
+            <Text style={[satoshiTitleTypography, { color: emphasisColor }]}>{AUTH_LANDING_SLOGAN_TAIL}</Text>
+            <View style={styles.wordmarkWrap}>
+              <AuthLandingWordmarkIcon
+                size={AUTH_LANDING_WORDMARK_ICON_SIZE}
+                borderRadius={wordmarkBorderRadius}
+                markColorToken={slideUi.wordmarkMarkColor}
+                stemFill={wordmarkTickFill}
+              />
+            </View>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -81,12 +106,31 @@ const styles = StyleSheet.create({
   topAligned: {
     flex: 1,
     justifyContent: 'flex-start',
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
-  // row is only as wide as icon + title; parent `alignItems: center` centers that cluster on the screen
-  wordmarkRow: {
+  headerCluster: {
+    alignSelf: 'stretch',
+    alignItems: 'flex-start',
+  },
+  sloganRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    alignSelf: 'stretch',
+  },
+  /** “Flow … through …” only — intrinsic width + can shrink when the row wraps on small screens */
+  sloganLeadMiddleWrap: {
+    flexShrink: 1,
+    maxWidth: '100%',
+  },
+  /** **matters,** + **to you.** + wordmark — one flex row; `flexShrink: 0` keeps them from splitting awkwardly */
+  tailAndIconRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: AUTH_LANDING_WORDMARK_ICON_TITLE_GAP,
+    flexShrink: 0,
+  },
+  wordmarkWrap: {
+    marginLeft: Paddings.groupedListIconTextSpacing,
   },
 });

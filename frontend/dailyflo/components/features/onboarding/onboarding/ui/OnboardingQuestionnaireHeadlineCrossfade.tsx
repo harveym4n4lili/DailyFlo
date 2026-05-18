@@ -13,7 +13,8 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 // import typography + pager tokens directly — avoids pulling the whole `constants` barrel (and `questionnaireSlideModel`) while this module loads; reduces HMR circular-init glitches
 import { ONBOARDING_SLIDES_TITLE_SUBTEXT_GAP } from '../constants/pagerLayout';
 import {
-  ONBOARDING_SLIDES_CAPTION_TEXT_STYLE,
+  ONBOARDING_SLIDES_HEADLINE_CAPTION_TEXT_STYLE,
+  ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_TEXT_STYLE,
   ONBOARDING_SLIDES_PAGE_TITLE_TEXT_STYLE,
 } from '../constants/typography';
 import type { OnboardingSlidesPageTitleConfig, OnboardingSlidesSlideUiConfig } from '../constants/types';
@@ -81,6 +82,14 @@ function QuestionnaireHeadlineSlideBody({
   const captionColor = resolveOnboardingSlidesSlideUiText(themeColors, slideUi.captionColor);
   const caption = pageCaptions[slideIndex] ?? '';
 
+  // order: shared highlight typography, then slide row overrides, then per-title tweak from textValues, then theme color
+  const headlineHighlightStyle = [
+    ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_TEXT_STYLE,
+    slideUi.titleHighlightTypographyOverrides,
+    titleConfig.highlight?.style,
+    { color: highlightColor },
+  ];
+
   return (
     <View style={styles.layerGap}>
       <View style={styles.titleBlock}>
@@ -88,16 +97,14 @@ function QuestionnaireHeadlineSlideBody({
           style={[ONBOARDING_SLIDES_PAGE_TITLE_TEXT_STYLE, { color: titleColor }, titleConfig.titleStyle]}
         >
           {parts.before}
-          {parts.match !== '' ? (
-            <Text style={[titleConfig.highlight?.style, { color: highlightColor }]}>{parts.match}</Text>
-          ) : null}
+          {parts.match !== '' ? <Text style={headlineHighlightStyle}>{parts.match}</Text> : null}
           {parts.after}
         </Text>
       </View>
       <View style={styles.subtextBlock}>
         {caption.length > 0 ? (
           <Text
-            style={[ONBOARDING_SLIDES_CAPTION_TEXT_STYLE, { color: captionColor, lineHeight: 24 }]}
+            style={[ONBOARDING_SLIDES_HEADLINE_CAPTION_TEXT_STYLE, { color: captionColor }]}
             numberOfLines={4}
           >
             {caption}

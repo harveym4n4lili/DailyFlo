@@ -13,9 +13,9 @@ import { Checkbox } from '@/components/ui/Button';
 import { SolidSeparator } from '@/components/ui/borders';
 import { PencilFillIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { useTypography } from '@/hooks/useTypography';
 
 import { ONBOARDING_TASK_TITLE_SURFACE_RADIUS } from '../constants/pagerLayout';
+import { ONBOARDING_SLIDES_TASK_AND_HABIT_FIELD_TITLE_TEXT_STYLE } from '../constants/typography';
 import {
   TASK_AGENDA_TITLE_ROW_CHECKBOX_GAP_WIDTH,
   TASK_AGENDA_TITLE_ROW_PENCIL_ICON_SIZE,
@@ -46,7 +46,6 @@ export function OnboardingQuestionnaireTaskTitleRow({
   suppressTitleKeyboard = false,
 }: OnboardingQuestionnaireTaskTitleRowProps) {
   const themeColors = useThemeColors();
-  const typography = useTypography();
 
   const primaryTint = themeColors.primaryButton.fill();
   const pencilColor = pencilIconColor ?? themeColors.text.tertiary();
@@ -99,7 +98,7 @@ export function OnboardingQuestionnaireTaskTitleRow({
                   cursorColor={primaryTint}
                   underlineColorAndroid="transparent"
                   style={[
-                    typography.getTextStyle('heading-4'),
+                    ONBOARDING_SLIDES_TASK_AND_HABIT_FIELD_TITLE_TEXT_STYLE,
                     L.titleInput,
                     {
                       color: inputTextColor,

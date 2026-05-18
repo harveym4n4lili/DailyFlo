@@ -85,10 +85,16 @@ export const AUTH_BRAND_COLORS = {
   },
 } as const;
 
-/** single-row landing screen palette — lives in slideUiTokens.ts (wordmark typography/color: authLandingDailyFloTitle.ts) */
+/** single-row landing screen — all colors live in `slideUiTokens.ts` (copy in `textValues.ts`, type in `typography.ts`) */
 export type AuthSlideUiConfig = {
   background: IntroSlideBackgroundColor;
   continueButtonBackground: IntroContinueButtonColorToken;
   /** optional — landing route uses `background` for FAB icon stroke so it always matches the page surface */
   continueButtonIcon?: IntroContinueButtonColorToken;
+  /** satoshi slogan spans — “Flow”, “to you.” (`resolveIntroTextColor`) */
+  sloganEmphasisColor: IntroSlideTextColor;
+  /** middle slogan spans — onboarding/inter heading face (`resolveIntroTextColor`) */
+  sloganMiddleColor: IntroSlideTextColor;
+  /** marple wordmark plate (`AuthLandingWordmarkIcon` `markColorToken`) */
+  wordmarkMarkColor: IntroContinueButtonColorToken;
 };

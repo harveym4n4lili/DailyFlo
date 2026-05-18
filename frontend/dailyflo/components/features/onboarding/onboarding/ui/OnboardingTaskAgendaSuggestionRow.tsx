@@ -16,13 +16,13 @@ import Animated, {
 
 import { SparklesIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { useTypography } from '@/hooks/useTypography';
 
 import {
   ONBOARDING_TASK_AGENDA_SURFACE_BORDER_WIDTH,
   ONBOARDING_TASK_AGENDA_SUGGESTION_SELECT_ANIM_MS,
   ONBOARDING_TASK_TITLE_SURFACE_RADIUS,
 } from '../constants/pagerLayout';
+import { ONBOARDING_SLIDES_TASK_AND_HABIT_FIELD_TITLE_TEXT_STYLE } from '../constants/typography';
 import { taskAgendaSuggestionChipLayoutStyles as C, TASK_AGENDA_ROW_ICON_SIZE } from './taskAgendaTitleRowLayout';
 
 export type OnboardingTaskAgendaSuggestionRowProps = {
@@ -43,7 +43,6 @@ export function OnboardingTaskAgendaSuggestionRow({
   selectedBrandColor,
 }: OnboardingTaskAgendaSuggestionRowProps) {
   const themeColors = useThemeColors();
-  const typography = useTypography();
   // cache strings for worklets — border + slide brand come from JS; `selectedBrandColor` updates when questionnaire blend moves
   const borderSecondary = themeColors.border.secondary();
   const sparklesIdle = themeColors.text.tertiary();
@@ -111,7 +110,7 @@ export function OnboardingTaskAgendaSuggestionRow({
             <View style={C.titleColumn}>
               <Text
                 style={[
-                  typography.getTextStyle('heading-4'),
+                  ONBOARDING_SLIDES_TASK_AND_HABIT_FIELD_TITLE_TEXT_STYLE,
                   styles.titleLabel,
                   {
                     color: titleTextColor,

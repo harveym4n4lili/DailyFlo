@@ -9,11 +9,13 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Paddings } from '@/constants/Paddings';
-import { useBrandColors, useThemeColors } from '@/hooks/useColorPalette';
-import { useTypography } from '@/hooks/useTypography';
+import { useThemeColors } from '@/hooks/useColorPalette';
 
 import type { OnboardingQuestionnaireNextStepChoice } from '../constants';
-import { ONBOARDING_SLIDES_CAPTION_TEXT_STYLE } from '../constants/typography';
+import {
+  ONBOARDING_SLIDES_CAPTION_TEXT_STYLE,
+  ONBOARDING_SLIDES_NEXT_STEP_CHOICE_CARD_TITLE_TEXT_STYLE,
+} from '../constants/typography';
 
 /** same corner radius as `TimelineItem` `combinedContainer` / `content` */
 const TIMELINE_TASK_CARD_RADIUS = 24;
@@ -22,6 +24,8 @@ const TIMELINE_TASK_CARD_RADIUS = 24;
 const NEXT_STEP_CARD_DIAGRAM_PLACEHOLDER_HEIGHT = 160;
 
 export type OnboardingNextStepChoiceCardsProps = {
+  /** resolved from `pageSlideUi[nextStepIndex].nextStepChoiceCardTitleColor` */
+  cardTitleColor: string;
   value: OnboardingQuestionnaireNextStepChoice;
   onChange: (next: OnboardingQuestionnaireNextStepChoice) => void;
 };
@@ -48,17 +52,16 @@ function ChoiceCard({
   subtext,
   selected,
   onPress,
+  cardTitleColor,
 }: {
   label: string;
   subtext: string;
   selected: boolean;
   onPress: () => void;
+  cardTitleColor: string;
 }) {
   const themeColors = useThemeColors();
-  // brand ramps (plant / moss / sage) live on `useBrandColors`, not `useThemeColors` — theme hook is only surfaces + neutral text
-  const { getPlantBrandColor } = useBrandColors();
-  const typography = useTypography();
-  const titleStyle = [typography.getTextStyle('heading-3'), { color: getPlantBrandColor(700) }];
+  const titleStyle = [ONBOARDING_SLIDES_NEXT_STEP_CHOICE_CARD_TITLE_TEXT_STYLE, { color: cardTitleColor }];
   // onboarding caption stack — quieter than title; reads like slide body copy
   const subtextStyle = [ONBOARDING_SLIDES_CAPTION_TEXT_STYLE, { color: themeColors.text.secondary() }];
 
@@ -104,7 +107,7 @@ function ChoiceCard({
   );
 }
 
-export function OnboardingNextStepChoiceCards({ value, onChange }: OnboardingNextStepChoiceCardsProps) {
+export function OnboardingNextStepChoiceCards({ cardTitleColor, value, onChange }: OnboardingNextStepChoiceCardsProps) {
   return (
     <View style={styles.column} accessibilityRole="radiogroup" accessibilityLabel="Pick your next step">
       {OPTIONS.map((opt) => (
@@ -113,6 +116,7 @@ export function OnboardingNextStepChoiceCards({ value, onChange }: OnboardingNex
           label={opt.label}
           subtext={opt.subtext}
           selected={value === opt.id}
+          cardTitleColor={cardTitleColor}
           onPress={() => onChange(opt.id)}
         />
       ))}

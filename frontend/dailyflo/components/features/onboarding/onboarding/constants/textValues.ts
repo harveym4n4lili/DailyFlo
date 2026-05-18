@@ -1,28 +1,14 @@
 /**
 
- * questionnaire funnel — titles/captions per slide (merged onto typography.ts headline styles).
+ * questionnaire funnel — titles/captions per slide only (`typography.ts` = all `TextStyle`s; `slideUiTokens.ts` = colors).
+
+ * emphasized word: optional `highlight.text`; color from `slideUi.titleHighlightColor`; optional per-title `highlight.style` overrides.
 
  */
 
 
 
-import type { TextStyle } from 'react-native';
-
-
-
-import { FontWeight } from '@/constants/Typography';
-
-
-
 import type { OnboardingSlidesPageTitleConfig } from './types';
-
-
-
-const ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE: TextStyle = {
-
-  fontWeight: FontWeight.bold,
-
-};
 
 
 
@@ -42,8 +28,6 @@ export const ONBOARDING_QUESTIONNAIRE_CORE_PAGE_TITLES: readonly OnboardingSlide
 
       text: 'planning',
 
-      style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE,
-
     },
 
   },
@@ -55,8 +39,6 @@ export const ONBOARDING_QUESTIONNAIRE_CORE_PAGE_TITLES: readonly OnboardingSlide
     highlight: {
 
       text: 'wake up',
-
-      style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE,
 
     },
 
@@ -70,8 +52,6 @@ export const ONBOARDING_QUESTIONNAIRE_CORE_PAGE_TITLES: readonly OnboardingSlide
 
       text: 'go to sleep?',
 
-      style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE,
-
     },
 
   },
@@ -83,8 +63,6 @@ export const ONBOARDING_QUESTIONNAIRE_CORE_PAGE_TITLES: readonly OnboardingSlide
     highlight: {
 
       text: 'habit',
-
-      style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE,
 
     },
 
@@ -116,7 +94,7 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_FOLLOWUP_TITLES: readonly OnboardingS
 
     title: "What's on the agenda?",
 
-    highlight: { text: 'agenda', style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE },
+    highlight: { text: 'agenda' },
 
   },
 
@@ -124,7 +102,7 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_FOLLOWUP_TITLES: readonly OnboardingS
 
     title: 'At what time?',
 
-    highlight: { text: 'time', style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE },
+    highlight: { text: 'time' },
 
   },
 
@@ -132,7 +110,7 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_FOLLOWUP_TITLES: readonly OnboardingS
 
     title: 'For how long?',
 
-    highlight: { text: 'long', style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE },
+    highlight: { text: 'long' },
 
   },
 
@@ -140,7 +118,7 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_FOLLOWUP_TITLES: readonly OnboardingS
 
     title: 'Great, your task is in flow.',
 
-    highlight: { text: 'flow', style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE },
+    highlight: { text: 'flow' },
 
   },
 
@@ -165,7 +143,7 @@ export const ONBOARDING_QUESTIONNAIRE_HABIT_FOLLOWUP_TITLES: readonly Onboarding
 
     title: 'What is our goal?',
 
-    highlight: { text: 'goal', style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE },
+    highlight: { text: 'goal' },
 
   },
 
@@ -173,7 +151,7 @@ export const ONBOARDING_QUESTIONNAIRE_HABIT_FOLLOWUP_TITLES: readonly Onboarding
 
     title: 'How often?',
 
-    highlight: { text: 'often', style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE },
+    highlight: { text: 'often' },
 
   },
 
@@ -181,7 +159,7 @@ export const ONBOARDING_QUESTIONNAIRE_HABIT_FOLLOWUP_TITLES: readonly Onboarding
 
     title: "Nice! That's a great plan.",
 
-    highlight: { text: 'plan', style: ONBOARDING_SLIDES_PAGE_TITLE_HIGHLIGHT_STYLE },
+    highlight: { text: 'plan' },
 
   },
 

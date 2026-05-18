@@ -11,12 +11,19 @@
  *
  * time wheel: `timeWheelBrandRamp` tints the spinner for wake/sleep steps.
  * fixed core: marple → moss → sage → marple (intro, wake, sleep, picker).
+ * title highlight: `titleHighlightColor` tints the emphasized word in each headline (see rows below).
+ * picker cards: `nextStepChoiceCardTitleColor` on the last core step — `OnboardingNextStepChoiceCards`.
  */
 
 import type {
   OnboardingSlidesSlideUiConfig,
+  OnboardingSlidesSlideTextColor,
   OnboardingSlidesTimeWheelBrandRamp,
 } from './types';
+
+/** fallback when `OnboardingTaskAgendaSuggestionsSection` mounts without blended chrome — keep in sync with theme intent */
+export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_SECTION_TITLE_FALLBACK_COLOR: OnboardingSlidesSlideTextColor =
+  'primary';
 
 /** line above sideways suggestion chips — canonical copy for the task-agenda step (referenced from `taskAgendaBody`) */
 export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_SECTION_TITLE = 'Here are some suggestions:';
@@ -38,7 +45,7 @@ export const ONBOARDING_QUESTIONNAIRE_CORE_PAGE_SLIDE_UI: readonly OnboardingSli
   {
     background: { scope: 'background', token: 'primary' },
     titleColor: { scope: 'text', token: 'primary' },
-    titleHighlightColor: { scope: 'text', token: 'primary' },
+    titleHighlightColor: { scope: 'text', token: 'marple:600' },
     captionColor: { scope: 'text', token: 'primary' },
     dotIndicatorColor: { scope: 'text', token: 'marple:600' },
     continueButtonBackground: { scope: 'button', token: 'marple:500' },
@@ -50,7 +57,7 @@ export const ONBOARDING_QUESTIONNAIRE_CORE_PAGE_SLIDE_UI: readonly OnboardingSli
   {
     background: { scope: 'background', token: 'primary' },
     titleColor: { scope: 'text', token: 'primary' },
-    titleHighlightColor: { scope: 'text', token: 'primary' },
+    titleHighlightColor: { scope: 'text', token: 'moss:600' },
     captionColor: { scope: 'text', token: 'primary' },
     dotIndicatorColor: { scope: 'text', token: 'moss:600' },
     continueButtonBackground: { scope: 'button', token: 'moss:500' },
@@ -63,7 +70,7 @@ export const ONBOARDING_QUESTIONNAIRE_CORE_PAGE_SLIDE_UI: readonly OnboardingSli
   {
     background: { scope: 'background', token: 'primary' },
     titleColor: { scope: 'text', token: 'primary' },
-    titleHighlightColor: { scope: 'text', token: 'primary' },
+    titleHighlightColor: { scope: 'text', token: 'sage:600' },
     captionColor: { scope: 'text', token: 'primary' },
     dotIndicatorColor: { scope: 'text', token: 'sage:600' },
     continueButtonBackground: { scope: 'button', token: 'sage:500' },
@@ -76,7 +83,7 @@ export const ONBOARDING_QUESTIONNAIRE_CORE_PAGE_SLIDE_UI: readonly OnboardingSli
   {
     background: { scope: 'background', token: 'primary' },
     titleColor: { scope: 'text', token: 'primary' },
-    titleHighlightColor: { scope: 'text', token: 'primary' },
+    titleHighlightColor: { scope: 'text', token: 'marple:600' },
     captionColor: { scope: 'text', token: 'primary' },
     dotIndicatorColor: { scope: 'text', token: 'marple:600' },
     continueButtonBackground: { scope: 'button', token: 'marple:500' },
@@ -84,6 +91,7 @@ export const ONBOARDING_QUESTIONNAIRE_CORE_PAGE_SLIDE_UI: readonly OnboardingSli
     progressBarTrack: { scope: 'track', token: 'primarySecondaryBlend' },
     progressBarFill: { scope: 'button', token: 'marple:500' },
     headerBackIconColor: { scope: 'text', token: 'secondary' },
+    nextStepChoiceCardTitleColor: { scope: 'text', token: 'plant:700' },
   },
 ];
 
@@ -92,7 +100,7 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_BRANCH_SLIDE_UI: readonly OnboardingS
   {
     background: { scope: 'background', token: 'primary' },
     titleColor: { scope: 'text', token: 'primary' },
-    titleHighlightColor: { scope: 'text', token: 'primary' },
+    titleHighlightColor: { scope: 'text', token: 'marple:600' },
     captionColor: { scope: 'text', token: 'primary' },
     dotIndicatorColor: { scope: 'text', token: 'marple:600' },
     continueButtonBackground: { scope: 'button', token: 'marple:500' },
@@ -111,7 +119,7 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_BRANCH_SLIDE_UI: readonly OnboardingS
   {
     background: { scope: 'background', token: 'primary' },
     titleColor: { scope: 'text', token: 'primary' },
-    titleHighlightColor: { scope: 'text', token: 'primary' },
+    titleHighlightColor: { scope: 'text', token: 'plant:600' },
     captionColor: { scope: 'text', token: 'primary' },
     dotIndicatorColor: { scope: 'text', token: 'marple:600' },
     continueButtonBackground: { scope: 'button', token: 'marple:500' },
@@ -124,7 +132,7 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_BRANCH_SLIDE_UI: readonly OnboardingS
   {
     background: { scope: 'background', token: 'primary' },
     titleColor: { scope: 'text', token: 'primary' },
-    titleHighlightColor: { scope: 'text', token: 'primary' },
+    titleHighlightColor: { scope: 'text', token: 'moss:600' },
     captionColor: { scope: 'text', token: 'primary' },
     dotIndicatorColor: { scope: 'text', token: 'marple:600' },
     continueButtonBackground: { scope: 'button', token: 'marple:500' },
@@ -136,7 +144,7 @@ export const ONBOARDING_QUESTIONNAIRE_TASK_BRANCH_SLIDE_UI: readonly OnboardingS
   {
     background: { scope: 'background', token: 'primary' },
     titleColor: { scope: 'text', token: 'primary' },
-    titleHighlightColor: { scope: 'text', token: 'primary' },
+    titleHighlightColor: { scope: 'text', token: 'marple:600' },
     captionColor: { scope: 'text', token: 'primary' },
     dotIndicatorColor: { scope: 'text', token: 'marple:600' },
     continueButtonBackground: { scope: 'button', token: 'marple:500' },
@@ -152,7 +160,7 @@ export const ONBOARDING_QUESTIONNAIRE_HABIT_BRANCH_SLIDE_UI: readonly Onboarding
   {
     background: { scope: 'background', token: 'primary' },
     titleColor: { scope: 'text', token: 'primary' },
-    titleHighlightColor: { scope: 'text', token: 'primary' },
+    titleHighlightColor: { scope: 'text', token: 'plant:600' },
     captionColor: { scope: 'text', token: 'primary' },
     dotIndicatorColor: { scope: 'text', token: 'marple:600' },
     continueButtonBackground: { scope: 'button', token: 'marple:500' },
@@ -164,7 +172,7 @@ export const ONBOARDING_QUESTIONNAIRE_HABIT_BRANCH_SLIDE_UI: readonly Onboarding
   {
     background: { scope: 'background', token: 'primary' },
     titleColor: { scope: 'text', token: 'primary' },
-    titleHighlightColor: { scope: 'text', token: 'primary' },
+    titleHighlightColor: { scope: 'text', token: 'sage:600' },
     captionColor: { scope: 'text', token: 'primary' },
     dotIndicatorColor: { scope: 'text', token: 'marple:600' },
     continueButtonBackground: { scope: 'button', token: 'marple:500' },
@@ -176,7 +184,7 @@ export const ONBOARDING_QUESTIONNAIRE_HABIT_BRANCH_SLIDE_UI: readonly Onboarding
   {
     background: { scope: 'background', token: 'primary' },
     titleColor: { scope: 'text', token: 'primary' },
-    titleHighlightColor: { scope: 'text', token: 'primary' },
+    titleHighlightColor: { scope: 'text', token: 'marple:600' },
     captionColor: { scope: 'text', token: 'primary' },
     dotIndicatorColor: { scope: 'text', token: 'marple:600' },
     continueButtonBackground: { scope: 'button', token: 'marple:500' },
