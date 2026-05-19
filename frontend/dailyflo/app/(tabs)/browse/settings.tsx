@@ -8,7 +8,17 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Platform, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Platform,
+  Alert,
+  Modal,
+  TouchableOpacity,
+  ActivityIndicator,
+  useColorScheme,
+} from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Stack, router as expoRouter, type Href } from 'expo-router';
@@ -28,8 +38,18 @@ import { useTypography } from '@/hooks/useTypography';
 import { MainCloseButton } from '@/components/ui/Button';
 import { IosBrowseModalCloseStackToolbar } from '@/components/navigation/IosBrowseModalStackToolbars';
 import { Paddings } from '@/constants/Paddings';
-import { useAppDispatch } from '@/store';
-import { logoutUser } from '@/store/slices/auth/authSlice';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { logoutUser, patchUserSchedulePreferences } from '@/store/slices/auth/authSlice';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { timeToMinutes } from '@/components/features/timeline/timelineUtils';
+import {
+  coerceWakeSleepHHMM,
+  DEFAULT_SLEEP_HHMM,
+  DEFAULT_WAKE_HHMM,
+  formatWakeSleepLabel,
+  hhmmLocalToReferenceDate,
+  scheduleDateToSnappedHHMM,
+} from '@/utils/preferenceScheduleTimes';
 
 // header row height matches close button (42) – same as Activity Log
 const HEADER_ROW_HEIGHT = 42;
@@ -46,6 +66,13 @@ export default function BrowseSettingsScreen() {
   const semanticColors = useSemanticColors();
   const { getMarpleBrandColor } = useColorPalette();
   const typography = useTypography();
+  const colorSchemeRN = useColorScheme();
+  const loggedInPrefs = useAppSelector((state) => state.auth.user?.preferences);
+  const isSavingSchedulePrefs = useAppSelector((state) => state.auth.isUpdatingProfile);
+  const [scheduleModalKind, setScheduleModalKind] = useState<'wake' | 'sleep' | null>(null);
+  const [draftScheduleTime, setDraftScheduleTime] = useState(() =>
+    hhmmLocalToReferenceDate(DEFAULT_WAKE_HHMM, DEFAULT_WAKE_HHMM),
+  );
   // leading icons in grouped lists — same marple accent as browse home / chrome (logout row keeps semantic red below)
   const settingsGroupedListIconColor = getMarpleBrandColor(500);
   // shared token for destructive row — semantic error ramp, not body text
@@ -116,6 +143,92 @@ export default function BrowseSettingsScreen() {
     );
   }, [handleConfirmLogout, loggingOut]);
 
+  const wakeDisplayLabel = useMemo(
+    () =>
+      formatWakeSleepLabel(
+        coerceWakeSleepHHMM(loggedInPrefs?.wakeTime, DEFAULT_WAKE_HHMM),
+        DEFAULT_WAKE_HHMM,
+        loggedInPrefs?.timeFormat ?? '12h',
+      ),
+    [loggedInPrefs?.timeFormat, loggedInPrefs?.wakeTime],
+  );
+
+  const sleepDisplayLabel = useMemo(
+    () =>
+      formatWakeSleepLabel(
+        coerceWakeSleepHHMM(loggedInPrefs?.sleepTime, DEFAULT_SLEEP_HHMM),
+        DEFAULT_SLEEP_HHMM,
+        loggedInPrefs?.timeFormat ?? '12h',
+      ),
+    [loggedInPrefs?.timeFormat, loggedInPrefs?.sleepTime],
+  );
+
+  const closeScheduleSheet = useCallback(() => setScheduleModalKind(null), []);
+
+  const openWakePicker = useCallback(() => {
+    if (!loggedInPrefs) return;
+    setDraftScheduleTime(
+      hhmmLocalToReferenceDate(
+        coerceWakeSleepHHMM(loggedInPrefs.wakeTime, DEFAULT_WAKE_HHMM),
+        DEFAULT_WAKE_HHMM,
+      ),
+    );
+    setScheduleModalKind('wake');
+  }, [loggedInPrefs]);
+
+  const openSleepPicker = useCallback(() => {
+    if (!loggedInPrefs) return;
+    setDraftScheduleTime(
+      hhmmLocalToReferenceDate(
+        coerceWakeSleepHHMM(loggedInPrefs.sleepTime, DEFAULT_SLEEP_HHMM),
+        DEFAULT_SLEEP_HHMM,
+      ),
+    );
+    setScheduleModalKind('sleep');
+  }, [loggedInPrefs]);
+
+  const onDraftScheduleChange = useCallback((_event: DateTimePickerEvent, date?: Date) => {
+    if (date) {
+      setDraftScheduleTime(date);
+    }
+  }, []);
+
+  const saveScheduleDraft = useCallback(async () => {
+    if (!scheduleModalKind || !loggedInPrefs) return;
+    const snapped = scheduleDateToSnappedHHMM(draftScheduleTime);
+    const nextWake =
+      scheduleModalKind === 'wake'
+        ? snapped
+        : coerceWakeSleepHHMM(loggedInPrefs.wakeTime, DEFAULT_WAKE_HHMM);
+    const nextSleep =
+      scheduleModalKind === 'sleep'
+        ? snapped
+        : coerceWakeSleepHHMM(loggedInPrefs.sleepTime, DEFAULT_SLEEP_HHMM);
+
+    // planner TimelineView anchors assume wake precedes bedtime on the same calendar pass (overnight UX is intentionally deferred).
+    if (timeToMinutes(nextWake) >= timeToMinutes(nextSleep)) {
+      Alert.alert('Check times', 'Wake time needs to come before bedtime for the planner timeline window.');
+      return;
+    }
+
+    try {
+      await dispatch(patchUserSchedulePreferences({ wakeTime: nextWake, sleepTime: nextSleep })).unwrap();
+      closeScheduleSheet();
+    } catch (err: unknown) {
+      const detail = typeof err === 'string' ? err : '';
+      Alert.alert(
+        'Could not save schedule',
+        detail.length > 0 ? detail : 'Try again shortly when you have a stable connection.',
+      );
+    }
+  }, [
+    scheduleModalKind,
+    loggedInPrefs,
+    draftScheduleTime,
+    dispatch,
+    closeScheduleSheet,
+  ]);
+
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
       {/* ios: native title next to Stack.Toolbar xmark — style matches list-create (heading-4) */}
@@ -182,6 +295,38 @@ export default function BrowseSettingsScreen() {
                 label="Calendar"
                 value=""
                 onPress={() => {}}
+                showChevron={true}
+              />
+              <FormDetailButton
+                key="wake"
+                iconComponent={
+                  <SFSymbolIcon
+                    name="sun.horizon.fill"
+                    size={20}
+                    color={settingsGroupedListIconColor}
+                    fallback={<SparklesIcon size={20} color={settingsGroupedListIconColor} />}
+                  />
+                }
+                label="Wake up"
+                value={wakeDisplayLabel}
+                onPress={openWakePicker}
+                disabled={!loggedInPrefs || isSavingSchedulePrefs}
+                showChevron={true}
+              />
+              <FormDetailButton
+                key="sleep"
+                iconComponent={
+                  <SFSymbolIcon
+                    name="moon.zzz.fill"
+                    size={20}
+                    color={settingsGroupedListIconColor}
+                    fallback={<SparklesIcon size={20} color={settingsGroupedListIconColor} />}
+                  />
+                }
+                label="Sleep"
+                value={sleepDisplayLabel}
+                onPress={openSleepPicker}
+                disabled={!loggedInPrefs || isSavingSchedulePrefs}
                 showChevron={true}
               />
             </GroupedList>
@@ -460,6 +605,69 @@ export default function BrowseSettingsScreen() {
           </>
         ) : null}
       </View>
+
+      <Modal
+        transparent
+        visible={scheduleModalKind !== null}
+        animationType="fade"
+        onRequestClose={closeScheduleSheet}
+      >
+        {/* modal lives above settings chrome — same half-sheet pattern onboarding uses */}
+        <View style={styles.scheduleModalRoot}>
+          <TouchableOpacity
+            style={styles.scheduleBackdropTouchable}
+            activeOpacity={1}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss schedule editor"
+            onPress={closeScheduleSheet}
+          />
+          <View style={styles.scheduleSheet}>
+            <Text style={styles.scheduleSheetTitle}>
+              {scheduleModalKind === 'sleep' ? 'Sleep time' : 'Wake time'}
+            </Text>
+            <DateTimePicker
+              value={draftScheduleTime}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              minuteInterval={15}
+              onChange={onDraftScheduleChange}
+              {...(Platform.OS === 'ios'
+                ? {
+                    themeVariant: colorSchemeRN === 'dark' ? ('dark' as const) : ('light' as const),
+                    textColor: themeColors.text.primary(),
+                  }
+                : { design: 'default' as const })}
+            />
+
+            <View style={styles.scheduleActionsRow}>
+              <TouchableOpacity
+                style={styles.scheduleSecondaryButton}
+                onPress={closeScheduleSheet}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel editing schedule times"
+              >
+                <Text style={styles.scheduleSecondaryLabel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.schedulePrimaryButton,
+                  !loggedInPrefs || isSavingSchedulePrefs ? { opacity: 0.45 } : null,
+                ]}
+                disabled={!loggedInPrefs || isSavingSchedulePrefs}
+                onPress={() => void saveScheduleDraft()}
+                accessibilityRole="button"
+                accessibilityLabel="Save wake and bedtime"
+              >
+                {isSavingSchedulePrefs ? (
+                  <ActivityIndicator color={themeColors.text.primary()} />
+                ) : (
+                  <Text style={styles.schedulePrimaryLabel}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -545,6 +753,61 @@ const createStyles = (
     },
     logoutGroupedListSection: {
       marginTop: 24,
+    },
+    scheduleModalRoot: {
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
+    scheduleBackdropTouchable: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    },
+    scheduleSheet: {
+      backgroundColor: themeColors.background.primary(),
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: Paddings.screen,
+      paddingBottom: Platform.OS === 'ios' ? 28 : Paddings.screen,
+      paddingTop: 18,
+      gap: 12,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderLeftWidth: StyleSheet.hairlineWidth,
+      borderRightWidth: StyleSheet.hairlineWidth,
+      borderColor: themeColors.border.primary(),
+    },
+    scheduleSheetTitle: {
+      ...typography.getTextStyle('heading-4'),
+      color: themeColors.text.primary(),
+    },
+    scheduleActionsRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      gap: 16,
+      marginTop: 8,
+    },
+    scheduleSecondaryButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    scheduleSecondaryLabel: {
+      ...typography.getTextStyle('body-medium'),
+      color: themeColors.text.secondary(),
+    },
+    schedulePrimaryButton: {
+      minWidth: 110,
+      borderRadius: 14,
+      backgroundColor: themeColors.background.secondary(),
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 11,
+      paddingHorizontal: 16,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: themeColors.border.secondary(),
+    },
+    schedulePrimaryLabel: {
+      ...typography.getTextStyle('button-secondary'),
+      color: themeColors.text.primary(),
     },
     bottomSpacer: {
       height: 200,

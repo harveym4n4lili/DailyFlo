@@ -121,6 +121,8 @@ interface TimelineItemProps {
    * when true (and `children` is not), row width hugs title + leading column instead of stretching to the tasks column — onboarding wake/sleep only.
    */
   hugContent?: boolean;
+  /** planner wake/sleep bands: disables drag/long-press and ignores taps (no phantom task modal). */
+  interactionLocked?: boolean;
 }
 
 // compare by value so sibling Redux updates don't interrupt checkbox/animations
@@ -138,6 +140,7 @@ function timelineItemPropsAreEqual(prev: TimelineItemProps, next: TimelineItemPr
   if (prev.children !== next.children) return false;
   if (prev.leadingAccessory !== next.leadingAccessory) return false;
   if (prev.hugContent !== next.hugContent) return false;
+  if (prev.interactionLocked !== next.interactionLocked) return false;
   return true;
 }
 
@@ -168,6 +171,7 @@ const TimelineItem = React.memo(function TimelineItem({
   children,
   leadingAccessory,
   hugContent = false,
+  interactionLocked = false,
 }: TimelineItemProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -244,6 +248,10 @@ const TimelineItem = React.memo(function TimelineItem({
   // this wrapper ensures haptic feedback fires even if gesture handler intercepts the touch
   // prevents modal from opening if user just finished dragging the task
   const handleTaskPress = () => {
+    // wake/sleep ambience rows swallow taps silently (nothing to edit).
+    if (interactionLocked) {
+      return;
+    }
     // if a drag just finished, don't open the modal
     // this prevents accidental modal opening when releasing after dragging
     if (justFinishedDragRef.current) {
@@ -706,8 +714,9 @@ const TimelineItem = React.memo(function TimelineItem({
   // combine long press and pan gestures using Simultaneous
   // long press activates first, then pan takes over for dragging
   // both gestures can be active at the same time
-  // when selectionMode: disable drag - use empty gesture so tap still works via TouchableOpacity
-  const combinedGesture = selectionMode ? Gesture.Tap() : Gesture.Simultaneous(longPressGesture, panGesture);
+  // when selectionMode / interactionLocked: tap-only so long-press drag never activates.
+  const combinedGesture =
+    selectionMode || interactionLocked ? Gesture.Tap() : Gesture.Simultaneous(longPressGesture, panGesture);
 
   // hug width only for the default task card — full-width `children` (e.g. onboarding task row) ignores `hugContent`
   const useHugRow = hugContent && children == null;

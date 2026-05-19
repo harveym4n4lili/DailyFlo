@@ -34,6 +34,9 @@ export interface UserPreferences {
   timezone: string;                 // User's timezone (e.g., 'UTC', 'America/New_York')
   dateFormat: string;               // Date format preference (e.g., 'MM/DD/YYYY')
   timeFormat: '12h' | '24h';        // Time format preference
+  /** local planner day window boundaries (stored as Django `wake_time` / `sleep_time`, 24h `HH:mm`) */
+  wakeTime: string;
+  sleepTime: string;
   
   // App behavior preferences
   autoArchiveCompleted: boolean;    // Auto-archive completed tasks
@@ -123,6 +126,8 @@ export interface UpdateUserPreferencesInput {
   timezone?: string;                // Optional: New timezone
   dateFormat?: string;              // Optional: New date format
   timeFormat?: UserPreferences['timeFormat']; // Optional: New time format
+  wakeTime?: string;
+  sleepTime?: string;
   autoArchiveCompleted?: boolean;   // Optional: Auto-archive setting
   showCompletedTasks?: boolean;     // Optional: Show completed tasks setting
   sortTasksBy?: UserPreferences['sortTasksBy']; // Optional: New default sorting
