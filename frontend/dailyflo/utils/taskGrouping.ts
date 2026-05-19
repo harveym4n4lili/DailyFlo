@@ -34,6 +34,12 @@ export function formatDateForGroup(date: Date): string {
 export const ROUTINE_GROUP_ONE_TIME = 'One-time';
 export const ROUTINE_GROUP_RECURRING = 'Recurring';
 
+/** single planner bucket for tasks without a time — must match collapse/expand logic in ListCard */
+export const ALL_DAY_TASKS_GROUP_TITLE = 'All day tasks';
+
+/** group header key starts collapsed on planner until user expands — avoids duplicating string literals */
+export const ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES: readonly string[] = [ALL_DAY_TASKS_GROUP_TITLE];
+
 export function getTaskGroupKey(
   task: Task,
   groupBy: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'none'
@@ -44,7 +50,7 @@ export function getTaskGroupKey(
       return task.routineType === 'once' ? ROUTINE_GROUP_ONE_TIME : ROUTINE_GROUP_RECURRING;
     case 'allDay':
       // used by planner screen - all tasks in this group are "all day" (no time set)
-      return 'All day tasks';
+      return ALL_DAY_TASKS_GROUP_TITLE;
     case 'priority':
       return `Priority ${task.priorityLevel}`;
     case 'dueDate':
