@@ -13,11 +13,6 @@
  */
 
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-// redux store imports - access auth state and dispatch actions
-// store: the main redux store that holds all app state
-// logout: action that logs out the user
-import { store } from '../../store';
-import { logout } from '../../store/slices/auth/authSlice';
 // token storage imports - secure storage for authentication tokens
 // these functions store and retrieve tokens from Expo SecureStore (encrypted storage)
 import {
@@ -27,6 +22,16 @@ import {
   storeRefreshToken,
   clearAllTokens,
 } from '../auth/tokenStorage';
+
+/**
+ * dispatch logout without importing authSlice — breaks `client` ↔ `authSlice` cycle that can
+ * corrupt module init and crash right after the auth screen mounts.
+ */
+function dispatchLogoutFromStore(): void {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { store } = require('../../store');
+  store.dispatch({ type: 'auth/logout' });
+}
 
 /**
  * Configuration for the API client
@@ -182,7 +187,7 @@ const createApiClient = (): AxiosInstance => {
           // we only clear tokens here; the onboarding flag is intentionally left alone
           // so a returning user who is merely logged out is taken to sign-in, not full onboarding.
           await clearAllTokens();
-          store.dispatch(logout());
+          dispatchLogoutFromStore();
           return Promise.reject(refreshError);
         }
       }

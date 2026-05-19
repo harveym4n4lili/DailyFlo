@@ -11,8 +11,8 @@ import { Stack, type Href } from 'expo-router';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState, useRef } from 'react';
-import { Platform, TextInput } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { InteractionManager, Platform, TextInput } from 'react-native';
 
 // set default cursor/selection color app-wide; RN 0.83 types omit defaultProps but the merge still works at runtime
 const TI = TextInput as typeof TextInput & { defaultProps?: Record<string, unknown> };
@@ -24,6 +24,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { ReduxProvider } from '@/store/Provider';
+import { AuthSessionGate } from '@/components/navigation/AuthSessionGate';
 import { CustomTabNavMetricsProvider } from '@/contexts/CustomTabNavMetricsContext';
 import { CreateTaskDraftProvider } from './task/CreateTaskDraftContext';
 import { DuplicateTaskProvider } from './task/DuplicateTaskContext';
@@ -38,6 +39,11 @@ const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
 // typed routes lag behind new files until expo regenerates — cast keeps router.push happy
 const ONBOARDING_AUTH_HREF = '/(onboarding)/auth' as Href;
 
+// prefer tabs on cold start / restores — pairs with `<Stack initialRouteName="(tabs)">`
+export const unstable_settings = {
+  initialRouteName: '(tabs)',
+};
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useGuardedRouter();
@@ -47,10 +53,6 @@ export default function RootLayout() {
   // liquid glass: on iOS (not iPad) we let expo-glass-effect decide if glass is supported internally.
   // older SDKs may not export isGlassEffectAPIAvailable, so we avoid calling it directly.
   const useLiquidGlass = Platform.OS === 'ios' && !Platform.isPad;
-  
-  // state to track if we're still checking onboarding status
-  // this prevents showing the app before we know where to route the user
-  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
   
   // ref to track if we've already done the initial navigation check
   // this prevents the useEffect from running multiple times and causing flashing
@@ -110,8 +112,13 @@ export default function RootLayout() {
         router.replace('/(tabs)/today');
 
         const needsOnboarding = onboardingComplete !== 'true' || !authState.isAuthenticated;
+        // push on the same tick as replace can hard-crash the native stack — wait until transitions settle
         if (needsOnboarding) {
-          router.push(ONBOARDING_AUTH_HREF);
+          InteractionManager.runAfterInteractions(() => {
+            requestAnimationFrame(() => {
+              router.push(ONBOARDING_AUTH_HREF);
+            });
+          });
         }
       } catch (error) {
         console.error('Failed to check onboarding status:', error);
@@ -124,22 +131,22 @@ export default function RootLayout() {
         }
 
         router.replace('/(tabs)/today');
-        router.push(ONBOARDING_AUTH_HREF);
-      } finally {
-        setIsCheckingOnboarding(false);
+        InteractionManager.runAfterInteractions(() => {
+          requestAnimationFrame(() => {
+            router.push(ONBOARDING_AUTH_HREF);
+          });
+        });
       }
     };
 
+    // bootstrap runs after the root Stack mounts (we only return null until fonts load). calling replace/push
+    // before the Stack existed could strand navigation on a blank screen.
     checkOnboardingStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
 
-  // wait for fonts to load before showing the app
-  // this prevents text from showing with wrong fonts while loading
-  // also wait for onboarding check to complete
-  if (!loaded || isCheckingOnboarding) {
-    // return null means don't show anything until fonts are ready and onboarding check is done
-    // this only happens in development - in production fonts are bundled
+  // wait for fonts only — the root Stack must mount before bootstrap runs router.replace/push (see useEffect above)
+  if (!loaded) {
     return null;
   }
 
@@ -163,6 +170,7 @@ export default function RootLayout() {
           <DuplicateTaskProvider>
           <PlannerMonthSelectProvider>
           <Stack
+            initialRouteName="(tabs)"
             screenOptions={{
               animation: 'default', // native iOS slide-from-right for all stack transitions
               gestureEnabled: true,
@@ -313,6 +321,7 @@ export default function RootLayout() {
           </DuplicateTaskProvider>
           </CreateTaskDraftProvider>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+          <AuthSessionGate />
         </ThemeProvider>
         </CustomTabNavMetricsProvider>
       </ReduxProvider>

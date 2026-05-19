@@ -308,7 +308,7 @@ export function useThemeColors() {
       invertedDisabled: () => getThemeColor('interactive', 'invertedDisabled'),
     },
 
-    // primary solid buttons — FAB default fill + icon; extend with pressed/hover tokens later if needed
+    // primary solid buttons — default fill + icon for primary CTAs (FAB uses marple + canvas in `FloatingActionButton`)
     primaryButton: {
       fill: () => getThemeColor('primaryButton', 'fill'),
       icon: () => getThemeColor('primaryButton', 'icon'),
