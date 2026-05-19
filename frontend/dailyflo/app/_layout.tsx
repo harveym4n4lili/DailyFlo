@@ -7,9 +7,12 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { useFonts } from 'expo-font';
-import { Stack, type Href } from 'expo-router';
+import { Stack, type Href, usePathname, useSegments } from 'expo-router';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
+import { fetchLists } from '@/store/slices/lists/listsSlice';
+import { fetchTasks } from '@/store/slices/tasks/tasksSlice';
+import { isRouteAlreadyShowingToday } from '@/utils/navigation/bootstrapRouteUtils';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
 import { InteractionManager, Platform, TextInput } from 'react-native';
@@ -47,6 +50,11 @@ export const unstable_settings = {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useGuardedRouter();
+  const pathname = usePathname();
+  const segments = useSegments();
+  // read inside async bootstrap after delays — ref always holds latest tree position
+  const routeSnapshotRef = useRef({ pathname: '', segments: [] as string[] });
+  routeSnapshotRef.current = { pathname, segments: [...segments] };
   // theme background used when liquid glass is not available (android or older ios)
   const themeColors = useThemeColors();
   const tabBarBackgroundColor = themeColors.background.primary();
@@ -108,8 +116,22 @@ export default function RootLayout() {
           authState = store.getState().auth;
         }
 
-        // today is the default tab; keep tabs mounted so onboarding is just a layer on top
-        router.replace('/(tabs)/today');
+        // start task/list loads before Today paints when session restores — reduces empty-state flicker
+        if (authState.isAuthenticated) {
+          const { tasks, lists } = store.getState();
+          if (tasks.lastFetched === null) {
+            void store.dispatch(fetchTasks());
+          }
+          if (lists.lastFetched === null) {
+            void store.dispatch(fetchLists());
+          }
+        }
+
+        // skip redundant replace when tabs already on Today — second replace was animating like a duplicate screen
+        const { pathname: bootstrapPath, segments: bootstrapSegs } = routeSnapshotRef.current;
+        if (!isRouteAlreadyShowingToday(bootstrapPath, bootstrapSegs)) {
+          router.replace('/(tabs)/today');
+        }
 
         const needsOnboarding = onboardingComplete !== 'true' || !authState.isAuthenticated;
         // push on the same tick as replace can hard-crash the native stack — wait until transitions settle
@@ -130,7 +152,10 @@ export default function RootLayout() {
           store.dispatch(logout());
         }
 
-        router.replace('/(tabs)/today');
+        const { pathname: errPath, segments: errSegs } = routeSnapshotRef.current;
+        if (!isRouteAlreadyShowingToday(errPath, errSegs)) {
+          router.replace('/(tabs)/today');
+        }
         InteractionManager.runAfterInteractions(() => {
           requestAnimationFrame(() => {
             router.push(ONBOARDING_AUTH_HREF);
