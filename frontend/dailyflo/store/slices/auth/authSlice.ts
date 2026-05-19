@@ -23,6 +23,7 @@ import {
   getTokenExpiry,
   hasValidTokens,
 } from '../../../services/auth/tokenStorage';
+import { queueNavigateToTodayThenAuthLanding } from '../../../utils/navigation/queueLogoutAuthNavigation';
 
 // storage key for tracking onboarding completion status
 // this key is used to check if the user has completed the onboarding flow
@@ -722,7 +723,10 @@ export const logoutUser = createAsyncThunk(
         // The logout should still succeed even if onboarding reset fails
         console.error('Error resetting onboarding during logout:', onboardingError);
       }
-      
+
+      // only dispatched from browse settings — show auth modal from root routing queue (not from a screen hook lifecycle — see util comment)
+      queueNavigateToTodayThenAuthLanding();
+
       // Return success - the reducer handles clearing the state
       return true;
     } catch (error) {
@@ -745,7 +749,9 @@ export const logoutUser = createAsyncThunk(
       } catch (onboardingError) {
         console.error('Error resetting onboarding during logout:', onboardingError);
       }
-      
+
+      queueNavigateToTodayThenAuthLanding();
+
       console.error('Error during logout (tokens may not have been cleared):', error);
       return true;
     }
