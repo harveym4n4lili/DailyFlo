@@ -7,11 +7,11 @@
  * Sections: Account/Calendar, Productivity, Personalization, Support, Logout.
  */
 
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Platform, Alert } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { Stack } from 'expo-router';
+import { Stack, router as expoRouter, type Href } from 'expo-router';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -28,6 +28,8 @@ import { useTypography } from '@/hooks/useTypography';
 import { MainCloseButton } from '@/components/ui/Button';
 import { IosBrowseModalCloseStackToolbar } from '@/components/navigation/IosBrowseModalStackToolbars';
 import { Paddings } from '@/constants/Paddings';
+import { useAppDispatch } from '@/store';
+import { logoutUser } from '@/store/slices/auth/authSlice';
 
 // header row height matches close button (42) – same as Activity Log
 const HEADER_ROW_HEIGHT = 42;
@@ -37,7 +39,9 @@ const FADE_OVERFLOW = 48;
 const TOP_SECTION_HEIGHT = HEADER_TOP + HEADER_ROW_HEIGHT + FADE_OVERFLOW;
 
 export default function BrowseSettingsScreen() {
+  const dispatch = useAppDispatch();
   const router = useGuardedRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
   const themeColors = useThemeColors();
   const semanticColors = useSemanticColors();
   const { getMarpleBrandColor } = useColorPalette();
@@ -67,6 +71,51 @@ export default function BrowseSettingsScreen() {
     containerStyle: styles.listContainer,
   };
 
+  // full sign-out path lives in redux: `logoutUser` clears securestore tokens, auth slice, tasks, and onboarding flag
+  const handleConfirmLogout = useCallback(async () => {
+    setLoggingOut(true);
+    try {
+      // peel browse/settings first (back → browse index or replace browse root). `logoutUser` then queues today+auth via expo-router's global routing queue (see `queueLogoutAuthNavigation`).
+      const canPopSettings = expoRouter.canGoBack();
+      if (canPopSettings) {
+        expoRouter.back();
+      } else {
+        expoRouter.replace('/(tabs)/browse' as Href);
+      }
+      // brief gap so browse stack commits after closing settings modal before thunk enqueues replace/push onto the root stack
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await dispatch(logoutUser()).unwrap();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      setLoggingOut(false);
+    }
+  }, [dispatch]);
+
+  // if native stack loses `back()` target (broken history), flatten to browse home instead of crashing on GO_BACK
+  const handleCloseSettings = useCallback(() => {
+    const canPop =
+      typeof (router as { canGoBack?: () => boolean }).canGoBack === 'function' &&
+      (router as { canGoBack: () => boolean }).canGoBack();
+    if (canPop) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/browse' as Href);
+    }
+  }, [router]);
+
+  const handleLogoutPress = useCallback(() => {
+    if (loggingOut) return;
+    Alert.alert(
+      'Log out?',
+      "You'll need to sign in again to sync your tasks.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Log out', style: 'destructive', onPress: () => void handleConfirmLogout() },
+      ],
+    );
+  }, [handleConfirmLogout, loggingOut]);
+
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
       {/* ios: native title next to Stack.Toolbar xmark — style matches list-create (heading-4) */}
@@ -79,7 +128,7 @@ export default function BrowseSettingsScreen() {
           }}
         />
       ) : null}
-      <IosBrowseModalCloseStackToolbar />
+      <IosBrowseModalCloseStackToolbar onPress={handleCloseSettings} />
       {/* content first (behind) – scrollable settings sections */}
       <View style={styles.contentArea}>
         <ScrollView
@@ -361,7 +410,8 @@ export default function BrowseSettingsScreen() {
                 }
                 label="Logout"
                 value=""
-                onPress={() => {}}
+                onPress={handleLogoutPress}
+                disabled={loggingOut}
                 showChevron={false}
                 customStyles={{ label: { color: logoutDestructiveColor } }}
               />
@@ -402,7 +452,7 @@ export default function BrowseSettingsScreen() {
             </View>
             <View style={styles.closeButtonContainer} pointerEvents="box-none">
               <MainCloseButton
-                onPress={() => router.back()}
+                onPress={handleCloseSettings}
                 top={Paddings.screen}
                 left={Paddings.screen}
               />
