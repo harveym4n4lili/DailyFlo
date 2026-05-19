@@ -38,6 +38,12 @@ import {
   getOccurrenceDateFromId,
   toLocalCalendarDayString,
 } from '@/utils/recurrenceUtils';
+import {
+  coerceWakeSleepHHMM,
+  DEFAULT_SLEEP_HHMM,
+  DEFAULT_WAKE_HHMM,
+  timelinePlannerHoursFromWakeSleepHHMM,
+} from '@/utils/preferenceScheduleTimes';
 
 type PlannerIosNavMonthTitleProps = {
   label: string;
@@ -71,9 +77,31 @@ export type PlannerTabContentProps = {
 export function PlannerTabContent({ mode }: PlannerTabContentProps) {
   const plannerAnchorFromStore = useAppSelector((s) => s.ui.plannerSelectionAnchorDate);
 
+  /** signed-in planner day window pulled from `/accounts/users/profile/` preferences — TimelineView clamps label math to coarse hours derived here */
+  const wakeHHMMFromProfile = useAppSelector((s) =>
+    coerceWakeSleepHHMM(s.auth.user?.preferences.wakeTime, DEFAULT_WAKE_HHMM),
+  );
+  const sleepHHMMFromProfile = useAppSelector((s) =>
+    coerceWakeSleepHHMM(s.auth.user?.preferences.sleepTime, DEFAULT_SLEEP_HHMM),
+  );
+  const { startHour: plannerTimelineStartHour, endHour: plannerTimelineEndHour } = useMemo(
+    () => timelinePlannerHoursFromWakeSleepHHMM(wakeHHMMFromProfile, sleepHHMMFromProfile),
+    [wakeHHMMFromProfile, sleepHHMMFromProfile],
+  );
+
   const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString());
   const [timelineDate, setTimelineDate] = useState<string>(() => new Date().toISOString());
   const [, startTimelineTransition] = useTransition();
+
+  /** wake/sleep visual bands on the dotted column — TimelineView merges these pseudo tasks keyed to the planner day iso */
+  const plannerScheduleAnchorsPayload = useMemo(
+    () => ({
+      wakeHHMM: wakeHHMMFromProfile,
+      sleepHHMM: sleepHHMMFromProfile,
+      dueDateIso: timelineDate ?? selectedDate,
+    }),
+    [wakeHHMMFromProfile, sleepHHMMFromProfile, timelineDate, selectedDate],
+  );
 
   const router = useGuardedRouter();
   const navigation = useNavigation();
@@ -427,8 +455,9 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                 selectionMode={timelineListSelection}
                 selectedTaskIds={selection.selectedItems}
                 onToggleTaskSelection={timelineListSelection ? toggleItemSelection : undefined}
-                startHour={6}
-                endHour={23}
+                plannerScheduleAnchors={plannerScheduleAnchorsPayload}
+                startHour={plannerTimelineStartHour}
+                endHour={plannerTimelineEndHour}
                 timeInterval={60}
                 scrollContentPaddingTop={16}
                 scrollContentPaddingBottom={

@@ -11,17 +11,17 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text, Platform } from 'react-native';
 import AnimatedReanimated, { useSharedValue, withTiming, makeMutable, withSpring, LinearTransition, createAnimatedComponent } from 'react-native-reanimated';
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { useThemeColors, useColorPalette } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
-import { CHECKBOX_HIDE_DELAY_MS } from '@/constants/Checkbox';
+import { CHECKBOX_HIDE_DELAY_MS, CHECKBOX_SIZE_TASK_VIEW } from '@/constants/Checkbox';
 import { Task } from '@/types';
 import TimelineItem from './TimelineItem/TimelineItem';
 import TimeLabel from './TimeLabel';
 import { OverlappingTaskCard } from './OverlappingTaskCard';
 import DragOverlay from './DragOverlay';
 import { DashedVerticalLine } from '@/components/ui/borders';
-import { SparklesIcon } from '@/components/ui/Icon';
+import { SparklesIcon, SunshineFillIcon, MoonFillIcon } from '@/components/ui/Icon';
 import {
   generateTimeSlots,
   timeToMinutes,
@@ -32,6 +32,11 @@ import {
 } from './timelineUtils';
 import { getTimelineTaskGapPx } from './timelineSpacing';
 import { FREE_TIME_BREAK_MESSAGES, formatMinutesToDuration } from './timelineFreeTime';
+import {
+  buildPlannerWakeSleepAnchorTasks,
+  isPlannerScheduleAnchorTaskId,
+  PLANNER_WAKE_ANCHOR_TASK_ID,
+} from './plannerScheduleAnchors';
 
 // layout transition for planner: footer + timeline slide up together when task is checked
 // duration-based linear transition so both animate in sync (no delay)
@@ -80,6 +85,12 @@ interface TimelineViewProps {
   onToggleTaskSelection?: (taskId: string) => void;
   /** false disables scroll (embedded timelines) */
   scrollEnabled?: boolean;
+  /** planner: shows wake/wind-down rows anchored to `dueDateIso` plus user hh:mm prefs (non-draggable pseudo tasks). */
+  plannerScheduleAnchors?: {
+    wakeHHMM: string;
+    sleepHHMM: string;
+    dueDateIso: string | null;
+  };
 }
 
 /**
@@ -104,9 +115,13 @@ export default function TimelineView({
   selectedTaskIds = [],
   onToggleTaskSelection,
   scrollEnabled = true,
+  plannerScheduleAnchors,
 }: TimelineViewProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
+  const { getMossBrandColor, getSageBrandColor } = useColorPalette();
+  const plannerWakeIconColor = getMossBrandColor(600);
+  const plannerSleepIconColor = getSageBrandColor(600);
 
   // track measured/animated card heights (used for both rendering and spacing)
   // spacing now follows the animated height so the whole timeline moves smoothly
@@ -243,6 +258,18 @@ export default function TimelineView({
   // tasks without time won't appear on the timeline
   // also exclude tasks that are hidden due to overlaps
   // and include combined overlapping tasks as pseudo-tasks for rendering
+  const plannerDayAnchorPseudoTasks = useMemo(
+    () =>
+      plannerScheduleAnchors
+        ? buildPlannerWakeSleepAnchorTasks(
+            plannerScheduleAnchors.wakeHHMM,
+            plannerScheduleAnchors.sleepHHMM,
+            plannerScheduleAnchors.dueDateIso,
+          )
+        : [],
+    [plannerScheduleAnchors],
+  );
+
   const tasksWithTime = useMemo(() => {
     const regularTasks = visibleTasks.filter(task => 
       task.time && 
@@ -278,9 +305,9 @@ export default function TimelineView({
         };
       });
     
-    // combine regular tasks and combined tasks
-    return [...regularTasks, ...combinedTasksAsPseudoTasks];
-  }, [visibleTasks, hiddenTaskIds, combinedOverlappingTasks]);
+    // combine planner day rows — real tasks, overlap composites, immutable wake/wind anchors
+    return [...regularTasks, ...combinedTasksAsPseudoTasks, ...plannerDayAnchorPseudoTasks];
+  }, [visibleTasks, hiddenTaskIds, combinedOverlappingTasks, plannerDayAnchorPseudoTasks]);
 
   // calculate dynamic start time - use earliest task time or fallback to startHour
   // round down to the hour and subtract 1 hour for buffer to allow scrolling up
@@ -1065,7 +1092,9 @@ export default function TimelineView({
    */
   const detectAndCreateOverlappingTasks = useCallback((tasksToAnalyze: Task[]) => {
     // filter to only tasks with time (required for overlap detection)
-    const tasksWithTime = tasksToAnalyze.filter(task => task.time && task.dueDate);
+    const tasksWithTime = tasksToAnalyze.filter(
+      (task) => task.time && task.dueDate && !isPlannerScheduleAnchorTaskId(task.id),
+    );
     
     if (tasksWithTime.length === 0) {
       // no tasks with time - clear all overlapping state
@@ -1157,6 +1186,14 @@ export default function TimelineView({
   const handleTaskTimeChangeWithOverlap = useCallback((taskId: string, newTime: string) => {
     // mark that we're processing a drag operation to prevent useEffect from running overlap detection
     isProcessingDragRef.current = true;
+
+    // immutable planner ambience rows cannot move — guard in case gestures mis-fire
+    if (isPlannerScheduleAnchorTaskId(taskId)) {
+      setTimeout(() => {
+        isProcessingDragRef.current = false;
+      }, 50);
+      return;
+    }
     
     // update the task time via parent callback
     onTaskTimeChange?.(taskId, newTime);
@@ -2032,6 +2069,8 @@ export default function TimelineView({
                 taskPpm
               );
 
+              const isPlannerDayAnchorRow = isPlannerScheduleAnchorTaskId(task.id);
+
               return (
                 <TimelineItem
                   key={task.id}
@@ -2041,33 +2080,51 @@ export default function TimelineView({
                   pixelsPerMinute={renderProps.pixelsPerMinute}
                   startHour={dynamicStartHour}
                   onHeightMeasured={(height: number) => handleHeightMeasured(task.id, height)}
+                  interactionLocked={isPlannerDayAnchorRow}
+                  hugContent={isPlannerDayAnchorRow}
+                  leadingAccessory={
+                    isPlannerDayAnchorRow ? (
+                      task.id === PLANNER_WAKE_ANCHOR_TASK_ID ? (
+                        <SunshineFillIcon
+                          size={CHECKBOX_SIZE_TASK_VIEW}
+                          color={plannerWakeIconColor}
+                        />
+                      ) : (
+                        <MoonFillIcon
+                          size={CHECKBOX_SIZE_TASK_VIEW}
+                          color={plannerSleepIconColor}
+                        />
+                      )
+                    ) : undefined
+                  }
                   onDrag={(newY: number) => {
+                    if (isPlannerDayAnchorRow) return;
                     handleDragEnd(task.id, newY, renderProps.measuredHeight);
                   }}
                   onDragStart={() => {
-                    // initial top = center - height/2 (same as renderProps.position)
+                    if (isPlannerDayAnchorRow) return;
                     const initialTopY = renderProps.position;
                     handleDragStart(task.id, initialTopY, renderProps.measuredHeight, task);
                   }}
                   onDragPositionChange={(yPosition: number) => {
-                    // yPosition is the top position from TimelineItem during drag
-                    // use modular drag handler which converts top to center and updates drag state
-                    // this provides visual feedback during drag
+                    if (isPlannerDayAnchorRow) return;
                     handleDragPositionChange(task.id, yPosition, renderProps.measuredHeight);
                   }}
                   onDragEnd={() => {
                     // drag ended - cleanup handled by handleDragEnd in onDrag callback
-                    // this is called after onDrag, so state is already cleared
                   }}
-                  onPress={() =>
-                    selectionMode && onToggleTaskSelection
-                      ? onToggleTaskSelection(task.id)
-                      : onTaskPress?.(task)
+                  onPress={
+                    !isPlannerDayAnchorRow
+                      ? () =>
+                          selectionMode && onToggleTaskSelection
+                            ? onToggleTaskSelection(task.id)
+                            : onTaskPress?.(task)
+                      : undefined
                   }
-                  onTaskComplete={selectionMode ? undefined : handleTaskComplete}
-                  onTaskCompleteImmediate={selectionMode ? undefined : handleTaskCompleteImmediate}
-                  // pass isDraggedTask prop so this task can apply higher z-index when being dragged
-                  // this ensures the dragged task appears above all other tasks on the timeline
+                  onTaskComplete={selectionMode || isPlannerDayAnchorRow ? undefined : handleTaskComplete}
+                  onTaskCompleteImmediate={
+                    selectionMode || isPlannerDayAnchorRow ? undefined : handleTaskCompleteImmediate
+                  }
                   isDraggedTask={dragState?.taskId === task.id}
                   selectionMode={selectionMode}
                   isSelected={selectionMode && selectedTaskIds.includes(task.id)}

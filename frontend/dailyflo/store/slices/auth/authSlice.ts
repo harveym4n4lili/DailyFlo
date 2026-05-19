@@ -24,6 +24,11 @@ import {
   hasValidTokens,
 } from '../../../services/auth/tokenStorage';
 import { queueNavigateToTodayThenAuthLanding } from '../../../utils/navigation/queueLogoutAuthNavigation';
+import {
+  coerceWakeSleepHHMM,
+  DEFAULT_SLEEP_HHMM,
+  DEFAULT_WAKE_HHMM,
+} from '../../../utils/preferenceScheduleTimes';
 
 // storage key for tracking onboarding completion status
 // this key is used to check if the user has completed the onboarding flow
@@ -287,7 +292,42 @@ function transformApiPreferencesToPreferences(apiPrefs: any): UserPreferences {
     sortTasksBy: apiPrefs.sort_tasks_by || apiPrefs.sortTasksBy || 'dueDate',
     analyticsEnabled: (apiPrefs.analytics_enabled || apiPrefs.analyticsEnabled) ?? true,
     crashReportingEnabled: (apiPrefs.crash_reporting_enabled || apiPrefs.crashReportingEnabled) ?? true,
+    wakeTime: coerceWakeSleepHHMM(apiPrefs.wake_time || apiPrefs.wakeTime, DEFAULT_WAKE_HHMM),
+    sleepTime: coerceWakeSleepHHMM(apiPrefs.sleep_time || apiPrefs.sleepTime, DEFAULT_SLEEP_HHMM),
   };
+}
+
+/**
+ * PATCH `/accounts/users/profile/update/` expects snake_case django fields nested under `preferences`.
+ * we only serialize the entries the server allows + merge server-side onto existing json.
+ */
+export function preferencesPartialToSnakePayload(prefs: Partial<UserPreferences>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (prefs.theme !== undefined) out.theme = prefs.theme;
+  if (prefs.defaultPriority !== undefined) out.default_priority = prefs.defaultPriority;
+  if (prefs.defaultColor !== undefined) out.default_color = prefs.defaultColor;
+  if (prefs.defaultListView !== undefined) out.default_list_view = prefs.defaultListView;
+  if (prefs.timezone !== undefined) out.timezone = prefs.timezone;
+  if (prefs.dateFormat !== undefined) out.date_format = prefs.dateFormat;
+  if (prefs.timeFormat !== undefined) out.time_format = prefs.timeFormat;
+  if (prefs.autoArchiveCompleted !== undefined) out.auto_archive_completed = prefs.autoArchiveCompleted;
+  if (prefs.showCompletedTasks !== undefined) out.show_completed_tasks = prefs.showCompletedTasks;
+  if (prefs.sortTasksBy !== undefined) out.sort_tasks_by = prefs.sortTasksBy;
+  if (prefs.analyticsEnabled !== undefined) out.analytics_enabled = prefs.analyticsEnabled;
+  if (prefs.crashReportingEnabled !== undefined) out.crash_reporting_enabled = prefs.crashReportingEnabled;
+  if (prefs.wakeTime !== undefined) out.wake_time = prefs.wakeTime;
+  if (prefs.sleepTime !== undefined) out.sleep_time = prefs.sleepTime;
+  if (prefs.notifications !== undefined) {
+    const n = prefs.notifications;
+    const nid: Record<string, unknown> = {};
+    if (n.enabled !== undefined) nid.enabled = n.enabled;
+    if (n.dueDateReminders !== undefined) nid.due_date_reminders = n.dueDateReminders;
+    if (n.routineReminders !== undefined) nid.routine_reminders = n.routineReminders;
+    if (n.pushNotifications !== undefined) nid.push_notifications = n.pushNotifications;
+    if (n.emailNotifications !== undefined) nid.email_notifications = n.emailNotifications;
+    if (Object.keys(nid).length) out.notifications = nid;
+  }
+  return out;
 }
 
 /**
@@ -671,6 +711,38 @@ export const updateUserProfile = createAsyncThunk(
   }
 );
 
+/**
+ * PATCH wake/sleep through django `preferences` merge — thunk keeps redux user in sync with server truth.
+ */
+export const patchUserSchedulePreferences = createAsyncThunk(
+  'auth/patchUserSchedulePreferences',
+  async (patch: { wakeTime: string; sleepTime: string }, { getState, rejectWithValue }) => {
+    try {
+      const loggedInUser = (getState() as { auth: Readonly<{ user: User | null }> }).auth.user;
+      if (!loggedInUser?.id) {
+        return rejectWithValue('Sign in required to save your schedule.');
+      }
+
+      const response = await authApiService.patchProfileUpdate({
+        preferences: preferencesPartialToSnakePayload({
+          wakeTime: patch.wakeTime,
+          sleepTime: patch.sleepTime,
+        }),
+      });
+
+      const bodyUser = response.user ?? response;
+      return transformApiUserToUser(bodyUser);
+    } catch (error: any) {
+      const prefsErr = error?.response?.data?.preferences;
+      const message =
+        (Array.isArray(prefsErr) ? prefsErr[0] : undefined) ??
+        error?.response?.data?.detail ??
+        (error instanceof Error ? error.message : 'Could not save schedule.');
+      return rejectWithValue(typeof message === 'string' ? message : 'Could not save schedule.');
+    }
+  },
+);
+
 // Refresh access token
 export const refreshAccessToken = createAsyncThunk(
   'auth/refreshAccessToken',
@@ -961,6 +1033,20 @@ const authSlice = createSlice({
       .addCase(updateUserProfile.rejected, (state, action) => {
         state.isUpdatingProfile = false;
         state.profileError = action.payload as string;
+      })
+
+      .addCase(patchUserSchedulePreferences.pending, (state) => {
+        state.isUpdatingProfile = true;
+        state.profileError = null;
+      })
+      .addCase(patchUserSchedulePreferences.fulfilled, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = null;
+        state.user = action.payload;
+      })
+      .addCase(patchUserSchedulePreferences.rejected, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = (action.payload as string) || 'Schedule update failed';
       })
       
       // Handle refreshAccessToken actions
