@@ -268,6 +268,12 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
     return selectedDateTasks.filter((task) => !task.time || task.time === '');
   }, [selectedDateTasks]);
 
+  // show footer list only while there is at least one incomplete all-day row (ListCard hides completed with hideCompletedTasks)
+  const shouldShowPlannerAllDayFooter = useMemo(
+    () => allDayTasks.some((task) => !task.isCompleted),
+    [allDayTasks],
+  );
+
   // must match selectedDateTasks filtering — changing day remounts ListCard below so all-day collapses again (fresh hook state per day)
   const plannerDisplayedDayKey = useMemo(() => {
     const sourceDate = timelineDate || selectedDate;
@@ -472,12 +478,12 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                 scrollContentPaddingBottom={
                   mode === 'select' && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
                 }
+                // planner: footer always mounts so Timeline keeps footer margin below chrome fade — empty/incomplete-less day passes [] + silentWhenEmpty so ListCard is height 0 (no empty copy)
                 footerComponent={
                   <View style={styles.allDayFooter}>
-                    {/* all-day strip uses the same TaskCard/ListCard row preset as Today (spread + recurrence row) */}
                     <ListCard
                       key={`planner-allday-${plannerDisplayedDayKey || 'unknown'}`}
-                      tasks={allDayTasks}
+                      tasks={shouldShowPlannerAllDayFooter ? allDayTasks : []}
                       selectionMode={timelineListSelection}
                       selectedTaskIds={selection.selectedItems}
                       onToggleTaskSelection={timelineListSelection ? toggleItemSelection : undefined}
@@ -489,6 +495,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                       {...LIST_CARD_TASK_ROW_PRESET_TODAY}
                       showListRecurrenceRow
                       initialCollapsedGroupTitles={ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES}
+                      silentWhenEmpty
                       emptyMessage="No all-day tasks for this date."
                       loading={false}
                       groupBy="allDay"

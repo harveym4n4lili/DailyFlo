@@ -94,6 +94,8 @@ export interface ListCardProps {
   liquidGlass?: boolean;
   emptyMessage?: string; // message to show when no tasks are available
   loading?: boolean; // whether the list is currently loading
+  /** when true and tasks is empty (and not loading): render zero-height shell — skips empty-state copy (planner all-day footer) */
+  silentWhenEmpty?: boolean;
 
   // optional list configuration
   groupBy?: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'none'; // routine = one-time vs recurring (browse list detail); allDay = planner all-day bucket
@@ -213,6 +215,7 @@ export default function ListCard({
   liquidGlass = false,
   emptyMessage = 'No tasks available',
   loading = false,
+  silentWhenEmpty = false,
   groupBy = 'none',
   initialCollapsedGroupTitles,
   sortBy = 'createdAt',
@@ -811,6 +814,18 @@ export default function ListCard({
       <View style={styles.container}>
         <LoadingState />
       </View>
+    );
+  }
+
+  // planner/footer pattern: empty list but parent still needs “footer exists” spacing — hide empty message + take no vertical space
+  if (silentWhenEmpty && tasks.length === 0) {
+    return (
+      <View
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={{ height: 0, overflow: 'hidden' }}
+      />
     );
   }
 
