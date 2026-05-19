@@ -1,5 +1,6 @@
 /**
- * onboarding stack — `auth/` and `slides/` are *folder + index only* (no `auth/_layout` / `slides/_layout`), so expo registers them as `auth/index` and `slides/index`, not `auth` / `slides`. `Stack.Screen name` must match that or options never apply (auth showed `auth/index` as title; slides lost the header when the default was `headerShown: false`).
+ * onboarding stack — `auth/` and `slides/` use folder + `index` only, so routes are `auth/index` and `slides/index`.
+ * no `index` at group root: default screen is `auth/index` (`initialRouteName`) so we never `<Redirect>` through an extra route.
  */
 
 import React from 'react';
@@ -46,6 +47,7 @@ export default function OnboardingLayout() {
 
   return (
     <Stack
+      initialRouteName="auth/index"
       screenOptions={{
         headerShown: true,
         headerTransparent: true,
@@ -60,7 +62,6 @@ export default function OnboardingLayout() {
         ...iosHeaderNoChromeFade,
       }}
     >
-      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="auth/index" options={{ headerShown: false }} />
       <Stack.Screen name="slides/index" options={SLIDES_HEADER_OPTIONS} />
     </Stack>

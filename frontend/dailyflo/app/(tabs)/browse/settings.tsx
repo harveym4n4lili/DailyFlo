@@ -8,7 +8,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Stack } from 'expo-router';
@@ -23,7 +23,7 @@ import {
   CalendarIcon,
   SparklesIcon,
 } from '@/components/ui/Icon';
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { useColorPalette, useSemanticColors, useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainCloseButton } from '@/components/ui/Button';
 import { IosBrowseModalCloseStackToolbar } from '@/components/navigation/IosBrowseModalStackToolbars';
@@ -39,7 +39,13 @@ const TOP_SECTION_HEIGHT = HEADER_TOP + HEADER_ROW_HEIGHT + FADE_OVERFLOW;
 export default function BrowseSettingsScreen() {
   const router = useGuardedRouter();
   const themeColors = useThemeColors();
+  const semanticColors = useSemanticColors();
+  const { getMarpleBrandColor } = useColorPalette();
   const typography = useTypography();
+  // leading icons in grouped lists — same marple accent as browse home / chrome (logout row keeps semantic red below)
+  const settingsGroupedListIconColor = getMarpleBrandColor(500);
+  // shared token for destructive row — semantic error ramp, not body text
+  const logoutDestructiveColor = semanticColors.error();
   const styles = createStyles(themeColors, typography);
   const headerHeight = useHeaderHeight();
   // same as list-create: one style object for ios native headerTitle + android overlay <Text>
@@ -105,8 +111,8 @@ export default function BrowseSettingsScreen() {
                   <SFSymbolIcon
                     name="person.circle"
                     size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<GearIcon size={20} color={themeColors.text.primary()} />}
+                    color={settingsGroupedListIconColor}
+                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Account"
@@ -120,8 +126,8 @@ export default function BrowseSettingsScreen() {
                   <SFSymbolIcon
                     name="calendar"
                     size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<CalendarIcon size={20} color={themeColors.text.primary()} />}
+                    color={settingsGroupedListIconColor}
+                    fallback={<CalendarIcon size={20} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Calendar"
@@ -151,8 +157,8 @@ export default function BrowseSettingsScreen() {
                   <SFSymbolIcon
                     name="target"
                     size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<SparklesIcon size={20} color={themeColors.text.primary()} />}
+                    color={settingsGroupedListIconColor}
+                    fallback={<SparklesIcon size={20} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Goals"
@@ -166,8 +172,8 @@ export default function BrowseSettingsScreen() {
                   <SFSymbolIcon
                     name="bell.badge"
                     size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<BellIcon size={20} color={themeColors.text.primary()} />}
+                    color={settingsGroupedListIconColor}
+                    fallback={<BellIcon size={20} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Reminders"
@@ -181,8 +187,8 @@ export default function BrowseSettingsScreen() {
                   <SFSymbolIcon
                     name="bell"
                     size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<BellIcon size={20} color={themeColors.text.primary()} />}
+                    color={settingsGroupedListIconColor}
+                    fallback={<BellIcon size={20} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Notifications"
@@ -212,8 +218,8 @@ export default function BrowseSettingsScreen() {
                   <SFSymbolIcon
                     name="paintbrush"
                     size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<GearIcon size={20} color={themeColors.text.primary()} />}
+                    color={settingsGroupedListIconColor}
+                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Theme"
@@ -227,8 +233,8 @@ export default function BrowseSettingsScreen() {
                   <SFSymbolIcon
                     name="square.grid.2x2"
                     size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<GearIcon size={20} color={themeColors.text.primary()} />}
+                    color={settingsGroupedListIconColor}
+                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Navigation"
@@ -242,8 +248,8 @@ export default function BrowseSettingsScreen() {
                   <SFSymbolIcon
                     name="app.badge"
                     size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<GearIcon size={20} color={themeColors.text.primary()} />}
+                    color={settingsGroupedListIconColor}
+                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="App Icon"
@@ -273,8 +279,8 @@ export default function BrowseSettingsScreen() {
                   <SFSymbolIcon
                     name="info.circle"
                     size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<GearIcon size={20} color={themeColors.text.primary()} />}
+                    color={settingsGroupedListIconColor}
+                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="About"
@@ -288,8 +294,8 @@ export default function BrowseSettingsScreen() {
                   <SFSymbolIcon
                     name="bubble.left.and.bubble.right"
                     size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<GearIcon size={20} color={themeColors.text.primary()} />}
+                    color={settingsGroupedListIconColor}
+                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Help and Feedback"
@@ -303,8 +309,8 @@ export default function BrowseSettingsScreen() {
                   <SFSymbolIcon
                     name="sparkles"
                     size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<SparklesIcon size={20} color={themeColors.text.primary()} />}
+                    color={settingsGroupedListIconColor}
+                    fallback={<SparklesIcon size={20} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="What's New"
@@ -318,8 +324,8 @@ export default function BrowseSettingsScreen() {
                   <SFSymbolIcon
                     name="arrow.triangle.2.circlepath"
                     size={20}
-                    color={themeColors.text.primary()}
-                    fallback={<GearIcon size={20} color={themeColors.text.primary()} />}
+                    color={settingsGroupedListIconColor}
+                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Sync"
@@ -330,23 +336,37 @@ export default function BrowseSettingsScreen() {
             </GroupedList>
           </View>
 
-          <TouchableOpacity
-            style={[styles.logoutButton, { backgroundColor: themeColors.background.primarySecondaryBlend() }]}
-            onPress={() => {}}
-            activeOpacity={0.7}
-          >
-            <SFSymbolIcon
-              name="rectangle.portrait.and.arrow.right"
-              size={20}
-              color={themeColors.text.primary()}
-              fallback={<GearIcon size={20} color={themeColors.text.primary()} />}
-            />
-            <Text
-              style={[styles.logoutButtonText, { color: themeColors.text.primary() }]}
+          {/* logout: its own card so it matches other settings blocks (same radius, separator chrome — one row, no chevron) */}
+          <View style={[styles.groupedListSection, styles.logoutGroupedListSection]}>
+            <GroupedList
+              containerStyle={listStyle.containerStyle}
+              backgroundColor={listStyle.backgroundColor}
+              separatorColor={listStyle.separatorColor}
+              separatorInsetRight={Paddings.groupedListContentHorizontal}
+              separatorVariant="solid"
+              borderRadius={24}
+              minimalStyle={false}
+              separatorConsiderIconColumn={true}
+              iconColumnWidth={30}
             >
-              Logout
-            </Text>
-          </TouchableOpacity>
+              <FormDetailButton
+                key="logout"
+                iconComponent={
+                  <SFSymbolIcon
+                    name="rectangle.portrait.and.arrow.right"
+                    size={20}
+                    color={logoutDestructiveColor}
+                    fallback={<GearIcon size={20} color={logoutDestructiveColor} />}
+                  />
+                }
+                label="Logout"
+                value=""
+                onPress={() => {}}
+                showChevron={false}
+                customStyles={{ label: { color: logoutDestructiveColor } }}
+              />
+            </GroupedList>
+          </View>
 
           <View style={styles.bottomSpacer} />
         </View>
@@ -473,18 +493,8 @@ const createStyles = (
     listContainer: {
       marginVertical: 0,
     },
-    logoutButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: Paddings.formDataPillHorizontal,
-      paddingVertical: Paddings.formDataPillVertical,
-      borderRadius: Paddings.formDataPillRadius,
+    logoutGroupedListSection: {
       marginTop: 24,
-      minHeight: 44,
-    },
-    logoutButtonText: {
-      ...typography.getTextStyle('body-large'),
-      marginLeft: Paddings.formDataPillIconGap,
     },
     bottomSpacer: {
       height: 200,

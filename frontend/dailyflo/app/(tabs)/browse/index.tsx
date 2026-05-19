@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useLists } from '@/store/hooks';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
@@ -38,6 +38,10 @@ function BrowseListsColumn({
   isMyListsExpanded: boolean;
   setIsMyListsExpanded: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
+  // marple for leading icons — same brand accent as tab FAB / quick-add primary action (not body text.primary)
+  const { getMarpleBrandColor } = useColorPalette();
+  const groupedListIconColor = getMarpleBrandColor(500);
+
   return (
     <View style={styles.contentWrapper}>
       <View style={styles.groupedListSection}>
@@ -54,7 +58,7 @@ function BrowseListsColumn({
         >
           <FormDetailButton
             key="inbox"
-            iconComponent={<SFSymbolIcon name="tray.full" size={20} color={themeColors.text.primary()} fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />} />}
+            iconComponent={<SFSymbolIcon name="tray.full" size={20} color={groupedListIconColor} fallback={<BrowseIcon size={18} color={groupedListIconColor} />} />}
             label="Inbox"
             value=""
             onPress={() => router.push('/(tabs)/browse/inbox')}
@@ -62,7 +66,7 @@ function BrowseListsColumn({
           />
           <FormDetailButton
             key="completed"
-            iconComponent={<SFSymbolIcon name="checkmark.circle.fill" size={20} color={themeColors.text.primary()} fallback={<TickIcon size={18} color={themeColors.text.primary()} />} />}
+            iconComponent={<SFSymbolIcon name="checkmark.circle.fill" size={20} color={groupedListIconColor} fallback={<TickIcon size={18} color={groupedListIconColor} />} />}
             label="Completed"
             value=""
             onPress={() => router.push('/(tabs)/browse/completed')}
@@ -70,7 +74,7 @@ function BrowseListsColumn({
           />
           <FormDetailButton
             key="tags"
-            iconComponent={<SFSymbolIcon name="tag" size={20} color={themeColors.text.primary()} fallback={<BrowseIcon size={18} color={themeColors.text.primary()} />} />}
+            iconComponent={<SFSymbolIcon name="tag" size={20} color={groupedListIconColor} fallback={<BrowseIcon size={18} color={groupedListIconColor} />} />}
             label="Tags"
             value=""
             onPress={() => router.push('/(tabs)/browse/tags')}
