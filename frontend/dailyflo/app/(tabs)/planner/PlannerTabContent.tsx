@@ -23,6 +23,7 @@ import { TimelineView } from '@/components/features/timeline';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
+import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTasks, useUI } from '@/store/hooks';
 import { useAppDispatch, useAppSelector, store } from '@/store';
@@ -44,6 +45,7 @@ import {
   DEFAULT_WAKE_HHMM,
   timelinePlannerHoursFromWakeSleepHHMM,
 } from '@/utils/preferenceScheduleTimes';
+import { ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES } from '@/utils/taskGrouping';
 
 type PlannerIosNavMonthTitleProps = {
   label: string;
@@ -266,6 +268,13 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
     return selectedDateTasks.filter((task) => !task.time || task.time === '');
   }, [selectedDateTasks]);
 
+  // must match selectedDateTasks filtering — changing day remounts ListCard below so all-day collapses again (fresh hook state per day)
+  const plannerDisplayedDayKey = useMemo(() => {
+    const sourceDate = timelineDate || selectedDate;
+    if (!sourceDate) return '';
+    return toLocalCalendarDayString(new Date(sourceDate));
+  }, [timelineDate, selectedDate]);
+
   const handleTaskPress = (task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
@@ -465,8 +474,9 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                 }
                 footerComponent={
                   <View style={styles.allDayFooter}>
+                    {/* all-day strip uses the same TaskCard/ListCard row preset as Today (spread + recurrence row) */}
                     <ListCard
-                      key="planner-allday-listcard"
+                      key={`planner-allday-${plannerDisplayedDayKey || 'unknown'}`}
                       tasks={allDayTasks}
                       selectionMode={timelineListSelection}
                       selectedTaskIds={selection.selectedItems}
@@ -476,17 +486,9 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                       onTaskComplete={handleTaskComplete}
                       onTaskEdit={handleTaskEdit}
                       onTaskDelete={handleTaskDelete}
-                      showCategory={false}
-                      compact={false}
-                      showIcon={false}
-                      showIndicators={false}
-                      showMetadata={false}
-                      metadataVariant="today"
-                      cardSpacing={0}
-                      showDashedSeparator={true}
-                      taskRowSeparatorVariant="dashed"
-                      hideBackground={true}
-                      removeInnerPadding={true}
+                      {...LIST_CARD_TASK_ROW_PRESET_TODAY}
+                      showListRecurrenceRow
+                      initialCollapsedGroupTitles={ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES}
                       emptyMessage="No all-day tasks for this date."
                       loading={false}
                       groupBy="allDay"
@@ -495,7 +497,6 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                       paddingHorizontal={Paddings.screen}
                       paddingBottom={8}
                       scrollEnabled={false}
-                      delayHeightChangeOnTaskComplete={false}
                       disableInitialLayoutTransition={true}
                     />
                   </View>
