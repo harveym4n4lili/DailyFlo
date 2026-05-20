@@ -30,7 +30,7 @@ import type { Task, TaskColor } from '@/types';
 import { OnboardingQuestionnaireTaskTitleRow } from './OnboardingQuestionnaireTaskTitleRow';
 
 /**
- * same tiers as `TimelineView` free-time rows — keeps short gaps under 30m readable inside fixed px gaps.
+ * same tiers as `TimelineView` free-time rows — gaps under 30m stay empty (spacing only, no copy).
  */
 function OnboardingPlannerFreeTimeGap({
   top,
@@ -64,7 +64,7 @@ function OnboardingPlannerFreeTimeGap({
     [themeColors],
   );
 
-  if (height <= 0) return null;
+  if (height <= 0 || minutes < 30) return null;
 
   const isLongBreak = minutes > 120;
 
@@ -76,16 +76,10 @@ function OnboardingPlannerFreeTimeGap({
           <Text style={s.text}>
             Woah! you have <Text style={s.bold}>{formatMinutesToDuration(minutes)}</Text> of free time!
           </Text>
-        ) : minutes >= 30 ? (
+        ) : (
           <Text style={s.text}>
             {FREE_TIME_BREAK_MESSAGES[messageRotateIndex % FREE_TIME_BREAK_MESSAGES.length]}
           </Text>
-        ) : minutes > 0 ? (
-          <Text style={s.text}>
-            <Text style={s.bold}>{minutes} min</Text> free before what&apos;s next.
-          </Text>
-        ) : (
-          <Text style={s.text}>Flows right into what&apos;s next.</Text>
         )}
       </View>
     </View>
