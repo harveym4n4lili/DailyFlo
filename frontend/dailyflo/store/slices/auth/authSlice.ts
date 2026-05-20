@@ -21,8 +21,10 @@ import {
   getAccessToken,
   getRefreshToken,
   getTokenExpiry,
-  hasValidTokens,
+  isAccessTokenExpired,
+  resolveAccessTokenExpiryMs,
 } from '../../../services/auth/tokenStorage';
+import { refreshStoredSessionTokens } from '../../../services/auth/sessionRefresh';
 import { queueNavigateToTodayThenAuthLanding } from '../../../utils/navigation/queueLogoutAuthNavigation';
 import {
   inferOnboardingIsNewAccount,
@@ -115,128 +117,59 @@ const initialState: AuthState = {
 // This runs when the app launches to see if the user is still logged in
 export const checkAuthStatus = createAsyncThunk(
   'auth/checkAuthStatus',
-  async (_, { rejectWithValue, dispatch }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      // Check if we have valid tokens stored in SecureStore
-      // hasValidTokens checks if tokens exist and haven't expired
-      const hasValid = await hasValidTokens();
-      
-      if (!hasValid) {
-        // No valid tokens, user is not authenticated
-        // Clear any leftover invalid tokens
+      // long-lived refresh token (30d server-side) — not the 15m access JWT
+      let refreshToken = await getRefreshToken();
+      if (!refreshToken) {
         await clearAllTokens();
         return null;
       }
-      
-      // Get tokens from SecureStore
-      // These are the tokens we stored when the user logged in
-      const accessToken = await getAccessToken();
-      const refreshToken = await getRefreshToken();
-      const expiry = await getTokenExpiry();
-      
-      if (!accessToken || !refreshToken) {
-        // Tokens missing, clear everything
-        await clearAllTokens();
-        return null;
+
+      let accessToken = await getAccessToken();
+      let expiresAt = (await getTokenExpiry()) ?? Date.now();
+
+      // cold start after hours: access JWT is expired but refresh is still valid — mint new access first
+      if (!accessToken || (await isAccessTokenExpired())) {
+        const refreshed = await refreshStoredSessionTokens();
+        if (!refreshed) {
+          await clearAllTokens();
+          return null;
+        }
+        accessToken = refreshed.accessToken;
+        refreshToken = refreshed.refreshToken;
+        expiresAt = refreshed.expiresAt;
       }
-      
-      // Validate token with backend by fetching user profile
-      // This makes an API call to verify the token is still valid on the server
-      // If the token is invalid, we'll get a 401 and can try to refresh
-      try {
-        // Call getCurrentUser to verify token and get user data
-        // This endpoint requires authentication, so if the token is valid, we get user data
-        // If the token is invalid, we get a 401 error
-        // Django UserProfileView returns user data directly (not wrapped in { user: ... })
+
+      const loadProfile = async () => {
         const userResponse = await authApiService.getCurrentUser();
-        
-        // Transform API response to match our User interface
-        // Backend returns snake_case, frontend uses camelCase
-        // UserProfileView returns the user object directly, so use userResponse directly
         const user: User = transformApiUserToUser(userResponse.user || userResponse);
-        
-        // Return user data and tokens FIRST before fetching tasks
-        // This ensures Redux state is updated with auth info before tasks API calls
-        // The auth state update happens in the reducer, which runs after this thunk completes
-        // We'll fetch tasks after auth state is updated (in the reducer or component)
-        const result = {
+        return {
           user,
-          accessToken,
+          accessToken: accessToken!,
           refreshToken,
-          expiresAt: expiry ? new Date(expiry) : new Date(Date.now() + 15 * 60 * 1000),
+          expiresAt: new Date(expiresAt),
         };
-        
-        // Note: Tasks will be fetched automatically when user navigates to tasks screen
-        // or after auth state is updated in Redux. We don't fetch here to avoid
-        // making API calls before auth state is properly set in Redux.
-        
-        return result;
+      };
+
+      try {
+        return await loadProfile();
       } catch (error: any) {
-        // Token validation failed - might be expired or invalid
-        // Try to refresh the token using the refresh token
         if (error.response?.status === 401) {
-          // Token is invalid/expired, try to refresh it
-          try {
-            // Call refresh token endpoint to get a new access token
-            const refreshResponse = await authApiService.refreshToken({
-              refresh: refreshToken,
-            });
-            
-            // Extract new tokens from response
-            // Backend returns tokens in different formats, handle both
-            const newAccessToken = refreshResponse.access || refreshResponse.data?.access;
-            const newRefreshToken = refreshResponse.refresh || refreshResponse.data?.refresh || refreshToken;
-            
-            if (newAccessToken) {
-              // Successfully refreshed tokens, store the new ones
-              await storeAccessToken(newAccessToken);
-              if (newRefreshToken !== refreshToken) {
-                // If backend rotated the refresh token, store the new one
-                await storeRefreshToken(newRefreshToken);
-              }
-              
-              // Calculate new expiry time (15 minutes from now)
-              const newExpiryTime = Date.now() + (15 * 60 * 1000);
-              await storeTokenExpiry(newExpiryTime);
-              
-              // Try to get user profile again with the new token
-              // UserProfileView returns user data directly
-              const profileResponse = await authApiService.getCurrentUser();
-              const user: User = transformApiUserToUser(profileResponse.user || profileResponse);
-              
-              // Return user data and new tokens FIRST before fetching tasks
-              // This ensures Redux state is updated with auth info before tasks API calls
-              // The auth state update happens in the reducer, which runs after this thunk completes
-              // We'll fetch tasks after auth state is updated (in the reducer or component)
-              const result = {
-                user,
-                accessToken: newAccessToken,
-                refreshToken: newRefreshToken,
-                expiresAt: new Date(newExpiryTime),
-              };
-              
-              // Note: Tasks will be fetched automatically when user navigates to tasks screen
-              // or after auth state is updated in Redux. We don't fetch here to avoid
-              // making API calls before auth state is properly set in Redux.
-              
-              return result;
-            }
-          } catch (refreshError) {
-            // Refresh failed - tokens are invalid, user needs to log in again
-            console.error('Token refresh failed during auth check:', refreshError);
+          const refreshed = await refreshStoredSessionTokens();
+          if (!refreshed) {
             await clearAllTokens();
             return null;
           }
+          accessToken = refreshed.accessToken;
+          refreshToken = refreshed.refreshToken;
+          expiresAt = refreshed.expiresAt;
+          return await loadProfile();
         }
-        
-        // If we get here, validation failed and refresh didn't work
-        // Clear tokens and return null (user needs to log in again)
         await clearAllTokens();
         return null;
       }
     } catch (error) {
-      // On any error, assume user is not authenticated
-      // This is the safest approach - better to ask user to log in than to allow invalid access
       console.error('Failed to check auth status:', error);
       await clearAllTokens();
       return rejectWithValue(error instanceof Error ? error.message : 'Failed to check auth status');
@@ -400,16 +333,9 @@ export const loginUser = createAsyncThunk(
         user = transformApiUserToUser(userResponse.user || userResponse);
       }
       
-      // Calculate and store token expiry
-      // JWT tokens contain expiry info, but we'll set it to 15 minutes from now
-      // (matching backend JWT configuration - access tokens typically expire in 15 minutes)
-      const expiryTime = Date.now() + (15 * 60 * 1000); // 15 minutes in milliseconds
+      const expiryTime = resolveAccessTokenExpiryMs(accessToken);
       await storeTokenExpiry(expiryTime);
-      
-      // Return user data and tokens FIRST
-      // Redux will automatically update the state with this data via the reducer
-      // Tasks will be fetched automatically when user navigates to tasks screen
-      // or can be fetched after auth state is updated in Redux
+
       return {
         user,
         accessToken,
@@ -537,9 +463,7 @@ export const registerUser = createAsyncThunk(
       await storeAccessToken(accessToken);
       await storeRefreshToken(refreshToken);
       
-      // Calculate and store token expiry
-      // JWT access tokens typically expire in 15 minutes (matching backend configuration)
-      const expiryTime = Date.now() + (15 * 60 * 1000); // 15 minutes in milliseconds
+      const expiryTime = resolveAccessTokenExpiryMs(accessToken);
       await storeTokenExpiry(expiryTime);
       
       // Return user data and tokens FIRST
@@ -650,7 +574,7 @@ export const socialAuth = createAsyncThunk(
       await storeRefreshToken(refreshToken);
 
       const user: User = transformApiUserToUser(response.user);
-      const expiryTime = Date.now() + 15 * 60 * 1000;
+      const expiryTime = resolveAccessTokenExpiryMs(accessToken);
       await storeTokenExpiry(expiryTime);
 
       // django sets `is_new_user` from get_or_create — existing google accounts get false (show onboarding Skip)
