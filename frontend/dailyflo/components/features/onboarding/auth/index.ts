@@ -49,7 +49,14 @@ export {
   type OnboardingAuthShellProps,
 } from './ui';
 
-export { ONBOARDING_COMPLETE_STORAGE_KEY, useCompleteOnboardingAndExit, useAppleAuthOnboarding, useGoogleAuthOnboarding } from './hooks';
+export {
+  ONBOARDING_COMPLETE_STORAGE_KEY,
+  useCompleteOnboardingAndExit,
+  completeOnboardingEmailAuth,
+  useAppleAuthOnboarding,
+  useGoogleAuthOnboarding,
+} from './hooks';
+export { AuthLoginScreen, AuthRegisterScreen } from './screens';
 export type { OnboardingQuestionnaireStoredAnswersV1 } from '../onboarding/constants/onboardingQuestionnaireAnswers';
 
 export {

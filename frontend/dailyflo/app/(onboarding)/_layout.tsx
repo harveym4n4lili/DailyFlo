@@ -1,6 +1,6 @@
 /**
- * onboarding stack — `auth/` and `slides/` use folder + `index` only, so routes are `auth/index` and `slides/index`.
- * no `index` at group root: default screen is `auth/index` (`initialRouteName`) so we never `<Redirect>` through an extra route.
+ * onboarding stack — nested `auth` group (`auth/_layout`: landing `index`, email login/register sheets) plus `slides/index` questionnaire.
+ * `initialRouteName` defaults to brand landing (`auth`).
  */
 
 import React from 'react';
@@ -47,7 +47,7 @@ export default function OnboardingLayout() {
 
   return (
     <Stack
-      initialRouteName="auth/index"
+      initialRouteName="auth"
       screenOptions={{
         headerShown: true,
         headerTransparent: true,
@@ -62,7 +62,7 @@ export default function OnboardingLayout() {
         ...iosHeaderNoChromeFade,
       }}
     >
-      <Stack.Screen name="auth/index" options={{ headerShown: false }} />
+      <Stack.Screen name="auth" options={{ headerShown: false }} />
       <Stack.Screen name="slides/index" options={SLIDES_HEADER_OPTIONS} />
     </Stack>
   );

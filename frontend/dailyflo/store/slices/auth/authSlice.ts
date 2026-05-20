@@ -204,6 +204,40 @@ function transformApiUserToUser(apiUser: any): User {
 }
 
 /**
+ * redux thunk fulfilled payloads must stay json-serializable — `Date` triggers serializableCheck warnings.
+ * we iso-string dates on return from PATCH profile thunks, then map back to `Date` in the reducer.
+ */
+
+type UserThunkSerializablePayload = Omit<User, 'createdAt' | 'updatedAt' | 'lastLogin'> & {
+  createdAt: string;
+  updatedAt: string;
+  lastLogin: string | null;
+};
+
+function serializeUserForThunkPayload(user: User): UserThunkSerializablePayload {
+  return {
+    ...user,
+    createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : String(user.createdAt),
+    updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : String(user.updatedAt),
+    lastLogin:
+      user.lastLogin == null
+        ? null
+        : user.lastLogin instanceof Date
+          ? user.lastLogin.toISOString()
+          : String(user.lastLogin),
+  };
+}
+
+function deserializeUserThunkPayload(payload: UserThunkSerializablePayload): User {
+  return {
+    ...payload,
+    createdAt: new Date(payload.createdAt),
+    updatedAt: new Date(payload.updatedAt),
+    lastLogin: payload.lastLogin ? new Date(payload.lastLogin) : null,
+  };
+}
+
+/**
  * Helper function to transform API preferences to UserPreferences interface
  * Backend uses snake_case for preference field names, frontend uses camelCase
  * 
@@ -653,7 +687,10 @@ export const updateUserProfile = createAsyncThunk(
  * PATCH wake/sleep through django `preferences` merge — thunk keeps redux user in sync with server truth.
  */
 /** PATCH `preferences.onboarding_completed` — synced when user finishes or skips questionnaire */
-export const patchUserOnboardingCompleted = createAsyncThunk(
+export const patchUserOnboardingCompleted = createAsyncThunk<
+  UserThunkSerializablePayload,
+  void
+>(
   'auth/patchUserOnboardingCompleted',
   async (_, { getState, rejectWithValue }) => {
     try {
@@ -667,7 +704,7 @@ export const patchUserOnboardingCompleted = createAsyncThunk(
       });
 
       const bodyUser = response.user ?? response;
-      return transformApiUserToUser(bodyUser);
+      return serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
     } catch (error: any) {
       const prefsErr = error?.response?.data?.preferences;
       const message =
@@ -679,7 +716,10 @@ export const patchUserOnboardingCompleted = createAsyncThunk(
   },
 );
 
-export const patchUserSchedulePreferences = createAsyncThunk(
+export const patchUserSchedulePreferences = createAsyncThunk<
+  UserThunkSerializablePayload,
+  { wakeTime: string; sleepTime: string }
+>(
   'auth/patchUserSchedulePreferences',
   async (patch: { wakeTime: string; sleepTime: string }, { getState, rejectWithValue }) => {
     try {
@@ -696,7 +736,7 @@ export const patchUserSchedulePreferences = createAsyncThunk(
       });
 
       const bodyUser = response.user ?? response;
-      return transformApiUserToUser(bodyUser);
+      return serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
     } catch (error: any) {
       const prefsErr = error?.response?.data?.preferences;
       const message =
@@ -1016,7 +1056,7 @@ const authSlice = createSlice({
       .addCase(patchUserSchedulePreferences.fulfilled, (state, action) => {
         state.isUpdatingProfile = false;
         state.profileError = null;
-        state.user = action.payload;
+        state.user = deserializeUserThunkPayload(action.payload);
       })
       .addCase(patchUserSchedulePreferences.rejected, (state, action) => {
         state.isUpdatingProfile = false;
@@ -1024,7 +1064,7 @@ const authSlice = createSlice({
       })
 
       .addCase(patchUserOnboardingCompleted.fulfilled, (state, action) => {
-        state.user = action.payload;
+        state.user = deserializeUserThunkPayload(action.payload);
       })
       
       // Handle refreshAccessToken actions
