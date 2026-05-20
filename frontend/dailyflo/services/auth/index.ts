@@ -24,6 +24,13 @@ export {
   getTokenExpiry,
   clearAllTokens,
   hasValidTokens,
+  hasRestorableSession,
+  isAccessTokenExpired,
+  resolveAccessTokenExpiryMs,
+  ACCESS_TOKEN_LIFETIME_MS,
 } from './tokenStorage';
+
+export { refreshStoredSessionTokens } from './sessionRefresh';
+export type { RefreshedSessionTokens } from './sessionRefresh';
 
 export { triggerGoogleSignIn, triggerAppleSignIn } from './socialAuth';

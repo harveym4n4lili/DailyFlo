@@ -20,6 +20,8 @@ import {
   getRefreshToken,
   storeAccessToken,
   storeRefreshToken,
+  storeTokenExpiry,
+  resolveAccessTokenExpiryMs,
   clearAllTokens,
 } from '../auth/tokenStorage';
 
@@ -169,6 +171,7 @@ const createApiClient = (): AxiosInstance => {
           // Store the new tokens in secure storage
           // This updates the tokens so future requests will use the new access token
           await storeAccessToken(access);
+          await storeTokenExpiry(resolveAccessTokenExpiryMs(access));
           if (newRefreshToken) {
             // Store new refresh token if provided (some backends rotate refresh tokens)
             await storeRefreshToken(newRefreshToken);

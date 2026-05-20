@@ -16,6 +16,9 @@ const ACCESS_TOKEN_KEY = 'DailyFlo_accessToken';
 const REFRESH_TOKEN_KEY = 'DailyFlo_refreshToken';
 const TOKEN_EXPIRY_KEY = 'DailyFlo_tokenExpiry';
 
+/** keep in sync with django `SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']` (settings.py) */
+export const ACCESS_TOKEN_LIFETIME_MS = 15 * 60 * 1000;
+
 /**
  * Store access token securely
  * This is like putting a valuable item in a safe
@@ -125,28 +128,60 @@ export async function clearAllTokens(): Promise<void> {
 }
 
 /**
- * Check if user has valid stored tokens
- * This checks if tokens exist and haven't expired
- * 
- * @returns True if valid tokens exist, false otherwise
+ * read `exp` from a JWT access token (seconds → ms) — used when persisting expiry after login/refresh
+ */
+export function accessTokenExpiryFromJwt(accessToken: string): number | null {
+  try {
+    const segment = accessToken.split('.')[1];
+    if (!segment) return null;
+    const base64 = segment.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(base64)) as { exp?: number };
+    if (typeof payload.exp === 'number') {
+      return payload.exp * 1000;
+    }
+  } catch {
+    // malformed token — caller falls back to ACCESS_TOKEN_LIFETIME_MS
+  }
+  return null;
+}
+
+/** when to treat the short-lived access JWT as expired (refresh token may still be valid for weeks) */
+export function resolveAccessTokenExpiryMs(accessToken: string): number {
+  return accessTokenExpiryFromJwt(accessToken) ?? Date.now() + ACCESS_TOKEN_LIFETIME_MS;
+}
+
+export async function isAccessTokenExpired(): Promise<boolean> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return true;
+
+  const expiry = await getTokenExpiry();
+  if (expiry != null) {
+    return Date.now() >= expiry;
+  }
+
+  const jwtExpiry = accessTokenExpiryFromJwt(accessToken);
+  if (jwtExpiry != null) {
+    return Date.now() >= jwtExpiry;
+  }
+
+  return true;
+}
+
+/**
+ * true when a refresh token exists — user can restore session without re-entering password
+ * (backend refresh lifetime is 30 days; access token alone is only ~15 minutes)
+ */
+export async function hasRestorableSession(): Promise<boolean> {
+  const refreshToken = await getRefreshToken();
+  return !!refreshToken;
+}
+
+/**
+ * true only when the access JWT is still within its short lifetime — NOT whether the user can stay logged in
+ * @deprecated for cold-start gate — use `hasRestorableSession` + `refreshStoredSessionTokens` instead
  */
 export async function hasValidTokens(): Promise<boolean> {
-  try {
-    const accessToken = await getAccessToken();
-    const expiry = await getTokenExpiry();
-    
-    // If no token, return false
-    if (!accessToken) return false;
-    
-    // If no expiry, assume token is valid (shouldn't happen in production)
-    if (!expiry) return true;
-    
-    // Check if token has expired
-    // expiry is a Unix timestamp (milliseconds since 1970)
-    const now = Date.now();
-    return now < expiry;
-  } catch (error) {
-    console.error('Failed to check token validity:', error);
-    return false;
-  }
+  const accessToken = await getAccessToken();
+  if (!accessToken) return false;
+  return !(await isAccessTokenExpired());
 }
