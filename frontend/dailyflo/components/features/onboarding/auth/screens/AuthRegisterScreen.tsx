@@ -3,27 +3,32 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { completeOnboardingEmailAuth } from '../hooks/completeOnboardingEmailAuth';
 import {
+  AUTH_EMAIL_FIELD_LABEL_EMAIL,
+  AUTH_EMAIL_FIELD_LABEL_PASSWORD,
   AUTH_EMAIL_FORM_EMAIL_PLACEHOLDER,
-  AUTH_EMAIL_FORM_FIRST_NAME_PLACEHOLDER,
-  AUTH_EMAIL_FORM_LAST_NAME_PLACEHOLDER,
   AUTH_EMAIL_FORM_PASSWORD_PLACEHOLDER,
+  AUTH_EMAIL_REGISTER_PASSWORD_HINT,
   AUTH_EMAIL_REGISTER_SHEET_TITLE,
   AUTH_EMAIL_REGISTER_SUBMIT_LABEL,
-  AUTH_EMAIL_SHEET_CANCEL_LABEL,
 } from '../constants/textValues';
 import { AuthEmailFormShell } from '../ui/AuthEmailFormShell';
 import { AuthGlassTextField } from '../ui/AuthGlassTextField';
 
+import { getTypographyStyle } from '@/constants/Typography';
+import { Paddings } from '@/constants/Paddings';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { registerUser } from '@/store/slices/auth/authSlice';
 
 const useLiquidGlass = Platform.OS === 'ios' && !Platform.isPad;
+
+const typographyPlatform =
+  Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
 
 export function AuthRegisterScreen() {
   const router = useGuardedRouter();
@@ -34,8 +39,6 @@ export function AuthRegisterScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
 
   const handleCancel = useCallback(() => {
     router.back();
@@ -46,19 +49,12 @@ export function AuthRegisterScreen() {
     if (!trimmed || !password) return;
     try {
       // register creates user row + tokens; redux persists refresh like oauth paths
-      await dispatch(
-        registerUser({
-          email: trimmed,
-          password,
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-        }),
-      ).unwrap();
+      await dispatch(registerUser({ email: trimmed, password })).unwrap();
       completeOnboardingEmailAuth(router);
     } catch {
       // thunk maps django validation into registerError string
     }
-  }, [dispatch, email, firstName, lastName, password, router]);
+  }, [dispatch, email, password, router]);
 
   const containerBg = useLiquidGlass ? 'transparent' : themeColors.background.secondary();
 
@@ -66,7 +62,6 @@ export function AuthRegisterScreen() {
     <View style={{ flex: 1, backgroundColor: containerBg }}>
       <AuthEmailFormShell
         title={AUTH_EMAIL_REGISTER_SHEET_TITLE}
-        cancelLabel={AUTH_EMAIL_SHEET_CANCEL_LABEL}
         onCancel={handleCancel}
         submitLabel={AUTH_EMAIL_REGISTER_SUBMIT_LABEL}
         onSubmit={() => void handleSubmit()}
@@ -75,20 +70,7 @@ export function AuthRegisterScreen() {
         errorText={registerError}
       >
         <AuthGlassTextField
-          placeholder={AUTH_EMAIL_FORM_FIRST_NAME_PLACEHOLDER}
-          value={firstName}
-          onChangeText={setFirstName}
-          textContentType="givenName"
-          autoComplete="name-given"
-        />
-        <AuthGlassTextField
-          placeholder={AUTH_EMAIL_FORM_LAST_NAME_PLACEHOLDER}
-          value={lastName}
-          onChangeText={setLastName}
-          textContentType="familyName"
-          autoComplete="name-family"
-        />
-        <AuthGlassTextField
+          label={AUTH_EMAIL_FIELD_LABEL_EMAIL}
           placeholder={AUTH_EMAIL_FORM_EMAIL_PLACEHOLDER}
           value={email}
           onChangeText={setEmail}
@@ -96,15 +78,33 @@ export function AuthRegisterScreen() {
           autoComplete="email"
           textContentType="emailAddress"
         />
-        <AuthGlassTextField
-          placeholder={AUTH_EMAIL_FORM_PASSWORD_PLACEHOLDER}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          textContentType="newPassword"
-          autoComplete="password-new"
-        />
+        <View style={styles.passwordSection}>
+          <AuthGlassTextField
+            label={AUTH_EMAIL_FIELD_LABEL_PASSWORD}
+            placeholder={AUTH_EMAIL_FORM_PASSWORD_PLACEHOLDER}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            textContentType="newPassword"
+            autoComplete="password-new"
+          />
+          <Text
+            style={[styles.passwordHint, getTypographyStyle('body-small', typographyPlatform), { color: themeColors.text.tertiary() }]}
+          >
+            {AUTH_EMAIL_REGISTER_PASSWORD_HINT}
+          </Text>
+        </View>
       </AuthEmailFormShell>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  // keeps password chrome + validator copy spaced like label→field (touchTarget) without pinching wrapped lines
+  passwordSection: {
+    gap: Paddings.touchTarget,
+  },
+  passwordHint: {
+    lineHeight: 18,
+  },
+});

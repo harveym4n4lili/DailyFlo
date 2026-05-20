@@ -27,6 +27,14 @@ export interface DropdownListItem {
   // optional custom icon - render function receives color for theme-aware icons (e.g. TrashIcon)
   // takes precedence over icon when provided
   iconComponent?: (color: string) => ReactNode;
+
+  /** rounded plate behind glyph — onboarding auth uses marple-tint badges */
+  leadingIconPlateColor?: string;
+  /** when set with icon / iconComponent, paints the glyph explicitly (still respects destructive/disabled unless you override callers) */
+  leadingIconTint?: string;
+
+  /** per-row backdrop — marple wash chips for login/sign-up dropdown */
+  menuItemBackgroundColor?: string;
   
   // callback function called when this menu item is pressed
   // this allows the parent component to handle the action
