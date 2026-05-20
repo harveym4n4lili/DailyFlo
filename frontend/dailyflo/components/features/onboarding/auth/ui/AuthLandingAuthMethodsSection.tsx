@@ -7,20 +7,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { Href } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
-import GlassView from 'expo-glass-effect/build/GlassView';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { GoogleMarkIcon } from '@/components/ui/Icon';
 import { ThemeColors } from '@/constants/ColorPalette';
 import { Paddings } from '@/constants/Paddings';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { ONBOARDING_SLIDES_CONTINUE_BUTTON_TEXT_STYLE } from '../../onboarding/constants/typography';
 
 import { AUTH_LANDING_SLIDE_UI } from '../constants/slideUiTokens';
 import {
   AUTH_LANDING_CONTINUE_WITH_APPLE_LABEL,
-  AUTH_LANDING_CONTINUE_WITH_EMAIL_LABEL,
   AUTH_LANDING_CONTINUE_WITH_GOOGLE_LABEL,
   AUTH_LANDING_DEV_CONTINUE_WITHOUT_SIGN_IN_LABEL,
 } from '../constants/textValues';
@@ -29,22 +26,11 @@ import { useAppleAuthOnboarding } from '../hooks/useAppleAuthOnboarding';
 import { useGoogleAuthOnboarding } from '../hooks/useGoogleAuthOnboarding';
 import { resolveIntroContinueButtonPaint } from '../scrollTransition';
 
+import { AuthEmailMethodMenuRow } from './AuthEmailMethodMenuRow';
+import { AuthLandingGlassAuthRow } from './AuthLandingGlassAuthRow';
+
 /** questionnaire entry — same target the former auth continue FAB used */
 const SLIDES_HREF = '/(onboarding)/slides' as Href;
-
-/** one step tighter than `OnboardingContinueButton` vertical padding (`touchTargetSmall`) so stacked auth rows read lighter */
-const authLandingAuthRowPaddingVertical =
-  Paddings.onboardingContinueButtonPaddingVertical - Paddings.touchTargetSmall;
-
-const authLandingAuthRowMinHeight =
-  authLandingAuthRowPaddingVertical * 2 + Paddings.onboardingContinueButtonHitSlop * 2;
-
-const onboardingContinueHitSlop = {
-  top: Paddings.onboardingContinueButtonHitSlop,
-  bottom: Paddings.onboardingContinueButtonHitSlop,
-  left: Paddings.onboardingContinueButtonHitSlop,
-  right: Paddings.onboardingContinueButtonHitSlop,
-} as const;
 
 const ROW_GAP = 4;
 const ICON_SIZE = 24;
@@ -53,94 +39,8 @@ const APPLE_AUTH_PRIMARY_DARK_TEXT = ThemeColors.light.text.primary;
 /** apple row glass/solid fill — explicit white plate (brand convention) */
 const APPLE_AUTH_PLATE_BACKGROUND = '#FFFFFF';
 
-function getIOSMajor(): number {
-  if (Platform.OS !== 'ios') return 0;
-  const v = Platform.Version as string | number;
-  return typeof v === 'string' ? parseInt(v.split('.')[0], 10) : Math.floor(v as number);
-}
-
-type GlassAuthRowProps = {
-  label: string;
-  accessibilityLabel: string;
-  tintColor: string;
-  labelColor: string;
-  /** optional — email still unwired */
-  onPress?: () => void;
-  disabled?: boolean;
-} & (
-  | { icon: React.ComponentProps<typeof Ionicons>['name']; leading?: never }
-  | { icon?: never; leading: React.ReactNode }
-);
-
-function AuthLandingGlassAuthRow({
-  label,
-  icon,
-  leading,
-  accessibilityLabel,
-  tintColor,
-  labelColor,
-  onPress,
-  disabled = false,
-}: GlassAuthRowProps) {
-  const isNewerIOS = getIOSMajor() >= 15;
-  const glassAvailable = Platform.OS === 'ios';
-  const bleed = Paddings.liquidGlassBleed;
-
-  const pressable = (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      onPress={onPress ?? (() => {})}
-      disabled={disabled}
-      hitSlop={onboardingContinueHitSlop}
-      style={({ pressed }) => ({
-        width: '100%',
-        minHeight: authLandingAuthRowMinHeight,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: authLandingAuthRowPaddingVertical,
-        paddingHorizontal: Paddings.onboardingContinueButtonPaddingHorizontal,
-        borderRadius: Paddings.continueButtonRadius,
-        gap: 10,
-        opacity: disabled ? 0.5 : pressed ? 0.92 : 1,
-      })}
-    >
-      {leading ?? <Ionicons name={icon!} size={ICON_SIZE} color={labelColor} />}
-      <Text style={[ONBOARDING_SLIDES_CONTINUE_BUTTON_TEXT_STYLE, { color: labelColor }]}>{label}</Text>
-    </Pressable>
-  );
-
-  const haloWrap: ViewStyle = {
-    overflow: 'visible',
-    padding: bleed,
-    alignSelf: 'stretch',
-  };
-
-  const surfaceStyle = {
-    width: '100%' as const,
-    minHeight: authLandingAuthRowMinHeight,
-    borderRadius: Paddings.continueButtonRadius,
-    overflow: 'visible' as const,
-  };
-
-  return (
-    <View style={haloWrap}>
-      {isNewerIOS && glassAvailable ? (
-        <GlassView
-          style={surfaceStyle}
-          tintColor={tintColor as any}
-          glassEffectStyle="regular"
-          isInteractive
-        >
-          {pressable}
-        </GlassView>
-      ) : (
-        <View style={[surfaceStyle, { backgroundColor: tintColor, overflow: 'hidden' }]}>{pressable}</View>
-      )}
-    </View>
-  );
-}
+/** same horizontal gutter as `app/(onboarding)/auth/index.tsx` footer — dropdown anchors on android */
+export const AUTH_LANDING_EMAIL_DROPDOWN_LEFT_OFFSET = Paddings.screen + Paddings.touchTarget;
 
 export type AuthLandingAuthMethodsSectionProps = {
   /** `footer` sits under the hero — drop top margin; `belowHeadline` keeps space under the slogan cluster */
@@ -181,12 +81,10 @@ export function AuthLandingAuthMethodsSection({ variant = 'belowHeadline' }: Aut
       accessibilityRole="none"
     >
       <View style={styles.authRows}>
-        <AuthLandingGlassAuthRow
-          label={AUTH_LANDING_CONTINUE_WITH_EMAIL_LABEL}
-          icon="mail-outline"
-          accessibilityLabel={AUTH_LANDING_CONTINUE_WITH_EMAIL_LABEL}
+        <AuthEmailMethodMenuRow
           tintColor={emailTintColor}
           labelColor={emailLabelColor}
+          dropdownLeftOffset={AUTH_LANDING_EMAIL_DROPDOWN_LEFT_OFFSET}
         />
         {appleReady ? (
           <AuthLandingGlassAuthRow
