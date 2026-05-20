@@ -30,6 +30,11 @@ import {
   ONBOARDING_SLIDES_CONTINUE_BUTTON_TEXT_STYLE,
   ONBOARDING_SLIDES_CONTINUE_LABEL,
   ONBOARDING_SLIDES_FINISH_SETUP_LABEL,
+  ONBOARDING_SLIDES_SKIP_BUTTON_ACCESSIBILITY_LABEL,
+  ONBOARDING_SLIDES_SKIP_BUTTON_HIT_SLOP,
+  ONBOARDING_SLIDES_SKIP_BUTTON_LABEL,
+  ONBOARDING_SLIDES_SKIP_TEXT_COLOR,
+  ONBOARDING_SLIDES_SKIP_TEXT_STYLE,
   ONBOARDING_TASK_AGENDA_KEYBOARD_FINAL_Y_BLEND_REFERENCE_HEIGHT_PX,
   type OnboardingQuestionnaireNextStepChoice,
   buildOnboardingQuestionnaireStoredAnswers,
@@ -37,7 +42,11 @@ import {
   getOnboardingQuestionnaireSlideModel,
 } from '../constants';
 import { ONBOARDING_HABIT_FREQUENCY_OPTIONS } from '../constants/onboardingQuestionnaireAnswers';
-import { useOnboardingSlidesHeader, useQuestionnaireBlendProgress } from '../hooks';
+import {
+  useIsReturningOnboardingUser,
+  useOnboardingSlidesHeader,
+  useQuestionnaireBlendProgress,
+} from '../hooks';
 import {
   blendOnboardingSlidesColorAtProgress,
   resolveOnboardingSlidesProgressTrackColor,
@@ -73,6 +82,7 @@ export function OnboardingQuestionnaireFlow() {
   const [taskAgendaTitle, setTaskAgendaTitle] = useState('');
   const [taskAgendaChecked, setTaskAgendaChecked] = useState(false);
   const { completeAndExit, busy } = useCompleteOnboardingAndExit();
+  const isReturningUser = useIsReturningOnboardingUser();
 
   const [taskEventTime, setTaskEventTime] = useState(() => {
     const d = new Date();
@@ -201,6 +211,32 @@ export function OnboardingQuestionnaireFlow() {
     router.back();
   }, [pageIndex, router]);
 
+  const skipTextColorsByPage = useMemo(
+    () =>
+      slideModel.pageSlideUi.map((row) =>
+        resolveOnboardingSlidesSlideUiText(themeColors, ONBOARDING_SLIDES_SKIP_TEXT_COLOR),
+      ),
+    [themeColors, slideModel.pageSlideUi],
+  );
+  const skipTextColor = useMemo(
+    () => blendOnboardingSlidesColorAtProgress(blendProgress, skipTextColorsByPage),
+    [blendProgress, skipTextColorsByPage],
+  );
+
+  const onSkipOnboarding = useCallback(async () => {
+    try {
+      await completeAndExit();
+    } catch (err: unknown) {
+      const msg =
+        typeof err === 'string'
+          ? err
+          : err && typeof err === 'object' && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : 'Something went wrong finishing setup.';
+      Alert.alert('Could not finish setup', msg);
+    }
+  }, [completeAndExit]);
+
   useOnboardingSlidesHeader({
     pageProgress: blendProgress,
     totalPages: slideModel.pageCount,
@@ -209,6 +245,16 @@ export function OnboardingQuestionnaireFlow() {
     backChevronColor,
     onBackPress: goBack,
     backAccessibilityLabel: pageIndex > 0 ? 'Previous questionnaire step' : 'Back to introduction',
+    skip: isReturningUser
+      ? {
+          label: ONBOARDING_SLIDES_SKIP_BUTTON_LABEL,
+          accessibilityLabel: ONBOARDING_SLIDES_SKIP_BUTTON_ACCESSIBILITY_LABEL,
+          hitSlop: ONBOARDING_SLIDES_SKIP_BUTTON_HIT_SLOP,
+          textStyle: [ONBOARDING_SLIDES_SKIP_TEXT_STYLE, { color: skipTextColor }],
+          onPress: onSkipOnboarding,
+          disabled: busy,
+        }
+      : undefined,
   });
 
   const onContinue = useCallback(async () => {

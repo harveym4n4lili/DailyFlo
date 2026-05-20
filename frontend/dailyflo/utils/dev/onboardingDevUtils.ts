@@ -17,7 +17,9 @@ import { logout } from '@/store/slices/auth/authSlice';
 
 // storage key for tracking onboarding completion status
 // this matches the key used in _layout.tsx and OnboardingActions.tsx
-const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
+import { ONBOARDING_COMPLETE_STORAGE_KEY } from '@/utils/onboarding/onboardingUserStatus';
+
+const ONBOARDING_COMPLETE_KEY = ONBOARDING_COMPLETE_STORAGE_KEY;
 
 /**
  * Check the current onboarding completion status

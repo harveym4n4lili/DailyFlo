@@ -37,6 +37,8 @@ export interface UserPreferences {
   /** local planner day window boundaries (stored as Django `wake_time` / `sleep_time`, 24h `HH:mm`) */
   wakeTime: string;
   sleepTime: string;
+  /** set when user finishes onboarding questionnaire — used to show Skip for returning accounts */
+  onboardingCompleted?: boolean;
   
   // App behavior preferences
   autoArchiveCompleted: boolean;    // Auto-archive completed tasks

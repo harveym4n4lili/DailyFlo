@@ -22,8 +22,6 @@ const TI = TextInput as typeof TextInput & { defaultProps?: Record<string, unkno
 TI.defaultProps = { ...(TI.defaultProps || {}), selectionColor: '#FFFFFF', cursorColor: '#FFFFFF' };
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { ReduxProvider } from '@/store/Provider';
@@ -34,10 +32,10 @@ import { DuplicateTaskProvider } from './task/DuplicateTaskContext';
 import { PlannerMonthSelectProvider } from './PlannerMonthSelectContext';
 import { store } from '@/store';
 import { logout, checkAuthStatus } from '@/store/slices/auth/authSlice';
-
-// storage key for tracking onboarding completion status
-// this key is used to check if the user has completed the onboarding flow
-const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
+import {
+  getDeviceOnboardingComplete,
+  hasUserEverCompletedOnboarding,
+} from '@/utils/onboarding/onboardingUserStatus';
 
 // typed routes lag behind new files until expo regenerates — cast keeps router.push happy
 const ONBOARDING_AUTH_HREF = '/(onboarding)/auth' as Href;
@@ -104,14 +102,16 @@ export default function RootLayout() {
         // small delay so expo-router's stack mounts before we replace/push
         await new Promise((resolve) => setTimeout(resolve, 100));
 
-        const onboardingComplete = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY);
+        const onboardingComplete = await getDeviceOnboardingComplete();
 
         await store.dispatch(checkAuthStatus());
 
         let authState = store.getState().auth;
 
-        // first launch: don't keep a stale session while intro is still pending
-        if (onboardingComplete !== 'true' && authState.isAuthenticated) {
+        // stale session on a fresh install — but keep tokens when this account already finished onboarding before (returning re-login)
+        const accountFinishedOnboardingBefore =
+          authState.user != null && (await hasUserEverCompletedOnboarding(authState.user));
+        if (!onboardingComplete && authState.isAuthenticated && !accountFinishedOnboardingBefore) {
           store.dispatch(logout());
           authState = store.getState().auth;
         }
@@ -133,7 +133,7 @@ export default function RootLayout() {
           router.replace('/(tabs)/today');
         }
 
-        const needsOnboarding = onboardingComplete !== 'true' || !authState.isAuthenticated;
+        const needsOnboarding = !onboardingComplete || !authState.isAuthenticated;
         // push on the same tick as replace can hard-crash the native stack — wait until transitions settle
         if (needsOnboarding) {
           InteractionManager.runAfterInteractions(() => {
