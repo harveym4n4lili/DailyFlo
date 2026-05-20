@@ -94,6 +94,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             'theme', 'notifications', 'default_priority', 'default_color',
             'default_list_view', 'timezone', 'date_format', 'time_format',
             'wake_time', 'sleep_time',
+            'onboarding_completed',
             'auto_archive_completed',
             'show_completed_tasks',
             'sort_tasks_by',

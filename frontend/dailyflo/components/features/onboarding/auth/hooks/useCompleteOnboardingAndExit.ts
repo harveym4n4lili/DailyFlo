@@ -10,9 +10,17 @@ import type { Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
-import { useAppDispatch } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { createTask, updateTask } from '@/store/slices/tasks/tasksSlice';
-import { patchUserSchedulePreferences } from '@/store/slices/auth/authSlice';
+import {
+  patchUserOnboardingCompleted,
+  patchUserSchedulePreferences,
+} from '@/store/slices/auth/authSlice';
+import {
+  ONBOARDING_COMPLETE_STORAGE_KEY,
+  setDeviceOnboardingComplete,
+  setUserOnboardingComplete,
+} from '@/utils/onboarding/onboardingUserStatus';
 
 import type { OnboardingQuestionnaireStoredAnswersV1 } from '@/components/features/onboarding/onboarding/constants/onboardingQuestionnaireAnswers';
 import { ONBOARDING_QUESTIONNAIRE_ANSWERS_STORAGE_KEY } from '@/components/features/onboarding/onboarding/constants/onboardingQuestionnaireAnswers';
@@ -24,7 +32,8 @@ import {
   snapWakeSleepHHMM,
 } from '@/utils/preferenceScheduleTimes';
 
-export const ONBOARDING_COMPLETE_STORAGE_KEY = '@DailyFlo:onboardingComplete';
+/** re-export so existing imports from this hook keep working */
+export { ONBOARDING_COMPLETE_STORAGE_KEY };
 
 /** same tab route root `_layout` uses — dismiss onboarding modal here, don’t `back()` (that only slides→auth). */
 const TODAY_HREF = '/(tabs)/today' as Href;
@@ -32,6 +41,7 @@ const TODAY_HREF = '/(tabs)/today' as Href;
 export function useCompleteOnboardingAndExit() {
   const router = useGuardedRouter();
   const dispatch = useAppDispatch();
+  const userId = useAppSelector((state) => state.auth.user?.id);
   const [busy, setBusy] = useState(false);
 
   // optional `answers` — questionnaire snapshot saved as json; also drives `createTask` payload for today
@@ -60,7 +70,15 @@ export function useCompleteOnboardingAndExit() {
             console.warn('[onboarding] wake/sleep profile sync skipped', scheduleErr);
           }
         }
-        await AsyncStorage.setItem(ONBOARDING_COMPLETE_STORAGE_KEY, 'true');
+        await setDeviceOnboardingComplete();
+        if (userId) {
+          await setUserOnboardingComplete(userId);
+        }
+        try {
+          await dispatch(patchUserOnboardingCompleted()).unwrap();
+        } catch (flagErr) {
+          console.warn('[onboarding] server onboarding_completed sync skipped', flagErr);
+        }
         // `router.back()` only pops questionnaire (`slides`) → still on `auth` inside the onboarding stack.
         // dismiss to today closes the full-screen onboarding modal and focuses the tab (expo-router).
         router.dismissTo(TODAY_HREF);
@@ -68,7 +86,7 @@ export function useCompleteOnboardingAndExit() {
         setBusy(false);
       }
     },
-    [busy, router, dispatch],
+    [busy, router, dispatch, userId],
   );
 
   return { completeAndExit, busy };

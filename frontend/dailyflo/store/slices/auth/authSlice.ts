@@ -25,15 +25,14 @@ import {
 } from '../../../services/auth/tokenStorage';
 import { queueNavigateToTodayThenAuthLanding } from '../../../utils/navigation/queueLogoutAuthNavigation';
 import {
+  inferOnboardingIsNewAccount,
+  ONBOARDING_COMPLETE_STORAGE_KEY,
+} from '../../../utils/onboarding/onboardingUserStatus';
+import {
   coerceWakeSleepHHMM,
   DEFAULT_SLEEP_HHMM,
   DEFAULT_WAKE_HHMM,
 } from '../../../utils/preferenceScheduleTimes';
-
-// storage key for tracking onboarding completion status
-// this key is used to check if the user has completed the onboarding flow
-// when user logs out, we reset this so they see onboarding screens again
-const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
 
 /**
  * Define the shape of the authentication state
@@ -66,6 +65,12 @@ interface AuthState {
   // Session persistence
   rememberMe: boolean;              // Whether to remember user session
   lastLoginTime: number | null;     // Timestamp of last successful login
+
+  /**
+   * last auth action: true = brand-new django user (hide Skip), false = existing (show Skip).
+   * set from social auth `is_new_user`; null after logout or before first auth in session.
+   */
+  onboardingIsNewAccount: boolean | null;
 }
 
 /**
@@ -99,6 +104,7 @@ const initialState: AuthState = {
   // Default session settings
   rememberMe: false,
   lastLoginTime: null,
+  onboardingIsNewAccount: null,
 };
 
 /**
@@ -256,7 +262,7 @@ function transformApiUserToUser(apiUser: any): User {
     lastName: apiUser.last_name || apiUser.lastName || '',
     avatarUrl: apiUser.avatar_url || apiUser.avatarUrl || null,
     isEmailVerified: apiUser.is_email_verified || apiUser.isEmailVerified || false,
-    lastLogin: apiUser.last_login ? new Date(apiUser.last_login) : new Date(),
+    lastLogin: apiUser.last_login ? new Date(apiUser.last_login) : null,
     preferences: transformApiPreferencesToPreferences(apiUser.preferences || {}),
     softDeleted: apiUser.soft_deleted || apiUser.softDeleted || false,
     createdAt: apiUser.created_at ? new Date(apiUser.created_at) : new Date(),
@@ -294,6 +300,8 @@ function transformApiPreferencesToPreferences(apiPrefs: any): UserPreferences {
     crashReportingEnabled: (apiPrefs.crash_reporting_enabled || apiPrefs.crashReportingEnabled) ?? true,
     wakeTime: coerceWakeSleepHHMM(apiPrefs.wake_time || apiPrefs.wakeTime, DEFAULT_WAKE_HHMM),
     sleepTime: coerceWakeSleepHHMM(apiPrefs.sleep_time || apiPrefs.sleepTime, DEFAULT_SLEEP_HHMM),
+    onboardingCompleted:
+      apiPrefs.onboarding_completed === true || apiPrefs.onboardingCompleted === true,
   };
 }
 
@@ -317,6 +325,7 @@ export function preferencesPartialToSnakePayload(prefs: Partial<UserPreferences>
   if (prefs.crashReportingEnabled !== undefined) out.crash_reporting_enabled = prefs.crashReportingEnabled;
   if (prefs.wakeTime !== undefined) out.wake_time = prefs.wakeTime;
   if (prefs.sleepTime !== undefined) out.sleep_time = prefs.sleepTime;
+  if (prefs.onboardingCompleted !== undefined) out.onboarding_completed = prefs.onboardingCompleted;
   if (prefs.notifications !== undefined) {
     const n = prefs.notifications;
     const nid: Record<string, unknown> = {};
@@ -644,11 +653,15 @@ export const socialAuth = createAsyncThunk(
       const expiryTime = Date.now() + 15 * 60 * 1000;
       await storeTokenExpiry(expiryTime);
 
+      // django sets `is_new_user` from get_or_create — existing google accounts get false (show onboarding Skip)
+      const isNewUser = response.is_new_user === true || response.isNewUser === true;
+
       return {
         user,
         accessToken,
         refreshToken,
         expiresAt: new Date(expiryTime),
+        isNewUser,
       };
     } catch (error: any) {
       let errorMessage = 'Sign in failed. Please try again.';
@@ -714,6 +727,33 @@ export const updateUserProfile = createAsyncThunk(
 /**
  * PATCH wake/sleep through django `preferences` merge — thunk keeps redux user in sync with server truth.
  */
+/** PATCH `preferences.onboarding_completed` — synced when user finishes or skips questionnaire */
+export const patchUserOnboardingCompleted = createAsyncThunk(
+  'auth/patchUserOnboardingCompleted',
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const loggedInUser = (getState() as { auth: Readonly<{ user: User | null }> }).auth.user;
+      if (!loggedInUser?.id) {
+        return rejectWithValue('Sign in required to save onboarding status.');
+      }
+
+      const response = await authApiService.patchProfileUpdate({
+        preferences: preferencesPartialToSnakePayload({ onboardingCompleted: true }),
+      });
+
+      const bodyUser = response.user ?? response;
+      return transformApiUserToUser(bodyUser);
+    } catch (error: any) {
+      const prefsErr = error?.response?.data?.preferences;
+      const message =
+        (Array.isArray(prefsErr) ? prefsErr[0] : undefined) ??
+        error?.response?.data?.detail ??
+        (error instanceof Error ? error.message : 'Could not save onboarding status.');
+      return rejectWithValue(typeof message === 'string' ? message : 'Could not save onboarding status.');
+    }
+  },
+);
+
 export const patchUserSchedulePreferences = createAsyncThunk(
   'auth/patchUserSchedulePreferences',
   async (patch: { wakeTime: string; sleepTime: string }, { getState, rejectWithValue }) => {
@@ -785,11 +825,10 @@ export const logoutUser = createAsyncThunk(
       const { clearTasks } = await import('../tasks/tasksSlice');
       dispatch(clearTasks());
       
-      // Reset onboarding status when user logs out
-      // This ensures that after logout, the user will see onboarding screens again
-      // This is important because a logged-out user should be treated as a new user
+      // clear device-wide onboarding flag on logout so cold start shows auth modal again.
+      // per-user keys stay — returning accounts still get Skip after they sign back in.
       try {
-        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_STORAGE_KEY);
       } catch (onboardingError) {
         // If resetting onboarding fails, log it but don't fail the logout
         // The logout should still succeed even if onboarding reset fails
@@ -817,7 +856,7 @@ export const logoutUser = createAsyncThunk(
       // Try to reset onboarding even if other logout steps failed
       // This ensures onboarding is reset regardless of other errors
       try {
-        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_STORAGE_KEY);
       } catch (onboardingError) {
         console.error('Error resetting onboarding during logout:', onboardingError);
       }
@@ -860,6 +899,7 @@ const authSlice = createSlice({
       state.tokenExpiry = null;
       state.authMethod = null;
       state.lastLoginTime = null;
+      state.onboardingIsNewAccount = null;
       
       // Note: Actual token storage clearing should be done by TokenManager/SecureStorage
       // when implementing full auth persistence. For now, we only clear Redux state.
@@ -905,6 +945,10 @@ const authSlice = createSlice({
           state.tokenExpiry = action.payload.expiresAt.getTime();
           state.authMethod = action.payload.user.authProvider;
           state.lastLoginTime = Date.now();
+          state.onboardingIsNewAccount = inferOnboardingIsNewAccount(
+            action.payload.user,
+            null,
+          );
         } else {
           // No valid tokens, user is not authenticated
           state.isAuthenticated = false;
@@ -913,6 +957,7 @@ const authSlice = createSlice({
           state.refreshToken = null;
           state.tokenExpiry = null;
           state.authMethod = null;
+          state.onboardingIsNewAccount = null;
         }
       })
       .addCase(checkAuthStatus.rejected, (state, action) => {
@@ -925,6 +970,7 @@ const authSlice = createSlice({
         state.refreshToken = null;
         state.tokenExpiry = null;
         state.authMethod = null;
+        state.onboardingIsNewAccount = null;
         // Note: Tokens are cleared by the thunk, no need to clear here
       })
       
@@ -944,6 +990,7 @@ const authSlice = createSlice({
         state.authMethod = 'email';
         state.lastLoginTime = Date.now();
         state.loginError = null;
+        state.onboardingIsNewAccount = false;
         
         // Note: Tokens are stored in SecureStore by the thunk before this reducer runs
         // No need to store tokens here - they're already in secure storage
@@ -973,6 +1020,7 @@ const authSlice = createSlice({
         state.authMethod = action.payload.user.authProvider;
         state.lastLoginTime = Date.now();
         state.registerError = null;
+        state.onboardingIsNewAccount = true;
         
         // Note: Tokens are stored in SecureStore by the thunk before this reducer runs
         // No need to store tokens here - they're already in secure storage
@@ -1001,6 +1049,7 @@ const authSlice = createSlice({
         state.tokenExpiry = action.payload.expiresAt.getTime();
         state.authMethod = action.payload.user.authProvider;
         state.lastLoginTime = Date.now();
+        state.onboardingIsNewAccount = action.payload.isNewUser;
         // tokens already persisted in the thunk via SecureStore (same pattern as loginUser)
       })
       .addCase(socialAuth.rejected, (state, action) => {
@@ -1047,6 +1096,10 @@ const authSlice = createSlice({
       .addCase(patchUserSchedulePreferences.rejected, (state, action) => {
         state.isUpdatingProfile = false;
         state.profileError = (action.payload as string) || 'Schedule update failed';
+      })
+
+      .addCase(patchUserOnboardingCompleted.fulfilled, (state, action) => {
+        state.user = action.payload;
       })
       
       // Handle refreshAccessToken actions
