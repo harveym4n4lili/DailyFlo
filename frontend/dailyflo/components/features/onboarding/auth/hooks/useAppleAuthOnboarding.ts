@@ -3,23 +3,21 @@
  *
  * flow:
  * 1. user taps the row → `triggerAppleSignIn` runs Apple's system sheet (Face ID / Apple ID).
- * 2. we read `identityToken` (+ optional name on first sign-in), dispatch `socialAuth` → django `/accounts/auth/social/`.
- * 3. on success we `router.push` questionnaire slides — same path as google.
+ * 2. we read `identityToken` (+ optional name on first sign-in), then `completeOnboardingSocialSignIn` → django `/accounts/auth/social/`.
+ * 3. `socialAuth` stores DailyFlo access + refresh in SecureStore (same as google); cold start uses refresh via `checkAuthStatus`.
  *
  * requires a **development/production build** with `expo-apple-authentication` + `usesAppleSignIn` in `app.json` — not available on android/web.
  */
 
 import * as AppleAuthentication from 'expo-apple-authentication';
-import type { Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { triggerAppleSignIn } from '@/services/auth/socialAuth';
 import { useAppDispatch } from '@/store';
-import { socialAuth } from '@/store/slices/auth/authSlice';
 
-const SLIDES_HREF = '/(onboarding)/slides' as Href;
+import { completeOnboardingSocialSignIn } from './completeOnboardingSocialSignIn';
 
 function unwrapSocialAuthError(err: unknown): string {
   if (typeof err === 'string') return err;
@@ -63,15 +61,12 @@ export function useAppleAuthOnboarding() {
     setBusy(true);
     try {
       const { idToken, firstName, lastName } = await triggerAppleSignIn();
-      await dispatch(
-        socialAuth({
-          provider: 'apple',
-          idToken,
-          firstName,
-          lastName,
-        }),
-      ).unwrap();
-      router.push(SLIDES_HREF);
+      await completeOnboardingSocialSignIn(dispatch, router, {
+        provider: 'apple',
+        idToken,
+        firstName,
+        lastName,
+      });
     } catch (err: unknown) {
       if (isAppleSignInCancelled(err)) {
         return;

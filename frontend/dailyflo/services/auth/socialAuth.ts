@@ -1,7 +1,8 @@
 /**
  * Social login triggers — apple uses expo-apple-authentication; google uses **native** `@react-native-google-signin/google-signin`
  * (needs a dev/EAS build with the config plugin — not Expo Go). Both return an identity **id_token** jwt that django verifies.
- * Redux `socialAuth` thunk posts that token to `/accounts/auth/social/`.
+ * Redux `socialAuth` thunk posts that token to `/accounts/auth/social/`, then persists DailyFlo access + refresh
+ * (same 30-day refresh / 15-minute access rotation as google, email login, and `checkAuthStatus` on cold start).
  */
 
 // Apple's expo wrapper around ios native apis — opens system ui, returns jwt + optional name once.

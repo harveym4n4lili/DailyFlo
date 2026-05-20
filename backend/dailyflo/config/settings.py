@@ -156,6 +156,7 @@ REST_FRAMEWORK = {
 }
 
 # jwt lifetimes + rotation: old refresh tokens go to blacklist so they cannot be reused
+# refresh = how long google/apple/email users stay signed in without re-login (same for every auth method)
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
