@@ -543,7 +543,8 @@ export const registerUser = createAsyncThunk(
   }
 );
 
-// Social authentication — google/apple id_token verified by django, then same jwt session as email login
+// Social authentication — google/apple id_token verified by django, then same DailyFlo jwt session as email login
+// (access ~15m + refresh ~30d in SecureStore; cold start / 401 use refreshStoredSessionTokens — not provider-specific)
 export const socialAuth = createAsyncThunk(
   'auth/socialAuth',
   async (authData: SocialAuthInput, { rejectWithValue }) => {

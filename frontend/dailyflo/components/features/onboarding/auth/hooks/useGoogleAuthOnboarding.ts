@@ -3,22 +3,20 @@
  *
  * flow:
  * 1. user taps the row → `triggerGoogleSignIn` runs **GoogleSignin.signIn()** (native ui — not expo-auth-session / custom scheme redirect).
- * 2. we read `id_token` (from user object or `getTokens()`), then dispatch `socialAuth` → django `/accounts/auth/social/`; thunk stores DailyFlo jwts in SecureStore like email login.
- * 3. on success we `router.push` questionnaire slides — authenticated before onboarding per product rules.
+ * 2. we read `id_token` (from user object or `getTokens()`), then `completeOnboardingSocialSignIn` → django `/accounts/auth/social/`.
+ * 3. `socialAuth` stores DailyFlo access + refresh in SecureStore; cold start uses refresh via `checkAuthStatus` (same as apple).
  *
  * requires a **development/production build** with `@react-native-google-signin/google-signin` + `app.json` plugin — not Expo Go.
  */
 
-import type { Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { triggerGoogleSignIn } from '@/services/auth/socialAuth';
 import { useAppDispatch } from '@/store';
-import { socialAuth } from '@/store/slices/auth/authSlice';
 
-const SLIDES_HREF = '/(onboarding)/slides' as Href;
+import { completeOnboardingSocialSignIn } from './completeOnboardingSocialSignIn';
 
 function unwrapSocialAuthError(err: unknown): string {
   if (typeof err === 'string') return err;
@@ -41,8 +39,7 @@ export function useGoogleAuthOnboarding() {
     setBusy(true);
     try {
       const { idToken } = await triggerGoogleSignIn();
-      await dispatch(socialAuth({ provider: 'google', idToken })).unwrap();
-      router.push(SLIDES_HREF);
+      await completeOnboardingSocialSignIn(dispatch, router, { provider: 'google', idToken });
     } catch (err: unknown) {
       const msg = unwrapSocialAuthError(err);
       if (msg.toLowerCase().includes('cancel')) {

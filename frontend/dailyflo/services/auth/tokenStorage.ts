@@ -19,6 +19,9 @@ const TOKEN_EXPIRY_KEY = 'DailyFlo_tokenExpiry';
 /** keep in sync with django `SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']` (settings.py) */
 export const ACCESS_TOKEN_LIFETIME_MS = 15 * 60 * 1000;
 
+/** keep in sync with django `SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']` — session length before user must sign in again */
+export const REFRESH_TOKEN_LIFETIME_DAYS = 30;
+
 /**
  * Store access token securely
  * This is like putting a valuable item in a safe
@@ -169,7 +172,7 @@ export async function isAccessTokenExpired(): Promise<boolean> {
 
 /**
  * true when a refresh token exists — user can restore session without re-entering password
- * (backend refresh lifetime is 30 days; access token alone is only ~15 minutes)
+ * (backend refresh lifetime is REFRESH_TOKEN_LIFETIME_DAYS; access token alone is only ~15 minutes)
  */
 export async function hasRestorableSession(): Promise<boolean> {
   const refreshToken = await getRefreshToken();
