@@ -1851,9 +1851,9 @@ export default function TimelineView({
             ]}
           />
 
-          {/* free time blocks - gaps between non-overlapping tasks; short gaps (<30m) still get a compact line so spacing rows feel consistent */}
+          {/* free time copy only for gaps ≥30m — <30m uses TIMELINE_SPACING_LESS_THAN_30_MIN (20px) with no overlay text */}
           {freeTimeSegments
-            .filter((seg) => seg.timeDifferenceMinutes > 0)
+            .filter((seg) => seg.timeDifferenceMinutes >= 30)
             .map((seg, i) => {
               const isLongBreak = seg.timeDifferenceMinutes > 120;
               return (
@@ -1874,14 +1874,9 @@ export default function TimelineView({
                         </Text>
                         {' '}of free time!
                       </Text>
-                    ) : seg.timeDifferenceMinutes >= 30 ? (
-                      <Text style={[styles.freeTimeTextSegments, { color: themeColors.background.tertiary() }]}>
-                        {FREE_TIME_BREAK_MESSAGES[i % FREE_TIME_BREAK_MESSAGES.length]}
-                      </Text>
                     ) : (
                       <Text style={[styles.freeTimeTextSegments, { color: themeColors.background.tertiary() }]}>
-                        <Text style={styles.freeTimeDurationBold}>{seg.timeDifferenceMinutes} min</Text> free before
-                        what&apos;s next.
+                        {FREE_TIME_BREAK_MESSAGES[i % FREE_TIME_BREAK_MESSAGES.length]}
                       </Text>
                     )}
                   </View>
