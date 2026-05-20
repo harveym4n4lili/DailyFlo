@@ -25,6 +25,7 @@ import {
   AUTH_LANDING_DEV_CONTINUE_WITHOUT_SIGN_IN_LABEL,
 } from '../constants/textValues';
 import { AUTH_LANDING_DEV_SKIP_SUBTEXT_STYLE } from '../constants/typography';
+import { useAppleAuthOnboarding } from '../hooks/useAppleAuthOnboarding';
 import { useGoogleAuthOnboarding } from '../hooks/useGoogleAuthOnboarding';
 import { resolveIntroContinueButtonPaint } from '../scrollTransition';
 
@@ -63,7 +64,7 @@ type GlassAuthRowProps = {
   accessibilityLabel: string;
   tintColor: string;
   labelColor: string;
-  /** wired for google first; email/apple noop until those flows exist */
+  /** optional — email still unwired */
   onPress?: () => void;
   disabled?: boolean;
 } & (
@@ -149,6 +150,7 @@ export type AuthLandingAuthMethodsSectionProps = {
 export function AuthLandingAuthMethodsSection({ variant = 'belowHeadline' }: AuthLandingAuthMethodsSectionProps) {
   const themeColors = useThemeColors();
   const router = useGuardedRouter();
+  const { onApplePress, appleBusy, appleReady } = useAppleAuthOnboarding();
   const { onGooglePress, googleBusy, googleReady } = useGoogleAuthOnboarding();
 
   const onDevContinueWithoutSignIn = useCallback(() => {
@@ -186,13 +188,17 @@ export function AuthLandingAuthMethodsSection({ variant = 'belowHeadline' }: Aut
           tintColor={emailTintColor}
           labelColor={emailLabelColor}
         />
-        <AuthLandingGlassAuthRow
-          label={AUTH_LANDING_CONTINUE_WITH_APPLE_LABEL}
-          icon="logo-apple"
-          accessibilityLabel={AUTH_LANDING_CONTINUE_WITH_APPLE_LABEL}
-          tintColor={appleTintColor}
-          labelColor={APPLE_AUTH_PRIMARY_DARK_TEXT}
-        />
+        {appleReady ? (
+          <AuthLandingGlassAuthRow
+            label={AUTH_LANDING_CONTINUE_WITH_APPLE_LABEL}
+            icon="logo-apple"
+            accessibilityLabel={AUTH_LANDING_CONTINUE_WITH_APPLE_LABEL}
+            tintColor={appleTintColor}
+            labelColor={APPLE_AUTH_PRIMARY_DARK_TEXT}
+            onPress={onApplePress}
+            disabled={appleBusy}
+          />
+        ) : null}
         <AuthLandingGlassAuthRow
           label={AUTH_LANDING_CONTINUE_WITH_GOOGLE_LABEL}
           leading={<GoogleMarkIcon size={ICON_SIZE} />}
