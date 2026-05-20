@@ -7,11 +7,12 @@ import { Platform, View } from 'react-native';
 
 import { completeOnboardingEmailAuth } from '../hooks/completeOnboardingEmailAuth';
 import {
+  AUTH_EMAIL_FIELD_LABEL_EMAIL,
+  AUTH_EMAIL_FIELD_LABEL_PASSWORD,
   AUTH_EMAIL_FORM_EMAIL_PLACEHOLDER,
   AUTH_EMAIL_FORM_PASSWORD_PLACEHOLDER,
   AUTH_EMAIL_LOGIN_SHEET_TITLE,
   AUTH_EMAIL_LOGIN_SUBMIT_LABEL,
-  AUTH_EMAIL_SHEET_CANCEL_LABEL,
 } from '../constants/textValues';
 import { AuthEmailFormShell } from '../ui/AuthEmailFormShell';
 import { AuthGlassTextField } from '../ui/AuthGlassTextField';
@@ -55,7 +56,6 @@ export function AuthLoginScreen() {
     <View style={{ flex: 1, backgroundColor: containerBg }}>
       <AuthEmailFormShell
         title={AUTH_EMAIL_LOGIN_SHEET_TITLE}
-        cancelLabel={AUTH_EMAIL_SHEET_CANCEL_LABEL}
         onCancel={handleCancel}
         submitLabel={AUTH_EMAIL_LOGIN_SUBMIT_LABEL}
         onSubmit={() => void handleSubmit()}
@@ -64,6 +64,7 @@ export function AuthLoginScreen() {
         errorText={loginError}
       >
         <AuthGlassTextField
+          label={AUTH_EMAIL_FIELD_LABEL_EMAIL}
           placeholder={AUTH_EMAIL_FORM_EMAIL_PLACEHOLDER}
           value={email}
           onChangeText={setEmail}
@@ -72,6 +73,7 @@ export function AuthLoginScreen() {
           textContentType="emailAddress"
         />
         <AuthGlassTextField
+          label={AUTH_EMAIL_FIELD_LABEL_PASSWORD}
           placeholder={AUTH_EMAIL_FORM_PASSWORD_PLACEHOLDER}
           value={password}
           onChangeText={setPassword}

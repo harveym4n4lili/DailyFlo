@@ -58,6 +58,8 @@ export default function BrowseSettingsScreen() {
   const { getMarpleBrandColor } = useColorPalette();
   const typography = useTypography();
   const loggedInPrefs = useAppSelector((state) => state.auth.user?.preferences);
+  // email from redux matches the jwt-backed session — show under logout so the user sees which account signs out (same pattern as system settings apps)
+  const accountEmail = useAppSelector((state) => state.auth.user?.email);
   // true while wake/sleep sheet is saving — disables rows so user cannot open a second picker mid-patch
   const isSavingSchedulePrefs = useAppSelector((state) => state.auth.isUpdatingProfile);
   const { openScheduleTimeSelect } = useSettingsScheduleTimeSelect();
@@ -512,6 +514,15 @@ export default function BrowseSettingsScreen() {
                 customStyles={{ label: { color: logoutDestructiveColor } }}
               />
             </GroupedList>
+            {accountEmail ? (
+              <Text
+                style={styles.signedInEmailCaption}
+                numberOfLines={2}
+                ellipsizeMode="middle"
+              >
+                {`Logged in with: ${accountEmail}`}
+              </Text>
+            ) : null}
           </View>
 
           <View style={styles.bottomSpacer} />
@@ -641,6 +652,13 @@ const createStyles = (
     },
     logoutGroupedListSection: {
       marginTop: 24,
+    },
+    signedInEmailCaption: {
+      marginTop: 10,
+      textAlign: 'center',
+      ...typography.getTextStyle('body-small'),
+      // heavier than secondary so the account line stays readable — still caption-sized, not a title
+      color: themeColors.text.secondary(),
     },
     bottomSpacer: {
       height: 200,

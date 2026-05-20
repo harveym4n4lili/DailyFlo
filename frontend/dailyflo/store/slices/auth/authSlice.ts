@@ -442,10 +442,27 @@ export const loginUser = createAsyncThunk(
 );
 
 /**
+ * django/rest may return `{ field: ["a", "b"] }` (esp. password validators); join into one readable line for UI.
+ */
+function formatDrfFieldErrors(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === 'string' ? item : JSON.stringify(item)))
+      .join(' ')
+      .trim();
+  }
+  // drf normally returns arrays; fallback if a single string or other primitive slips through
+  if (value != null && (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')) {
+    return String(value);
+  }
+  return '';
+}
+
+/**
  * Register a new user
  * This creates a new account and automatically logs the user in
  * 
- * @param userData - User registration information (email, password, firstName, lastName)
+ * @param userData - registration payload (email, password; optional firstName / lastName if collected elsewhere)
  * @returns User data and tokens if successful, error if failed
  */
 export const registerUser = createAsyncThunk(
@@ -462,8 +479,8 @@ export const registerUser = createAsyncThunk(
         email: userData.email,
         password: userData.password,
         password_confirm: userData.password, // Django requires password confirmation - use same password
-        first_name: userData.firstName,
-        last_name: userData.lastName,
+        first_name: userData.firstName?.trim() ?? '',
+        last_name: userData.lastName?.trim() ?? '',
       } as any); // Type assertion needed because RegisterRequest type definition doesn't match actual API implementation
       
       // Log the full response for debugging
@@ -524,33 +541,24 @@ export const registerUser = createAsyncThunk(
         console.error('Registration error response:', JSON.stringify(data, null, 2));
         
         if (status === 400) {
-          // Bad request - usually validation errors
-          // Django REST Framework returns field-specific error messages
-          // Check for non_field_errors first (cross-field validation, like password mismatch)
+          // Bad request — model + `validate_password` can return several messages per field (arrays)
           if (data.non_field_errors) {
-            // Django uses non_field_errors for validation that spans multiple fields
-            errorMessage = Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors;
+            errorMessage = formatDrfFieldErrors(data.non_field_errors) || 'Invalid registration data';
           } else if (data.email) {
-            // Email validation error (e.g., invalid format, already exists)
-            errorMessage = `Email: ${Array.isArray(data.email) ? data.email[0] : data.email}`;
+            errorMessage = `Email: ${formatDrfFieldErrors(data.email)}`;
           } else if (data.password) {
-            // Password validation error (e.g., too short, doesn't meet requirements)
-            errorMessage = `Password: ${Array.isArray(data.password) ? data.password[0] : data.password}`;
+            errorMessage = `Password: ${formatDrfFieldErrors(data.password)}`;
           } else if (data.password_confirm) {
-            // Password confirmation validation error
-            errorMessage = `Password confirmation: ${Array.isArray(data.password_confirm) ? data.password_confirm[0] : data.password_confirm}`;
+            errorMessage = `Password confirmation: ${formatDrfFieldErrors(data.password_confirm)}`;
           } else if (data.first_name) {
-            // First name validation error
-            errorMessage = `First name: ${Array.isArray(data.first_name) ? data.first_name[0] : data.first_name}`;
+            errorMessage = `First name: ${formatDrfFieldErrors(data.first_name)}`;
           } else if (data.last_name) {
-            // Last name validation error
-            errorMessage = `Last name: ${Array.isArray(data.last_name) ? data.last_name[0] : data.last_name}`;
+            errorMessage = `Last name: ${formatDrfFieldErrors(data.last_name)}`;
           } else {
-            // Other validation errors - try to get first error from any field
             const firstErrorKey = Object.keys(data)[0];
             if (firstErrorKey) {
               const firstError = data[firstErrorKey];
-              errorMessage = `${firstErrorKey}: ${Array.isArray(firstError) ? firstError[0] : firstError}`;
+              errorMessage = `${firstErrorKey}: ${formatDrfFieldErrors(firstError)}`;
             } else {
               errorMessage = data.message || data.detail || 'Invalid registration data';
             }
