@@ -1836,3 +1836,158 @@ TODO:
 ### Notes
 - Retro: **Daily dev-log bullets were not typed between ~21/04/2026 and 05/05/2026** in this journal; assumptions from **20/04/2026** plans carried until this catch-up unless implemented elsewhere—verify merge history if year-end accounting matters.
 - New helpers under `components/features/onboarding/onboarding/` include **`onboardingSlidesThemeResolvers.ts`** (`resolveOnboardingSlidesTextColor`) and **`ui/onboardingSlidesProgressGlow.ts`** (`onboardingProgressGlowStops`); Expo lint still reports unrelated repo-wide errors unrelated to onboarding work (see tooling pass when churn allows).
+
+---
+## [07/05/2026] - [Thursday]
+
+### Today's Goals
+- [x] I shipped the post-intro **questionnaire** route with blended slide UI, glass continue CTA, early native header mount, body offset under the transparent header, tighter headline/caption spacing, secondary back affordances, and the supporting routes/docs.
+- [x] I refactored onboarding **constants** into split modules (text, slide UI tokens, typography, top section, pager layout) for intro + post-intro while keeping the public barrel API stable.
+- [x] I unified onboarding typography/spacing, simplified intro/questionnaire constants, and reverted the slides progress bar to a **solid** fill where that made more sense.
+- [x] I refined slides **progress bar motion** with Reanimated step animations, dropped unused scroll wiring, and simplified onboarding barrel exports.
+
+### Plans For Future
+- Keep hardening questionnaire steps (pickers, validation, persistence contract) and wire wake/sleep into real profile data.
+- Quick-add / browse polish from the April TODO list (new-list header, create screen, search bar).
+- Broader backlog: MVP realignment, palette/UI reconstruction, AI model choice, gamification/theme ideas.
+
+### Notes
+- Git also shows a housekeeping commit that day touching the logbook metadata—treat commits as source of truth if this day’s wording drifts.
+
+---
+## [12/05/2026] - [Tuesday]
+
+### Today's Goals
+- [x] I replaced the multi-slide **intro carousel** with a single **auth landing** (“DailyFlo” + Continue → questionnaire slides), renamed the feature area from introductory → **auth**, and deleted obsolete intro-only UI.
+- [x] I expanded the questionnaire with **habit vs task** branch slides, next-step choice cards, safer headline crossfade, and a Finish Setup CTA.
+- [x] I improved onboarding flows with **native time pickers**, shared layout tokens, custom back chrome, and headline layout that sizes from content instead of fixed headline constants.
+
+### Plans For Future
+- Land real sign-in rows and session handoff onto the auth landing (email + social), not just Continue → slides.
+- Finish wiring questionnaire answers through to task/habit defaults and backend profile fields.
+
+### Notes
+- no notes
+
+---
+## [13/05/2026] - [Wednesday]
+
+### Today's Goals
+- [x] I added onboarding **task-branch** debug overlays, flushed footer spacing, and a keyboard-gated ScrollView while experimenting with questionnaire layout.
+- [x] I built the **“what’s on the agenda?”** body with a Today-style title row, local questionnaire state, caption copy, tighter horizontal shell padding, and an updated pencil icon.
+
+### Plans For Future
+- Continue the agenda step: chips, keyboard pinning, validation, and motion.
+
+### Notes
+- no notes
+
+---
+## [14/05/2026] - [Thursday]
+
+### Today's Goals
+- [x] I improved the task-agenda step with **suggestion chips**, body crossfade, layout tokens, and continue validation while reusing shared pill/icon pieces.
+- [x] I tuned **keyboard layout** for that slide: pinned the scroll region to the keyboard top, removed debug chrome, and aligned footer shell math with shared layout constants.
+- [x] I implemented a smooth, **keyboard-reactive** task agenda slide transition.
+
+### Plans For Future
+- Merge agenda UX with WOTA/AWT strips and branded duration controls (next commits).
+
+### Notes
+- no notes
+
+---
+## [16/05/2026] - [Saturday]
+
+### Today's Goals
+- [x] I introduced the **Marple** botanical ramp and refactored post-intro questionnaire theming around scoped slide color tokens, resolvers, optional header skip, and updated palette hooks + core slide chrome rows.
+- [x] I onboarded **task agenda** across WOTA and AWT with a shared body layer, native time wheel, and layout tokens tuned for the replace-slot crossfade and spinner position.
+- [x] I folded the **“for how long?”** step into the shared strip and shipped a branded **duration pill slider** with tuned motion and haptics.
+
+### Plans For Future
+- Persist questionnaire + wire duration/habit answers into task create and Django preferences.
+- Keep iterating liquid glass + stack header edge cases.
+
+### Notes
+- no notes
+
+---
+## [17/05/2026] - [Sunday]
+
+### Today's Goals
+- [x] I refreshed the auth landing with a **Satoshi** wordmark, font loading, tighter icon-to-title spacing, corrected onboarding stack screen names, and supporting assets/docs.
+- [x] I polished the onboarding **finish-step planner preview** and shared timeline gap/free-time logic with the main planner.
+- [x] I **persisted questionnaire answers** to AsyncStorage on finish, added habit goal + frequency steps, and exposed storage keys/types for downstream wiring.
+- [x] I enhanced **duration UI** with a blend rail + secondary trail, a “Custom duration?” pill aligned to the slider, layout tokens, and read-only titles on time/duration steps so the keyboard stays closed.
+
+### Plans For Future
+- Replace AsyncStorage patches with authoritative profile PATCH when contract is settled.
+- Ship social/email auth on the landing screen.
+
+### Notes
+- no notes
+
+---
+## [18/05/2026] - [Monday]
+
+### Today's Goals
+- [x] I shipped **native Google Sign-In** for onboarding, hardened the social auth client + Django token verification, created the **first onboarding task** on finish, exited onboarding to **Today** correctly, and wrote implementation logs.
+- [x] I added the **auth landing footer** with liquid-glass social rows, centered slogan, multicolor Google mark, and a dev-only skip link while removing the old continue FAB from the auth route.
+- [x] I refactored onboarding auth **constants** to mirror questionnaire layout (slide UI, text, typography) and centralized questionnaire typography + picker chrome colors in shared modules.
+
+### Plans For Future
+- Add Apple parity and email path; tighten security review around token storage and questionnaire navigation guards.
+
+### Notes
+- no notes
+
+---
+## [19/05/2026] - [Tuesday]
+
+### Today's Goals
+- [x] I unified **marple accent** across chrome and planners, polished browse/settings **quick-add** UX, hardened **cold-start auth** navigation, and broke the **API client ↔ auth slice** import cycle so onboarding stopped crashing after a brief auth flash.
+- [x] I wired **Settings logout** through Redux cleanup and expo-router’s global routing queue so the auth landing shows without reload, captured the design in tech docs, and made the Settings close button resilient when there is no back target.
+- [x] I smoothed **cold-start return** for logged-in users (skip redundant hop to Today, prefetch tasks/lists after auth hydration, treat the gap as loading so Today doesn’t flash empty).
+- [x] I **persisted wake/sleep** into Django preferences with merge-safe PATCH, synced from onboarding + Settings, surfaced them on the planner as wake/wind-down rows, and tightened hour bounds on TimelineView.
+- [x] I updated the **planner all-day footer** to mirror Today row styling, show recurrence rows, remove the dashed TaskCard separator override, and start each day’s bucket collapsed until expanded.
+- [x] I added **ListCard silentWhenEmpty** and wired the planner all-day footer to pass an empty array when there’s nothing incomplete so the empty copy hides but timeline inset stays right.
+
+### Plans For Future
+- Keep hardening selection mode, quick-add validation, and browse modals.
+- Profile PATCH contract for more onboarding fields (beyond wake/sleep).
+
+### Notes
+- no notes
+
+---
+## [20/05/2026] - [Wednesday]
+
+### Today's Goals
+- [x] I **restyled timer select** screens and fixed the **small constant spaces** sub-message bug.
+- [x] I added a **conditional skip** on onboarding for returning users so repeat opens don’t force the full funnel when it isn’t needed.
+- [x] I **prolonged refresh token** lifetime on the backend (JWT comment + behavior) so DailyFlo sessions last longer in line with product expectations.
+- [x] I wired **Sign in with Apple** on the auth landing (same pattern as Google: `triggerAppleSignIn`, `socialAuth`, questionnaire navigation).
+- [x] I aligned Apple and Google onboarding with the same **~30-day session** story: shared social completion helper, provider-agnostic refresh docs, and backend JWT lifetime notes for all auth methods.
+- [x] I added **onboarding email auth** (SwiftUI Menu on iOS + DropdownList chooser on Android, login/register formSheets) and fixed **Redux serializable payloads** for patch-onboarding profile sync.
+
+### Plans For Future
+- Polish email sheet UX (close button, marple CTAs, register validation copy) and double-check navigation to slides only after real JWT success.
+- Timer/settings passes if any regressions show up on device.
+
+### Notes
+- no notes
+
+---
+## [21/05/2026] - [Thursday]
+
+### Today's Goals
+- [x] I streamlined **email register/login** UX (form shell + glass fields, email+password only signup, optional names on Django, clearer `registerUser` DRF error formatting), made **post-auth navigation** pop the sheet then push slides on the settled stack, and showed **signed-in email** under logout in browse settings.
+
+### Plans For Future
+- Strip **console.log** of full auth responses before production builds; keep security review for any other slides entry points.
+- Same longer-term backlog as spring notes (MVP realignment, nature UI palette pass, AI provider choice, gamification).
+
+### Notes
+- Verified email paths only advance to **`/(onboarding)/slides`** after `loginUser` / `registerUser` thunks **fulfill** (tokens stored + user resolved); dev-only skip link on auth landing still bypasses auth by design.
+
+---
