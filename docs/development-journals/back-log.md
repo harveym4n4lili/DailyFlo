@@ -2,52 +2,34 @@
 
 This document tracks features, improvements, and technical debt items that are planned for future implementation. Items are organized by priority and category.
 
-**Last Updated**: 2025-01-26 (Added planner screen enhancement items)
+**Last Updated**: 2026-05-26 — Onboarding backlog aligned with shipped code; reconciliation doc unchanged path reference below.
+
+> **Maintainers:** Prefer moving **✅ Completed** rows into **[§ Completed (Archive)]** when an item ships; archive entries keep file-path hints for archaeology.
 
 ---
 
 ## 🔴 High Priority
 
-### Authentication API Integration - Remaining Items
+### Authentication API Integration — **remaining** vs shipped (**onboarding**)
 
-#### Social Authentication Implementation Plan & Development
-- **Status**: Not Started
-- **Description**: Create implementation plan and implement functionality for social auth buttons (Google, Apple, Facebook) in onboarding and sign-in modals
-- **Files**: 
-  - Create planning document: `docs/technical-design/authentication/plan/social-auth-implementation.md`
-  - `store/slices/auth/authSlice.ts` (update socialAuth thunk)
-  - `services/api/auth.ts` (connect to social auth API endpoint)
-  - `components/features/authentication/sections/SocialAuthActions.tsx` (wire up button handlers)
-  - `components/features/authentication/modals/SignInModal.tsx` (connect handleSocialAuth)
-  - `components/features/onboarding/OnboardingActions.tsx` (connect handleSocialAuth)
-- **Planning Tasks**:
-  - Research and document Expo AuthSession capabilities and setup requirements
-  - Plan OAuth flow for each provider (Google, Apple, Facebook)
-  - Design token exchange flow with backend API
-  - Plan error handling and edge cases (user cancellation, network failures)
-  - Design user experience flow (loading states, success/error feedback)
-  - Document required backend API contract and response formats
-- **Implementation Details**: 
-  - Connect socialAuth Redux thunk to backend API endpoint `/accounts/auth/social/`
-  - Integrate with Expo AuthSession or appropriate social auth libraries
-  - Handle provider token validation and user creation/retrieval
-  - Store tokens securely after successful social auth
-  - Handle social auth errors and edge cases
-  - Implement proper loading states and user feedback
-- **Reference**: `docs/technical-design/authentication/plan/auth-api-integration.md` - Step 3 (partial), backend endpoint exists
+**✅ Completed (below):** Onboarding expo stack (**`auth` + `slides`**), Google & Apple sign-in from auth landing, email login/register sheets, full questionnaire funnel + AsyncStorage answers, finish path (**task create**, wake/sleep **PATCH**, onboarding flags, **`dismissTo`** Today), and **Skip** for returning users.
 
-#### Onboarding Reminders Message Functionality
+**❌ Still open in this backlog section:** Facebook/deferred providers; optional **notifications permission** onboarding step — see [`onboarding-backlog-reconciliation.md`](../technical-design/onboarding/onboarding-backlog-reconciliation.md).
+
+Other auth backlog (tokens, logout, etc.) stays in Completed archive unchanged.
+
+#### Facebook social sign-in & other providers
+- **Status**: Deferred (not MVP)
+- **Description**: Extend backend `SocialAuthSerializer` (`google`/`apple` only today) plus client parity; `CustomUser` / TS types reserve `facebook`.
+- **When picked up**: Add verifier on Django mirroring Apple/Google patterns; onboarding auth landing row; error states.
+- **Reference**: [`onboarding-backlog-reconciliation.md`](../technical-design/onboarding/onboarding-backlog-reconciliation.md) §2
+
+#### On-device notification permission during onboarding (“reminders” step)
 - **Status**: Not Started
-- **Description**: Implement reminder permission request functionality on reminders screen
-- **Files**: 
-  - `app/(onboarding)/reminders.tsx` (implement permission request)
-  - `components/features/onboarding/OnboardingActions.tsx` (implement handleAllow)
-- **Details**: 
-  - Request notification permissions from device
-  - Handle permission grant/denial appropriately
-  - Store permission status
-  - Navigate to next screen after handling permissions
-- **Reference**: Onboarding reminders screen exists but permission handling is not implemented
+- **Description**: Dedicated onboarding screen to request notification permission, persist consent, navigate forward.
+- **Reality**: **No `app/(onboarding)/reminders.tsx`**, no **`OnboardingActions.tsx`** — legacy backlog paths obsolete; greenfield route + hook into `(onboarding)/_layout` stack if product wants this.
+- **Details**: Prefer `expo-notifications` permission APIs; optionally sync preference field on profile PATCH.
+- **Reference**: Same reconciliation doc §2 · §3.2
 
 ### Tasks API Integration - Remaining Items
 
@@ -77,17 +59,9 @@ This document tracks features, improvements, and technical debt items that are p
 - **Completed**: 20/01/2025
 
 #### Loading State UI Components
-- **Status**: Not Started
-- **Description**: Add visual feedback for loading states
-- **Files**: 
-  - Create `components/ui/LoadingIndicator.tsx`
-  - Create `components/ui/ErrorMessage.tsx`
-  - Update task-related screens
-- **Details**:
-  - Show loading spinner during API calls
-  - Display error messages with dismiss option
-  - Success toast notifications
-  - Optimistic update visual feedback
+- **Status**: Partially Complete
+- **Description**: Dedicated `LoadingIndicator` / `ErrorMessage` primitives remain optional; the app widely uses **`ActivityIndicator`**, inline banners, **`submitting`/busy props** on forms, and Redux flags (`isLoading`, `isLoggingIn`, …).
+- **Remaining**: Centralize spinner + toast/error patterns when design system settles.
 - **Reference**: `docs/technical-design/api/plan/tasks/tasks-api-integration.md` - Step 9
 
 ---
@@ -171,15 +145,14 @@ This document tracks features, improvements, and technical debt items that are p
 - **Reference**: Dev-log entries 16/11/2025, recurring TODO
 
 #### Task Color Palette Aesthetic
-- **Status**: Not Started
-- **Description**: Improve task color palette for better aesthetics
-- **Details**: Review and update color choices for tasks
-- **Files**: `constants/ColorPalette.ts`
-- **Reference**: Dev-log recurring TODO
+- **Status**: Partially Complete (ongoing polish)
+- **Description**: Major palette / **Marple** botanical ramp landed (see dev-log Spring 2026); further harmonize chip colors + task ramps as needed.
+- **Files**: `constants/ColorPalette.ts`, `hooks/useColorPalette.ts`
+- **Reference**: Dev-log Spring 2026 brand/palette commits
 
 #### Planner Screen Enhancements
-- **Status**: Not Started
-- **Description**: Improve overlapping tasks UI and add visual enhancements to timeline view
+- **Status**: Partially Complete
+- **Description**: Overlapping groups, timeline polish, wake/sleep planner rows, all-day footer, freetime helpers — iterated heavily; backlog bullets below may still have follow-ups (native reanimated overhaul, richer “between task” messaging).
 - **Details**:
   - Add better styling for overlapping tasks
   - Add in-between task messages
@@ -204,41 +177,28 @@ This document tracks features, improvements, and technical debt items that are p
 - **Details**: Cache in-flight requests, return same promise for concurrent calls
 
 #### Optimistic Updates
-- **Status**: Not Started
-- **Description**: Update UI immediately, sync in background
-- **Details**: Show changes instantly, rollback on error
+- **Status**: Partially Complete
+- **Description**: Checkbox / completion paths use **`optimisticUpdateTask`** and related thunk-side patterns in `tasksSlice.ts` for snappy Timeline/Today UX.
+- **Remaining**: Extend pattern to fewer-covered mutations; formal rollback UX on hard failures where needed.
 
 ### User Experience
 
 #### Bulk Operations UI
-- **Status**: Not Started
-- **Description**: UI for bulk update/delete operations, including "Select All" functionality
-- **Details**: 
-  - Implement "Select All" feature accessible from 3-dots menu (ellipse button) in today screen
-  - Multi-select interface for selecting multiple tasks
-  - Bulk action toolbar for performing actions on selected tasks
-  - Clear visual indication of selected tasks
-  - Handle selection state in Redux store
-- **Files**: 
-  - `app/(tabs)/today/index.tsx` (implement handleSelectAll function - currently has TODO at line ~343)
-  - `components/ui/Card/TaskCard/` (add selection state UI)
-  - `store/slices/tasks/tasksSlice.ts` (bulk selection actions already exist - toggleTaskSelection, clearTaskSelection)
-- **Reference**: Today screen dropdown menu with "Select All" option exists but is not functional
+- **Status**: ✅ Completed (iterate as needed)
+- **Description**: Route/stack-based multi-select with toolbars Today / Planner / Browse; **`selectAllItems` / bulk reschedule** wired from `TodayScreenContent` (+ iOS **`today/select`** route pattern); Redux selection via `useUI` / slices.
+- **Files**: `app/(tabs)/today/TodayScreenContent.tsx`, `app/(tabs)/today/select.tsx`, `components/ui/Card/TaskCard/` (among others — planner/browse parity)
+- **Completed**: Rolling — core UX shipped **2026-04**
 
 #### Advanced Search
-- **Status**: Not Started
-- **Description**: Enhanced search with filters and sorting
-- **Details**: Search by date range, priority, tags, etc.
+- **Status**: Partially Complete
+- **Description**: Browse unified search overlay with **filters / chips**, top vs recent grouping, docked animations — revisit backlog scope (extra sort dimensions, tags, calendar-range filters).
+- **Files**: Browse stack — `components/features/browse/`
 
 #### Dark Mode Support
-- **Status**: Not Started
-- **Description**: Implement dark mode throughout app
-- **Details**: 
-  - Color palette for dark mode exists (designed 17/09/2025)
-  - Need to implement theme switching
-  - Ensure all components support dark mode
-- **Files**: `constants/ColorPalette.ts`, `hooks/useColorScheme.ts`
-- **Reference**: Dev-log entry 09/09/2025
+- **Status**: Partially Complete
+- **Description**: **`useColorPalette`** / **`useThemeColors`** respect **system** light/dark with shared ramps; polish per-screen edge cases vs “missing dark”.
+- **Remaining**: Optional explicit in-app toggle (vs system-follow only).
+- **Files**: `constants/ColorPalette.ts`, `hooks/useColorPalette.ts`
 
 ---
 
@@ -255,20 +215,11 @@ This document tracks features, improvements, and technical debt items that are p
 - **Description**: Attach files/images to tasks
 
 #### Recurring Task Improvements
-- **Status**: Not Started
-- **Description**: Implement repeating/recurring task selection in task creation date picker modal
-- **Details**: 
-  - **Currently broken**: Repeating option exists in DatePickerModal but has no functionality (button is disabled/does nothing)
-  - Implement repeating task selection UI and logic in DatePickerModal
-  - Allow users to select repeat patterns (daily, weekly, monthly) when creating tasks
-  - Store routineType in task data when repeating is selected
-  - Plan and implement custom patterns beyond daily/weekly/monthly (future enhancement)
-  - Integrate with backend routine/recurring task system when available
-- **Files**: 
-  - `components/features/calendar/DatePicker/DatePickerModal.tsx` (implement repeating functionality - currently no-op at line ~156)
-  - `components/features/tasks/TaskCreation/TaskCreationModal.tsx` (handle routineType from date picker)
-  - `store/slices/tasks/tasksSlice.ts` (ensure routineType is saved with task)
-- **Reference**: Dev-log entries 09/10/2025, 13/10/2025, DatePickerModal.tsx repeating button (line ~154-193)
+- **Status**: Partially Complete
+- **Description**: **`routineType`** selection + backend CRUD paths ship on **task screen**, **quick-add**, **`TaskCreateModalScreen`/`TaskEditModalScreen`** (`FormDetailSection` repeat menus) — backlog’s **legacy `DatePickerModal`** recurrence row is superseded/outdated naming.
+- **Remaining**: Rare edge patterns, clearer discoverability vs date UI, recurrence-from-old DatePicker workflows if any screen still orphaned.
+- **Files**: `components/features/tasks/TaskScreen/`, `components/features/tasks/quickAdd/`, `components/features/tasks/TaskScreens/`
+- **Reference**: Dev-log recurring CRUD milestone **Feb 2026**; see `RoutineType` in `@/types`
 
 #### Task Categories/Grouping
 - **Status**: Not Started
@@ -428,6 +379,44 @@ This document tracks features, improvements, and technical debt items that are p
 - **Files**: `store/slices/auth/authSlice.ts`, `app/(tabs)/settings/index.tsx`
 - **Details**: Created logoutUser async thunk, clears tokens from SecureStore, clears Redux state, resets onboarding status, navigates to welcome screen, added logout button to settings page
 - **Completed**: 20/01/2025
+
+#### Onboarding Expo stack (auth landing + questionnaire)
+- **Status**: ✅ Completed
+- **Description**: Full-screen onboarding group with **`initialRouteName: auth`** and questionnaire **`slides/index`** (`Stack` screens in `(onboarding)/_layout.tsx`); questionnaire also reachable as standalone **`app/onboarding/index.tsx`** (same flow component).
+- **Files**: `app/(onboarding)/_layout.tsx`, `app/(onboarding)/auth/_layout.tsx`, `app/(onboarding)/slides/index.tsx`, `app/onboarding/index.tsx`; feature code under `components/features/onboarding/`
+- **Details**: Transparent native headers for slides; **`auth`** group hides outer header (`auth/login`, `auth/register`, landing `auth/index`).
+- **Reference**: [`onboarding-backlog-reconciliation.md`](../technical-design/onboarding/onboarding-backlog-reconciliation.md) §2
+- **Completed**: 05/2026 (see dev-log / git history)
+
+#### Onboarding Google & Apple social sign-in
+- **Status**: ✅ Completed
+- **Description**: Native Google + Sign in with Apple on **auth landing**; id tokens exchanged via Django **`POST /accounts/auth/social/`**; Redux **`socialAuth`** persists JWTs (`SecureStore`) and hydrates user; completion helper navigates toward questionnaire per product flow (`completeOnboardingSocialSignIn` pattern).
+- **Files**: `services/api/auth.ts` (`socialLogin`), `store/slices/auth/authSlice.ts` (`socialAuth`), `backend/dailyflo/apps/accounts/views.py` (`SocialAuthView`), `backend/.../serializers.py` (**`provider`**: `google` \| `apple`); UI: `components/features/onboarding/auth/` (landing rows, hooks)
+- **Completed**: 05/2026
+
+#### Onboarding email login & registration (sheets)
+- **Status**: ✅ Completed
+- **Description**: **`login`** / **`register`** form-sheet routes dispatch **`loginUser`** / **`registerUser`**; on fulfilled thunk (**tokens stored + user resolved**), **`completeOnboardingEmailAuth`** dismisses nested sheet then pushes **`/(onboarding)/slides`**.
+- **Files**: `app/(onboarding)/auth/login.tsx`, `app/(onboarding)/auth/register.tsx`, `components/features/onboarding/auth/screens/AuthLoginScreen.tsx`, `AuthRegisterScreen.tsx`, `hooks/completeOnboardingEmailAuth.ts`, `backend/.../serializers.py` (optional **`first_name` / `last_name`** on registration for mobile‑first forms)
+- **Completed**: 05/2026
+
+#### Onboarding questionnaire UX + outbound data
+- **Status**: ✅ Completed
+- **Description**: Multi-step questionnaire (wake/sleep wheels, habit vs task branching, agenda/duration UX, planner preview finish); **`OnboardingQuestionnaireFlow`** owns local state + AsyncStorage persistence of **`ONBOARDING_QUESTIONNAIRE_ANSWERS_STORAGE_KEY`** on finish branch.
+- **Files**: `components/features/onboarding/onboarding/` (`pages/OnboardingQuestionnaireFlow.tsx`, constants, utilities)
+- **Completed**: 05/2026
+
+#### Onboarding finish → profile, first task, and exit modal
+- **Status**: ✅ Completed
+- **Description**: **`useCompleteOnboardingAndExit`**: (**1**) map stored answers → **`createTask`** (optional **`updateTask`** if agenda item completed); (**2**) **`patchUserSchedulePreferences`** for wake/sleep HH:MM synced to Django **preferences**; (**3**) device + server **`onboarding_completed`** where applicable; (**4**) **`router.dismissTo('/(tabs)/today')`** so user does not land back on auth after finish.
+- **Files**: `components/features/onboarding/auth/hooks/useCompleteOnboardingAndExit.ts`, `onboarding/utils/buildCreateTaskInputFromOnboardingAnswers.ts`, auth slice PATCH thunks (`patchUserSchedulePreferences`, `patchUserOnboardingCompleted`), `utils/onboarding/onboardingUserStatus.ts`
+- **Completed**: 05/2026
+
+#### Onboarding questionnaire Skip for returning sessions
+- **Status**: ✅ Completed
+- **Description**: Returning users (**`useIsReturningOnboardingUser`**: `onboardingIsNewAccount`, **`preferences.onboarding_completed`**, etc.) see Skip in questionnaire header alongside progress UX.
+- **Files**: `components/features/onboarding/onboarding/hooks/useIsReturningOnboardingUser.ts`, slides header chrome
+- **Completed**: 05/2026
 
 ---
 
