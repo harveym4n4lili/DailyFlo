@@ -724,6 +724,43 @@ export const patchUserOnboardingCompleted = createAsyncThunk<
   },
 );
 
+/** PATCH `preferences.notifications` after onboarding permission step — keeps django json in sync with os grant/deny */
+export const patchUserNotificationPreferences = createAsyncThunk<
+  UserThunkSerializablePayload,
+  { enabled: boolean; pushNotifications: boolean; dueDateReminders: boolean; routineReminders: boolean }
+>(
+  'auth/patchUserNotificationPreferences',
+  async (patch, { getState, rejectWithValue }) => {
+    try {
+      const loggedInUser = (getState() as { auth: Readonly<{ user: User | null }> }).auth.user;
+      if (!loggedInUser?.id) {
+        return rejectWithValue('Sign in required to save notification settings.');
+      }
+
+      const response = await authApiService.patchProfileUpdate({
+        preferences: preferencesPartialToSnakePayload({
+          notifications: {
+            enabled: patch.enabled,
+            pushNotifications: patch.pushNotifications,
+            dueDateReminders: patch.dueDateReminders,
+            routineReminders: patch.routineReminders,
+          },
+        }),
+      });
+
+      const bodyUser = response.user ?? response;
+      return serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
+    } catch (error: any) {
+      const prefsErr = error?.response?.data?.preferences;
+      const message =
+        (Array.isArray(prefsErr) ? prefsErr[0] : undefined) ??
+        error?.response?.data?.detail ??
+        (error instanceof Error ? error.message : 'Could not save notification settings.');
+      return rejectWithValue(typeof message === 'string' ? message : 'Could not save notification settings.');
+    }
+  },
+);
+
 export const patchUserSchedulePreferences = createAsyncThunk<
   UserThunkSerializablePayload,
   { wakeTime: string; sleepTime: string }
@@ -1073,6 +1110,20 @@ const authSlice = createSlice({
 
       .addCase(patchUserOnboardingCompleted.fulfilled, (state, action) => {
         state.user = deserializeUserThunkPayload(action.payload);
+      })
+
+      .addCase(patchUserNotificationPreferences.pending, (state) => {
+        state.isUpdatingProfile = true;
+        state.profileError = null;
+      })
+      .addCase(patchUserNotificationPreferences.fulfilled, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = null;
+        state.user = deserializeUserThunkPayload(action.payload);
+      })
+      .addCase(patchUserNotificationPreferences.rejected, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = (action.payload as string) || 'Notification settings update failed';
       })
       
       // Handle refreshAccessToken actions

@@ -36,6 +36,7 @@ import {
   getDeviceOnboardingComplete,
   hasUserEverCompletedOnboarding,
 } from '@/utils/onboarding/onboardingUserStatus';
+import { setupNotifications } from '@/services/notifications/notificationsSetup';
 
 // typed routes lag behind new files until expo regenerates — cast keeps router.push happy
 const ONBOARDING_AUTH_HREF = '/(onboarding)/auth' as Href;
@@ -78,6 +79,11 @@ export default function RootLayout() {
     // your kit may only include black as `.ttf`; switch to `Satoshi-Black.otf` when that file is in this folder
     'Satoshi-Black': require('../assets/fonts/Satoshi-Black.ttf'),
   });
+
+  // register foreground handler + android channel once — required before any notification can display
+  useEffect(() => {
+    void setupNotifications();
+  }, []);
 
   /**
    * bootstrap navigation: land on today first, then stack-present onboarding when needed.

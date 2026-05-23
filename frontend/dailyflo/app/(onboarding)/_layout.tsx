@@ -1,5 +1,6 @@
 /**
- * onboarding stack — nested `auth` group (`auth/_layout`: landing `index`, email login/register sheets) plus `slides/index` questionnaire.
+ * onboarding stack — nested `auth` group (`auth/_layout`: landing `index`, email login/register sheets),
+ * questionnaire `slides/index`, then optional `notifications` permission step before tabs.
  * `initialRouteName` defaults to brand landing (`auth`).
  */
 
@@ -64,6 +65,7 @@ export default function OnboardingLayout() {
     >
       <Stack.Screen name="auth" options={{ headerShown: false }} />
       <Stack.Screen name="slides/index" options={SLIDES_HEADER_OPTIONS} />
+      <Stack.Screen name="notifications" options={{ headerShown: false, gestureEnabled: false }} />
     </Stack>
   );
 }

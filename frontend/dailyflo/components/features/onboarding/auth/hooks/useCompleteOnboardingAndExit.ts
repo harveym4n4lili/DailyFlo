@@ -21,6 +21,7 @@ import {
   setDeviceOnboardingComplete,
   setUserOnboardingComplete,
 } from '@/utils/onboarding/onboardingUserStatus';
+import { getNotificationPromptAlreadyShown } from '@/utils/notifications/notificationPromptStorage';
 
 import type { OnboardingQuestionnaireStoredAnswersV1 } from '@/components/features/onboarding/onboarding/constants/onboardingQuestionnaireAnswers';
 import { ONBOARDING_QUESTIONNAIRE_ANSWERS_STORAGE_KEY } from '@/components/features/onboarding/onboarding/constants/onboardingQuestionnaireAnswers';
@@ -35,8 +36,8 @@ import {
 /** re-export so existing imports from this hook keep working */
 export { ONBOARDING_COMPLETE_STORAGE_KEY };
 
-/** same tab route root `_layout` uses — dismiss onboarding modal here, don’t `back()` (that only slides→auth). */
-const TODAY_HREF = '/(tabs)/today' as Href;
+/** questionnaire finish → optional notifications step → Today tab */
+const NOTIFICATIONS_HREF = '/(onboarding)/notifications' as Href;
 
 export function useCompleteOnboardingAndExit() {
   const router = useGuardedRouter();
@@ -79,9 +80,13 @@ export function useCompleteOnboardingAndExit() {
         } catch (flagErr) {
           console.warn('[onboarding] server onboarding_completed sync skipped', flagErr);
         }
-        // `router.back()` only pops questionnaire (`slides`) → still on `auth` inside the onboarding stack.
-        // dismiss to today closes the full-screen onboarding modal and focuses the tab (expo-router).
-        router.dismissTo(TODAY_HREF);
+        // first-time installs see the native notification prompt once; returning installs skip straight to Today
+        const alreadyPrompted = await getNotificationPromptAlreadyShown();
+        if (alreadyPrompted) {
+          router.dismissTo('/(tabs)/today' as Href);
+        } else {
+          router.push(NOTIFICATIONS_HREF);
+        }
       } finally {
         setBusy(false);
       }

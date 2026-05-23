@@ -44,7 +44,14 @@
       "expo-web-browser",
       "expo-apple-authentication",
       "expo-image",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#6B4E71"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
