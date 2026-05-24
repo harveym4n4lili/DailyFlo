@@ -7,6 +7,8 @@ from django.core.exceptions import ValidationError
 from .models import CustomUser
 
 _HH_MM_RE = re.compile(r'^([01]\d|2[0-3]):([0-5]\d)$')
+_ONBOARDING_BRANCHES = frozenset({'habit', 'task'})
+_ONBOARDING_HABIT_FREQUENCIES = frozenset({'daily', 'weekly', 'weekends'})
 
 
 def _validate_hh_mm_string(value):
@@ -15,6 +17,62 @@ def _validate_hh_mm_string(value):
         return
     if not isinstance(value, str) or not _HH_MM_RE.match(value):
         raise serializers.ValidationError('Expected time as HH:MM in 24h format')
+
+
+def _validate_onboarding_questionnaire(value):
+    """questionnaire snapshot written once when user finishes onboarding setup"""
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        raise serializers.ValidationError('onboarding_questionnaire must be a JSON object')
+
+    allowed_top = {'v', 'branch', 'completed_at', 'task', 'habit'}
+    for key in value.keys():
+        if key not in allowed_top:
+            raise serializers.ValidationError(f'Invalid onboarding_questionnaire key: {key}')
+
+    if value.get('v') is not None and value.get('v') != 1:
+        raise serializers.ValidationError('onboarding_questionnaire v must be 1')
+
+    branch = value.get('branch')
+    if branch is not None and branch not in _ONBOARDING_BRANCHES:
+        raise serializers.ValidationError('onboarding_questionnaire branch must be habit or task')
+
+    completed_at = value.get('completed_at')
+    if completed_at is not None and not isinstance(completed_at, str):
+        raise serializers.ValidationError('onboarding_questionnaire completed_at must be a string')
+
+    task = value.get('task')
+    if task is not None:
+        if not isinstance(task, dict):
+            raise serializers.ValidationError('onboarding_questionnaire task must be an object or null')
+        task_keys = {'title', 'completed', 'event_time', 'duration_minutes'}
+        for key in task.keys():
+            if key not in task_keys:
+                raise serializers.ValidationError(f'Invalid onboarding_questionnaire task key: {key}')
+        if not isinstance(task.get('title', ''), str):
+            raise serializers.ValidationError('task title must be a string')
+        if not isinstance(task.get('completed', False), bool):
+            raise serializers.ValidationError('task completed must be a boolean')
+        if not isinstance(task.get('event_time', ''), str):
+            raise serializers.ValidationError('task event_time must be a string')
+        duration = task.get('duration_minutes', 0)
+        if not isinstance(duration, int) or duration < 0:
+            raise serializers.ValidationError('task duration_minutes must be a non-negative integer')
+
+    habit = value.get('habit')
+    if habit is not None:
+        if not isinstance(habit, dict):
+            raise serializers.ValidationError('onboarding_questionnaire habit must be an object or null')
+        habit_keys = {'goal_title', 'frequency_id'}
+        for key in habit.keys():
+            if key not in habit_keys:
+                raise serializers.ValidationError(f'Invalid onboarding_questionnaire habit key: {key}')
+        if not isinstance(habit.get('goal_title', ''), str):
+            raise serializers.ValidationError('habit goal_title must be a string')
+        frequency_id = habit.get('frequency_id')
+        if frequency_id is not None and frequency_id not in _ONBOARDING_HABIT_FREQUENCIES:
+            raise serializers.ValidationError('habit frequency_id must be daily, weekly, or weekends')
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -79,6 +137,24 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 n = dict(current.get('notifications') or {})
                 n.update(nested_notifications)
                 current['notifications'] = n
+            nested_onboarding = prefs_patch.pop('onboarding_questionnaire', None)
+            if nested_onboarding is not None and isinstance(nested_onboarding, dict):
+                o = dict(current.get('onboarding_questionnaire') or {})
+                for nested_key in ('task', 'habit'):
+                    if nested_key in nested_onboarding:
+                        nested_val = nested_onboarding[nested_key]
+                        if nested_val is None:
+                            o[nested_key] = None
+                        elif isinstance(nested_val, dict):
+                            sub = dict(o.get(nested_key) or {})
+                            sub.update(nested_val)
+                            o[nested_key] = sub
+                        else:
+                            o[nested_key] = nested_val
+                for key, val in nested_onboarding.items():
+                    if key not in ('task', 'habit'):
+                        o[key] = val
+                current['onboarding_questionnaire'] = o
             current.update(prefs_patch)
             user.preferences = current
             user.save(update_fields=['preferences', 'updated_at'])
@@ -95,6 +171,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             'default_list_view', 'timezone', 'date_format', 'time_format',
             'wake_time', 'sleep_time',
             'onboarding_completed',
+            'onboarding_questionnaire',
             'auto_archive_completed',
             'show_completed_tasks',
             'sort_tasks_by',
@@ -125,6 +202,9 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             _validate_hh_mm_string(value.get('wake_time'))
         if 'sleep_time' in value:
             _validate_hh_mm_string(value.get('sleep_time'))
+
+        if 'onboarding_questionnaire' in value:
+            _validate_onboarding_questionnaire(value.get('onboarding_questionnaire'))
         
         return value
 

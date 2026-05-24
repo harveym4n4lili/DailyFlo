@@ -2,7 +2,7 @@
  * persists onboarding-complete flag then navigates home — root `_layout.tsx` trusts this key.
  * when questionnaire `answers` are passed, we also POST the user’s task/habit via `createTask` so
  * today’s list shows it immediately (redux `createTask.fulfilled` pushes into `tasks` — no extra fetch).
- * questionnaire wake/sleep is PATCH’d into django profile `preferences` so planner bounds follow the signed-in account.
+ * questionnaire wake/sleep + habit/task branch snapshot PATCH’d into django profile `preferences`.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,6 +14,7 @@ import { useAppDispatch, useAppSelector } from '@/store';
 import { createTask, updateTask } from '@/store/slices/tasks/tasksSlice';
 import {
   patchUserOnboardingCompleted,
+  patchUserOnboardingQuestionnaire,
   patchUserSchedulePreferences,
 } from '@/store/slices/auth/authSlice';
 import {
@@ -26,6 +27,7 @@ import { getNotificationPromptAlreadyShown } from '@/utils/notifications/notific
 import type { OnboardingQuestionnaireStoredAnswersV1 } from '@/components/features/onboarding/onboarding/constants/onboardingQuestionnaireAnswers';
 import { ONBOARDING_QUESTIONNAIRE_ANSWERS_STORAGE_KEY } from '@/components/features/onboarding/onboarding/constants/onboardingQuestionnaireAnswers';
 import { buildCreateTaskInputFromOnboardingAnswers } from '@/components/features/onboarding/onboarding/utils/buildCreateTaskInputFromOnboardingAnswers';
+import { mapStoredAnswersToProfileQuestionnaire } from '@/components/features/onboarding/onboarding/utils/mapStoredAnswersToProfileQuestionnaire';
 import {
   DEFAULT_SLEEP_HHMM,
   DEFAULT_WAKE_HHMM,
@@ -69,6 +71,14 @@ export function useCompleteOnboardingAndExit() {
             await dispatch(patchUserSchedulePreferences({ wakeTime, sleepTime })).unwrap();
           } catch (scheduleErr) {
             console.warn('[onboarding] wake/sleep profile sync skipped', scheduleErr);
+          }
+          try {
+            // habit goal / task agenda answers — server copy so reinstall + settings can read them later
+            await dispatch(
+              patchUserOnboardingQuestionnaire(mapStoredAnswersToProfileQuestionnaire(answers)),
+            ).unwrap();
+          } catch (questionnaireErr) {
+            console.warn('[onboarding] questionnaire profile sync skipped', questionnaireErr);
           }
         }
         await setDeviceOnboardingComplete();
