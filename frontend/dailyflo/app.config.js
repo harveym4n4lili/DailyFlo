@@ -81,6 +81,8 @@ module.exports = ({ config }) => {
     plugins: withGoogleSignInPlugin(config.plugins, iosUrlScheme),
     ios: {
       ...config.ios,
+      googleServicesFile:
+        process.env.GOOGLE_SERVICES_PLIST ?? './GoogleService-Info.plist',
       infoPlist: {
         ...config.ios?.infoPlist,
         CFBundleURLTypes: [{ CFBundleURLSchemes: urlSchemes }],
