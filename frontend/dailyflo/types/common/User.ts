@@ -39,6 +39,26 @@ export interface UserPreferences {
   sleepTime: string;
   /** set when user finishes onboarding questionnaire — used to show Skip for returning accounts */
   onboardingCompleted?: boolean;
+
+  /**
+   * snapshot of habit vs task branch answers from the onboarding questionnaire —
+   * synced to django `preferences.onboarding_questionnaire` on finish (server source of truth after PATCH).
+   */
+  onboardingQuestionnaire?: {
+    v: 1;
+    branch: 'habit' | 'task';
+    completedAt: string;
+    task: {
+      title: string;
+      completed: boolean;
+      eventTime: string;
+      durationMinutes: number;
+    } | null;
+    habit: {
+      goalTitle: string;
+      frequencyId: string;
+    } | null;
+  };
   
   // App behavior preferences
   autoArchiveCompleted: boolean;    // Auto-archive completed tasks
@@ -130,6 +150,8 @@ export interface UpdateUserPreferencesInput {
   timeFormat?: UserPreferences['timeFormat']; // Optional: New time format
   wakeTime?: string;
   sleepTime?: string;
+  onboardingCompleted?: boolean;
+  onboardingQuestionnaire?: Partial<UserPreferences['onboardingQuestionnaire']>;
   autoArchiveCompleted?: boolean;   // Optional: Auto-archive setting
   showCompletedTasks?: boolean;     // Optional: Show completed tasks setting
   sortTasksBy?: UserPreferences['sortTasksBy']; // Optional: New default sorting

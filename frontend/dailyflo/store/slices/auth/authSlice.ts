@@ -245,6 +245,7 @@ function deserializeUserThunkPayload(payload: UserThunkSerializablePayload): Use
  * @returns UserPreferences object matching frontend interface (camelCase format)
  */
 function transformApiPreferencesToPreferences(apiPrefs: any): UserPreferences {
+  const rawQuestionnaire = apiPrefs.onboarding_questionnaire ?? apiPrefs.onboardingQuestionnaire;
   return {
     theme: apiPrefs.theme || 'light',
     notifications: {
@@ -269,6 +270,45 @@ function transformApiPreferencesToPreferences(apiPrefs: any): UserPreferences {
     sleepTime: coerceWakeSleepHHMM(apiPrefs.sleep_time || apiPrefs.sleepTime, DEFAULT_SLEEP_HHMM),
     onboardingCompleted:
       apiPrefs.onboarding_completed === true || apiPrefs.onboardingCompleted === true,
+    onboardingQuestionnaire:
+      rawQuestionnaire && typeof rawQuestionnaire === 'object'
+        ? {
+            v: 1,
+            branch: rawQuestionnaire.branch === 'habit' ? 'habit' : 'task',
+            completedAt:
+              rawQuestionnaire.completed_at ??
+              rawQuestionnaire.completedAt ??
+              new Date().toISOString(),
+            task:
+              rawQuestionnaire.task && typeof rawQuestionnaire.task === 'object'
+                ? {
+                    title: String(rawQuestionnaire.task.title ?? ''),
+                    completed: rawQuestionnaire.task.completed === true,
+                    eventTime: String(
+                      rawQuestionnaire.task.event_time ?? rawQuestionnaire.task.eventTime ?? '',
+                    ),
+                    durationMinutes: Number(
+                      rawQuestionnaire.task.duration_minutes ??
+                        rawQuestionnaire.task.durationMinutes ??
+                        0,
+                    ),
+                  }
+                : null,
+            habit:
+              rawQuestionnaire.habit && typeof rawQuestionnaire.habit === 'object'
+                ? {
+                    goalTitle: String(
+                      rawQuestionnaire.habit.goal_title ?? rawQuestionnaire.habit.goalTitle ?? '',
+                    ),
+                    frequencyId: String(
+                      rawQuestionnaire.habit.frequency_id ??
+                        rawQuestionnaire.habit.frequencyId ??
+                        'daily',
+                    ),
+                  }
+                : null,
+          }
+        : undefined,
   };
 }
 
@@ -293,6 +333,33 @@ export function preferencesPartialToSnakePayload(prefs: Partial<UserPreferences>
   if (prefs.wakeTime !== undefined) out.wake_time = prefs.wakeTime;
   if (prefs.sleepTime !== undefined) out.sleep_time = prefs.sleepTime;
   if (prefs.onboardingCompleted !== undefined) out.onboarding_completed = prefs.onboardingCompleted;
+  if (prefs.onboardingQuestionnaire !== undefined) {
+    const q = prefs.onboardingQuestionnaire;
+    const qid: Record<string, unknown> = {
+      v: q.v ?? 1,
+      branch: q.branch,
+      completed_at: q.completedAt,
+    };
+    if (q.task === null) {
+      qid.task = null;
+    } else if (q.task) {
+      qid.task = {
+        title: q.task.title,
+        completed: q.task.completed,
+        event_time: q.task.eventTime,
+        duration_minutes: q.task.durationMinutes,
+      };
+    }
+    if (q.habit === null) {
+      qid.habit = null;
+    } else if (q.habit) {
+      qid.habit = {
+        goal_title: q.habit.goalTitle,
+        frequency_id: q.habit.frequencyId,
+      };
+    }
+    out.onboarding_questionnaire = qid;
+  }
   if (prefs.notifications !== undefined) {
     const n = prefs.notifications;
     const nid: Record<string, unknown> = {};
@@ -793,6 +860,36 @@ export const patchUserSchedulePreferences = createAsyncThunk<
   },
 );
 
+/** PATCH habit/task branch answers into django `preferences.onboarding_questionnaire` on questionnaire finish */
+export const patchUserOnboardingQuestionnaire = createAsyncThunk<
+  UserThunkSerializablePayload,
+  NonNullable<UserPreferences['onboardingQuestionnaire']>
+>(
+  'auth/patchUserOnboardingQuestionnaire',
+  async (questionnaire, { getState, rejectWithValue }) => {
+    try {
+      const loggedInUser = (getState() as { auth: Readonly<{ user: User | null }> }).auth.user;
+      if (!loggedInUser?.id) {
+        return rejectWithValue('Sign in required to save onboarding answers.');
+      }
+
+      const response = await authApiService.patchProfileUpdate({
+        preferences: preferencesPartialToSnakePayload({ onboardingQuestionnaire: questionnaire }),
+      });
+
+      const bodyUser = response.user ?? response;
+      return serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
+    } catch (error: any) {
+      const prefsErr = error?.response?.data?.preferences;
+      const message =
+        (Array.isArray(prefsErr) ? prefsErr[0] : undefined) ??
+        error?.response?.data?.detail ??
+        (error instanceof Error ? error.message : 'Could not save onboarding answers.');
+      return rejectWithValue(typeof message === 'string' ? message : 'Could not save onboarding answers.');
+    }
+  },
+);
+
 // Refresh access token
 export const refreshAccessToken = createAsyncThunk(
   'auth/refreshAccessToken',
@@ -1106,6 +1203,20 @@ const authSlice = createSlice({
       .addCase(patchUserSchedulePreferences.rejected, (state, action) => {
         state.isUpdatingProfile = false;
         state.profileError = (action.payload as string) || 'Schedule update failed';
+      })
+
+      .addCase(patchUserOnboardingQuestionnaire.pending, (state) => {
+        state.isUpdatingProfile = true;
+        state.profileError = null;
+      })
+      .addCase(patchUserOnboardingQuestionnaire.fulfilled, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = null;
+        state.user = deserializeUserThunkPayload(action.payload);
+      })
+      .addCase(patchUserOnboardingQuestionnaire.rejected, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = (action.payload as string) || 'Onboarding answers update failed';
       })
 
       .addCase(patchUserOnboardingCompleted.fulfilled, (state, action) => {
