@@ -10,6 +10,8 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dailyflo.app",
+      "usesAppleSignIn": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -40,7 +42,16 @@
       "expo-font",
       "expo-secure-store",
       "expo-web-browser",
-      "expo-image"
+      "expo-apple-authentication",
+      "expo-image",
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#6B4E71"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

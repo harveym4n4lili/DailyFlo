@@ -335,7 +335,11 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
       ? `${selection.selectedItems.length} selected`
       : 'Today';
 
-  if (isLoading && tasks.length === 0) {
+  // authed user but fetch not dispatched/pending yet (one frame gap) — avoids flashing empty copy before loading UI
+  const awaitingFirstTaskFetch =
+    isAuthenticated && lastFetched === null && !error;
+
+  if ((isLoading || awaitingFirstTaskFetch) && tasks.length === 0) {
     return (
       <View style={{ flex: 1 }}>
         <ScreenContainer scrollable={false} paddingHorizontal={0} backgroundColor="transparent">

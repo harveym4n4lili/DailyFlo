@@ -26,7 +26,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getTextStyle } from '@/constants/Typography';
 
 // hooks for theme-aware colors that adapt to light/dark mode
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 // padding constants for consistent spacing
 import { Paddings } from '@/constants/Paddings';
 
@@ -75,6 +75,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 }) => {
   // get theme-aware colors for styling (adapts to light/dark mode)
   const themeColors = useThemeColors();
+  const { getMarpleBrandColor } = useColorPalette();
+  const selectedDayFill = getMarpleBrandColor(500);
+  const selectedDayLabel = themeColors.background.primary();
   
   // state for current displayed month - this is what month the calendar shows
   // useState with function initializer runs once on component mount
@@ -346,14 +349,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     styles.dayCell,
                     cellMargin,
                     {
-                      // background color logic:
-                      // pressed = temporary highlight
-                      // selected = dark background with white text
-                      // default = transparent
-                      backgroundColor: pressed 
+                      // pressed = tertiary highlight; selected = marple fill + primary-background label (FAB / onboarding)
+                      backgroundColor: pressed
                         ? themeColors.background.tertiary()
                         : isSelectedDate
-                        ? themeColors.text.primary()
+                        ? selectedDayFill
                         : 'transparent',
                     }
                   ]}
@@ -369,12 +369,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     getTextStyle('heading-4'),
                     styles.dayText,
                     {
-                      // text color logic:
-                      // selected = white text on dark background
-                      // current month = primary text color
-                      // other months = secondary text color
+                      // selected = label on marple; current month = primary text; other months = tertiary
                       color: isSelectedDate
-                        ? themeColors.background.primary()
+                        ? selectedDayLabel
                         : isCurrentMonthDay
                         ? themeColors.text.primary()
                         : themeColors.text.tertiary?.() || themeColors.text.secondary(),

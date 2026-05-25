@@ -165,6 +165,9 @@ class CustomUser(AbstractUser):
                 'timezone': 'UTC',
                 'date_format': 'MM/DD/YYYY',
                 'time_format': '12h',
+                # local day-planning window used by planner timeline (24h hh:mm strings)
+                'wake_time': '06:00',
+                'sleep_time': '23:00',
             }
     
     def save(self, *args, **kwargs):

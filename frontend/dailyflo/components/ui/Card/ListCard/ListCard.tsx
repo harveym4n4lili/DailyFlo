@@ -94,9 +94,13 @@ export interface ListCardProps {
   liquidGlass?: boolean;
   emptyMessage?: string; // message to show when no tasks are available
   loading?: boolean; // whether the list is currently loading
+  /** when true and tasks is empty (and not loading): render zero-height shell — skips empty-state copy (planner all-day footer) */
+  silentWhenEmpty?: boolean;
 
   // optional list configuration
   groupBy?: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'none'; // routine = one-time vs recurring (browse list detail); allDay = planner all-day bucket
+  /** titles that render collapsed until the user taps the header — planner seeds `ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES`; remount with a day key resets per day */
+  initialCollapsedGroupTitles?: readonly string[];
   sortBy?: 'createdAt' | 'dueDate' | 'priority' | 'title'; // how to sort tasks
   sortDirection?: 'asc' | 'desc'; // sort direction
 
@@ -211,7 +215,9 @@ export default function ListCard({
   liquidGlass = false,
   emptyMessage = 'No tasks available',
   loading = false,
+  silentWhenEmpty = false,
   groupBy = 'none',
+  initialCollapsedGroupTitles,
   sortBy = 'createdAt',
   sortDirection = 'desc',
   onRefresh,
@@ -335,7 +341,7 @@ export default function ListCard({
     toggleGroupCollapse,
     getAnimatedValuesForGroup,
     isGroupCollapsed,
-  } = useGroupAnimations();
+  } = useGroupAnimations(initialCollapsedGroupTitles);
 
 
   // when hideCompletedTasks: hide completed tasks (local + redux). optimistically hide on tap so we don't wait for redux
@@ -808,6 +814,18 @@ export default function ListCard({
       <View style={styles.container}>
         <LoadingState />
       </View>
+    );
+  }
+
+  // planner/footer pattern: empty list but parent still needs “footer exists” spacing — hide empty message + take no vertical space
+  if (silentWhenEmpty && tasks.length === 0) {
+    return (
+      <View
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={{ height: 0, overflow: 'hidden' }}
+      />
     );
   }
 

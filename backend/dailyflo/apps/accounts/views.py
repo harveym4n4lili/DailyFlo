@@ -11,6 +11,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from .models import CustomUser
+from .social_auth import verify_apple_id_token, verify_google_id_token
 from .serializers import (
     UserRegistrationSerializer, SocialAuthSerializer, UserLoginSerializer,
     PasswordChangeSerializer, PasswordResetRequestSerializer, 
@@ -52,48 +53,76 @@ class UserRegistrationView(APIView):
 
 class SocialAuthView(APIView):
     """
-    social authentication endpoint
-    handles Google, Apple, Facebook authentication
+    social authentication endpoint — verifies google/apple id tokens server-side, then issues dailyflo jwt.
     """
     permission_classes = [permissions.AllowAny]
-    
+
     def post(self, request):
-        serializer = SocialAuthSerializer(data=request.data)  # validate social auth data
-        if serializer.is_valid():  # check if data is valid
-            provider = serializer.validated_data['provider']  # get social provider (google/apple/facebook)
-            access_token = serializer.validated_data['access_token']  # get provider access token
-            user_info = serializer.validated_data.get('user_info', {})  # get user info from provider
-            
-            # TODO: implement social provider token validation
-            # for now, create or get user based on provider data
-            
-            try:
-                # check if user already exists
-                user = CustomUser.objects.get(  # find existing user by provider and provider ID
-                    auth_provider=provider,
-                    auth_provider_id=user_info.get('id')
+        serializer = SocialAuthSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        provider = serializer.validated_data['provider']
+        raw_token = serializer.validated_data['id_token']
+        first_name = serializer.validated_data.get('first_name', '')
+        last_name = serializer.validated_data.get('last_name', '')
+
+        try:
+            if provider == 'google':
+                claims = verify_google_id_token(raw_token)
+            else:
+                claims = verify_apple_id_token(raw_token)
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_401_UNAUTHORIZED)
+
+        provider_user_id = claims['sub']
+        raw_email = (claims.get('email') or '').strip()
+        # email field is required for uniqueness; apple sometimes omits email — synthetic unique placeholder
+        email = raw_email or f'{provider}-{provider_user_id}@social-login.invalid'
+
+        ev_raw = claims.get('email_verified', False)
+        if isinstance(ev_raw, str):
+            email_verified_bool = ev_raw.lower() in ('true', '1', 'yes')
+        else:
+            email_verified_bool = bool(ev_raw)
+
+        # conflict only when provider shared a real email (compare apples-to-apples with existing rows)
+        if raw_email:
+            conflict = CustomUser.objects.filter(email=email).exclude(auth_provider=provider).first()
+            if conflict:
+                return Response(
+                    {
+                        'error': 'account_conflict',
+                        'message': (
+                            f'An account with this email already exists using '
+                            f'{conflict.auth_provider}. Please sign in with that method.'
+                        ),
+                    },
+                    status=status.HTTP_409_CONFLICT,
                 )
-            except CustomUser.DoesNotExist:
-                # create new user
-                user = CustomUser.objects.create(  # create new user with provider data
-                    email=user_info.get('email'),
-                    first_name=user_info.get('first_name', ''),
-                    last_name=user_info.get('last_name', ''),
-                    avatar_url=user_info.get('avatar_url'),
-                    auth_provider=provider,
-                    auth_provider_id=user_info.get('id'),
-                    is_email_verified=user_info.get('email_verified', False)
-                )
-            
-            tokens = get_tokens_for_user(user)  # generate JWT tokens for user
-            
-            return Response({  # return success response
-                'message': f'Successfully authenticated with {provider}',
-                'tokens': tokens,  # JWT tokens for API access
-                'user': UserProfileSerializer(user).data  # user profile data
-            }, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  # return validation errors
+
+        user, created = CustomUser.objects.get_or_create(
+            auth_provider=provider,
+            auth_provider_id=provider_user_id,
+            defaults={
+                'email': email,
+                'first_name': claims.get('given_name') or first_name,
+                'last_name': claims.get('family_name') or last_name,
+                'avatar_url': claims.get('picture'),
+                'is_email_verified': email_verified_bool,
+            },
+        )
+
+        tokens = get_tokens_for_user(user)
+        return Response(
+            {
+                'message': f'Authenticated with {provider}',
+                'tokens': tokens,
+                'user': UserProfileSerializer(user).data,
+                'is_new_user': created,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class UserLoginView(APIView):

@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 
 import { AddIcon } from '@/components/ui/Icon';
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { useCustomTabNavMetrics } from '@/contexts/CustomTabNavMetricsContext';
 /** offset from parent bottom/right — 0 = flush corner (used by tab layout to match FAB) */
 export const FAB_SCREEN_INSET = 20;
@@ -120,14 +120,15 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   // modal is now managed by parent screens to prevent duplicate modals
   // const [isModalVisible, setIsModalVisible] = useState(false);
   const themeColors = useThemeColors();
+  const { getMarpleBrandColor } = useColorPalette();
   // when native tabs are hidden, (tabs)/_layout measures the glass strip and stores its height here — FAB matches that height
   const { measuredNavBarHeight } = useCustomTabNavMetrics();
   const fabSide =
     measuredNavBarHeight != null && measuredNavBarHeight > 8 ? measuredNavBarHeight : 64;
   const fabRadius = fabSide / 2;
-  // default fill + icon from primaryButton palette (same tokens for other primary solid buttons)
-  const backgroundColor = customBackgroundColor ?? themeColors.primaryButton.fill();
-  const iconColor = customIconColor ?? themeColors.primaryButton.icon();
+  // brand-aligned with onboarding continue on marple slides (`marple:500` + label on primary canvas)
+  const backgroundColor = customBackgroundColor ?? getMarpleBrandColor(500);
+  const iconColor = customIconColor ?? themeColors.background.primary();
   // tintColor: iOS uses DynamicColorIOS so the system can treat this as a "dynamic" color
   // just like the navbar; Android falls back to the plain hex value.
   const tintColor =
@@ -228,7 +229,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
  * 
  * Follows the design system specifications:
  * - 56px diameter circular button
- * - White background (from color palette)
+ * - marple fill + primary-background icon — matches onboarding `OnboardingContinueButton` marple slides
  * - Bottom right: FAB_SCREEN_INSET (flush when 0; exported for tab layout sync)
  * - Large elevation shadow
  * - High z-index for overlay positioning

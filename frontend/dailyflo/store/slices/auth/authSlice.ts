@@ -21,13 +21,20 @@ import {
   getAccessToken,
   getRefreshToken,
   getTokenExpiry,
-  hasValidTokens,
+  isAccessTokenExpired,
+  resolveAccessTokenExpiryMs,
 } from '../../../services/auth/tokenStorage';
-
-// storage key for tracking onboarding completion status
-// this key is used to check if the user has completed the onboarding flow
-// when user logs out, we reset this so they see onboarding screens again
-const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
+import { refreshStoredSessionTokens } from '../../../services/auth/sessionRefresh';
+import { queueNavigateToTodayThenAuthLanding } from '../../../utils/navigation/queueLogoutAuthNavigation';
+import {
+  inferOnboardingIsNewAccount,
+  ONBOARDING_COMPLETE_STORAGE_KEY,
+} from '../../../utils/onboarding/onboardingUserStatus';
+import {
+  coerceWakeSleepHHMM,
+  DEFAULT_SLEEP_HHMM,
+  DEFAULT_WAKE_HHMM,
+} from '../../../utils/preferenceScheduleTimes';
 
 /**
  * Define the shape of the authentication state
@@ -60,6 +67,12 @@ interface AuthState {
   // Session persistence
   rememberMe: boolean;              // Whether to remember user session
   lastLoginTime: number | null;     // Timestamp of last successful login
+
+  /**
+   * last auth action: true = brand-new django user (hide Skip), false = existing (show Skip).
+   * set from social auth `is_new_user`; null after logout or before first auth in session.
+   */
+  onboardingIsNewAccount: boolean | null;
 }
 
 /**
@@ -93,6 +106,7 @@ const initialState: AuthState = {
   // Default session settings
   rememberMe: false,
   lastLoginTime: null,
+  onboardingIsNewAccount: null,
 };
 
 /**
@@ -103,128 +117,59 @@ const initialState: AuthState = {
 // This runs when the app launches to see if the user is still logged in
 export const checkAuthStatus = createAsyncThunk(
   'auth/checkAuthStatus',
-  async (_, { rejectWithValue, dispatch }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      // Check if we have valid tokens stored in SecureStore
-      // hasValidTokens checks if tokens exist and haven't expired
-      const hasValid = await hasValidTokens();
-      
-      if (!hasValid) {
-        // No valid tokens, user is not authenticated
-        // Clear any leftover invalid tokens
+      // long-lived refresh token (30d server-side) — not the 15m access JWT
+      let refreshToken = await getRefreshToken();
+      if (!refreshToken) {
         await clearAllTokens();
         return null;
       }
-      
-      // Get tokens from SecureStore
-      // These are the tokens we stored when the user logged in
-      const accessToken = await getAccessToken();
-      const refreshToken = await getRefreshToken();
-      const expiry = await getTokenExpiry();
-      
-      if (!accessToken || !refreshToken) {
-        // Tokens missing, clear everything
-        await clearAllTokens();
-        return null;
+
+      let accessToken = await getAccessToken();
+      let expiresAt = (await getTokenExpiry()) ?? Date.now();
+
+      // cold start after hours: access JWT is expired but refresh is still valid — mint new access first
+      if (!accessToken || (await isAccessTokenExpired())) {
+        const refreshed = await refreshStoredSessionTokens();
+        if (!refreshed) {
+          await clearAllTokens();
+          return null;
+        }
+        accessToken = refreshed.accessToken;
+        refreshToken = refreshed.refreshToken;
+        expiresAt = refreshed.expiresAt;
       }
-      
-      // Validate token with backend by fetching user profile
-      // This makes an API call to verify the token is still valid on the server
-      // If the token is invalid, we'll get a 401 and can try to refresh
-      try {
-        // Call getCurrentUser to verify token and get user data
-        // This endpoint requires authentication, so if the token is valid, we get user data
-        // If the token is invalid, we get a 401 error
-        // Django UserProfileView returns user data directly (not wrapped in { user: ... })
+
+      const loadProfile = async () => {
         const userResponse = await authApiService.getCurrentUser();
-        
-        // Transform API response to match our User interface
-        // Backend returns snake_case, frontend uses camelCase
-        // UserProfileView returns the user object directly, so use userResponse directly
         const user: User = transformApiUserToUser(userResponse.user || userResponse);
-        
-        // Return user data and tokens FIRST before fetching tasks
-        // This ensures Redux state is updated with auth info before tasks API calls
-        // The auth state update happens in the reducer, which runs after this thunk completes
-        // We'll fetch tasks after auth state is updated (in the reducer or component)
-        const result = {
+        return {
           user,
-          accessToken,
+          accessToken: accessToken!,
           refreshToken,
-          expiresAt: expiry ? new Date(expiry) : new Date(Date.now() + 15 * 60 * 1000),
+          expiresAt: new Date(expiresAt),
         };
-        
-        // Note: Tasks will be fetched automatically when user navigates to tasks screen
-        // or after auth state is updated in Redux. We don't fetch here to avoid
-        // making API calls before auth state is properly set in Redux.
-        
-        return result;
+      };
+
+      try {
+        return await loadProfile();
       } catch (error: any) {
-        // Token validation failed - might be expired or invalid
-        // Try to refresh the token using the refresh token
         if (error.response?.status === 401) {
-          // Token is invalid/expired, try to refresh it
-          try {
-            // Call refresh token endpoint to get a new access token
-            const refreshResponse = await authApiService.refreshToken({
-              refresh: refreshToken,
-            });
-            
-            // Extract new tokens from response
-            // Backend returns tokens in different formats, handle both
-            const newAccessToken = refreshResponse.access || refreshResponse.data?.access;
-            const newRefreshToken = refreshResponse.refresh || refreshResponse.data?.refresh || refreshToken;
-            
-            if (newAccessToken) {
-              // Successfully refreshed tokens, store the new ones
-              await storeAccessToken(newAccessToken);
-              if (newRefreshToken !== refreshToken) {
-                // If backend rotated the refresh token, store the new one
-                await storeRefreshToken(newRefreshToken);
-              }
-              
-              // Calculate new expiry time (15 minutes from now)
-              const newExpiryTime = Date.now() + (15 * 60 * 1000);
-              await storeTokenExpiry(newExpiryTime);
-              
-              // Try to get user profile again with the new token
-              // UserProfileView returns user data directly
-              const profileResponse = await authApiService.getCurrentUser();
-              const user: User = transformApiUserToUser(profileResponse.user || profileResponse);
-              
-              // Return user data and new tokens FIRST before fetching tasks
-              // This ensures Redux state is updated with auth info before tasks API calls
-              // The auth state update happens in the reducer, which runs after this thunk completes
-              // We'll fetch tasks after auth state is updated (in the reducer or component)
-              const result = {
-                user,
-                accessToken: newAccessToken,
-                refreshToken: newRefreshToken,
-                expiresAt: new Date(newExpiryTime),
-              };
-              
-              // Note: Tasks will be fetched automatically when user navigates to tasks screen
-              // or after auth state is updated in Redux. We don't fetch here to avoid
-              // making API calls before auth state is properly set in Redux.
-              
-              return result;
-            }
-          } catch (refreshError) {
-            // Refresh failed - tokens are invalid, user needs to log in again
-            console.error('Token refresh failed during auth check:', refreshError);
+          const refreshed = await refreshStoredSessionTokens();
+          if (!refreshed) {
             await clearAllTokens();
             return null;
           }
+          accessToken = refreshed.accessToken;
+          refreshToken = refreshed.refreshToken;
+          expiresAt = refreshed.expiresAt;
+          return await loadProfile();
         }
-        
-        // If we get here, validation failed and refresh didn't work
-        // Clear tokens and return null (user needs to log in again)
         await clearAllTokens();
         return null;
       }
     } catch (error) {
-      // On any error, assume user is not authenticated
-      // This is the safest approach - better to ask user to log in than to allow invalid access
       console.error('Failed to check auth status:', error);
       await clearAllTokens();
       return rejectWithValue(error instanceof Error ? error.message : 'Failed to check auth status');
@@ -250,11 +195,45 @@ function transformApiUserToUser(apiUser: any): User {
     lastName: apiUser.last_name || apiUser.lastName || '',
     avatarUrl: apiUser.avatar_url || apiUser.avatarUrl || null,
     isEmailVerified: apiUser.is_email_verified || apiUser.isEmailVerified || false,
-    lastLogin: apiUser.last_login ? new Date(apiUser.last_login) : new Date(),
+    lastLogin: apiUser.last_login ? new Date(apiUser.last_login) : null,
     preferences: transformApiPreferencesToPreferences(apiUser.preferences || {}),
     softDeleted: apiUser.soft_deleted || apiUser.softDeleted || false,
     createdAt: apiUser.created_at ? new Date(apiUser.created_at) : new Date(),
     updatedAt: apiUser.updated_at ? new Date(apiUser.updated_at) : new Date(),
+  };
+}
+
+/**
+ * redux thunk fulfilled payloads must stay json-serializable — `Date` triggers serializableCheck warnings.
+ * we iso-string dates on return from PATCH profile thunks, then map back to `Date` in the reducer.
+ */
+
+type UserThunkSerializablePayload = Omit<User, 'createdAt' | 'updatedAt' | 'lastLogin'> & {
+  createdAt: string;
+  updatedAt: string;
+  lastLogin: string | null;
+};
+
+function serializeUserForThunkPayload(user: User): UserThunkSerializablePayload {
+  return {
+    ...user,
+    createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : String(user.createdAt),
+    updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : String(user.updatedAt),
+    lastLogin:
+      user.lastLogin == null
+        ? null
+        : user.lastLogin instanceof Date
+          ? user.lastLogin.toISOString()
+          : String(user.lastLogin),
+  };
+}
+
+function deserializeUserThunkPayload(payload: UserThunkSerializablePayload): User {
+  return {
+    ...payload,
+    createdAt: new Date(payload.createdAt),
+    updatedAt: new Date(payload.updatedAt),
+    lastLogin: payload.lastLogin ? new Date(payload.lastLogin) : null,
   };
 }
 
@@ -266,6 +245,7 @@ function transformApiUserToUser(apiUser: any): User {
  * @returns UserPreferences object matching frontend interface (camelCase format)
  */
 function transformApiPreferencesToPreferences(apiPrefs: any): UserPreferences {
+  const rawQuestionnaire = apiPrefs.onboarding_questionnaire ?? apiPrefs.onboardingQuestionnaire;
   return {
     theme: apiPrefs.theme || 'light',
     notifications: {
@@ -286,7 +266,111 @@ function transformApiPreferencesToPreferences(apiPrefs: any): UserPreferences {
     sortTasksBy: apiPrefs.sort_tasks_by || apiPrefs.sortTasksBy || 'dueDate',
     analyticsEnabled: (apiPrefs.analytics_enabled || apiPrefs.analyticsEnabled) ?? true,
     crashReportingEnabled: (apiPrefs.crash_reporting_enabled || apiPrefs.crashReportingEnabled) ?? true,
+    wakeTime: coerceWakeSleepHHMM(apiPrefs.wake_time || apiPrefs.wakeTime, DEFAULT_WAKE_HHMM),
+    sleepTime: coerceWakeSleepHHMM(apiPrefs.sleep_time || apiPrefs.sleepTime, DEFAULT_SLEEP_HHMM),
+    onboardingCompleted:
+      apiPrefs.onboarding_completed === true || apiPrefs.onboardingCompleted === true,
+    onboardingQuestionnaire:
+      rawQuestionnaire && typeof rawQuestionnaire === 'object'
+        ? {
+            v: 1,
+            branch: rawQuestionnaire.branch === 'habit' ? 'habit' : 'task',
+            completedAt:
+              rawQuestionnaire.completed_at ??
+              rawQuestionnaire.completedAt ??
+              new Date().toISOString(),
+            task:
+              rawQuestionnaire.task && typeof rawQuestionnaire.task === 'object'
+                ? {
+                    title: String(rawQuestionnaire.task.title ?? ''),
+                    completed: rawQuestionnaire.task.completed === true,
+                    eventTime: String(
+                      rawQuestionnaire.task.event_time ?? rawQuestionnaire.task.eventTime ?? '',
+                    ),
+                    durationMinutes: Number(
+                      rawQuestionnaire.task.duration_minutes ??
+                        rawQuestionnaire.task.durationMinutes ??
+                        0,
+                    ),
+                  }
+                : null,
+            habit:
+              rawQuestionnaire.habit && typeof rawQuestionnaire.habit === 'object'
+                ? {
+                    goalTitle: String(
+                      rawQuestionnaire.habit.goal_title ?? rawQuestionnaire.habit.goalTitle ?? '',
+                    ),
+                    frequencyId: String(
+                      rawQuestionnaire.habit.frequency_id ??
+                        rawQuestionnaire.habit.frequencyId ??
+                        'daily',
+                    ),
+                  }
+                : null,
+          }
+        : undefined,
   };
+}
+
+/**
+ * PATCH `/accounts/users/profile/update/` expects snake_case django fields nested under `preferences`.
+ * we only serialize the entries the server allows + merge server-side onto existing json.
+ */
+export function preferencesPartialToSnakePayload(prefs: Partial<UserPreferences>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (prefs.theme !== undefined) out.theme = prefs.theme;
+  if (prefs.defaultPriority !== undefined) out.default_priority = prefs.defaultPriority;
+  if (prefs.defaultColor !== undefined) out.default_color = prefs.defaultColor;
+  if (prefs.defaultListView !== undefined) out.default_list_view = prefs.defaultListView;
+  if (prefs.timezone !== undefined) out.timezone = prefs.timezone;
+  if (prefs.dateFormat !== undefined) out.date_format = prefs.dateFormat;
+  if (prefs.timeFormat !== undefined) out.time_format = prefs.timeFormat;
+  if (prefs.autoArchiveCompleted !== undefined) out.auto_archive_completed = prefs.autoArchiveCompleted;
+  if (prefs.showCompletedTasks !== undefined) out.show_completed_tasks = prefs.showCompletedTasks;
+  if (prefs.sortTasksBy !== undefined) out.sort_tasks_by = prefs.sortTasksBy;
+  if (prefs.analyticsEnabled !== undefined) out.analytics_enabled = prefs.analyticsEnabled;
+  if (prefs.crashReportingEnabled !== undefined) out.crash_reporting_enabled = prefs.crashReportingEnabled;
+  if (prefs.wakeTime !== undefined) out.wake_time = prefs.wakeTime;
+  if (prefs.sleepTime !== undefined) out.sleep_time = prefs.sleepTime;
+  if (prefs.onboardingCompleted !== undefined) out.onboarding_completed = prefs.onboardingCompleted;
+  if (prefs.onboardingQuestionnaire !== undefined) {
+    const q = prefs.onboardingQuestionnaire;
+    const qid: Record<string, unknown> = {
+      v: q.v ?? 1,
+      branch: q.branch,
+      completed_at: q.completedAt,
+    };
+    if (q.task === null) {
+      qid.task = null;
+    } else if (q.task) {
+      qid.task = {
+        title: q.task.title,
+        completed: q.task.completed,
+        event_time: q.task.eventTime,
+        duration_minutes: q.task.durationMinutes,
+      };
+    }
+    if (q.habit === null) {
+      qid.habit = null;
+    } else if (q.habit) {
+      qid.habit = {
+        goal_title: q.habit.goalTitle,
+        frequency_id: q.habit.frequencyId,
+      };
+    }
+    out.onboarding_questionnaire = qid;
+  }
+  if (prefs.notifications !== undefined) {
+    const n = prefs.notifications;
+    const nid: Record<string, unknown> = {};
+    if (n.enabled !== undefined) nid.enabled = n.enabled;
+    if (n.dueDateReminders !== undefined) nid.due_date_reminders = n.dueDateReminders;
+    if (n.routineReminders !== undefined) nid.routine_reminders = n.routineReminders;
+    if (n.pushNotifications !== undefined) nid.push_notifications = n.pushNotifications;
+    if (n.emailNotifications !== undefined) nid.email_notifications = n.emailNotifications;
+    if (Object.keys(nid).length) out.notifications = nid;
+  }
+  return out;
 }
 
 /**
@@ -350,16 +434,9 @@ export const loginUser = createAsyncThunk(
         user = transformApiUserToUser(userResponse.user || userResponse);
       }
       
-      // Calculate and store token expiry
-      // JWT tokens contain expiry info, but we'll set it to 15 minutes from now
-      // (matching backend JWT configuration - access tokens typically expire in 15 minutes)
-      const expiryTime = Date.now() + (15 * 60 * 1000); // 15 minutes in milliseconds
+      const expiryTime = resolveAccessTokenExpiryMs(accessToken);
       await storeTokenExpiry(expiryTime);
-      
-      // Return user data and tokens FIRST
-      // Redux will automatically update the state with this data via the reducer
-      // Tasks will be fetched automatically when user navigates to tasks screen
-      // or can be fetched after auth state is updated in Redux
+
       return {
         user,
         accessToken,
@@ -432,10 +509,27 @@ export const loginUser = createAsyncThunk(
 );
 
 /**
+ * django/rest may return `{ field: ["a", "b"] }` (esp. password validators); join into one readable line for UI.
+ */
+function formatDrfFieldErrors(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === 'string' ? item : JSON.stringify(item)))
+      .join(' ')
+      .trim();
+  }
+  // drf normally returns arrays; fallback if a single string or other primitive slips through
+  if (value != null && (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')) {
+    return String(value);
+  }
+  return '';
+}
+
+/**
  * Register a new user
  * This creates a new account and automatically logs the user in
  * 
- * @param userData - User registration information (email, password, firstName, lastName)
+ * @param userData - registration payload (email, password; optional firstName / lastName if collected elsewhere)
  * @returns User data and tokens if successful, error if failed
  */
 export const registerUser = createAsyncThunk(
@@ -452,8 +546,8 @@ export const registerUser = createAsyncThunk(
         email: userData.email,
         password: userData.password,
         password_confirm: userData.password, // Django requires password confirmation - use same password
-        first_name: userData.firstName,
-        last_name: userData.lastName,
+        first_name: userData.firstName?.trim() ?? '',
+        last_name: userData.lastName?.trim() ?? '',
       } as any); // Type assertion needed because RegisterRequest type definition doesn't match actual API implementation
       
       // Log the full response for debugging
@@ -487,9 +581,7 @@ export const registerUser = createAsyncThunk(
       await storeAccessToken(accessToken);
       await storeRefreshToken(refreshToken);
       
-      // Calculate and store token expiry
-      // JWT access tokens typically expire in 15 minutes (matching backend configuration)
-      const expiryTime = Date.now() + (15 * 60 * 1000); // 15 minutes in milliseconds
+      const expiryTime = resolveAccessTokenExpiryMs(accessToken);
       await storeTokenExpiry(expiryTime);
       
       // Return user data and tokens FIRST
@@ -516,33 +608,24 @@ export const registerUser = createAsyncThunk(
         console.error('Registration error response:', JSON.stringify(data, null, 2));
         
         if (status === 400) {
-          // Bad request - usually validation errors
-          // Django REST Framework returns field-specific error messages
-          // Check for non_field_errors first (cross-field validation, like password mismatch)
+          // Bad request — model + `validate_password` can return several messages per field (arrays)
           if (data.non_field_errors) {
-            // Django uses non_field_errors for validation that spans multiple fields
-            errorMessage = Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors;
+            errorMessage = formatDrfFieldErrors(data.non_field_errors) || 'Invalid registration data';
           } else if (data.email) {
-            // Email validation error (e.g., invalid format, already exists)
-            errorMessage = `Email: ${Array.isArray(data.email) ? data.email[0] : data.email}`;
+            errorMessage = `Email: ${formatDrfFieldErrors(data.email)}`;
           } else if (data.password) {
-            // Password validation error (e.g., too short, doesn't meet requirements)
-            errorMessage = `Password: ${Array.isArray(data.password) ? data.password[0] : data.password}`;
+            errorMessage = `Password: ${formatDrfFieldErrors(data.password)}`;
           } else if (data.password_confirm) {
-            // Password confirmation validation error
-            errorMessage = `Password confirmation: ${Array.isArray(data.password_confirm) ? data.password_confirm[0] : data.password_confirm}`;
+            errorMessage = `Password confirmation: ${formatDrfFieldErrors(data.password_confirm)}`;
           } else if (data.first_name) {
-            // First name validation error
-            errorMessage = `First name: ${Array.isArray(data.first_name) ? data.first_name[0] : data.first_name}`;
+            errorMessage = `First name: ${formatDrfFieldErrors(data.first_name)}`;
           } else if (data.last_name) {
-            // Last name validation error
-            errorMessage = `Last name: ${Array.isArray(data.last_name) ? data.last_name[0] : data.last_name}`;
+            errorMessage = `Last name: ${formatDrfFieldErrors(data.last_name)}`;
           } else {
-            // Other validation errors - try to get first error from any field
             const firstErrorKey = Object.keys(data)[0];
             if (firstErrorKey) {
               const firstError = data[firstErrorKey];
-              errorMessage = `${firstErrorKey}: ${Array.isArray(firstError) ? firstError[0] : firstError}`;
+              errorMessage = `${firstErrorKey}: ${formatDrfFieldErrors(firstError)}`;
             } else {
               errorMessage = data.message || data.detail || 'Invalid registration data';
             }
@@ -569,64 +652,91 @@ export const registerUser = createAsyncThunk(
   }
 );
 
-// Social authentication (Google, Apple, Facebook)
+// Social authentication — google/apple id_token verified by django, then same DailyFlo jwt session as email login
+// (access ~15m + refresh ~30d in SecureStore; cold start / 401 use refreshStoredSessionTokens — not provider-specific)
 export const socialAuth = createAsyncThunk(
   'auth/socialAuth',
   async (authData: SocialAuthInput, { rejectWithValue }) => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.socialAuth(authData);
-      // return response.data;
-      
-      // For now, create a mock user
-      const mockUser: User = {
-        id: Date.now().toString(),
-        email: authData.email,
-        authProvider: authData.authProvider,
-        authProviderId: authData.authProviderId,
-        firstName: authData.firstName || '',
-        lastName: authData.lastName || '',
-        avatarUrl: authData.avatarUrl || null,
-        isEmailVerified: true,
-        lastLogin: new Date(),
-        preferences: {
-          theme: 'light',
-          notifications: {
-            enabled: true,
-            dueDateReminders: true,
-            routineReminders: true,
-            pushNotifications: true,
-            emailNotifications: false,
-          },
-          defaultPriority: 3,
-          defaultColor: 'blue',
-          defaultListView: 'list',
-          timezone: 'UTC',
-          dateFormat: 'MM/DD/YYYY',
-          timeFormat: '12h',
-          autoArchiveCompleted: false,
-          showCompletedTasks: true,
-          sortTasksBy: 'dueDate',
-          analyticsEnabled: true,
-          crashReportingEnabled: true,
-        },
-        softDeleted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      const mockTokens = {
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-      };
-      
+      // django expects snake_case field names matching SocialAuthSerializer
+      const response = await authApiService.socialLogin({
+        provider: authData.provider,
+        id_token: authData.idToken,
+        first_name: authData.firstName ?? '',
+        last_name: authData.lastName ?? '',
+      });
+
+      const accessToken =
+        response.tokens?.access || response.access || response.data?.tokens?.access || response.data?.access;
+      const refreshToken =
+        response.tokens?.refresh ||
+        response.refresh ||
+        response.data?.tokens?.refresh ||
+        response.data?.refresh;
+
+      if (!accessToken || !refreshToken) {
+        console.error('Social auth: tokens missing from response', Object.keys(response || {}));
+        throw new Error('Tokens not received from server');
+      }
+
+      // same as loginUser — apiClient reads the bearer token from SecureStore on later calls
+      await storeAccessToken(accessToken);
+      await storeRefreshToken(refreshToken);
+
+      const user: User = transformApiUserToUser(response.user);
+      const expiryTime = resolveAccessTokenExpiryMs(accessToken);
+      await storeTokenExpiry(expiryTime);
+
+      // django sets `is_new_user` from get_or_create — existing google accounts get false (show onboarding Skip)
+      const isNewUser = response.is_new_user === true || response.isNewUser === true;
+
       return {
-        user: mockUser,
-        ...mockTokens,
+        user,
+        accessToken,
+        refreshToken,
+        expiresAt: new Date(expiryTime),
+        isNewUser,
       };
-    } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Social authentication failed');
+    } catch (error: any) {
+      let errorMessage = 'Sign in failed. Please try again.';
+
+      if (error.response) {
+        const status = error.response.status;
+        const data = error.response.data;
+
+        if (status === 400 && data) {
+          if (data.non_field_errors) {
+            errorMessage = Array.isArray(data.non_field_errors)
+              ? data.non_field_errors[0]
+              : data.non_field_errors;
+          } else if (data.id_token) {
+            errorMessage = Array.isArray(data.id_token) ? data.id_token[0] : String(data.id_token);
+          } else if (data.provider) {
+            errorMessage = Array.isArray(data.provider) ? data.provider[0] : String(data.provider);
+          } else {
+            const firstKey = Object.keys(data)[0];
+            if (firstKey) {
+              const v = data[firstKey];
+              errorMessage = `${firstKey}: ${Array.isArray(v) ? v[0] : v}`;
+            } else {
+              errorMessage = data.message || data.detail || errorMessage;
+            }
+          }
+        } else if (status === 401) {
+          errorMessage = typeof data?.error === 'string' ? data.error : 'Could not verify your account. Try again.';
+        } else if (status === 409) {
+          errorMessage =
+            typeof data?.message === 'string' ? data.message : 'An account with this email already uses another sign-in method.';
+        } else if (status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+      } else if (error.request) {
+        errorMessage = 'Network error. Please check your connection.';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -646,6 +756,138 @@ export const updateUserProfile = createAsyncThunk(
       return rejectWithValue(error instanceof Error ? error.message : 'Profile update failed');
     }
   }
+);
+
+/**
+ * PATCH wake/sleep through django `preferences` merge — thunk keeps redux user in sync with server truth.
+ */
+/** PATCH `preferences.onboarding_completed` — synced when user finishes or skips questionnaire */
+export const patchUserOnboardingCompleted = createAsyncThunk<
+  UserThunkSerializablePayload,
+  void
+>(
+  'auth/patchUserOnboardingCompleted',
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const loggedInUser = (getState() as { auth: Readonly<{ user: User | null }> }).auth.user;
+      if (!loggedInUser?.id) {
+        return rejectWithValue('Sign in required to save onboarding status.');
+      }
+
+      const response = await authApiService.patchProfileUpdate({
+        preferences: preferencesPartialToSnakePayload({ onboardingCompleted: true }),
+      });
+
+      const bodyUser = response.user ?? response;
+      return serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
+    } catch (error: any) {
+      const prefsErr = error?.response?.data?.preferences;
+      const message =
+        (Array.isArray(prefsErr) ? prefsErr[0] : undefined) ??
+        error?.response?.data?.detail ??
+        (error instanceof Error ? error.message : 'Could not save onboarding status.');
+      return rejectWithValue(typeof message === 'string' ? message : 'Could not save onboarding status.');
+    }
+  },
+);
+
+/** PATCH `preferences.notifications` after onboarding permission step — keeps django json in sync with os grant/deny */
+export const patchUserNotificationPreferences = createAsyncThunk<
+  UserThunkSerializablePayload,
+  { enabled: boolean; pushNotifications: boolean; dueDateReminders: boolean; routineReminders: boolean }
+>(
+  'auth/patchUserNotificationPreferences',
+  async (patch, { getState, rejectWithValue }) => {
+    try {
+      const loggedInUser = (getState() as { auth: Readonly<{ user: User | null }> }).auth.user;
+      if (!loggedInUser?.id) {
+        return rejectWithValue('Sign in required to save notification settings.');
+      }
+
+      const response = await authApiService.patchProfileUpdate({
+        preferences: preferencesPartialToSnakePayload({
+          notifications: {
+            enabled: patch.enabled,
+            pushNotifications: patch.pushNotifications,
+            dueDateReminders: patch.dueDateReminders,
+            routineReminders: patch.routineReminders,
+          },
+        }),
+      });
+
+      const bodyUser = response.user ?? response;
+      return serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
+    } catch (error: any) {
+      const prefsErr = error?.response?.data?.preferences;
+      const message =
+        (Array.isArray(prefsErr) ? prefsErr[0] : undefined) ??
+        error?.response?.data?.detail ??
+        (error instanceof Error ? error.message : 'Could not save notification settings.');
+      return rejectWithValue(typeof message === 'string' ? message : 'Could not save notification settings.');
+    }
+  },
+);
+
+export const patchUserSchedulePreferences = createAsyncThunk<
+  UserThunkSerializablePayload,
+  { wakeTime: string; sleepTime: string }
+>(
+  'auth/patchUserSchedulePreferences',
+  async (patch: { wakeTime: string; sleepTime: string }, { getState, rejectWithValue }) => {
+    try {
+      const loggedInUser = (getState() as { auth: Readonly<{ user: User | null }> }).auth.user;
+      if (!loggedInUser?.id) {
+        return rejectWithValue('Sign in required to save your schedule.');
+      }
+
+      const response = await authApiService.patchProfileUpdate({
+        preferences: preferencesPartialToSnakePayload({
+          wakeTime: patch.wakeTime,
+          sleepTime: patch.sleepTime,
+        }),
+      });
+
+      const bodyUser = response.user ?? response;
+      return serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
+    } catch (error: any) {
+      const prefsErr = error?.response?.data?.preferences;
+      const message =
+        (Array.isArray(prefsErr) ? prefsErr[0] : undefined) ??
+        error?.response?.data?.detail ??
+        (error instanceof Error ? error.message : 'Could not save schedule.');
+      return rejectWithValue(typeof message === 'string' ? message : 'Could not save schedule.');
+    }
+  },
+);
+
+/** PATCH habit/task branch answers into django `preferences.onboarding_questionnaire` on questionnaire finish */
+export const patchUserOnboardingQuestionnaire = createAsyncThunk<
+  UserThunkSerializablePayload,
+  NonNullable<UserPreferences['onboardingQuestionnaire']>
+>(
+  'auth/patchUserOnboardingQuestionnaire',
+  async (questionnaire, { getState, rejectWithValue }) => {
+    try {
+      const loggedInUser = (getState() as { auth: Readonly<{ user: User | null }> }).auth.user;
+      if (!loggedInUser?.id) {
+        return rejectWithValue('Sign in required to save onboarding answers.');
+      }
+
+      const response = await authApiService.patchProfileUpdate({
+        preferences: preferencesPartialToSnakePayload({ onboardingQuestionnaire: questionnaire }),
+      });
+
+      const bodyUser = response.user ?? response;
+      return serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
+    } catch (error: any) {
+      const prefsErr = error?.response?.data?.preferences;
+      const message =
+        (Array.isArray(prefsErr) ? prefsErr[0] : undefined) ??
+        error?.response?.data?.detail ??
+        (error instanceof Error ? error.message : 'Could not save onboarding answers.');
+      return rejectWithValue(typeof message === 'string' ? message : 'Could not save onboarding answers.');
+    }
+  },
 );
 
 // Refresh access token
@@ -690,17 +932,19 @@ export const logoutUser = createAsyncThunk(
       const { clearTasks } = await import('../tasks/tasksSlice');
       dispatch(clearTasks());
       
-      // Reset onboarding status when user logs out
-      // This ensures that after logout, the user will see onboarding screens again
-      // This is important because a logged-out user should be treated as a new user
+      // clear device-wide onboarding flag on logout so cold start shows auth modal again.
+      // per-user keys stay — returning accounts still get Skip after they sign back in.
       try {
-        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_STORAGE_KEY);
       } catch (onboardingError) {
         // If resetting onboarding fails, log it but don't fail the logout
         // The logout should still succeed even if onboarding reset fails
         console.error('Error resetting onboarding during logout:', onboardingError);
       }
-      
+
+      // only dispatched from browse settings — show auth modal from root routing queue (not from a screen hook lifecycle — see util comment)
+      queueNavigateToTodayThenAuthLanding();
+
       // Return success - the reducer handles clearing the state
       return true;
     } catch (error) {
@@ -719,11 +963,13 @@ export const logoutUser = createAsyncThunk(
       // Try to reset onboarding even if other logout steps failed
       // This ensures onboarding is reset regardless of other errors
       try {
-        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+        await AsyncStorage.removeItem(ONBOARDING_COMPLETE_STORAGE_KEY);
       } catch (onboardingError) {
         console.error('Error resetting onboarding during logout:', onboardingError);
       }
-      
+
+      queueNavigateToTodayThenAuthLanding();
+
       console.error('Error during logout (tokens may not have been cleared):', error);
       return true;
     }
@@ -760,6 +1006,7 @@ const authSlice = createSlice({
       state.tokenExpiry = null;
       state.authMethod = null;
       state.lastLoginTime = null;
+      state.onboardingIsNewAccount = null;
       
       // Note: Actual token storage clearing should be done by TokenManager/SecureStorage
       // when implementing full auth persistence. For now, we only clear Redux state.
@@ -805,6 +1052,10 @@ const authSlice = createSlice({
           state.tokenExpiry = action.payload.expiresAt.getTime();
           state.authMethod = action.payload.user.authProvider;
           state.lastLoginTime = Date.now();
+          state.onboardingIsNewAccount = inferOnboardingIsNewAccount(
+            action.payload.user,
+            null,
+          );
         } else {
           // No valid tokens, user is not authenticated
           state.isAuthenticated = false;
@@ -813,6 +1064,7 @@ const authSlice = createSlice({
           state.refreshToken = null;
           state.tokenExpiry = null;
           state.authMethod = null;
+          state.onboardingIsNewAccount = null;
         }
       })
       .addCase(checkAuthStatus.rejected, (state, action) => {
@@ -825,6 +1077,7 @@ const authSlice = createSlice({
         state.refreshToken = null;
         state.tokenExpiry = null;
         state.authMethod = null;
+        state.onboardingIsNewAccount = null;
         // Note: Tokens are cleared by the thunk, no need to clear here
       })
       
@@ -844,6 +1097,7 @@ const authSlice = createSlice({
         state.authMethod = 'email';
         state.lastLoginTime = Date.now();
         state.loginError = null;
+        state.onboardingIsNewAccount = false;
         
         // Note: Tokens are stored in SecureStore by the thunk before this reducer runs
         // No need to store tokens here - they're already in secure storage
@@ -873,6 +1127,7 @@ const authSlice = createSlice({
         state.authMethod = action.payload.user.authProvider;
         state.lastLoginTime = Date.now();
         state.registerError = null;
+        state.onboardingIsNewAccount = true;
         
         // Note: Tokens are stored in SecureStore by the thunk before this reducer runs
         // No need to store tokens here - they're already in secure storage
@@ -901,14 +1156,8 @@ const authSlice = createSlice({
         state.tokenExpiry = action.payload.expiresAt.getTime();
         state.authMethod = action.payload.user.authProvider;
         state.lastLoginTime = Date.now();
-        
-        // Store tokens if remember me is enabled
-        if (state.rememberMe) {
-          localStorage.setItem('accessToken', action.payload.accessToken);
-          localStorage.setItem('refreshToken', action.payload.refreshToken);
-          localStorage.setItem('user', JSON.stringify(action.payload.user));
-          localStorage.setItem('tokenExpiry', action.payload.expiresAt.getTime().toString());
-        }
+        state.onboardingIsNewAccount = action.payload.isNewUser;
+        // tokens already persisted in the thunk via SecureStore (same pattern as loginUser)
       })
       .addCase(socialAuth.rejected, (state, action) => {
         state.isLoggingIn = false;
@@ -940,6 +1189,52 @@ const authSlice = createSlice({
       .addCase(updateUserProfile.rejected, (state, action) => {
         state.isUpdatingProfile = false;
         state.profileError = action.payload as string;
+      })
+
+      .addCase(patchUserSchedulePreferences.pending, (state) => {
+        state.isUpdatingProfile = true;
+        state.profileError = null;
+      })
+      .addCase(patchUserSchedulePreferences.fulfilled, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = null;
+        state.user = deserializeUserThunkPayload(action.payload);
+      })
+      .addCase(patchUserSchedulePreferences.rejected, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = (action.payload as string) || 'Schedule update failed';
+      })
+
+      .addCase(patchUserOnboardingQuestionnaire.pending, (state) => {
+        state.isUpdatingProfile = true;
+        state.profileError = null;
+      })
+      .addCase(patchUserOnboardingQuestionnaire.fulfilled, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = null;
+        state.user = deserializeUserThunkPayload(action.payload);
+      })
+      .addCase(patchUserOnboardingQuestionnaire.rejected, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = (action.payload as string) || 'Onboarding answers update failed';
+      })
+
+      .addCase(patchUserOnboardingCompleted.fulfilled, (state, action) => {
+        state.user = deserializeUserThunkPayload(action.payload);
+      })
+
+      .addCase(patchUserNotificationPreferences.pending, (state) => {
+        state.isUpdatingProfile = true;
+        state.profileError = null;
+      })
+      .addCase(patchUserNotificationPreferences.fulfilled, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = null;
+        state.user = deserializeUserThunkPayload(action.payload);
+      })
+      .addCase(patchUserNotificationPreferences.rejected, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = (action.payload as string) || 'Notification settings update failed';
       })
       
       // Handle refreshAccessToken actions

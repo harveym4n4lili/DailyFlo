@@ -29,12 +29,15 @@ export interface UseGroupAnimationsReturn {
 
 /**
  * Custom hook for managing group collapse/expand animations
- * 
+ *
+ * @param initialCollapsedTitles - optional group titles that start collapsed (planner passes all-day bucket)
  * @returns Object containing collapsed groups state and animation functions
  */
-export function useGroupAnimations(): UseGroupAnimationsReturn {
-  // state management for collapsed groups
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+export function useGroupAnimations(initialCollapsedTitles?: readonly string[]): UseGroupAnimationsReturn {
+  // state management for collapsed groups — planner can seed collapsed headers on mount/remount via initialCollapsedTitles
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() =>
+    initialCollapsedTitles?.length ? new Set(initialCollapsedTitles) : new Set(),
+  );
 
   // animated values storage - keeps track of animated values for each group
   const animatedValues = useRef<

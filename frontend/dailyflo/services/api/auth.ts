@@ -74,16 +74,21 @@ class AuthApiService {
   }
 
   /**
-   * Social authentication (Google, Apple, Facebook)
-   * This is like using a third-party ID (like a driver's license) to prove who you are
-   * 
-   * @param data - Social authentication data (provider, tokens, etc.)
-   * @returns Promise with user data and authentication tokens
+   * Social authentication (Google, Apple)
+   * Django's SocialAuthSerializer expects snake_case on the wire: provider, id_token, optional first_name / last_name.
+   *
+   * @param body - Must match the serializer (use snake_case here; Swift/TS callers map from camelCase before calling).
+   * @returns Same envelope as register: message, tokens { access, refresh }, user
    */
-  async socialLogin(data: any): Promise<any> {
+  async socialLogin(body: {
+    provider: 'google' | 'apple';
+    id_token: string;
+    first_name?: string;
+    last_name?: string;
+  }): Promise<any> {
     try {
       // Send a POST request to the /accounts/auth/social/ endpoint
-      const response = await apiClient.post('/accounts/auth/social/', data);
+      const response = await apiClient.post('/accounts/auth/social/', body);
       
       return response.data;
     } catch (error) {
@@ -132,9 +137,24 @@ class AuthApiService {
   }
 
   /**
+   * Partially update the current user's profile (`UserProfileUpdateView`).
+   * django merges shallow keys under `preferences` — send only deltas (eg wake_time / sleep_time).
+   */
+  async patchProfileUpdate(body: Record<string, unknown>): Promise<any> {
+    try {
+      const response = await apiClient.patch('/accounts/users/profile/update/', body);
+      return response.data;
+    } catch (error) {
+      console.error('Profile update (patch) failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Update user profile
    * This allows users to change their personal information
-   * 
+   *
+   * @deprecated for self edits — Django exposes `PATCH /accounts/users/profile/update/` (`patchProfileUpdate`) which merges nested `preferences`; this legacy URL targets admin retrieval routes and may not work for normal users.
    * @param userId - The ID of the user to update
    * @param updates - The new information to save
    * @returns Promise with updated user data
@@ -144,7 +164,7 @@ class AuthApiService {
       // Send a PATCH request to update the user
       // PATCH is used for partial updates (only changing some fields)
       const response = await apiClient.patch(`/accounts/users/${userId}/`, updates);
-      
+
       return response.data;
     } catch (error) {
       console.error('Profile update failed:', error);
