@@ -12,6 +12,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { TaskQuickAddOverlay } from '@/components/features/tasks/quickAdd';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
+import { DEFAULT_NEW_TASK_ALERT_IDS } from '@/services/notifications/taskReminderConstants';
 
 export default function TaskQuickAddScreen() {
   const router = useGuardedRouter();
@@ -29,7 +30,7 @@ export default function TaskQuickAddScreen() {
       dueDate: params.dueDate,
       time: undefined,
       duration: undefined,
-      alerts: [],
+      alerts: [...DEFAULT_NEW_TASK_ALERT_IDS],
       pickedListId: null,
       routineType: 'once',
     });

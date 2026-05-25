@@ -10,7 +10,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 // TYPES FOLDER IMPORTS - TypeScript type definitions
 // The types folder contains all TypeScript interfaces and type definitions
-import { Task, CreateTaskInput, UpdateTaskInput, TaskFilters, TaskSortOptions } from '../../../types';
+import { Task, CreateTaskInput, UpdateTaskInput, TaskFilters, TaskSortOptions, User } from '../../../types';
 // Task: Main interface for task objects (from types/common/Task.ts)
 // CreateTaskInput: Interface for creating new tasks (from types/common/Task.ts)
 // UpdateTaskInput: Interface for updating existing tasks (from types/common/Task.ts)
@@ -26,8 +26,32 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // tasksApiService: service that handles all task-related API calls to Django backend
 // this service makes HTTP requests and returns formatted responses
 import tasksApiService from '../../../services/api/tasks';
+import { syncTaskReminders, cancelTaskReminders, syncAllTaskReminders } from '../../../services/notifications/taskReminderScheduler';
 import { normalizeTimeToHHMM } from '../../../utils/taskFormatters';
 import { isExpandedRecurrenceId, getBaseTaskId } from '../../../utils/recurrenceUtils';
+
+/** read signed-in user notification prefs for local reminder scheduling */
+function getNotificationPrefsFromAuthState(getState: () => unknown) {
+  return (getState() as { auth: Readonly<{ user: User | null }> }).auth.user?.preferences?.notifications;
+}
+
+/** fire-and-forget — task api success must not fail if expo schedule fails */
+async function scheduleRemindersAfterTaskChange(task: Task, getState: () => unknown): Promise<void> {
+  try {
+    await syncTaskReminders(task, getNotificationPrefsFromAuthState(getState));
+  } catch (err) {
+    console.warn('[notifications] task reminder sync skipped', err);
+  }
+}
+
+/** rebuild all local reminders after tasks load — covers app restart + tasks created before this feature */
+async function scheduleRemindersAfterTasksFetch(tasks: Task[], getState: () => unknown): Promise<void> {
+  try {
+    await syncAllTaskReminders(tasks, getNotificationPrefsFromAuthState(getState));
+  } catch (err) {
+    console.warn('[notifications] bulk reminder sync skipped', err);
+  }
+}
 
 /**
  * Define the shape of the tasks state
@@ -300,7 +324,7 @@ export function transformApiTaskToTask(apiTask: any): Task {
 // Fetch all tasks from the API
 export const fetchTasks = createAsyncThunk(
   'tasks/fetchTasks',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
       console.log('🔄 fetchTasks thunk started - calling API');
       
@@ -359,6 +383,9 @@ export const fetchTasks = createAsyncThunk(
       const transformedTasks = tasksArray.map((apiTask: any) => transformApiTaskToTask(apiTask));
       
       console.log('✅ fetchTasks completed:', transformedTasks.length, 'tasks fetched from API');
+
+      void scheduleRemindersAfterTasksFetch(transformedTasks, getState);
+
       return transformedTasks;
     } catch (error) {
       // Handle API errors - log the error and return a user-friendly message
@@ -700,7 +727,7 @@ function generateTaskId(): string {
 // This makes an API call to Django backend to create the task in the database
 export const createTask = createAsyncThunk(
   'tasks/createTask',
-  async (taskData: CreateTaskInput, { rejectWithValue }) => {
+  async (taskData: CreateTaskInput, { rejectWithValue, getState }) => {
     try {
       console.log('🔄 createTask thunk started - calling API');
       
@@ -760,6 +787,8 @@ export const createTask = createAsyncThunk(
       const transformedTask = transformApiTaskToTask(apiTask);
       
       console.log('✅ createTask completed:', transformedTask.id, 'task created via API');
+
+      await scheduleRemindersAfterTaskChange(transformedTask, getState);
       
       // Return the transformed task so Redux can add it to state
       return transformedTask;
@@ -782,7 +811,7 @@ export const createTask = createAsyncThunk(
 // This makes an API call to Django backend to update the task in the database
 export const updateTask = createAsyncThunk(
   'tasks/updateTask',
-  async ({ id, updates }: { id: string; updates: UpdateTaskInput }, { rejectWithValue }) => {
+  async ({ id, updates }: { id: string; updates: UpdateTaskInput }, { rejectWithValue, getState }) => {
     try {
       console.log('🔄 updateTask thunk started - calling API');
       
@@ -835,6 +864,8 @@ export const updateTask = createAsyncThunk(
       const transformedTask = transformApiTaskToTask(apiTask);
       
       console.log('✅ updateTask completed:', transformedTask.id, 'task updated via API');
+
+      await scheduleRemindersAfterTaskChange(transformedTask, getState);
       
       // Return the transformed task so Redux can update it in state
       return transformedTask;
@@ -869,6 +900,12 @@ export const deleteTask = createAsyncThunk(
       // It won't retry on 4xx errors (client errors) since those won't succeed on retry
       await retryWithExponentialBackoff(() => tasksApiService.deleteTask(taskId));
       
+      try {
+        await cancelTaskReminders(taskId);
+      } catch (cancelErr) {
+        console.warn('[notifications] cancel on delete skipped', cancelErr);
+      }
+
       console.log('✅ deleteTask completed:', taskId, 'task deleted via API');
       
       // Return the task ID so Redux can remove it from state
@@ -890,7 +927,7 @@ export const deleteTask = createAsyncThunk(
 // Duplicate a task - creates a copy via API
 export const duplicateTask = createAsyncThunk(
   'tasks/duplicateTask',
-  async (taskId: string, { rejectWithValue }) => {
+  async (taskId: string, { rejectWithValue, getState }) => {
     try {
       const response = await retryWithExponentialBackoff(() => tasksApiService.duplicateTask(taskId));
       const responseAny = response as any;
@@ -904,7 +941,9 @@ export const duplicateTask = createAsyncThunk(
       } else {
         throw new Error(`Unexpected response format from duplicate API`);
       }
-      return transformApiTaskToTask(apiTask);
+      const duplicated = transformApiTaskToTask(apiTask);
+      await scheduleRemindersAfterTaskChange(duplicated, getState);
+      return duplicated;
     } catch (error) {
       console.error('❌ duplicateTask failed:', error);
       return rejectWithValue(getErrorMessage(error));

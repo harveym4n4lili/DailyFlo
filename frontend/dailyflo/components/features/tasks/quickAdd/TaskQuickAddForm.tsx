@@ -56,6 +56,8 @@ import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation'
 import { Paddings } from '@/constants/Paddings';
 import { getTextStyle, getTypographyStyle } from '@/constants/Typography';
 import type { CreateTaskInput, RoutineType, Subtask as TaskSubtask } from '@/types';
+import { mapAlertIdsToTaskReminders } from '@/utils/taskAlertReminders';
+import { DEFAULT_NEW_TASK_ALERT_IDS } from '@/services/notifications/taskReminderConstants';
 
 // same labels as FormDetailSection repeating menu — keeps quick-add repeat options aligned with task create
 const ROUTINE_TYPE_LABELS: Record<RoutineType, string> = {
@@ -380,7 +382,7 @@ export function TaskQuickAddForm({
       isCompleted: titleChecked,
       metadata: {
         subtasks: taskSubtasks,
-        reminders: [],
+        reminders: mapAlertIdsToTaskReminders(formValues.alerts),
         notes: formValues.description,
         tags: [],
       },
@@ -394,7 +396,7 @@ export function TaskQuickAddForm({
           dueDate: undefined,
           time: undefined,
           duration: undefined,
-          alerts: [],
+          alerts: [...DEFAULT_NEW_TASK_ALERT_IDS],
           pickedListId: null,
           routineType: 'once',
         });
