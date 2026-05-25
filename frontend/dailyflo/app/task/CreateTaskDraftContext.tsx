@@ -11,6 +11,7 @@ import React, { createContext, useContext, useState, useCallback, useRef, type R
 
 import type { RoutineType } from '@/types';
 import { DEFAULT_NEW_TASK_ALERT_IDS } from '@/services/notifications/taskReminderConstants';
+import { withoutEndAlertUnlessDuration } from '@/components/features/tasks/TaskScreen/modals/alertOptions';
 
 export interface CreateTaskDraftSlice {
   dueDate: string | undefined;
@@ -65,7 +66,12 @@ export function CreateTaskDraftProvider({ children }: { children: ReactNode }) {
     setDraftState((prev) => ({ ...prev, time }));
   }, []);
   const setDuration = useCallback((duration: number | undefined) => {
-    setDraftState((prev) => ({ ...prev, duration }));
+    setDraftState((prev) => ({
+      ...prev,
+      duration,
+      // end-of-task alert only valid when a length is set — drop it if user clears duration
+      alerts: withoutEndAlertUnlessDuration(prev.alerts, duration),
+    }));
   }, []);
   const setAlerts = useCallback((alertIds: string[]) => {
     setDraftState((prev) => ({ ...prev, alerts: alertIds }));

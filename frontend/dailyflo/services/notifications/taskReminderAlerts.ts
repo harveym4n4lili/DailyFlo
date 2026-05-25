@@ -2,24 +2,37 @@
  * resolves which alert options to schedule and when they fire — ties picker ids to os notifications.
  */
 
-import { ALERT_OPTIONS } from '@/components/features/tasks/TaskScreen/modals/alertOptions';
+import {
+  getMinutesBeforeStart,
+  isEndAlertId,
+  isKnownAlertId,
+  withoutEndAlertUnlessDuration,
+} from '@/components/features/tasks/TaskScreen/modals/alertOptions';
 import type { Task } from '@/types';
 
 import { MANDATORY_TASK_REMINDER_ALERT_ID } from './taskReminderConstants';
 import { formatTaskReminderBody } from './taskReminderCopy';
 import { getReminderFireDate } from './taskReminderDateMath';
 
-/** saved reminders on task — empty means mandatory 15-min default per notification plan */
+/** saved reminders on task — missing metadata defaults to mandatory 15-min; explicit empty array = no alerts */
 export function getEffectiveAlertIdsForTask(task: Task): string[] {
-  const fromMetadata = (task.metadata?.reminders ?? [])
+  const reminders = task.metadata?.reminders;
+
+  if (reminders === undefined || reminders === null) {
+    return [MANDATORY_TASK_REMINDER_ALERT_ID];
+  }
+
+  if (reminders.length === 0) {
+    return [];
+  }
+
+  const fromMetadata = reminders
     .filter((r) => r?.isEnabled !== false && typeof r.id === 'string')
     .map((r) => r.id);
 
-  const known = fromMetadata.filter((id) => ALERT_OPTIONS.some((o) => o.id === id));
-  if (known.length === 0) {
-    return [MANDATORY_TASK_REMINDER_ALERT_ID];
-  }
-  return known;
+  const known = fromMetadata.filter((id) => isKnownAlertId(id));
+  const filtered = withoutEndAlertUnlessDuration(known, task.duration);
+  return filtered;
 }
 
 /** when each selected alert should fire — null when invalid (e.g. end alert with no duration) */
@@ -28,19 +41,19 @@ export function getFireDateForAlert(
   taskStart: Date,
   durationMinutes: number,
 ): Date | null {
-  const option = ALERT_OPTIONS.find((o) => o.id === alertId);
-  if (!option) return null;
-
-  if (option.value === -1) {
+  if (isEndAlertId(alertId)) {
     if (!durationMinutes || durationMinutes <= 0) return null;
     return new Date(taskStart.getTime() + durationMinutes * 60_000);
   }
 
-  if (option.value <= 0) {
+  const minutesBefore = getMinutesBeforeStart(alertId);
+  if (minutesBefore === null) return null;
+
+  if (minutesBefore <= 0) {
     return taskStart;
   }
 
-  return getReminderFireDate(taskStart, option.value);
+  return getReminderFireDate(taskStart, minutesBefore);
 }
 
 /** banner body copy — start/before-start use mins-until-start; end uses ending copy */
@@ -52,7 +65,7 @@ export function formatNotificationBodyForAlert(
 ): string {
   const title = taskTitle.trim() || 'Your task';
 
-  if (alertId === 'end') {
+  if (isEndAlertId(alertId)) {
     return `${title} ending now`;
   }
 

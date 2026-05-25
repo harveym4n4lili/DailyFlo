@@ -300,7 +300,7 @@ export default function RootLayout() {
                 headerShown: false,
                 presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
                 sheetGrabberVisible: false,
-                sheetAllowedDetents: [0.8],
+                sheetAllowedDetents: [0.8, 1],
                 sheetInitialDetentIndex: 0,
                 contentStyle: {
                   backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
@@ -322,6 +322,19 @@ export default function RootLayout() {
             />
             <Stack.Screen
               name="alert-select"
+              options={{
+                headerShown: false,
+                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+                sheetGrabberVisible: false,
+                sheetAllowedDetents: [0.7],
+                sheetInitialDetentIndex: 0,
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
+                },
+              }}
+            />
+            <Stack.Screen
+              name="alert-offset-select"
               options={{
                 headerShown: false,
                 presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',

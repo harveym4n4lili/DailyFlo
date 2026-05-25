@@ -127,7 +127,7 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
               iconComponent={
                 <SFSymbolIcon
                   name="calendar"
-                  size={20}
+                  size={18}
                   color={themeColors.text.primary()}
                   fallback={<CalendarIcon size={18} color={themeColors.text.primary()} isSolid />}
                 />
@@ -142,7 +142,7 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
               iconComponent={
                 <SFSymbolIcon
                   name="clock.fill"
-                  size={20}
+                  size={18}
                   color={themeColors.text.primary()}
                   fallback={<ClockIcon size={18} color={themeColors.text.primary()} isSolid />}
                 />
@@ -157,7 +157,7 @@ export const FormDetailSection: React.FC<FormDetailSectionProps> = ({
               iconComponent={
                 <SFSymbolIcon
                   name="tray.fill"
-                  size={20}
+                  size={18}
                   color={themeColors.text.primary()}
                   fallback={
                     <Ionicons name="file-tray" size={18} color={themeColors.text.primary()} />

@@ -49,7 +49,7 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
 
   // determine icon color (custom or default)
   const iconColor = customStyles?.icon?.color || themeColors.text.primary();
-  const iconSize = customStyles?.icon?.size || 20;
+  const iconSize = customStyles?.icon?.size || 18;
   const showValue =
     value != null && (typeof value !== 'string' || value.trim().length > 0);
   const showLeftIcon = iconComponent != null || icon != null;
