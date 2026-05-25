@@ -71,3 +71,4 @@ Thumbs.db
 .env.local
 .env.production
 .env.*.local
+frontend/dailyflo/GoogleService-Info.plist
