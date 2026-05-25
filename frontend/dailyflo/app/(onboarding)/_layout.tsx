@@ -1,113 +1,71 @@
 /**
- * Onboarding Layout
- * 
- * This layout wraps all onboarding screens and handles navigation between them.
- * It uses Expo Router's Stack navigator for smooth transitions.
- * 
- * This is the navigation container for the onboarding flow, which includes:
- * - Welcome screen (first screen users see)
- * - Reminders screen (permission requests)
- * - Sign-up screen (authentication options)
- * - Completion screen (final step)
- * 
- * Global components (navigation and actions) are rendered here so they stay fixed
- * while screens slide underneath them.
+ * onboarding stack — nested `auth` group (`auth/_layout`: landing `index`, email login/register sheets),
+ * questionnaire `slides/index`, then optional `notifications` permission step before tabs.
+ * `initialRouteName` defaults to brand landing (`auth`).
  */
 
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
-import { useThemeColors } from '@/hooks/useColorPalette';
-import { useUI } from '@/store/hooks';
-import { OnboardingNavigation } from '@/components/features/onboarding';
-import { OnboardingActions } from '@/components/features/onboarding';
-import { EmailAuthRegisterModal } from '@/components/features/authentication/modals/EmailAuthModal';
-import { SignInModal } from '@/components/features/authentication/modals/SignInModal';
-import { ModalBackdrop } from '@/components/layout/ModalLayout';
 
-export default function OnboardingLayout() {
-  const themeColors = useThemeColors();
-  const styles = createStyles(themeColors);
-  
-  // get UI state from Redux to check if emailAuthSignIn modal should show backdrop
-  // modals.emailAuthSignIn controls whether the sign in modal is visible
-  // closeModal is a Redux action that closes the modal
-  const { 
-    modals: { emailAuthSignIn },
-    closeModal,
-  } = useUI();
-  
-  /**
-   * Handle sign in modal close
-   * Closes the modal by updating Redux state
-   */
-  const handleSignInModalClose = () => {
-    // close the modal by updating Redux state
-    // this triggers a re-render and hides the modal
-    closeModal('emailAuthSignIn');
-  };
-  
+import { OnboardingSlidesInitialHeader } from '@/components/features/onboarding';
+
+const IOS_ONBOARDING_SCROLL_EDGE_HIDDEN = {
+  top: 'hidden' as const,
+  bottom: 'hidden' as const,
+  left: 'hidden' as const,
+  right: 'hidden' as const,
+};
+
+function TransparentHeaderBackground() {
   return (
-    <View style={styles.container}>
-      {/* Stack Navigator - screens slide underneath global components */}
-      <Stack
-        screenOptions={{
-          headerShown: false, // Hide header for onboarding screens
-          animation: 'default', // native iOS slide-from-right (push) animation
-          gestureEnabled: true, // Allow swipe back gesture
-          contentStyle: { backgroundColor: themeColors.background.primary() },
-        }}
-      >
-        <Stack.Screen 
-          name="welcome" 
-          options={{
-            gestureEnabled: false, // Can't go back from welcome screen
-          }}
-        />
-        <Stack.Screen name="reminders" />
-        <Stack.Screen name="signup" />
-        <Stack.Screen 
-          name="completion" 
-          options={{
-            gestureEnabled: false, // Can't go back from completion screen
-          }}
-        />
-      </Stack>
-      
-      {/* Global Navigation Component */}
-      {/* stays fixed at top while screens slide */}
-      <OnboardingNavigation />
-      
-      {/* Global Actions Component */}
-      {/* stays fixed at bottom while screens slide, changes based on current screen */}
-      <OnboardingActions />
-      
-      {/* Email Auth Register Modal */}
-      {/* full-screen modal that appears when user clicks "Sign up with Email" */}
-      <EmailAuthRegisterModal variant="register" />
-      
-      {/* separate backdrop that fades in independently behind the sign in modal */}
-      {/* rendered at screen level, behind the modal in z-index */}
-      {/* same backdrop component used with task view modal */}
-      <ModalBackdrop
-        isVisible={emailAuthSignIn}
-        onPress={handleSignInModalClose}
-        zIndex={10000}
-      />
-      
-      {/* Sign In Modal */}
-      {/* draggable modal that appears when user clicks "Sign in" on welcome screen */}
-      {/* backdrop is rendered separately above so it fades in independently */}
-      <SignInModal />
-    </View>
+    <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: 'transparent' }]} />
   );
 }
 
-const createStyles = (
-  themeColors: ReturnType<typeof useThemeColors>
-) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: themeColors.background.primary(),
-  },
-});
+const SLIDES_HEADER_OPTIONS = {
+  title: '',
+  headerBackVisible: true,
+  headerShown: true,
+  headerTransparent: true,
+  headerShadowVisible: false,
+  headerStyle: { backgroundColor: 'transparent' },
+  headerLeft: () => null,
+  headerRight: () => null,
+  headerTitle: () => <OnboardingSlidesInitialHeader />,
+} as const;
+
+export default function OnboardingLayout() {
+  const iosHeaderNoChromeFade =
+    Platform.OS === 'ios'
+      ? ({
+          headerBlurEffect: 'none' as const,
+          headerLargeTitle: false,
+          headerLargeTitleShadowVisible: false,
+          scrollEdgeEffects: IOS_ONBOARDING_SCROLL_EDGE_HIDDEN,
+        } as const)
+      : {};
+
+  return (
+    <Stack
+      initialRouteName="auth"
+      screenOptions={{
+        headerShown: true,
+        headerTransparent: true,
+        headerShadowVisible: false,
+        headerStyle: { backgroundColor: 'transparent' },
+        headerBackground: () => <TransparentHeaderBackground />,
+        headerTitleAlign: 'center',
+        animation: 'default',
+        gestureEnabled: false,
+        contentStyle: { backgroundColor: 'transparent' },
+        headerBackVisible: false,
+        ...iosHeaderNoChromeFade,
+      }}
+    >
+      <Stack.Screen name="auth" options={{ headerShown: false }} />
+      <Stack.Screen name="slides/index" options={SLIDES_HEADER_OPTIONS} />
+      <Stack.Screen name="notifications" options={{ headerShown: false, gestureEnabled: false }} />
+    </Stack>
+  );
+}

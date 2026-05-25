@@ -427,16 +427,19 @@ export function TaskQuickAddForm({
 
   const primaryFabRadius = QUICK_ADD_PRIMARY_FAB_SIZE / 2;
   const primaryFabGlassInnerRadius = Math.max(0, primaryFabRadius - 3);
+  // marple matches main tab FAB / onboarding — not theme `primaryButton` (plant ramp)
+  const quickAddMarpleFill = colors.getMarpleBrandColor(500);
   const primaryGlassTint =
     Platform.OS === 'ios'
       ? DynamicColorIOS({
-          light: themeColors.primaryButton.fill(),
-          dark: themeColors.primaryButton.fill(),
+          light: quickAddMarpleFill,
+          dark: quickAddMarpleFill,
         })
-      : themeColors.primaryButton.fill();
-  // fab circle uses fill; icons use icon — caret/selection follow fill so ios/android don’t stick to system blue
-  const primaryButtonFill = themeColors.primaryButton.fill();
-  const primaryIconColor = themeColors.primaryButton.icon();
+      : quickAddMarpleFill;
+  // caret + selection tint follow the same marple accent so the title field doesn’t pick system blue
+  const titleCaretAndSelectionColor = quickAddMarpleFill;
+  // glyph on marple fill — same “canvas” ink as `FloatingActionButton` (primary background), not plant on-fill token
+  const primaryFabIconColor = themeColors.background.primary();
 
   return (
     <View style={styles.formTapRoot} pointerEvents="box-none">
@@ -464,7 +467,7 @@ export function TaskQuickAddForm({
           <View
             style={
               Platform.OS === 'ios'
-                ? ({ alignSelf: 'stretch', tintColor: primaryButtonFill } as object)
+                ? ({ alignSelf: 'stretch', tintColor: titleCaretAndSelectionColor } as object)
                 : { alignSelf: 'stretch' }
             }
           >
@@ -478,19 +481,19 @@ export function TaskQuickAddForm({
             }}
             placeholder="e.g., Answering emails"
             placeholderTextColor={themeColors.text.tertiary()}
-            selectionColor={primaryButtonFill}
-            cursorColor={primaryButtonFill}
+            selectionColor={titleCaretAndSelectionColor}
+            cursorColor={titleCaretAndSelectionColor}
             underlineColorAndroid="transparent"
             style={[
               getTypographyStyle('heading-3', typographyPlatform),
               {
-                color: primaryIconColor,
+                color: themeColors.text.primary(),
                 paddingBottom: Paddings.none,
                 paddingHorizontal: Paddings.none,
                 maxHeight: 68,
                 textAlignVertical: 'top',
                 // @ts-expect-error caretColor works on RN TextInput; @types/react-native TextStyle is incomplete
-                caretColor: primaryButtonFill,
+                caretColor: titleCaretAndSelectionColor,
               },
             ]}
             multiline
@@ -750,9 +753,9 @@ export function TaskQuickAddForm({
               accessibilityState={{ disabled: isCreating }}
             >
               {primaryActionIsCreate ? (
-                <SaveIcon size={24} color={primaryIconColor} />
+                <SaveIcon size={24} color={primaryFabIconColor} />
               ) : (
-                <SparklesIcon size={24} color={primaryIconColor} />
+                <SparklesIcon size={24} color={primaryFabIconColor} />
               )}
             </Pressable>
           </GlassView>
@@ -764,7 +767,7 @@ export function TaskQuickAddForm({
                 width: QUICK_ADD_PRIMARY_FAB_SIZE,
                 height: QUICK_ADD_PRIMARY_FAB_SIZE,
                 borderRadius: primaryFabRadius,
-                backgroundColor: themeColors.background.elevated(),
+                backgroundColor: quickAddMarpleFill,
                 borderColor: themeColors.border.primary(),
               },
             ]}
@@ -776,9 +779,9 @@ export function TaskQuickAddForm({
             accessibilityState={{ disabled: isCreating }}
           >
             {primaryActionIsCreate ? (
-              <SaveIcon size={24} color={themeColors.text.primary()} />
+              <SaveIcon size={24} color={primaryFabIconColor} />
             ) : (
-              <SparklesIcon size={24} color={themeColors.text.primary()} />
+              <SparklesIcon size={24} color={primaryFabIconColor} />
             )}
           </TouchableOpacity>
         )}

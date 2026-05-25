@@ -2,10 +2,27 @@ import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { TASK_SELECTION_STACK_ANIMATION } from '@/constants/nativeStackTransition';
+import { SettingsScheduleSelectProvider } from '@/app/SettingsScheduleSelectContext';
+
+const useLiquidGlass = Platform.OS === 'ios' && !Platform.isPad;
+
+/** same glass form sheet as planner `month-select` — 60% detent, transparent ios fill */
+const scheduleTimeSheetOptions = (themeColors: ReturnType<typeof useThemeColors>) => ({
+  headerShown: false,
+  presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
+  sheetGrabberVisible: false,
+  sheetAllowedDetents: [0.6],
+  sheetInitialDetentIndex: 0,
+  contentStyle: {
+    backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
+  },
+});
 
 export default function BrowseLayout() {
   const themeColors = useThemeColors();
+  const timeSheetOptions = scheduleTimeSheetOptions(themeColors);
   return (
+    <SettingsScheduleSelectProvider>
     <Stack
       screenOptions={{
         animation: 'default', // native iOS slide-from-right (push)
@@ -222,6 +239,9 @@ export default function BrowseLayout() {
               }
         }
       />
+      <Stack.Screen name="wake-time-select" options={timeSheetOptions} />
+      <Stack.Screen name="sleep-time-select" options={timeSheetOptions} />
     </Stack>
+    </SettingsScheduleSelectProvider>
   );
 }

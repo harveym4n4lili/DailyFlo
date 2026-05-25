@@ -23,6 +23,7 @@ import { TimelineView } from '@/components/features/timeline';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
+import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTasks, useUI } from '@/store/hooks';
 import { useAppDispatch, useAppSelector, store } from '@/store';
@@ -38,6 +39,13 @@ import {
   getOccurrenceDateFromId,
   toLocalCalendarDayString,
 } from '@/utils/recurrenceUtils';
+import {
+  coerceWakeSleepHHMM,
+  DEFAULT_SLEEP_HHMM,
+  DEFAULT_WAKE_HHMM,
+  timelinePlannerHoursFromWakeSleepHHMM,
+} from '@/utils/preferenceScheduleTimes';
+import { ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES } from '@/utils/taskGrouping';
 
 type PlannerIosNavMonthTitleProps = {
   label: string;
@@ -71,9 +79,31 @@ export type PlannerTabContentProps = {
 export function PlannerTabContent({ mode }: PlannerTabContentProps) {
   const plannerAnchorFromStore = useAppSelector((s) => s.ui.plannerSelectionAnchorDate);
 
+  /** signed-in planner day window pulled from `/accounts/users/profile/` preferences — TimelineView clamps label math to coarse hours derived here */
+  const wakeHHMMFromProfile = useAppSelector((s) =>
+    coerceWakeSleepHHMM(s.auth.user?.preferences.wakeTime, DEFAULT_WAKE_HHMM),
+  );
+  const sleepHHMMFromProfile = useAppSelector((s) =>
+    coerceWakeSleepHHMM(s.auth.user?.preferences.sleepTime, DEFAULT_SLEEP_HHMM),
+  );
+  const { startHour: plannerTimelineStartHour, endHour: plannerTimelineEndHour } = useMemo(
+    () => timelinePlannerHoursFromWakeSleepHHMM(wakeHHMMFromProfile, sleepHHMMFromProfile),
+    [wakeHHMMFromProfile, sleepHHMMFromProfile],
+  );
+
   const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString());
   const [timelineDate, setTimelineDate] = useState<string>(() => new Date().toISOString());
   const [, startTimelineTransition] = useTransition();
+
+  /** wake/sleep visual bands on the dotted column — TimelineView merges these pseudo tasks keyed to the planner day iso */
+  const plannerScheduleAnchorsPayload = useMemo(
+    () => ({
+      wakeHHMM: wakeHHMMFromProfile,
+      sleepHHMM: sleepHHMMFromProfile,
+      dueDateIso: timelineDate ?? selectedDate,
+    }),
+    [wakeHHMMFromProfile, sleepHHMMFromProfile, timelineDate, selectedDate],
+  );
 
   const router = useGuardedRouter();
   const navigation = useNavigation();
@@ -237,6 +267,19 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
   const allDayTasks = useMemo(() => {
     return selectedDateTasks.filter((task) => !task.time || task.time === '');
   }, [selectedDateTasks]);
+
+  // show footer list only while there is at least one incomplete all-day row (ListCard hides completed with hideCompletedTasks)
+  const shouldShowPlannerAllDayFooter = useMemo(
+    () => allDayTasks.some((task) => !task.isCompleted),
+    [allDayTasks],
+  );
+
+  // must match selectedDateTasks filtering — changing day remounts ListCard below so all-day collapses again (fresh hook state per day)
+  const plannerDisplayedDayKey = useMemo(() => {
+    const sourceDate = timelineDate || selectedDate;
+    if (!sourceDate) return '';
+    return toLocalCalendarDayString(new Date(sourceDate));
+  }, [timelineDate, selectedDate]);
 
   const handleTaskPress = (task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
@@ -427,18 +470,20 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                 selectionMode={timelineListSelection}
                 selectedTaskIds={selection.selectedItems}
                 onToggleTaskSelection={timelineListSelection ? toggleItemSelection : undefined}
-                startHour={6}
-                endHour={23}
+                plannerScheduleAnchors={plannerScheduleAnchorsPayload}
+                startHour={plannerTimelineStartHour}
+                endHour={plannerTimelineEndHour}
                 timeInterval={60}
                 scrollContentPaddingTop={16}
                 scrollContentPaddingBottom={
                   mode === 'select' && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
                 }
+                // planner: footer always mounts so Timeline keeps footer margin below chrome fade — empty/incomplete-less day passes [] + silentWhenEmpty so ListCard is height 0 (no empty copy)
                 footerComponent={
                   <View style={styles.allDayFooter}>
                     <ListCard
-                      key="planner-allday-listcard"
-                      tasks={allDayTasks}
+                      key={`planner-allday-${plannerDisplayedDayKey || 'unknown'}`}
+                      tasks={shouldShowPlannerAllDayFooter ? allDayTasks : []}
                       selectionMode={timelineListSelection}
                       selectedTaskIds={selection.selectedItems}
                       onToggleTaskSelection={timelineListSelection ? toggleItemSelection : undefined}
@@ -447,17 +492,10 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                       onTaskComplete={handleTaskComplete}
                       onTaskEdit={handleTaskEdit}
                       onTaskDelete={handleTaskDelete}
-                      showCategory={false}
-                      compact={false}
-                      showIcon={false}
-                      showIndicators={false}
-                      showMetadata={false}
-                      metadataVariant="today"
-                      cardSpacing={0}
-                      showDashedSeparator={true}
-                      taskRowSeparatorVariant="dashed"
-                      hideBackground={true}
-                      removeInnerPadding={true}
+                      {...LIST_CARD_TASK_ROW_PRESET_TODAY}
+                      showListRecurrenceRow
+                      initialCollapsedGroupTitles={ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES}
+                      silentWhenEmpty
                       emptyMessage="No all-day tasks for this date."
                       loading={false}
                       groupBy="allDay"
@@ -466,7 +504,6 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                       paddingHorizontal={Paddings.screen}
                       paddingBottom={8}
                       scrollEnabled={false}
-                      delayHeightChangeOnTaskComplete={false}
                       disableInitialLayoutTransition={true}
                     />
                   </View>
