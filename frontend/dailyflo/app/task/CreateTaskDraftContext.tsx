@@ -10,6 +10,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react';
 
 import type { RoutineType } from '@/types';
+import { DEFAULT_NEW_TASK_ALERT_IDS } from '@/services/notifications/taskReminderConstants';
 
 export interface CreateTaskDraftSlice {
   dueDate: string | undefined;
@@ -43,7 +44,7 @@ const defaultDraft: CreateTaskDraftSlice = {
   dueDate: undefined,
   time: undefined,
   duration: undefined,
-  alerts: [],
+  alerts: [...DEFAULT_NEW_TASK_ALERT_IDS],
 };
 
 const CreateTaskDraftContext = createContext<CreateTaskDraftContextValue | null>(null);
