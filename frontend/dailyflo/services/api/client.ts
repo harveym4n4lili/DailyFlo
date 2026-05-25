@@ -13,12 +13,6 @@
  */
 
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-// redux store imports - access auth state and dispatch actions
-// store: the main redux store that holds all app state
-// logout: action that logs out the user
-import { store } from '../../store';
-import { logout } from '../../store/slices/auth/authSlice';
 // token storage imports - secure storage for authentication tokens
 // these functions store and retrieve tokens from Expo SecureStore (encrypted storage)
 import {
@@ -26,13 +20,20 @@ import {
   getRefreshToken,
   storeAccessToken,
   storeRefreshToken,
+  storeTokenExpiry,
+  resolveAccessTokenExpiryMs,
   clearAllTokens,
 } from '../auth/tokenStorage';
 
-// storage key for tracking onboarding completion status
-// this key is used to check if the user has completed the onboarding flow
-// when user logs out, we reset this so they see onboarding screens again
-const ONBOARDING_COMPLETE_KEY = '@DailyFlo:onboardingComplete';
+/**
+ * dispatch logout without importing authSlice — breaks `client` ↔ `authSlice` cycle that can
+ * corrupt module init and crash right after the auth screen mounts.
+ */
+function dispatchLogoutFromStore(): void {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { store } = require('../../store');
+  store.dispatch({ type: 'auth/logout' });
+}
 
 /**
  * Configuration for the API client
@@ -82,11 +83,13 @@ const createApiClient = (): AxiosInstance => {
    */
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-      // Don't add auth token for login/register/refresh endpoints
-      // These endpoints don't require authentication and would fail with auth headers
-      const isAuthEndpoint = config.url?.includes('/auth/login/') || 
-                             config.url?.includes('/auth/register/') || 
-                             config.url?.includes('/auth/refresh/');
+      // don't add bearer for auth endpoints — social login must stay unauthenticated on the wire
+      // (a stale access token here causes 401 → refresh interceptor → "no refresh token available")
+      const isAuthEndpoint =
+        config.url?.includes('/auth/login/') ||
+        config.url?.includes('/auth/register/') ||
+        config.url?.includes('/auth/social/') ||
+        config.url?.includes('/auth/refresh/');
       
       if (!isAuthEndpoint) {
         // Get the access token from secure storage
@@ -127,11 +130,12 @@ const createApiClient = (): AxiosInstance => {
     async (error: AxiosError) => {
       const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
       
-      // Don't try to refresh tokens for login/register/refresh endpoints
-      // These endpoints can return 401 for invalid credentials, not expired tokens
-      const isAuthEndpoint = originalRequest?.url?.includes('/auth/login/') || 
-                             originalRequest?.url?.includes('/auth/register/') || 
-                             originalRequest?.url?.includes('/auth/refresh/');
+      // don't treat 401 on social/register/login as "expired access" — no dailyflo refresh cookie yet
+      const isAuthEndpoint =
+        originalRequest?.url?.includes('/auth/login/') ||
+        originalRequest?.url?.includes('/auth/register/') ||
+        originalRequest?.url?.includes('/auth/social/') ||
+        originalRequest?.url?.includes('/auth/refresh/');
       
       // Handle 401 Unauthorized - This means "your login has expired"
       // When we get a 401, the access token has likely expired, so we try to refresh it
@@ -167,6 +171,7 @@ const createApiClient = (): AxiosInstance => {
           // Store the new tokens in secure storage
           // This updates the tokens so future requests will use the new access token
           await storeAccessToken(access);
+          await storeTokenExpiry(resolveAccessTokenExpiryMs(access));
           if (newRefreshToken) {
             // Store new refresh token if provided (some backends rotate refresh tokens)
             await storeRefreshToken(newRefreshToken);
@@ -181,23 +186,11 @@ const createApiClient = (): AxiosInstance => {
           // Retry the original request with the new token
           return client(originalRequest);
         } catch (refreshError) {
-          // If refresh fails, clear tokens and logout user
-          // This means the refresh token is also expired or invalid, user needs to log in again
+          // refresh token is also expired or invalid – the user needs to log in again.
+          // we only clear tokens here; the onboarding flag is intentionally left alone
+          // so a returning user who is merely logged out is taken to sign-in, not full onboarding.
           await clearAllTokens();
-          // Dispatch logout action to clear Redux state
-          store.dispatch(logout());
-          
-          // Reset onboarding status when user is logged out due to token refresh failure
-          // This ensures that after logout, the user will see onboarding screens again
-          // This is important because a logged-out user should be treated as a new user
-          try {
-            await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
-          } catch (onboardingError) {
-            // If resetting onboarding fails, log it but don't fail the logout
-            // The logout should still succeed even if onboarding reset fails
-            console.error('Error resetting onboarding during token refresh failure:', onboardingError);
-          }
-          
+          dispatchLogoutFromStore();
           return Promise.reject(refreshError);
         }
       }

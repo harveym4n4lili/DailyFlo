@@ -103,6 +103,12 @@ interface UIState {
    * can start fading the liquid pill before segments update (avoids a hard cut then toolbar blur).
    */
   iosLiquidChromePreSelectFade: boolean;
+
+  /**
+   * bump this when the session ends or onboarding fully completes so the native tab shell remounts.
+   * otherwise each tab keeps its stack in memory (e.g. browse/settings stays open after re-login).
+   */
+  tabShellResetKey: number;
 }
 
 /**
@@ -186,6 +192,8 @@ const initialState: UIState = {
   plannerSelectionAnchorDate: null,
 
   iosLiquidChromePreSelectFade: false,
+
+  tabShellResetKey: 0,
 };
 
 /**
@@ -472,6 +480,11 @@ const uiSlice = createSlice({
     clearIosLiquidChromePreSelectFade: (state) => {
       state.iosLiquidChromePreSelectFade = false;
     },
+
+    // see UIState.tabShellResetKey — used from logout + finish setup, read in (tabs)/_layout
+    bumpTabShellResetKey: (state) => {
+      state.tabShellResetKey += 1;
+    },
     
     /**
      * Utility actions
@@ -523,6 +536,7 @@ export const {
     setPlannerSelectionAnchorDate,
     beginIosLiquidChromePreSelectFade,
     clearIosLiquidChromePreSelectFade,
+    bumpTabShellResetKey,
     selectAllItems,
   clearSelection,
   

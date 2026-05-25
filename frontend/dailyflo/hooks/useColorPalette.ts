@@ -13,15 +13,26 @@
 import { useColorScheme } from 'react-native';
 import {
   PrimaryColors,
+  PlantBrandColors,
+  SageBrandColors,
+  MarpleBrandColors,
+  MossBrandColors,
   SemanticColors,
   TaskCategoryColors,
   PrimaryButtonColors,
   ThemeColors,
   getSemanticColor,
   getTaskCategoryColor,
+  getBrandColor,
+  getBrandPaletteColor,
+  getPlantBrandColor,
+  getSageBrandColor,
+  getMarpleBrandColor,
+  getMossBrandColor,
   getThemeColor,
   withOpacity,
-  type PrimaryColorShade,
+  type BrandColorShade,
+  type BrandPaletteId,
   type SemanticColorName,
   type TaskCategoryColorName,
   type ThemeColorCategory,
@@ -38,7 +49,13 @@ export interface ColorPaletteReturn {
   isLight: boolean;
   
   // color palettes
+  // `brand` is the plant ramp — default accent for FAB / marketing (same object as `plantBrand`)
   primary: typeof PrimaryColors.light | typeof PrimaryColors.dark;
+  brand: typeof PlantBrandColors;
+  plantBrand: typeof PlantBrandColors;
+  sageBrand: typeof SageBrandColors;
+  marpleBrand: typeof MarpleBrandColors;
+  mossBrand: typeof MossBrandColors;
   semantic: typeof SemanticColors;
   taskCategory: typeof TaskCategoryColors;
   primaryButton: typeof PrimaryButtonColors.light | typeof PrimaryButtonColors.dark;
@@ -47,6 +64,13 @@ export interface ColorPaletteReturn {
   // utility functions
   getSemanticColor: (color: SemanticColorName, shade?: keyof typeof SemanticColors.success) => string;
   getTaskCategoryColor: (color: TaskCategoryColorName, shade?: keyof typeof TaskCategoryColors.red) => string;
+  /** default product accent — **plant** ramp; use `getSageBrandColor` / `getMarpleBrandColor` / `getMossBrandColor` for other greens */
+  getBrandColor: (shade?: BrandColorShade) => string;
+  getBrandPaletteColor: (palette: BrandPaletteId, shade?: BrandColorShade) => string;
+  getPlantBrandColor: (shade?: BrandColorShade) => string;
+  getSageBrandColor: (shade?: BrandColorShade) => string;
+  getMarpleBrandColor: (shade?: BrandColorShade) => string;
+  getMossBrandColor: (shade?: BrandColorShade) => string;
   getThemeColor: (category: ThemeColorCategory, variant: ThemeColorVariant) => string;
   withOpacity: (color: string, opacity: number) => string;
 }
@@ -66,6 +90,7 @@ export function useColorPalette(): ColorPaletteReturn {
   
   // get theme-specific colors
   const primary = PrimaryColors[theme];
+  const brand = PlantBrandColors;
   const primaryButton = PrimaryButtonColors[theme];
   const themeColors = ThemeColors[theme];
   
@@ -77,6 +102,11 @@ export function useColorPalette(): ColorPaletteReturn {
     
     // color palettes
     primary,
+    brand,
+    plantBrand: PlantBrandColors,
+    sageBrand: SageBrandColors,
+    marpleBrand: MarpleBrandColors,
+    mossBrand: MossBrandColors,
     semantic: SemanticColors,
     taskCategory: TaskCategoryColors,
     primaryButton,
@@ -88,6 +118,14 @@ export function useColorPalette(): ColorPaletteReturn {
     
     getTaskCategoryColor: (color: TaskCategoryColorName, shade = 500) => 
       getTaskCategoryColor(color, shade),
+
+    getBrandColor: (shade: BrandColorShade = 500) => getBrandColor(shade),
+    getBrandPaletteColor: (palette: BrandPaletteId, shade: BrandColorShade = 500) =>
+      getBrandPaletteColor(palette, shade),
+    getPlantBrandColor: (shade: BrandColorShade = 500) => getPlantBrandColor(shade),
+    getSageBrandColor: (shade: BrandColorShade = 500) => getSageBrandColor(shade),
+    getMarpleBrandColor: (shade: BrandColorShade = 500) => getMarpleBrandColor(shade),
+    getMossBrandColor: (shade: BrandColorShade = 500) => getMossBrandColor(shade),
     
     getThemeColor: (category: ThemeColorCategory, variant: ThemeColorVariant) => 
       getThemeColor(theme, category, variant),
@@ -149,6 +187,48 @@ export function useTaskColors() {
 }
 
 /**
+ * useBrandColors Hook
+ *
+ * Three botanical green ramps (plant / sage / marple / moss); **plant** is also exposed as `brand` for the default accent.
+ * Same step keys as neutrals (25 … 900). Default UI still prefers `useThemeColors()` for surfaces and text.
+ */
+export function useBrandColors() {
+  const {
+    theme,
+    brand,
+    plantBrand,
+    sageBrand,
+    marpleBrand,
+    mossBrand,
+    getBrandColor,
+    getBrandPaletteColor,
+    getPlantBrandColor,
+    getSageBrandColor,
+    getMarpleBrandColor,
+    getMossBrandColor,
+    withOpacity,
+  } = useColorPalette();
+
+  return {
+    theme,
+    brand,
+    plantBrand,
+    sageBrand,
+    marpleBrand,
+    mossBrand,
+    /** default step 500 — same as primary CTA fill (plant ramp) */
+    accent: (shade: BrandColorShade = 500) => getBrandColor(shade),
+    getBrandColor,
+    getBrandPaletteColor,
+    getPlantBrandColor,
+    getSageBrandColor,
+    getMarpleBrandColor,
+    getMossBrandColor,
+    withOpacity,
+  };
+}
+
+/**
  * useThemeColors Hook
  * 
  * Simplified hook for accessing theme-aware colors only.
@@ -191,6 +271,7 @@ export function useThemeColors() {
       quaternary: () => getThemeColor('text', 'quaternary'),
       // light-on-dark-surface text (e.g. icon on primary button fill)
       inverse: () => getThemeColor('text', 'inverse'),
+      disabled: () => getThemeColor('text', 'disabled'),
       // inverted colors - opposite theme colors for contrast sections
       invertedPrimary: () => getThemeColor('text', 'invertedPrimary'),
       invertedSecondary: () => getThemeColor('text', 'invertedSecondary'),
@@ -227,7 +308,7 @@ export function useThemeColors() {
       invertedDisabled: () => getThemeColor('interactive', 'invertedDisabled'),
     },
 
-    // primary solid buttons — FAB default fill + icon; extend with pressed/hover tokens later if needed
+    // primary solid buttons — default fill + icon for primary CTAs (FAB uses marple + canvas in `FloatingActionButton`)
     primaryButton: {
       fill: () => getThemeColor('primaryButton', 'fill'),
       icon: () => getThemeColor('primaryButton', 'icon'),
@@ -306,6 +387,20 @@ export function useThemeColors() {
  * }
  * ```
  * 
+ * BRAND COLORS:
+ * ```tsx
+ * import { useBrandColors } from '@/hooks/useColorPalette';
+ *
+ * function PromoBanner() {
+ *   const brand = useBrandColors();
+ *   return (
+ *     <View style={{ backgroundColor: brand.brand[100], borderColor: brand.accent(500) }}>
+ *       <Text style={{ color: brand.getBrandColor(700) }}>DailyFlo</Text>
+ *     </View>
+ *   );
+ * }
+ * ```
+ *
  * THEME COLORS:
  * ```tsx
  * import { useThemeColors } from '@/hooks/useColorPalette';

@@ -1,10 +1,7 @@
 /**
- * Onboarding Components Export
- * 
- * This file provides clean exports for all onboarding-related components.
+ * shared onboarding chrome — composed into routes under `app/(onboarding)/`.
  */
 
-export { OnboardingNavigation } from './OnboardingNavigation';
-export { OnboardingActions } from './OnboardingActions';
-export { SocialAuthActions } from '@/components/features/authentication/sections/SocialAuthActions';
-export type { SocialAuthActionsProps } from '@/components/features/authentication/sections/SocialAuthActions';
+export * from './auth';
+export * from './notifications';
+export * from './onboarding';

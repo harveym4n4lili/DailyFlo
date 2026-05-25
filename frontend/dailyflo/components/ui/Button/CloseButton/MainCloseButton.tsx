@@ -67,6 +67,9 @@ export interface MainCloseButtonProps {
    * inline: same glass / X styling in a normal row (e.g. next to a search field).
    */
   layout?: 'modal' | 'inline';
+
+  /** × glyph color — secondary is quieter chrome on onboarding sheets vs body titles */
+  iconEmphasis?: 'primary' | 'secondary';
 }
 
 /**
@@ -83,6 +86,7 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
   left = 0,
   right,
   layout = 'modal',
+  iconEmphasis = 'primary',
 }) => {
   // HOOKS
   // get theme-aware colors for styling
@@ -108,12 +112,9 @@ export const MainCloseButton: React.FC<MainCloseButtonProps> = ({
   // check if running on iOS 15+ (newer glass UI design)
   const isNewerIOS = getIOSVersion() >= 15;
   
-  // determine icon color
-  // always use the primary text color from the theme so the X icon
-  // matches other primary text (not the user-selected task color)
-  const getIconColor = () => {
-    return themeColors.text.primary();
-  };
+  // icon color follows typography tokens — onboarding email sheets prefer secondary so the headline stays strongest
+  const getIconColor = () =>
+    iconEmphasis === 'secondary' ? themeColors.text.secondary() : themeColors.text.primary();
 
   // background color for the close button container
   // align the close button surface styling with the FAB glass background

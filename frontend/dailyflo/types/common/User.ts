@@ -34,6 +34,31 @@ export interface UserPreferences {
   timezone: string;                 // User's timezone (e.g., 'UTC', 'America/New_York')
   dateFormat: string;               // Date format preference (e.g., 'MM/DD/YYYY')
   timeFormat: '12h' | '24h';        // Time format preference
+  /** local planner day window boundaries (stored as Django `wake_time` / `sleep_time`, 24h `HH:mm`) */
+  wakeTime: string;
+  sleepTime: string;
+  /** set when user finishes onboarding questionnaire — used to show Skip for returning accounts */
+  onboardingCompleted?: boolean;
+
+  /**
+   * snapshot of habit vs task branch answers from the onboarding questionnaire —
+   * synced to django `preferences.onboarding_questionnaire` on finish (server source of truth after PATCH).
+   */
+  onboardingQuestionnaire?: {
+    v: 1;
+    branch: 'habit' | 'task';
+    completedAt: string;
+    task: {
+      title: string;
+      completed: boolean;
+      eventTime: string;
+      durationMinutes: number;
+    } | null;
+    habit: {
+      goalTitle: string;
+      frequencyId: string;
+    } | null;
+  };
   
   // App behavior preferences
   autoArchiveCompleted: boolean;    // Auto-archive completed tasks
@@ -97,14 +122,12 @@ export interface LoginUserInput {
   password: string;                 // Required: User's password (for email auth)
 }
 
-// Type for social authentication input
+// Type for social authentication — matches django SocialAuthSerializer (id_token verified server-side)
 export interface SocialAuthInput {
-  authProvider: 'google' | 'apple' | 'facebook'; // Required: Social provider
-  authProviderId: string;           // Required: Provider-specific user ID
-  email: string;                    // Required: User's email from provider
-  firstName?: string;               // Optional: First name from provider
-  lastName?: string;               // Optional: Last name from provider
-  avatarUrl?: string;              // Optional: Avatar URL from provider
+  provider: 'google' | 'apple';
+  idToken: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 // Type for updating user profile
@@ -125,6 +148,10 @@ export interface UpdateUserPreferencesInput {
   timezone?: string;                // Optional: New timezone
   dateFormat?: string;              // Optional: New date format
   timeFormat?: UserPreferences['timeFormat']; // Optional: New time format
+  wakeTime?: string;
+  sleepTime?: string;
+  onboardingCompleted?: boolean;
+  onboardingQuestionnaire?: Partial<UserPreferences['onboardingQuestionnaire']>;
   autoArchiveCompleted?: boolean;   // Optional: Auto-archive setting
   showCompletedTasks?: boolean;     // Optional: Show completed tasks setting
   sortTasksBy?: UserPreferences['sortTasksBy']; // Optional: New default sorting
