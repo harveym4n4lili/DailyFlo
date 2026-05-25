@@ -55,6 +55,12 @@ export interface CalendarViewProps {
    * Useful for showing a specific month when calendar first opens
    */
   initialMonth?: Date;
+
+  /**
+   * When true, parent scroll already applies horizontal sheet inset — skip container side padding.
+   * Used by date-select stack screen alongside alertSheetChrome.
+   */
+  contentInsetHandledByParent?: boolean;
 }
 
 /**
@@ -72,6 +78,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   selectedDate,
   onSelectDate,
   initialMonth,
+  contentInsetHandledByParent = false,
 }) => {
   // get theme-aware colors for styling (adapts to light/dark mode)
   const themeColors = useThemeColors();
@@ -228,7 +235,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   });
   
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        contentInsetHandledByParent && styles.containerSheetInset,
+      ]}
+    >
       {/* 
         CALENDAR HEADER SECTION
         Contains: month/year text on left + navigation arrows on right
@@ -440,6 +452,9 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: Paddings.card,
     paddingVertical: Paddings.touchTarget,
+  },
+  containerSheetInset: {
+    paddingHorizontal: Paddings.none,
   },
   dayHeader: {
     flex: 1,
