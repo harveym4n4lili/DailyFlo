@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemeColors } from '@/constants/ColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { FAB_SCREEN_INSET } from '@/components/ui/Button';
 import { useCustomTabNavMetrics } from '@/contexts/CustomTabNavMetricsContext';
 
@@ -39,6 +39,7 @@ export function CustomLiquidTabBar() {
   const router = useGuardedRouter();
   const typography = useTypography();
   const themeColors = useThemeColors();
+  const { getMarpleBrandColor } = useColorPalette();
   const insets = useSafeAreaInsets();
   const segments = useSegments() as string[];
 
@@ -97,8 +98,9 @@ export function CustomLiquidTabBar() {
     // dark: unselected matches primary body text; light: keep softer secondary so tabs don’t compete with content
     const unselectedTint =
       themeColors.isDark ? themeColors.text.primary() : themeColors.text.secondary();
-    const tint = selected ? themeColors.primaryButton.fill() : unselectedTint;
-    const labelColor = selected ? themeColors.primaryButton.fill() : unselectedTint;
+    const marpleAccent = getMarpleBrandColor(500);
+    const tint = selected ? marpleAccent : unselectedTint;
+    const labelColor = selected ? marpleAccent : unselectedTint;
     return (
       <Pressable
         key={item.key}

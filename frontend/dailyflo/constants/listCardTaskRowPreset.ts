@@ -2,7 +2,7 @@
  * shared ListCard props that control how each TaskCard looks (Today / browse search: solid row rules, no card chrome).
  * ListCard still renders TaskCard internally — screens spread this preset so Today, browse lists, etc. stay in sync.
  */
-/** explicit row-chrome preset (separator style: solid by default on TaskCard; planner overrides to dashed) */
+/** explicit row-chrome preset (separator style: dashed line rules from showDashedSeparator; TaskCard separator variant stays default unless a screen overrides) */
 export type ListCardTaskRowPreset = {
   showCategory: boolean;
   compact: boolean;
@@ -16,7 +16,7 @@ export type ListCardTaskRowPreset = {
   removeInnerPadding: boolean;
 };
 
-/** use on ListCard together with screen-specific props (tasks, groupBy, scroll, handlers) */
+/** use on ListCard together with screen-specific props (tasks, groupBy, scroll, handlers) — Today, browse lists, planner all-day strip */
 export const LIST_CARD_TASK_ROW_PRESET_TODAY: ListCardTaskRowPreset = {
   showCategory: false,
   compact: false,

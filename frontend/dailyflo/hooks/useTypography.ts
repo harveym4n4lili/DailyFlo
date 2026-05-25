@@ -10,7 +10,7 @@
  * const fontFamily = typography.getFontFamily();
  */
 
-import { Platform } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
 import {
   FontFamily,
   FontWeight,
@@ -19,6 +19,7 @@ import {
   LetterSpacing,
   ResponsiveTypography,
   getTextStyle,
+  getOnboardingTextStyle,
   getFontFamily,
   getResponsiveFontSize,
   createTextStyle,
@@ -50,6 +51,8 @@ export interface TypographyReturn {
   
   // utility functions
   getTextStyle: (styleName: TextStyleName) => typeof TextStyles[TextStyleName];
+  /** intro + questionnaire onboarding — SF Pro Rounded on ios (see `ONBOARDING_FONT_FAMILY` in Typography.ts) */
+  getOnboardingTextStyle: (styleName: TextStyleName) => TextStyle;
   getFontFamily: (platform?: TypographyPlatform) => string;
   getResponsiveFontSize: (baseSize: number, screenSize?: ResponsiveScale) => number;
   createTextStyle: (fontSize: number, lineHeight?: number, fontWeight?: string, letterSpacing?: number) => any;
@@ -84,7 +87,9 @@ export function useTypography(): TypographyReturn {
     
     // utility functions with platform context
     getTextStyle: (styleName: TextStyleName) => getTextStyle(styleName),
-    
+
+    getOnboardingTextStyle: (styleName: TextStyleName) => getOnboardingTextStyle(styleName, currentPlatform),
+
     getFontFamily: (platform?: TypographyPlatform) => 
       getFontFamily(platform || currentPlatform),
     

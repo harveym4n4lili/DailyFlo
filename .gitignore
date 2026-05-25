@@ -5,6 +5,7 @@ Thumbs.db
 *.env
 *.env.*
 *.orig
+*.plist
 .env.local
 
 # Python ===
@@ -70,4 +71,4 @@ Thumbs.db
 .env
 .env.local
 .env.production
-.env.*.local
+.env.*.localC:\Users\Harvey\COM\Personal Coding Projects\Tech Stacks\django-react\DailyFlo\DailyFlo\frontend\dailyflo\GoogleService-Info.plist

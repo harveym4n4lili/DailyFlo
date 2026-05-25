@@ -25,7 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getTextStyle } from '@/constants/Typography';
 
 // hooks for theme-aware colors that adapt to light/dark mode
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 import { useTypography } from '@/hooks/useTypography';
 
@@ -74,6 +74,10 @@ interface DayCellProps {
   onSelectDate: (date: Date) => void;
   themeColors: ReturnType<typeof useThemeColors>;
   styles: ReturnType<typeof createStyles>;
+  /** marple accent — matches FAB / month grid / tab bar */
+  selectedFill: string;
+  /** number color on selected cell — primary canvas */
+  selectedLabelColor: string;
 }
 
 const DayCell: React.FC<DayCellProps> = ({
@@ -84,6 +88,8 @@ const DayCell: React.FC<DayCellProps> = ({
   onSelectDate,
   themeColors,
   styles,
+  selectedFill,
+  selectedLabelColor,
 }) => {
   // quick fade for the selected day fill so the highlight feels softer on tap
   const selectionOpacity = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
@@ -123,8 +129,8 @@ const DayCell: React.FC<DayCellProps> = ({
           style={[
             styles.dateCellBackground,
             {
-              // match FAB / primary solid buttons so the week picker feels on-brand
-              backgroundColor: themeColors.primaryButton.fill(),
+              // marple fill — same as month picker + FAB / onboarding accent
+              backgroundColor: selectedFill,
               opacity: selectionOpacity,
             }
           ]}
@@ -151,7 +157,7 @@ const DayCell: React.FC<DayCellProps> = ({
             styles.dateText,
             {
               color: isSelected
-                ? themeColors.primaryButton.icon()
+                ? selectedLabelColor
                 : themeColors.text.primary(),
             },
           ]}
@@ -181,6 +187,9 @@ export const WeekView: React.FC<WeekViewProps> = ({
 }) => {
   // get theme-aware colors for styling (adapts to light/dark mode)
   const themeColors = useThemeColors();
+  const { getMarpleBrandColor } = useColorPalette();
+  const selectedDayFill = getMarpleBrandColor(500);
+  const selectedDayLabel = themeColors.background.primary();
   
   // get typography system for consistent text styling
   const typography = useTypography();
@@ -501,6 +510,8 @@ export const WeekView: React.FC<WeekViewProps> = ({
                       onSelectDate={handleDateSelect}
                       themeColors={themeColors}
                       styles={styles}
+                      selectedFill={selectedDayFill}
+                      selectedLabelColor={selectedDayLabel}
                     />
                   </View>
                 );

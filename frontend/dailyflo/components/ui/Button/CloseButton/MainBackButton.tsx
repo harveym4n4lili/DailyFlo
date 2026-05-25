@@ -73,7 +73,7 @@ export const MainBackButton: React.FC<MainBackButtonProps> = ({
   };
 
   const isNewerIOS = getIOSVersion() >= 15;
-  const iconColor = themeColors.text.primary();
+  const iconColor = themeColors.text.secondary();
   const closeButtonBackgroundColor = themeColors.background.primary();
   const topPosition = top !== undefined ? top : 20;
   const glassAvailable = Platform.OS === 'ios';

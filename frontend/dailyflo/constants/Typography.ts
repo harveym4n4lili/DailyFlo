@@ -1,3 +1,6 @@
+import type { TextStyle } from 'react-native';
+import { Platform as RNPlatform } from 'react-native';
+
 /**
  * Typography System Constants
  * 
@@ -28,13 +31,23 @@ export const FontFamily = {
   // fallback fonts for different platforms
   // these are used if the primary font fails to load
   fallback: {
-    // iOS fallback fonts - these are system fonts that look good on iOS
+    // iOS — SF Pro Rounded first so onboarding + system stacks can target the same name (`ONBOARDING_FONT_FAMILY.ios`).
     ios: ['SF Pro Rounded', '-apple-system'],
     // Android fallback fonts - these are system fonts that look good on Android
     android: ['Roboto', 'sans-serif'],
     // web fallback fonts - these are web-safe fonts
     web: ['system-ui', 'sans-serif'],
   },
+} as const;
+
+/**
+ * Onboarding funnel (intro + questionnaire) — one face per platform, aligned with `FontFamily.fallback`.
+ * ios uses SF Pro Rounded (system on apple devices); weights still come from each `TextStyles` token.
+ */
+export const ONBOARDING_FONT_FAMILY = {
+  ios: FontFamily.fallback.ios[0],
+  android: FontFamily.fallback.android[0],
+  web: FontFamily.fallback.web.join(', '),
 } as const;
 
 /**
@@ -72,12 +85,12 @@ export const TextStyles = {
     //fontFamily: 'Inter-Bold',
   },
   'heading-1': {
-    fontSize: 40,        // large title size
+    fontSize: 38,        // large title size
     fontWeight: FontWeight.bold,
     //fontFamily: 'Inter-semibold',
   },
   'heading-2': {
-    fontSize: 26,        // medium title size
+    fontSize: 24,        // medium title size
     fontWeight: FontWeight.semibold,
    // fontFamily: 'Inter-Bold',
   },
@@ -142,6 +155,25 @@ export const TextStyles = {
    
     fontWeight: FontWeight.semibold,
     //fontFamily: 'Inter-Medium',
+  },
+
+  /**
+   * `/(onboarding)/auth` slogan middle phrase — base size/weight; **face** comes from `getAuthLandingSloganMiddleTextStyle` in `auth/constants/typography.ts` (not Satoshi).
+   * tweak here for app-wide definition; use `AUTH_LANDING_SLOGAN_MIDDLE_STYLE_OVERRIDES` in that file for funnel-only nudges without editing this table.
+   */
+  'auth-landing-middle-custom': {
+    fontSize: 28,
+
+    fontWeight: FontWeight.semibold,
+  },
+
+  /**
+   * `/(onboarding)/auth` landing wordmark (“dailyflo”) — metrics here; **Satoshi** via `getSatoshiTypographyStyle('auth-landing-title', platform)` (**.otf** / `useFonts` keys in `app/_layout`).
+   */
+  'auth-landing-title': {
+    fontSize: 39,
+    letterSpacing: 0,
+    fontWeight: 600,
   },
 } as const;
 
@@ -210,6 +242,35 @@ export function getTextStyle(styleName: keyof typeof TextStyles) {
   return TextStyles[styleName];
 }
 
+/**
+ * Resolved font family for onboarding screens — SF Pro Rounded on ios (see `ONBOARDING_FONT_FAMILY`).
+ */
+export function getOnboardingFontFamily(platform: Platform = 'ios'): string {
+  if (platform === 'ios') {
+    return ONBOARDING_FONT_FAMILY.ios;
+  }
+  if (platform === 'android') {
+    return ONBOARDING_FONT_FAMILY.android;
+  }
+  return ONBOARDING_FONT_FAMILY.web;
+}
+
+/**
+ * Same sizes/weights as `getTextStyle`, but swaps in the onboarding font stack and drops embedded Inter names
+ * so tokens like `button-primary` still pick a single rounded/system face for the funnel.
+ */
+export function getOnboardingTextStyle(
+  styleName: keyof typeof TextStyles,
+  platform: Platform = 'ios',
+): TextStyle {
+  const raw = getTextStyle(styleName);
+  const { fontFamily: _omit, ...rest } = raw as TextStyle & { fontFamily?: string };
+  return {
+    ...rest,
+    fontFamily: getOnboardingFontFamily(platform),
+  };
+}
+
 // returns a token text style with the matching Inter family for the current platform
 // so screens can use one typography helper and still get the correct weighted font files.
 export function getTypographyStyle(
@@ -269,6 +330,72 @@ export function getFontFamilyWithWeight(weight: 'light' | 'regular' | 'medium' |
   
   return weightMap[weight] || FontFamily.primary;
 }
+
+// satoshi: bundled in `assets/fonts` + registered in `app/_layout` — mirrors `getFontFamilyWithWeight` but uses satoshi **.otf** (one react-native `fontFamily` string per file; black may still be `.ttf` if your kit doesn’t ship black otf)
+export function getSatoshiFontFamilyWithWeight(
+  weight: 'light' | 'regular' | 'medium' | 'semibold' | 'bold',
+  platform: 'ios' | 'android' | 'web' = 'ios',
+): string {
+  if (platform === 'web') {
+    return FontFamily.fallback.web.join(', ');
+  }
+  const weightMap = {
+    light: 'Satoshi-Light',
+    regular: 'Satoshi-Regular',
+    medium: 'Satoshi-Medium',
+    semibold: 'Satoshi-Bold',
+    bold: 'Satoshi-Black',
+  };
+  return weightMap[weight];
+}
+
+// same weight resolution as `getTypographyStyle`, but satoshi files + no `fontWeight` on ios/android so react-native doesn’t fake-thin the glyphs on top of a named font file
+export function getSatoshiTypographyStyle(
+  styleName: keyof typeof TextStyles,
+  platform: 'ios' | 'android' | 'web' = 'ios',
+): TextStyle {
+  const style = getTextStyle(styleName);
+  const fontWeight = `${style.fontWeight ?? FontWeight.regular}`;
+  const matchedWeight = (
+    Object.entries(FontWeight).find(([, value]) => value === fontWeight)?.[0] ?? 'regular'
+  ) as keyof typeof FontWeight;
+
+  const fontFamily = getSatoshiFontFamilyWithWeight(matchedWeight, platform);
+  const { fontWeight: _w, fontFamily: _f, ...rest } = style as TextStyle & { fontFamily?: string };
+
+  if (platform === 'web') {
+    return { ...style, fontFamily };
+  }
+  return { ...rest, fontFamily };
+}
+
+/** resolved once at load from `RNPlatform.OS` — prefer `getAuthLandingPageTitleTextStyle(platform)` when platform must be exact */
+export const AUTH_LANDING_PAGE_TITLE_TEXT_STYLE: TextStyle = getSatoshiTypographyStyle(
+  'auth-landing-title',
+  RNPlatform.OS === 'android' ? 'android' : RNPlatform.OS === 'web' ? 'web' : 'ios',
+);
+
+/** `/(onboarding)/auth` “dailyflo” headline — satoshi via `getSatoshiTypographyStyle('auth-landing-title', …)` */
+export function getAuthLandingPageTitleTextStyle(
+  platform: 'ios' | 'android' | 'web' = 'ios',
+): TextStyle {
+  return getSatoshiTypographyStyle('auth-landing-title', platform);
+}
+
+/**
+ * legacy helper — landing headline now uses `getAuthLandingPageTitleTextStyle`; kept for older imports / HMR bundles.
+ */
+export function getAuthLandingSloganTextStyle(
+  platform: 'ios' | 'android' | 'web' = 'ios',
+): TextStyle {
+  return getTypographyStyle('body-large', platform);
+}
+
+/** legacy alias — same object as `AUTH_LANDING_PAGE_TITLE_TEXT_STYLE` (some bundles/tools still resolve this name) */
+export const AUTH_LANDING_TITLE_TEXT_STYLE: TextStyle = AUTH_LANDING_PAGE_TITLE_TEXT_STYLE;
+
+/** legacy alias — same object as `AUTH_LANDING_PAGE_TITLE_TEXT_STYLE` */
+export const AUTH_HEADLINE_TEXT_STYLE: TextStyle = AUTH_LANDING_PAGE_TITLE_TEXT_STYLE;
 
 /**
  * Get responsive font size
@@ -391,8 +518,18 @@ export default {
   LineHeight,
   LetterSpacing,
   ResponsiveTypography,
+  ONBOARDING_FONT_FAMILY,
   getTextStyle,
+  getOnboardingFontFamily,
+  getOnboardingTextStyle,
   getTypographyStyle,
+  getSatoshiFontFamilyWithWeight,
+  getSatoshiTypographyStyle,
+  getAuthLandingPageTitleTextStyle,
+  getAuthLandingSloganTextStyle,
+  AUTH_LANDING_PAGE_TITLE_TEXT_STYLE,
+  AUTH_LANDING_TITLE_TEXT_STYLE,
+  AUTH_HEADLINE_TEXT_STYLE,
   getFontFamily,
   getResponsiveFontSize,
   createTextStyle,

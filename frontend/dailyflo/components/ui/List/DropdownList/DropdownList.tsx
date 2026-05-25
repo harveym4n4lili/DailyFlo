@@ -174,29 +174,48 @@ export default function DropdownList({
       textColor = themeColors.text.tertiary();
     }
 
-    // determine icon color (same logic as text color)
-    const iconColor = textColor;
+    // glyphs: optional plated marple onboarding badges use leadingIconTint; else match label color
+    const iconColor =
+      item.destructive || item.disabled
+        ? textColor
+        : item.leadingIconTint ?? textColor;
+
+    const glyph =
+      item.iconComponent != null ? (
+        item.iconComponent(iconColor)
+      ) : item.icon ? (
+        <Ionicons name={item.icon as any} size={20} color={iconColor} />
+      ) : null;
+
+    const leading =
+      glyph && item.leadingIconPlateColor ? (
+        <View
+          style={[
+            styles.menuItemLeadingPlate,
+            { backgroundColor: item.leadingIconPlateColor },
+          ]}
+        >
+          {glyph}
+        </View>
+      ) : glyph ? (
+        <View style={styles.menuItemIcon}>{glyph}</View>
+      ) : null;
 
     return (
       <TouchableOpacity
         key={item.id}
-        style={styles.menuItem}
+        style={[
+          styles.menuItem,
+          item.menuItemBackgroundColor != null ? styles.menuItemChip : undefined,
+          item.menuItemBackgroundColor != null && {
+            backgroundColor: item.menuItemBackgroundColor,
+          },
+        ]}
         onPress={() => handleItemPress(item)}
         activeOpacity={0.7}
         disabled={item.disabled}
       >
-        {/* optional icon on the left side - use custom iconComponent or Ionicons */}
-        {(item.iconComponent || item.icon) && (
-          <View style={styles.menuItemIcon}>
-            {item.iconComponent ? item.iconComponent(iconColor) : (
-              <Ionicons
-                name={item.icon as any}
-                size={20}
-                color={iconColor}
-              />
-            )}
-          </View>
-        )}
+        {leading}
         {/* menu item label text */}
         <Text style={[styles.menuItemText, { color: textColor }]}>
           {item.label}
@@ -260,13 +279,31 @@ const createStyles = (
       elevation: 5,
     },
 
-    // menu item icon styling
-    // icon appears on the left side of each menu item
-    menuItemIcon: {
-      marginRight: 8,
+    menuItemLeadingPlate: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 10,
+      overflow: 'hidden',
     },
 
-    // --- PADDING STYLES ---
+    // menu item icon styling — icon appears on the left side of each menu item
+    menuItemIcon: {
+      marginRight: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    menuItemChip: {
+      paddingVertical: Paddings.listItemVertical + 8,
+      paddingHorizontal: Paddings.listItemHorizontal + 4,
+      borderRadius: 12,
+      marginVertical: 5,
+      marginHorizontal: Paddings.cardCompact / 4,
+    },
+
     menuItem: {
       flexDirection: 'row',
       alignItems: 'center',

@@ -37,8 +37,13 @@ export function getTaskCardHeight(duration: number): number {
 }
 
 /**
+ * default vertical scale for clock-time axes (`calculateTaskPosition`, planner day-window preview)
+ */
+export const TIMELINE_DEFAULT_PIXELS_PER_MINUTE = 0.5;
+
+/**
  * Converts a time string (HH:MM) to minutes from midnight
- * 
+ *
  * @param time - Time string in HH:MM format
  * @returns Minutes from midnight (0-1439)
  */
@@ -61,16 +66,16 @@ export function minutesToTime(minutes: number): string {
 
 /**
  * Calculates the Y position (in pixels) for a task on the timeline
- * 
+ *
  * @param time - Time string in HH:MM format
  * @param startHour - Starting hour of the timeline (e.g., 6 for 6 AM)
- * @param pixelsPerMinute - How many pixels represent one minute (default: 0.5)
+ * @param pixelsPerMinute - How many pixels represent one minute (default: `TIMELINE_DEFAULT_PIXELS_PER_MINUTE`)
  * @returns Y position in pixels from the top
  */
 export function calculateTaskPosition(
   time: string,
   startHour: number = 6,
-  pixelsPerMinute: number = 0.5
+  pixelsPerMinute: number = TIMELINE_DEFAULT_PIXELS_PER_MINUTE
 ): number {
   const taskMinutes = timeToMinutes(time);
   const startMinutes = startHour * 60;

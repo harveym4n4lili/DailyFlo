@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSegments } from 'expo-router';
 
-import { ThemeColors } from '@/constants/ColorPalette';
+import { MarpleBrandColors, ThemeColors } from '@/constants/ColorPalette';
 import { IOS_LIQUID_CHROME_TRANSITION_MS } from '@/constants/nativeStackTransition';
 import { useTypography } from '@/hooks/useTypography';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -38,13 +38,14 @@ export default function TabLayout() {
         })
       : themeColors.text.secondary();
 
+  // selected tab + tint — marple 500 to match onboarding / FAB brand accent (native tabs when liquid chrome is off)
   const tabIconSelected =
     Platform.OS === 'ios'
       ? DynamicColorIOS({
-          light: ThemeColors.light.primaryButton.fill,
-          dark: ThemeColors.dark.primaryButton.fill,
+          light: MarpleBrandColors[500],
+          dark: MarpleBrandColors[500],
         })
-      : themeColors.primaryButton.fill();
+      : MarpleBrandColors[500];
 
   const tabBarBgIos =
     Platform.OS === 'ios'
