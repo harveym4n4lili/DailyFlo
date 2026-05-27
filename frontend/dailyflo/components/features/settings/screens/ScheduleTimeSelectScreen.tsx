@@ -33,6 +33,8 @@ import {
   coerceWakeSleepHHMM,
   DEFAULT_SLEEP_HHMM,
   DEFAULT_WAKE_HHMM,
+  hhmmLocalToReferenceDate,
+  SCHEDULE_TIME_MINUTE_INTERVAL,
   scheduleDateToSnappedHHMM,
 } from '@/utils/preferenceScheduleTimes';
 
@@ -96,7 +98,10 @@ export function ScheduleTimeSelectScreen() {
     const next = consumeScheduleTimeSelect();
     setPayload(next);
     if (next) {
-      setDraftTime(next.draftTime);
+      // snap to 5-min grid so spinner + saved value stay aligned
+      const snapped = scheduleDateToSnappedHHMM(next.draftTime);
+      const fallback = next.kind === 'wake' ? DEFAULT_WAKE_HHMM : DEFAULT_SLEEP_HHMM;
+      setDraftTime(hhmmLocalToReferenceDate(snapped, fallback));
     } else {
       const id = setTimeout(() => router.back(), 100);
       return () => clearTimeout(id);
@@ -178,7 +183,7 @@ export function ScheduleTimeSelectScreen() {
               value={draftTime}
               mode="time"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              minuteInterval={15}
+              minuteInterval={SCHEDULE_TIME_MINUTE_INTERVAL}
               onChange={onDraftChange}
               style={styles.picker}
               {...(Platform.OS === 'ios'
