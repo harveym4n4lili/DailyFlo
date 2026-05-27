@@ -126,6 +126,9 @@ export interface FormDetailButtonProps {
   // whether to show the right chevron icon (defaults to true)
   // set to false to hide the chevron-forward icon on the right
   showChevron?: boolean;
+
+  /** when 'center', label is centered in the row (no icon); for destructive/standalone actions in a GroupedList */
+  labelAlign?: 'left' | 'center';
   
   // optional custom styles to override defaults for this specific item
   customStyles?: {

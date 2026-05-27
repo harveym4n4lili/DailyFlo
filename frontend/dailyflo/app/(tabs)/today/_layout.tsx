@@ -48,6 +48,29 @@ export default function TodayLayout() {
               }
         }
       />
+      <Stack.Screen
+        name="display"
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+            : {
+                title: 'Display',
+                headerShown: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+        }
+      />
     </Stack>
   );
 }

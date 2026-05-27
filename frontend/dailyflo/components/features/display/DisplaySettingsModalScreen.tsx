@@ -1,0 +1,436 @@
+/**
+ * Display settings modal — list view vs timeline view, sort options, reset.
+ * Same modal chrome as browse manage-lists / list-create:
+ * ios: Stack.Toolbar xmark + checkmark + native headerTitle "Display"
+ * android: glass close + submit in overlay, in-screen title row.
+ */
+
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Platform, Alert, Switch } from 'react-native';
+import { Stack } from 'expo-router';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
+import { useColorPalette, useSemanticColors, useThemeColors } from '@/hooks/useColorPalette';
+import { useTypography } from '@/hooks/useTypography';
+import { MainCloseButton, MainSubmitButton } from '@/components/ui/Button';
+import {
+  IosBrowseModalCloseStackToolbar,
+  IosBrowseModalTrailingStackToolbar,
+} from '@/components/navigation/IosBrowseModalStackToolbars';
+import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
+import { SFSymbolIcon, CalendarIcon, TickIcon } from '@/components/ui/Icon';
+import { Paddings } from '@/constants/Paddings';
+import { getTextStyle } from '@/constants/Typography';
+
+const HEADER_ROW_HEIGHT = 42;
+const HEADER_TOP = Paddings.screen;
+const FADE_OVERFLOW = 48;
+const TOP_SECTION_HEIGHT = HEADER_TOP + HEADER_ROW_HEIGHT + FADE_OVERFLOW;
+
+/** which field tasks are sorted by on today/planner list views */
+type DisplaySortBy = 'sort' | 'date' | 'priority';
+
+const DEFAULT_SORT_BY: DisplaySortBy = 'date';
+const DEFAULT_SHOW_COMPLETED_TASKS = true;
+
+// display grouped lists: base icon size + extra, column width = icon + label gap (separator alignment)
+const DISPLAY_GROUPED_LIST_ICON_SIZE =
+  Paddings.groupedListIconSize + Paddings.displayGroupedListIconSizeExtra;
+const DISPLAY_GROUPED_LIST_ICON_COLUMN_WIDTH =
+  DISPLAY_GROUPED_LIST_ICON_SIZE + Paddings.groupedListIconTextSpacing;
+// base GroupedList row v-padding + display-screen extra (see Paddings.groupedListContentVerticalExtra)
+const DISPLAY_GROUPED_LIST_CONTENT_PADDING_VERTICAL =
+  Paddings.groupedListContentVertical + Paddings.groupedListContentVerticalExtra;
+
+export default function DisplaySettingsModalScreen() {
+  const router = useGuardedRouter();
+  const insets = useSafeAreaInsets();
+  const themeColors = useThemeColors();
+  const semanticColors = useSemanticColors();
+  const { getMarpleBrandColor } = useColorPalette();
+  const typography = useTypography();
+  const styles = createStyles(typography);
+
+  const groupedListIconColor = getMarpleBrandColor(500);
+  const resetLabelColor = semanticColors.error();
+
+  // local layout/sort prefs — save enables when any value differs from defaults (redux wiring later)
+  const [selectedSortBy, setSelectedSortBy] = useState<DisplaySortBy>(DEFAULT_SORT_BY);
+  const [showCompletedTasks, setShowCompletedTasks] = useState(DEFAULT_SHOW_COMPLETED_TASKS);
+  const hasChanges =
+    selectedSortBy !== DEFAULT_SORT_BY ||
+    showCompletedTasks !== DEFAULT_SHOW_COMPLETED_TASKS;
+
+  const listGroupProps = useMemo(
+    () => ({
+      backgroundColor: themeColors.background.primarySecondaryBlend(),
+      separatorColor: themeColors.border.primary(),
+      separatorInsetRight: Paddings.groupedListContentHorizontal,
+      separatorVariant: 'solid' as const,
+      borderRadius: 24,
+      minimalStyle: false,
+      separatorConsiderIconColumn: true,
+      iconColumnWidth: DISPLAY_GROUPED_LIST_ICON_COLUMN_WIDTH,
+      contentPaddingVertical: DISPLAY_GROUPED_LIST_CONTENT_PADDING_VERTICAL,
+      containerStyle: styles.listContainer,
+    }),
+    [styles.listContainer, themeColors]
+  );
+
+  const handleResetAll = useCallback(() => {
+    Alert.alert(
+      'Reset all display settings?',
+      'Layout and sort preferences will return to their defaults.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset all',
+          style: 'destructive',
+          onPress: () => {
+            setSelectedSortBy(DEFAULT_SORT_BY);
+            setShowCompletedTasks(DEFAULT_SHOW_COMPLETED_TASKS);
+          },
+        },
+      ]
+    );
+  }, []);
+
+  const headerHeight = useHeaderHeight();
+  const headerTitleStyle = useMemo(
+    () => ({
+      ...typography.getTextStyle('heading-4'),
+      color: themeColors.text.primary(),
+    }),
+    [typography, themeColors]
+  );
+  const topSectionHeight =
+    Platform.OS === 'ios' ? headerHeight + FADE_OVERFLOW : TOP_SECTION_HEIGHT;
+  const scrollTopPadding =
+    Platform.OS === 'ios' ? headerHeight + 24 : HEADER_TOP + HEADER_ROW_HEIGHT + 24;
+
+  const handleSave = useCallback(() => {
+    if (!hasChanges) return;
+    // placeholder: persist selectedSortBy to redux / user prefs then dismiss
+    router.back();
+  }, [hasChanges, router]);
+
+  const renderSortCheckmark = useCallback(
+    (option: DisplaySortBy) =>
+      selectedSortBy === option ? (
+        <SFSymbolIcon
+          name="checkmark"
+          size={DISPLAY_GROUPED_LIST_ICON_SIZE}
+          color={themeColors.text.primary()}
+          fallback={
+            <Ionicons
+              name="checkmark"
+              size={DISPLAY_GROUPED_LIST_ICON_SIZE}
+              color={themeColors.text.primary()}
+            />
+          }
+        />
+      ) : (
+        ''
+      ),
+    [selectedSortBy, themeColors]
+  );
+
+  const handleSelectSortBy = useCallback((option: DisplaySortBy) => {
+    setSelectedSortBy(option);
+  }, []);
+
+  // same 18pt icons as browse/settings FormDetailButton rows — keeps SF Symbol + fallback sizes in sync
+  const renderGroupedListIcon = useCallback(
+    (name: string, fallback: React.ReactNode) => (
+      <SFSymbolIcon
+        name={name}
+        size={DISPLAY_GROUPED_LIST_ICON_SIZE}
+        color={groupedListIconColor}
+        fallback={fallback}
+      />
+    ),
+    [groupedListIconColor]
+  );
+
+  return (
+    <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
+      {Platform.OS === 'ios' ? (
+        <Stack.Screen
+          options={{
+            headerTitle: 'Display',
+            headerTitleStyle,
+            headerLargeTitle: false,
+          }}
+        />
+      ) : null}
+      <IosBrowseModalCloseStackToolbar />
+      <IosBrowseModalTrailingStackToolbar
+        icon="checkmark"
+        onPress={handleSave}
+        disabled={!hasChanges}
+        accessibilityLabel="Save display settings"
+      />
+      <View style={styles.contentArea}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: scrollTopPadding, paddingBottom: 120 + insets.bottom },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        >
+          <View style={styles.contentWrapper}>
+            <GroupedListHeader title="Layout" />
+            <View style={styles.groupedListSection}>
+              <GroupedList {...listGroupProps}>
+                {/* reserved slot — custom list/timeline layout picker will mount here */}
+                <View style={styles.layoutSelectorSlot} pointerEvents="box-none" />
+                <View style={styles.completedTasksRow}>
+                  <View style={styles.groupedListIconWrap}>
+                    {renderGroupedListIcon(
+                      'checkmark.circle.fill',
+                      <TickIcon size={DISPLAY_GROUPED_LIST_ICON_SIZE} color={groupedListIconColor} />
+                    )}
+                  </View>
+                  <Text
+                    style={[styles.completedTasksLabel, { color: themeColors.text.primary() }]}
+                    numberOfLines={1}
+                  >
+                    Completed tasks
+                  </Text>
+                  <Switch
+                    value={showCompletedTasks}
+                    onValueChange={setShowCompletedTasks}
+                    accessibilityLabel="Show completed tasks"
+                    trackColor={{
+                      false: themeColors.interactive.tertiary(),
+                      // on track uses marple brand — same accent as grouped list icons
+                      true: groupedListIconColor,
+                    }}
+                    thumbColor={themeColors.background.elevated()}
+                    ios_backgroundColor={themeColors.interactive.tertiary()}
+                  />
+                </View>
+              </GroupedList>
+            </View>
+
+            <GroupedListHeader title="Sort" style={styles.sectionHeader} />
+            <View style={styles.groupedListSection}>
+              <GroupedList {...listGroupProps}>
+                <FormDetailButton
+                  key="sort-by-sort"
+                  iconComponent={renderGroupedListIcon(
+                    'arrow.up.arrow.down',
+                    <Ionicons
+                      name="swap-vertical"
+                      size={DISPLAY_GROUPED_LIST_ICON_SIZE}
+                      color={groupedListIconColor}
+                    />
+                  )}
+                  label="Sort"
+                  value={renderSortCheckmark('sort')}
+                  onPress={() => handleSelectSortBy('sort')}
+                  showChevron={false}
+                />
+                <FormDetailButton
+                  key="sort-by-date"
+                  iconComponent={renderGroupedListIcon(
+                    'calendar',
+                    <CalendarIcon size={DISPLAY_GROUPED_LIST_ICON_SIZE} color={groupedListIconColor} />
+                  )}
+                  label="Date"
+                  value={renderSortCheckmark('date')}
+                  onPress={() => handleSelectSortBy('date')}
+                  showChevron={false}
+                />
+                <FormDetailButton
+                  key="sort-by-priority"
+                  iconComponent={renderGroupedListIcon(
+                    'flag.fill',
+                    <Ionicons
+                      name="flag"
+                      size={DISPLAY_GROUPED_LIST_ICON_SIZE}
+                      color={groupedListIconColor}
+                    />
+                  )}
+                  label="Priority"
+                  value={renderSortCheckmark('priority')}
+                  onPress={() => handleSelectSortBy('priority')}
+                  showChevron={false}
+                />
+              </GroupedList>
+            </View>
+
+            <View style={[styles.groupedListSection, styles.resetGroupedListSection]}>
+              <GroupedList {...listGroupProps} separatorConsiderIconColumn={false}>
+                <FormDetailButton
+                  key="reset-all"
+                  label="Reset all"
+                  onPress={handleResetAll}
+                  showChevron={false}
+                  labelAlign="center"
+                  customStyles={{ label: { color: resetLabelColor } }}
+                />
+              </GroupedList>
+            </View>
+
+            <View style={styles.bottomSpacer} />
+          </View>
+        </ScrollView>
+      </View>
+
+      <View collapsable={false} style={[styles.headerOverlay, { height: topSectionHeight }]} pointerEvents="box-none">
+        <View style={[styles.topSectionAnchor, { height: topSectionHeight }]} pointerEvents="box-none">
+          <BlurView
+            tint={themeColors.isDark ? 'dark' : 'light'}
+            intensity={1}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <LinearGradient
+            colors={[
+              themeColors.background.primary(),
+              themeColors.withOpacity(themeColors.background.primary(), 0),
+            ]}
+            locations={[0.4, 0.8]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+        </View>
+        {Platform.OS === 'android' ? (
+          <>
+            <View style={[styles.headerRow, { top: HEADER_TOP }]} pointerEvents="box-none">
+              <View style={styles.headerPlaceholder} pointerEvents="none" />
+              <View style={styles.headerCenter} pointerEvents="none">
+                <Text style={headerTitleStyle}>Display</Text>
+              </View>
+              <View style={styles.headerPlaceholder} pointerEvents="none" />
+            </View>
+            <View style={styles.headerActionsContainer} pointerEvents="box-none">
+              <MainCloseButton onPress={() => router.back()} top={Paddings.screen} left={Paddings.screen} />
+              <MainSubmitButton
+                onPress={handleSave}
+                disabled={!hasChanges}
+                top={Paddings.screen}
+                right={Paddings.screen}
+                accessibilityLabel="Save display settings"
+              />
+            </View>
+          </>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+const createStyles = (typography: ReturnType<typeof useTypography>) =>  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    contentArea: {
+      flex: 1,
+      zIndex: 0,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: Paddings.screen,
+      flexGrow: 1,
+    },
+    contentWrapper: {
+      paddingHorizontal: 0,
+    },
+    groupedListSection: {
+      paddingTop: 0,
+    },
+    sectionHeader: {
+      marginTop: 24,
+    },
+    listContainer: {
+      marginVertical: 0,
+    },
+    // empty first layout row — tall enough for a future list vs timeline selector UI
+    layoutSelectorSlot: {
+      minHeight: 128,
+      width: '100%',
+    },
+    completedTasksRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      width: '100%',
+      flex: 1,
+    },
+    // same icon gutter as FormDetailButton (margin only — no fixed column width)
+    groupedListIconWrap: {
+      marginRight: Paddings.groupedListIconTextSpacing,
+    },
+    completedTasksLabel: {
+      ...getTextStyle('body-large'),
+      flex: 1,
+      minWidth: 0,
+    },
+    resetGroupedListSection: {
+      // same vertical gap as stacked GroupedLists in list-create (above standalone reset card)
+      marginTop: Paddings.section,
+    },
+    bottomSpacer: {
+      height: 120,
+    },
+    headerOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+      overflow: 'hidden',
+    },
+    topSectionAnchor: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 9,
+      overflow: 'hidden',
+    },
+    headerRow: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      height: HEADER_ROW_HEIGHT,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: Paddings.screen,
+      zIndex: 10,
+    },
+    headerPlaceholder: {
+      width: 44,
+      height: 44,
+    },
+    headerCenter: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerActionsContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: TOP_SECTION_HEIGHT,
+      zIndex: 11,
+      overflow: 'visible',
+    },
+  });

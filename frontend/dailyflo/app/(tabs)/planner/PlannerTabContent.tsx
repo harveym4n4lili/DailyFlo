@@ -106,6 +106,9 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
   );
 
   const router = useGuardedRouter();
+  const openDisplaySettings = useCallback(() => {
+    router.push('/(tabs)/planner/display' as any);
+  }, [router]);
   const navigation = useNavigation();
 
   const themeColors = useThemeColors();
@@ -429,7 +432,12 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                 style={styles.topSectionSelectAllButton}
               />
             ) : Platform.OS === 'android' && mode === 'index' ? (
-              <ScreenHeaderActions variant="dashboard" style={styles.topSectionContextButton} tint="primary" />
+              <ScreenHeaderActions
+                variant="dashboard"
+                onDashboardPress={openDisplaySettings}
+                style={styles.topSectionContextButton}
+                tint="primary"
+              />
             ) : null}
           </View>
         </View>
