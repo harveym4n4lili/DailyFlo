@@ -7,7 +7,7 @@
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { useFocusEffect } from 'expo-router';
+import { Stack, useFocusEffect } from 'expo-router';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -209,15 +209,19 @@ export default function ManageListsScreen() {
 
   const keyExtractor = useCallback((item: List) => item.id, []);
 
-  // ios: native nav bar holds Stack.Toolbar close + add; offset in-content chrome to sit below it.
+  // ios: native nav bar holds Stack.Toolbar close + add and headerTitle between them (same as list-create / settings).
   const headerHeight = useHeaderHeight();
-  const iosNavOffset = Platform.OS === 'ios' ? headerHeight : 0;
-  const topSectionHeight = iosNavOffset + TOP_SECTION_HEIGHT;
-  const contentTopInset = iosNavOffset + HEADER_ROW_HEIGHT;
-  const headerTitleStyle = {
-    ...typography.getTextStyle('heading-3'),
-    color: themeColors.text.primary(),
-  };
+  const headerTitleStyle = useMemo(
+    () => ({
+      ...typography.getTextStyle('heading-4'),
+      color: themeColors.text.primary(),
+    }),
+    [typography, themeColors]
+  );
+  const topSectionHeight =
+    Platform.OS === 'ios' ? headerHeight + FADE_OVERFLOW : TOP_SECTION_HEIGHT;
+  const contentTopInset =
+    Platform.OS === 'ios' ? headerHeight : HEADER_TOP + HEADER_ROW_HEIGHT;
 
   const listEmpty = !isLoading && orderedLists.length === 0;
 
@@ -231,6 +235,15 @@ export default function ManageListsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
+      {Platform.OS === 'ios' ? (
+        <Stack.Screen
+          options={{
+            headerTitle: 'Manage Lists',
+            headerTitleStyle,
+            headerLargeTitle: false,
+          }}
+        />
+      ) : null}
       <IosBrowseModalCloseStackToolbar />
       <IosBrowseModalTrailingStackToolbar
         icon="plus"
@@ -290,27 +303,29 @@ export default function ManageListsScreen() {
             pointerEvents="none"
           />
         </View>
-        <View style={[styles.headerRow, { top: iosNavOffset + HEADER_TOP }]} pointerEvents="box-none">
-          <View style={styles.headerPlaceholder} pointerEvents="none" />
-          <View style={styles.headerCenter} pointerEvents="none">
-            <Text style={headerTitleStyle}>Manage Lists</Text>
-          </View>
-          <View style={styles.headerPlaceholder} pointerEvents="none" />
-        </View>
         {Platform.OS === 'android' ? (
-          <View style={styles.headerActionsContainer} pointerEvents="box-none">
-            <MainCloseButton
-              onPress={() => router.back()}
-              top={Paddings.screen}
-              left={Paddings.screen}
-            />
-            <MainCreateButton
-              onPress={openListCreate}
-              top={Paddings.screen}
-              right={Paddings.screen}
-              accessibilityLabel="Create new list"
-            />
-          </View>
+          <>
+            <View style={[styles.headerRow, { top: HEADER_TOP }]} pointerEvents="box-none">
+              <View style={styles.headerPlaceholder} pointerEvents="none" />
+              <View style={styles.headerCenter} pointerEvents="none">
+                <Text style={headerTitleStyle}>Manage Lists</Text>
+              </View>
+              <View style={styles.headerPlaceholder} pointerEvents="none" />
+            </View>
+            <View style={styles.headerActionsContainer} pointerEvents="box-none">
+              <MainCloseButton
+                onPress={() => router.back()}
+                top={Paddings.screen}
+                left={Paddings.screen}
+              />
+              <MainCreateButton
+                onPress={openListCreate}
+                top={Paddings.screen}
+                right={Paddings.screen}
+                accessibilityLabel="Create new list"
+              />
+            </View>
+          </>
         ) : null}
       </View>
     </View>
@@ -324,6 +339,7 @@ const createStyles = (typography: ReturnType<typeof useTypography>) =>
     },
     contentArea: {
       flex: 1,
+      zIndex: 0,
     },
     headerOverlay: {
       position: 'absolute',
