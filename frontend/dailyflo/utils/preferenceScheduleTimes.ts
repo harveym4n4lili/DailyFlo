@@ -9,6 +9,9 @@ import { timeToMinutes, minutesToTime } from '@/components/features/timeline/tim
 export const DEFAULT_WAKE_HHMM = '06:00';
 export const DEFAULT_SLEEP_HHMM = '23:00';
 
+/** wake/sleep settings spinner step — also used when snapping saved values */
+export const SCHEDULE_TIME_MINUTE_INTERVAL = 5;
+
 const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 /** fast guard so bad api data never blows up planners */
@@ -45,16 +48,17 @@ export function isoInstantToLocalHHMM(iso: string): string {
 }
 
 /**
- * round to 15-minute steps so settings + onboarding wheels stay visually consistent (`minuteInterval={15}`).
+ * round to schedule spinner steps so settings wheels + saved prefs stay aligned (`minuteInterval={5}`).
  */
-export function snapMinutesToQuarterHour(totalMinutesFromMidnight: number): number {
-  const capped = Math.max(0, Math.min(24 * 60 - 15, totalMinutesFromMidnight));
-  return Math.round(capped / 15) * 15;
+export function snapMinutesToScheduleInterval(totalMinutesFromMidnight: number): number {
+  const interval = SCHEDULE_TIME_MINUTE_INTERVAL;
+  const capped = Math.max(0, Math.min(24 * 60 - interval, totalMinutesFromMidnight));
+  return Math.round(capped / interval) * interval;
 }
 
 export function snapWakeSleepHHMM(raw: string, fallback: string): string {
   const base = coerceWakeSleepHHMM(raw, fallback);
-  const snapped = snapMinutesToQuarterHour(timeToMinutes(base));
+  const snapped = snapMinutesToScheduleInterval(timeToMinutes(base));
   return minutesToTime(snapped);
 }
 
@@ -75,11 +79,11 @@ export function timelinePlannerHoursFromWakeSleepHHMM(wakeHHMM: string, sleepHHM
 }
 
 /**
- * converts a picker `Date` (today + chosen clock) → stored `HH:mm` string on the same 15m grid onboarding uses.
+ * converts a picker `Date` (today + chosen clock) → stored `HH:mm` string on the 5-minute grid.
  */
 export function scheduleDateToSnappedHHMM(date: Date): string {
   const total = date.getHours() * 60 + date.getMinutes();
-  return minutesToTime(snapMinutesToQuarterHour(total));
+  return minutesToTime(snapMinutesToScheduleInterval(total));
 }
 
 /** human label for grouped settings rows respecting stored `preferences.timeFormat` choice */
