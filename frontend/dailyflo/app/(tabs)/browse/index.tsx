@@ -58,7 +58,7 @@ function BrowseListsColumn({
         >
           <FormDetailButton
             key="inbox"
-            iconComponent={<SFSymbolIcon name="tray.full" size={20} color={groupedListIconColor} fallback={<BrowseIcon size={18} color={groupedListIconColor} />} />}
+            iconComponent={<SFSymbolIcon name="tray.full" size={18} color={groupedListIconColor} fallback={<BrowseIcon size={18} color={groupedListIconColor} />} />}
             label="Inbox"
             value=""
             onPress={() => router.push('/(tabs)/browse/inbox')}
@@ -66,7 +66,7 @@ function BrowseListsColumn({
           />
           <FormDetailButton
             key="completed"
-            iconComponent={<SFSymbolIcon name="checkmark.circle.fill" size={20} color={groupedListIconColor} fallback={<TickIcon size={18} color={groupedListIconColor} />} />}
+            iconComponent={<SFSymbolIcon name="checkmark.circle.fill" size={18} color={groupedListIconColor} fallback={<TickIcon size={18} color={groupedListIconColor} />} />}
             label="Completed"
             value=""
             onPress={() => router.push('/(tabs)/browse/completed')}
@@ -74,7 +74,7 @@ function BrowseListsColumn({
           />
           <FormDetailButton
             key="tags"
-            iconComponent={<SFSymbolIcon name="tag" size={20} color={groupedListIconColor} fallback={<BrowseIcon size={18} color={groupedListIconColor} />} />}
+            iconComponent={<SFSymbolIcon name="tag" size={18} color={groupedListIconColor} fallback={<BrowseIcon size={18} color={groupedListIconColor} />} />}
             label="Tags"
             value=""
             onPress={() => router.push('/(tabs)/browse/tags')}

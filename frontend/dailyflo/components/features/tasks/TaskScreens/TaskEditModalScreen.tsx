@@ -22,6 +22,7 @@ import { validateAll } from '@/components/forms/TaskForm/TaskValidation';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { useDuplicateTask } from '@/app/task/DuplicateTaskContext';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
+import { getAlertIdsFromTask, mapAlertIdsToTaskReminders } from '@/utils/taskAlertReminders';
 
 // map metadata subtasks to form rows; api may use is_completed while ts types use isCompleted
 function taskToFormSubtasks(
@@ -90,7 +91,7 @@ export default function TaskEditScreen() {
         listId: task.listId ?? undefined,
         time: task.time,
         duration: task.duration ?? undefined,
-        alerts: (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
+        alerts: getAlertIdsFromTask(task),
       };
     }
     return {};
@@ -116,7 +117,7 @@ export default function TaskEditScreen() {
         listId: task.listId ?? undefined,
         priorityLevel: task.priorityLevel,
         routineType: task.routineType,
-        alerts: (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
+        alerts: getAlertIdsFromTask(task),
       },
       subtasks: taskToFormSubtasks(task.metadata?.subtasks),
     };
@@ -144,7 +145,7 @@ export default function TaskEditScreen() {
       dueDate: effectiveDueDate,
       time: t.time,
       duration: t.duration,
-      alerts: (t.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
+      alerts: getAlertIdsFromTask(t),
       pickedListId: undefined,
       routineType: t.routineType,
     });
@@ -159,12 +160,12 @@ export default function TaskEditScreen() {
       listId: t.listId ?? undefined,
       time: t.time,
       duration: t.duration,
-      alerts: (t.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [],
+      alerts: getAlertIdsFromTask(t),
     });
     setSubtasks(taskToFormSubtasks(t.metadata?.subtasks));
     if (!initialValuesRef.current) {
       initialValuesRef.current = {
-        values: { title: t.title, description: t.description || '', dueDate: effectiveDueDate ?? t.dueDate ?? '', time: t.time, duration: t.duration, color: t.color, icon: t.icon, listId: t.listId ?? undefined, priorityLevel: t.priorityLevel, routineType: t.routineType, alerts: (t.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [] },
+        values: { title: t.title, description: t.description || '', dueDate: effectiveDueDate ?? t.dueDate ?? '', time: t.time, duration: t.duration, color: t.color, icon: t.icon, listId: t.listId ?? undefined, priorityLevel: t.priorityLevel, routineType: t.routineType, alerts: getAlertIdsFromTask(t) },
         subtasks: taskToFormSubtasks(t.metadata?.subtasks),
       };
     }
@@ -176,7 +177,7 @@ export default function TaskEditScreen() {
       initialDraftSyncedRef.current = true;
       return;
     }
-    const taskAlerts = (task.metadata as any)?.reminders?.map((r: { id: string }) => r.id) ?? [];
+    const taskAlerts = getAlertIdsFromTask(task);
     const taskDueDate = task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : '';
     const draftDueDate = draft.dueDate ? new Date(draft.dueDate).toISOString().slice(0, 10) : '';
     const draftChanged =
@@ -199,7 +200,7 @@ export default function TaskEditScreen() {
           duration: draft.duration ?? undefined,
           metadata: {
             ...(task.metadata ?? {}),
-            reminders: (draft.alerts ?? []).map((id) => ({ id, type: 'custom' as const, scheduledTime: new Date(), isEnabled: true })),
+            reminders: mapAlertIdsToTaskReminders(draft.alerts),
           },
         },
       })
@@ -377,7 +378,7 @@ export default function TaskEditScreen() {
             listId: values.listId || undefined,
             metadata: {
               subtasks: taskSubtasks,
-              reminders: (values.alerts ?? []).map((id) => ({ id, type: 'custom' as const, scheduledTime: new Date(), isEnabled: true })),
+              reminders: mapAlertIdsToTaskReminders(values.alerts),
               notes: values.description?.trim() || undefined,
               tags: [],
             },
@@ -415,7 +416,7 @@ export default function TaskEditScreen() {
             listId: values.listId || undefined,
             metadata: {
               subtasks: taskSubtasks,
-              reminders: (values.alerts ?? []).map((id) => ({ id, type: 'custom' as const, scheduledTime: new Date(), isEnabled: true })),
+              reminders: mapAlertIdsToTaskReminders(values.alerts),
               notes: values.description?.trim() || undefined,
               tags: [],
             },

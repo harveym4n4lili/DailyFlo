@@ -11,6 +11,8 @@ import { User, RegisterUserInput, LoginUserInput, SocialAuthInput, UpdateUserInp
 // auth API service - handles API calls to Django backend for authentication
 // this service makes HTTP requests to login, register, and other auth endpoints
 import authApiService from '../../../services/api/auth';
+import { cancelAllTaskReminders } from '../../../services/notifications/taskReminderScheduler';
+import { syncPlannerWindDownReminders } from '../../../services/notifications/plannerWindDownReminders';
 // token storage functions - secure storage for authentication tokens using Expo SecureStore
 // these functions store and retrieve tokens from encrypted device storage
 import {
@@ -848,7 +850,19 @@ export const patchUserSchedulePreferences = createAsyncThunk<
       });
 
       const bodyUser = response.user ?? response;
-      return serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
+      const serialized = serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
+
+      // reschedule wind-down os reminders when sleep time changes
+      try {
+        await syncPlannerWindDownReminders(
+          patch.sleepTime,
+          serialized.preferences?.notifications,
+        );
+      } catch (reminderErr) {
+        console.warn('[notifications] wind-down sync after schedule prefs skipped', reminderErr);
+      }
+
+      return serialized;
     } catch (error: any) {
       const prefsErr = error?.response?.data?.preferences;
       const message =
@@ -931,6 +945,12 @@ export const logoutUser = createAsyncThunk(
       // Import clearTasks action from tasks slice to reset task state
       const { clearTasks } = await import('../tasks/tasksSlice');
       dispatch(clearTasks());
+
+      try {
+        await cancelAllTaskReminders();
+      } catch (reminderErr) {
+        console.warn('[notifications] cancel all on logout skipped', reminderErr);
+      }
       
       // clear device-wide onboarding flag on logout so cold start shows auth modal again.
       // per-user keys stay — returning accounts still get Skip after they sign back in.
@@ -958,6 +978,12 @@ export const logoutUser = createAsyncThunk(
         dispatch(clearTasks());
       } catch (taskClearError) {
         console.error('Error clearing tasks during logout:', taskClearError);
+      }
+
+      try {
+        await cancelAllTaskReminders();
+      } catch (reminderErr) {
+        console.warn('[notifications] cancel all on logout skipped', reminderErr);
       }
       
       // Try to reset onboarding even if other logout steps failed

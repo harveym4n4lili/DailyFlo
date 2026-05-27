@@ -1991,3 +1991,39 @@ TODO:
 - Verified email paths only advance to **`/(onboarding)/slides`** after `loginUser` / `registerUser` thunks **fulfill** (tokens stored + user resolved); dev-only skip link on auth landing still bypasses auth by design.
 
 ---
+## [23/05/2026] - [Saturday]
+
+### Today's Goals
+- [x] I unified the **task picker stack sheets** (date, time/duration, alerts) with shared liquid-glass chrome — `alertSheetChrome` insets, **Select Date** / **Time** / **Alerts** headings, and top-right **MainCloseButton** on each screen.
+- [x] I refactored **Alert select** into a saved-alerts grouped list (marple 18px icons, trash delete, empty state, **Add Alert** pill) and added the **`/alert-offset-select`** sheet with an onboarding-style offset spinner in a GroupedList, marple **Add** CTA, and close button.
+- [x] I replaced legacy **time/duration** UX on the time select sheet with the onboarding **time wheel** (GroupedList + **No time** pill) and **`TaskDurationSlider`** glass rail (**No duration** pill); duration heading is a step smaller with tighter top spacing.
+- [x] I moved **quick date options** into a GroupedList on date select (18px marple icons, wrapper cell padding only), added **Select Date** header + close, shared sheet spacing, and a **second full-screen detent** (`0.8` + `1`) on the date sheet.
+- [x] I extended **alert scheduling** for dynamic `before-{n}` ids, explicit empty reminders = no alerts, and stripping **end-of-task** alert when duration is cleared (draft + reminder helpers + `taskReminderAlerts`).
+- [x] I standardised **grouped list icon size to 18px** across browse, settings, and `FormDetailButton` so picker rows match alert rows.
+
+### Plans For Future
+- Manual QA on device for **local OS reminders** (dev client, not Expo Go) — confirm default 15-min fire, custom offsets, and cancel/reschedule on edit/logout.
+- Consider the same dual-detent treatment on other picker sheets if date select feels better at full height.
+- Same longer-term backlog as spring notes (MVP realignment, nature UI palette pass, AI provider choice, gamification).
+
+### Notes
+- Picker sheets now share one visual language with onboarding (spinners, glass duration slider, GroupedList surfaces) — good base before I revisit the April TODO (**new-list header**, create screen restyle, **search bar**).
+- `CalendarView` takes **`contentInsetHandledByParent`** on date select so horizontal padding isn’t doubled against `ALERT_SHEET_HORIZONTAL_INSET`.
+
+---
+## [23/05/2026] - [Saturday] (continued)
+
+### Today's Goals
+- [x] I added **notification tap → deep link** — `NotificationResponseHandler` opens `/task/[taskId]` (with `occurrenceDate` when recurring) or planner for wind-down reminders.
+- [x] I implemented **recurring task reminder scheduling** — `resolveTaskReminderSchedulingTarget` schedules the next eligible occurrence only (skips completed dates and recurrence exceptions).
+- [x] I updated **`notification-implementation.md`** to reflect shipped Phase 1.1, 1.2, 1.3, wind-down, and recurring scheduling.
+
+### Plans For Future
+- Manual QA on device (dev client) — timed task, custom alerts, recurring next occurrence after complete, wind-down copy, tap-to-open.
+- Day-rollover background resync for recurring reminders (optional AppState listener).
+- Phase 3 push tokens when ready.
+
+### Notes
+- Recurring reminders resync on task fetch and after `updateTask` (including per-occurrence completion); overnight rollover relies on next app open / fetch until background hook is added.
+
+---

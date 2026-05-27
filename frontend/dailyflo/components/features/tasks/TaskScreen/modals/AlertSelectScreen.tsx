@@ -1,36 +1,163 @@
 /**
  * Alert select screen content. Used by app/alert-select (root-level route).
- * Draft via CreateTaskDraftProvider.
+ * Draft via CreateTaskDraftProvider — shows saved alerts with delete; Add Alert opens offset picker.
  */
 
-import React from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '@/hooks/useColorPalette';
-import { getTypographyStyle } from '@/constants/Typography';
+import * as Haptics from 'expo-haptics';
+
+import { MainCloseButton } from '@/components/ui/Button';
+import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
+import { getTextStyle, getTypographyStyle } from '@/constants/Typography';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
-import { DashedSeparator } from '@/components/ui/borders';
+import { BellIcon, ClockIcon, SFSymbolIcon, TrashIcon } from '@/components/ui/Icon';
+import { GroupedList } from '@/components/ui/List/GroupedList';
 import { Paddings } from '@/constants/Paddings';
-import { ALERT_OPTIONS } from './alertOptions';
+import {
+  getAlertRowDisplay,
+  sortAlertIdsForDisplay,
+  withoutEndAlertUnlessDuration,
+} from './alertOptions';
+import {
+  ALERT_SHEET_CLOSE_TOP,
+  ALERT_SHEET_HEADER_TRAILING_INSET,
+  ALERT_SHEET_HORIZONTAL_INSET,
+  ALERT_SHEET_SCROLL_PADDING_TOP,
+} from './alertSheetChrome';
+
+const ALERTS_HEADING_GAP = Paddings.listItemVertical + Paddings.groupedListHeaderContentGap;
+const GROUPED_LIST_ICON_SIZE = 18;
+const DELETE_ICON_SIZE = 20;
+
+/** one saved alert row — leading icon + label + delete */
+function AlertSavedRow({
+  alertId,
+  iconColor,
+  onDelete,
+}: {
+  alertId: string;
+  iconColor: string;
+  onDelete: () => void;
+}) {
+  const typographyPlatform =
+    Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
+  const themeColors = useThemeColors();
+  const display = getAlertRowDisplay(alertId);
+
+  return (
+    <View style={styles.optionRow}>
+      <View style={styles.leadingIconWrap}>
+        <SFSymbolIcon
+          name={display.sfSymbol}
+          size={GROUPED_LIST_ICON_SIZE}
+          color={iconColor}
+          fallback={
+            display.ionicon === 'time' ? (
+              <ClockIcon size={GROUPED_LIST_ICON_SIZE} color={iconColor} isSolid />
+            ) : (
+              <Ionicons name={display.ionicon} size={GROUPED_LIST_ICON_SIZE} color={iconColor} />
+            )
+          }
+        />
+      </View>
+
+      <Text
+        style={[
+          getTypographyStyle('body-large', typographyPlatform),
+          styles.label,
+          { color: themeColors.text.secondary() },
+        ]}
+      >
+        {display.label}
+      </Text>
+
+      <TouchableOpacity
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onDelete();
+        }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel={`Delete ${display.label}`}
+      >
+        <SFSymbolIcon
+          name="trash.fill"
+          size={DELETE_ICON_SIZE}
+          color={themeColors.text.tertiary()}
+          fallback={<TrashIcon size={DELETE_ICON_SIZE} color={themeColors.text.tertiary()} />}
+        />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+/** empty grouped list row when user removed every alert */
+function AlertEmptyRow({ iconColor }: { iconColor: string }) {
+  const typographyPlatform =
+    Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
+  const themeColors = useThemeColors();
+
+  return (
+    <View style={styles.optionRow} accessibilityRole="text" accessibilityLabel="No alerts">
+      <View style={styles.leadingIconWrap}>
+        <SFSymbolIcon
+          name="bell.fill"
+          size={GROUPED_LIST_ICON_SIZE}
+          color={iconColor}
+          fallback={
+            <BellIcon size={GROUPED_LIST_ICON_SIZE} color={iconColor} isSolid />
+          }
+        />
+      </View>
+      <Text
+        style={[
+          getTypographyStyle('body-large', typographyPlatform),
+          styles.label,
+          { color: themeColors.text.tertiary() },
+        ]}
+      >
+        No alerts
+      </Text>
+    </View>
+  );
+}
 
 export function AlertSelectScreen() {
-  const typographyPlatform = Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
+  const typographyPlatform =
+    Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
+  const { getMarpleBrandColor } = useColorPalette();
   const { draft, setAlerts } = useCreateTaskDraft();
 
-  const selectedAlerts = draft.alerts ?? [];
+  const alertIconColor = getMarpleBrandColor(500);
+
+  const savedAlerts = useMemo(
+    () => sortAlertIdsForDisplay(withoutEndAlertUnlessDuration(draft.alerts ?? [], draft.duration)),
+    [draft.alerts, draft.duration],
+  );
+
   const useLiquidGlass = Platform.OS === 'ios' && !Platform.isPad;
   const backgroundColor = useLiquidGlass
     ? 'transparent'
     : themeColors.background.secondary();
 
-  const handleToggleAlert = (alertId: string) => {
-    const newAlerts = selectedAlerts.includes(alertId)
-      ? selectedAlerts.filter((id) => id !== alertId)
-      : [...selectedAlerts, alertId];
-    setAlerts(newAlerts);
+  const handleClose = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  const handleDeleteAlert = (alertId: string) => {
+    setAlerts((draft.alerts ?? []).filter((id) => id !== alertId));
+  };
+
+  const handleAddAlertPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/alert-offset-select');
   };
 
   return (
@@ -39,65 +166,103 @@ export function AlertSelectScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: Paddings.screenSmall, paddingBottom: insets.bottom + Paddings.modalBottomExtra },
+          {
+            paddingTop: ALERT_SHEET_SCROLL_PADDING_TOP,
+            paddingBottom: insets.bottom + Paddings.modalBottomExtra,
+            paddingHorizontal: ALERT_SHEET_HORIZONTAL_INSET,
+          },
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        {ALERT_OPTIONS.map((alert, index) => {
-          const isSelected = selectedAlerts.includes(alert.id);
-          const isLastOption = index === ALERT_OPTIONS.length - 1;
-          
-          return (
-            <View key={alert.id}>
-              <Pressable
-                onPress={() => handleToggleAlert(alert.id)}
-                style={({ pressed }) => [
-                  styles.optionButton,
-                  {
-                    backgroundColor:
-                      isSelected || pressed
-                        ? themeColors.background.tertiary()
-                        : 'transparent',
-                  },
+        <View style={styles.alertsSection}>
+          <Text
+            style={[
+              getTypographyStyle('heading-3', typographyPlatform),
+              styles.alertsHeading,
+              {
+                color: themeColors.text.primary(),
+                paddingRight: ALERT_SHEET_HEADER_TRAILING_INSET,
+              },
+            ]}
+            accessibilityRole="header"
+            accessibilityLabel="Alerts"
+          >
+            Alerts
+          </Text>
+
+          <GroupedList
+            containerStyle={styles.listContainer}
+            backgroundColor={themeColors.background.primarySecondaryBlend()}
+            separatorColor={themeColors.border.primary()}
+            separatorInsetRight={Paddings.groupedListContentHorizontal}
+            separatorVariant="solid"
+            borderRadius={24}
+            minimalStyle={false}
+            separatorConsiderIconColumn
+            iconColumnWidth={30}
+          >
+            {savedAlerts.length === 0 ? (
+              <AlertEmptyRow iconColor={alertIconColor} />
+            ) : (
+              savedAlerts.map((alertId) => (
+                <AlertSavedRow
+                  key={alertId}
+                  alertId={alertId}
+                  iconColor={alertIconColor}
+                  onDelete={() => handleDeleteAlert(alertId)}
+                />
+              ))
+            )}
+          </GroupedList>
+
+          <View style={styles.addAlertPillRow}>
+            <Pressable
+              style={styles.formDataPillTapArea}
+              hitSlop={{
+                top: Paddings.touchTarget,
+                bottom: Paddings.touchTarget,
+                left: Paddings.touchTarget,
+                right: Paddings.touchTarget,
+              }}
+              onPress={handleAddAlertPress}
+              accessibilityRole="button"
+              accessibilityLabel="Add Alert"
+            >
+              <View
+                style={[
+                  styles.formDataPill,
+                  { backgroundColor: themeColors.background.primarySecondaryBlend() },
                 ]}
-                accessibilityRole="button"
-                accessibilityLabel={`${isSelected ? 'Deselect' : 'Select'} ${alert.label}`}
-                accessibilityState={{ selected: isSelected }}
               >
-                <View style={styles.optionLeft}>
-                  <View style={styles.iconWrap}>
-                    <Ionicons
-                      name={alert.icon as any}
-                      size={20}
-                      color={
-                        isSelected
-                          ? themeColors.interactive.primary()
-                          : themeColors.text.secondary()
-                      }
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      getTypographyStyle('body-large', typographyPlatform),
-                      {
-                        color: themeColors.text.primary(),
-                      },
-                    ]}
-                  >
-                    {alert.label}
-                  </Text>
-                </View>
-              </Pressable>
-              {/* dashed separator below each option - same as QuickDateOptions: wrapper with card padding */}
-              {!isLastOption && (
-                <View style={styles.separatorWrapper}>
-                  <DashedSeparator paddingHorizontal={0} />
-                </View>
-              )}
-            </View>
-          );
-        })}
+                <SFSymbolIcon
+                  name="bell.fill"
+                  size={18}
+                  color={alertIconColor}
+                  fallback={
+                    <View style={styles.formDataPillIcon}>
+                      <BellIcon size={18} color={alertIconColor} isSolid />
+                    </View>
+                  }
+                  style={styles.formDataPillIcon}
+                />
+                <Text style={[styles.formDataPillText, { color: themeColors.text.primary() }]}>
+                  Add Alert
+                </Text>
+              </View>
+            </Pressable>
+          </View>
+        </View>
       </ScrollView>
+
+      <View style={styles.headerOverlay} pointerEvents="box-none">
+        <MainCloseButton
+          onPress={handleClose}
+          top={ALERT_SHEET_CLOSE_TOP}
+          right={ALERT_SHEET_HORIZONTAL_INSET}
+          iconEmphasis="secondary"
+        />
+      </View>
     </View>
   );
 }
@@ -105,20 +270,57 @@ export function AlertSelectScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flex: 1, minHeight: 0 },
-  scrollContent: { paddingHorizontal: Paddings.none },
-  // same horizontal padding as option buttons - matches QuickDateOptions separator alignment
-  separatorWrapper: {
-    paddingHorizontal: Paddings.card,
+  scrollContent: { flexGrow: 1 },
+  alertsSection: { width: '100%' },
+  alertsHeading: {
+    marginBottom: ALERTS_HEADING_GAP,
   },
-  optionButton: {
+  listContainer: { marginVertical: 0 },
+  addAlertPillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    marginTop: Paddings.formDataPillRowGap,
+  },
+  formDataPillTapArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    minHeight: 48,
+  },
+  formDataPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingVertical: Paddings.formDataPillVertical,
+    paddingHorizontal: Paddings.formDataPillHorizontal,
+    borderRadius: Paddings.formDataPillRadius,
+    overflow: 'hidden',
+  },
+  formDataPillIcon: {
+    marginRight: Paddings.formDataPillIconGap,
+  },
+  formDataPillText: {
+    ...getTextStyle('body-large'),
+  },
+  optionRow: {
     width: '100%',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Paddings.listItemVertical,
-    paddingHorizontal: Paddings.card,
-    height: 48,
+    justifyContent: 'space-between',
   },
-  optionLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  iconWrap: { width: 20, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  leadingIconWrap: {
+    marginRight: Paddings.groupedListIconTextSpacing,
+  },
+  label: {
+    flex: 1,
+    marginRight: Paddings.groupedListIconTextSpacing,
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
 });

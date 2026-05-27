@@ -225,9 +225,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="person.circle"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<GearIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Account"
@@ -240,9 +240,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="calendar"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<CalendarIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<CalendarIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Calendar"
@@ -255,9 +255,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="sun.horizon.fill"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<SparklesIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<SparklesIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Wake up"
@@ -271,9 +271,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="moon.zzz.fill"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<SparklesIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<SparklesIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Sleep"
@@ -303,9 +303,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="target"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<SparklesIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<SparklesIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Goals"
@@ -318,9 +318,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="bell.badge"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<BellIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<BellIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Reminders"
@@ -333,9 +333,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="bell"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<BellIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<BellIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Notifications"
@@ -364,9 +364,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="paintbrush"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<GearIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Theme"
@@ -379,9 +379,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="square.grid.2x2"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<GearIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Navigation"
@@ -394,9 +394,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="app.badge"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<GearIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="App Icon"
@@ -425,9 +425,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="info.circle"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<GearIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="About"
@@ -440,9 +440,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="bubble.left.and.bubble.right"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<GearIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Help and Feedback"
@@ -455,9 +455,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="sparkles"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<SparklesIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<SparklesIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="What's New"
@@ -470,9 +470,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="arrow.triangle.2.circlepath"
-                    size={20}
+                    size={18}
                     color={settingsGroupedListIconColor}
-                    fallback={<GearIcon size={20} color={settingsGroupedListIconColor} />}
+                    fallback={<GearIcon size={18} color={settingsGroupedListIconColor} />}
                   />
                 }
                 label="Sync"
@@ -501,9 +501,9 @@ export default function BrowseSettingsScreen() {
                 iconComponent={
                   <SFSymbolIcon
                     name="rectangle.portrait.and.arrow.right"
-                    size={20}
+                    size={18}
                     color={logoutDestructiveColor}
-                    fallback={<GearIcon size={20} color={logoutDestructiveColor} />}
+                    fallback={<GearIcon size={18} color={logoutDestructiveColor} />}
                   />
                 }
                 label="Logout"
