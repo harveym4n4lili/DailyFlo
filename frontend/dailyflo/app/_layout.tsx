@@ -37,6 +37,7 @@ import {
   hasUserEverCompletedOnboarding,
 } from '@/utils/onboarding/onboardingUserStatus';
 import { setupNotifications } from '@/services/notifications/notificationsSetup';
+import { NotificationResponseHandler } from '@/components/navigation/NotificationResponseHandler';
 
 // typed routes lag behind new files until expo regenerates — cast keeps router.push happy
 const ONBOARDING_AUTH_HREF = '/(onboarding)/auth' as Href;
@@ -365,6 +366,7 @@ export default function RootLayout() {
           </DuplicateTaskProvider>
           </CreateTaskDraftProvider>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+          <NotificationResponseHandler />
           <AuthSessionGate />
         </ThemeProvider>
         </CustomTabNavMetricsProvider>

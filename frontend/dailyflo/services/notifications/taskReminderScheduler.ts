@@ -9,6 +9,7 @@ import { Platform } from 'react-native';
 import type { Task, UserPreferences } from '@/types';
 
 import { isPlannerWindDownReminderTaskId } from '@/components/features/timeline/plannerScheduleAnchors';
+import { isRecurringTask } from '@/utils/recurrenceUtils';
 
 import { ANDROID_DEFAULT_CHANNEL_ID, ensureAndroidNotificationChannel } from './notificationsSetup';
 import { getNotificationPermissionSnapshot } from './requestNotificationPermission';
@@ -23,6 +24,7 @@ import {
 } from './taskReminderConstants';
 import { formatWindDownReminderBody } from './taskReminderCopy';
 import { getTaskLocalStartDate } from './taskReminderDateMath';
+import { resolveTaskReminderSchedulingTarget } from './taskRecurrenceReminderScheduling';
 import {
   areUserNotificationPrefsAllowed,
   canScheduleTaskReminders,
@@ -116,12 +118,43 @@ export async function syncTaskReminders(
 
   await cancelTaskReminders(task.id);
 
-  if (!isTaskEligibleForLocalReminder(task)) {
-    logReminderSkip(task.id, 'task not eligible', {
-      isCompleted: task.isCompleted,
-      hasDueDate: Boolean(task.dueDate),
-      hasTime: Boolean(task.time?.trim()),
-    });
+  const isWindDown = isPlannerWindDownReminderTaskId(task.id);
+  let scheduleTask = task;
+  let occurrenceDate: string | null = null;
+
+  if (!isWindDown) {
+    const target = resolveTaskReminderSchedulingTarget(task);
+    if (!target) {
+      logReminderSkip(task.id, 'no upcoming occurrence with future reminder', {
+        routineType: task.routineType,
+        isCompleted: task.isCompleted,
+      });
+      return;
+    }
+    scheduleTask = target.task;
+    occurrenceDate = target.occurrenceDate;
+  }
+
+  if (isWindDown) {
+    if (!isTaskEligibleForLocalReminder(scheduleTask)) {
+      logReminderSkip(task.id, 'task not eligible', {
+        isCompleted: scheduleTask.isCompleted,
+        hasDueDate: Boolean(scheduleTask.dueDate),
+        hasTime: Boolean(scheduleTask.time?.trim()),
+      });
+      return;
+    }
+  } else if (!isRecurringTask(task)) {
+    if (!isTaskEligibleForLocalReminder(scheduleTask)) {
+      logReminderSkip(task.id, 'task not eligible', {
+        isCompleted: scheduleTask.isCompleted,
+        hasDueDate: Boolean(scheduleTask.dueDate),
+        hasTime: Boolean(scheduleTask.time?.trim()),
+      });
+      return;
+    }
+  } else if (task.softDeleted || !task.time?.trim()) {
+    logReminderSkip(task.id, 'recurring task missing time or soft-deleted');
     return;
   }
 
@@ -137,17 +170,18 @@ export async function syncTaskReminders(
     return;
   }
 
-  const taskStart = getTaskLocalStartDate(task);
+  const taskStart = getTaskLocalStartDate(scheduleTask);
   if (!taskStart) {
     logReminderSkip(task.id, 'could not parse task start datetime', {
-      dueDate: task.dueDate,
-      time: task.time,
+      dueDate: scheduleTask.dueDate,
+      time: scheduleTask.time,
+      occurrenceDate,
     });
     return;
   }
 
-  const alertIds = getEffectiveAlertIdsForTask(task);
-  const durationMinutes = task.duration ?? 0;
+  const alertIds = getEffectiveAlertIdsForTask(scheduleTask);
+  const durationMinutes = scheduleTask.duration ?? 0;
   await ensureAndroidNotificationChannel();
 
   const scheduledEntries: Record<string, string> = {};
@@ -169,9 +203,9 @@ export async function syncTaskReminders(
     }
 
     const identifier = buildTaskReminderNotificationId(task.id, alertId);
-    const body = isPlannerWindDownReminderTaskId(task.id)
+    const body = isWindDown
       ? formatWindDownReminderBody(taskStart, fireDate)
-      : formatNotificationBodyForAlert(alertId, task.title, taskStart, fireDate);
+      : formatNotificationBodyForAlert(alertId, scheduleTask.title, taskStart, fireDate);
 
     const trigger: Notifications.DateTriggerInput = {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -189,8 +223,9 @@ export async function syncTaskReminders(
           body,
           sound: true,
           data: {
-            type: isPlannerWindDownReminderTaskId(task.id) ? 'wind_down_reminder' : 'task_reminder',
+            type: isWindDown ? 'wind_down_reminder' : 'task_reminder',
             taskId: task.id,
+            ...(occurrenceDate ? { occurrenceDate } : {}),
             alertId,
             taskStartIso: taskStart.toISOString(),
           },
