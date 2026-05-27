@@ -16,6 +16,9 @@ export {
   syncPlannerWindDownReminders,
   cancelPlannerWindDownReminders,
 } from './plannerWindDownReminders';
+export { getHrefFromNotificationData } from './notificationNavigation';
+export { resolveTaskReminderSchedulingTarget } from './taskRecurrenceReminderScheduling';
+export type { TaskReminderSchedulingTarget } from './taskRecurrenceReminderScheduling';
 export {
   MANDATORY_TASK_REMINDER_ALERT_ID,
   MANDATORY_TASK_REMINDER_OFFSET_MINUTES,

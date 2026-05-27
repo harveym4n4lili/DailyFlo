@@ -4,7 +4,7 @@
 
 **Audience:** Engineers working in `frontend/dailyflo` (Expo Router, Redux Toolkit, `expo-notifications`).
 
-**Status:** Phase 1 shipped in code — local mandatory 15‑min task reminders; see §8 Phase 1 checklist.
+**Status:** Phase 1–1.2 + recurring next-occurrence scheduling + tap-to-open shipped in code; wind-down 5‑min reminders shipped; **manual QA on device still required** (§8 Phase 1 step 7).
 
 **See also:**
 
@@ -242,15 +242,17 @@ frontend/dailyflo/
   services/notifications/
     notificationsSetup.ts              # exists — channel + foreground handler
     requestNotificationPermission.ts   # exists
-    taskReminderScheduler.ts           # NEW — sync/cancel + schedule
-    taskReminderCopy.ts                # NEW — "{title} scheduled in {x} mins"
-    taskReminderStorage.ts             # NEW — AsyncStorage id map
-    taskReminderEligibility.ts         # NEW — permission + prefs + task checks
-    taskReminderDateMath.ts            # NEW — dueDate + time → Date, fire offset
-  store/
-    (optional) middleware/taskReminderMiddleware.ts
-  types/
-    notifications.ts                   # NEW — payload + map types (optional)
+    taskReminderScheduler.ts           # sync/cancel + schedule
+    taskReminderCopy.ts                # "{title} scheduled in {x} mins" + wind-down copy
+    taskReminderStorage.ts             # AsyncStorage id map
+    taskReminderEligibility.ts         # permission + prefs + task checks
+    taskReminderDateMath.ts            # dueDate + time → Date, fire offset
+    taskReminderAlerts.ts              # alert id → fire date + body
+    taskRecurrenceReminderScheduling.ts # next recurring occurrence for schedule
+    plannerWindDownReminders.ts        # sleep anchor 5-min reminders (14-day lookahead)
+    notificationNavigation.ts          # notification data → expo-router href
+  components/navigation/
+    NotificationResponseHandler.tsx    # tap listener + cold-start deep link
 ```
 
 **Do not** add Django endpoints in v1.
@@ -286,19 +288,34 @@ frontend/dailyflo/
 
 ### Phase 1.1 — Alert picker parity
 
-- Map each selected `ALERT_OPTIONS` id to offset minutes (`start` → 0, `15-min` → 15, skip `end` until designed)
-- Schedule one notification per selected alert (unique identifier per alertId)
-- Persist selections in `metadata.reminders` with real `scheduledTime` (fix placeholder `new Date()` in edit auto-save)
+- [x] Map each selected `ALERT_OPTIONS` id to offset minutes (`start` → 0, dynamic `before-{n}`, skip `end` when no duration)
+- [x] Schedule one notification per selected alert (unique identifier per `alertId`)
+- [x] Empty `metadata.reminders: []` = no alerts; missing metadata still defaults to mandatory 15‑min for regular tasks
+- [ ] Persist selections with real `scheduledTime` in edit auto-save (still placeholder `new Date()` in some paths)
 
 ### Phase 1.2 — Cold-start resync
 
-- After tasks fetch, reconcile schedules vs map
-- Handle app reinstall (empty map, OS may still have stale ids — cancel-all then rebuild)
+- [x] After tasks fetch, `syncAllTaskReminders` + `syncPlannerWindDownReminders` rebuild schedules
+- [x] Logout `cancelAllTaskReminders` clears map + sweeps pending expo ids
+- [ ] App reinstall edge case (empty map, stale OS ids) — partial via cancel-all sweep on logout only
+
+### Phase 1.3 — Tap notification → navigate
+
+- [x] `NotificationResponseHandler` in root `_layout` — listener + `getLastNotificationResponseAsync` (cold start)
+- [x] `task_reminder` → `/task/[taskId]` with optional `occurrenceDate` for recurring
+- [x] `wind_down_reminder` → `/(tabs)/planner`
 
 ### Phase 2 — Recurring tasks
 
-- On each occurrence completion or day rollover, schedule **next** occurrence only
-- Coordinate with `routineType` + `recurrence_completions` / planner occurrence logic
+- [x] `resolveTaskReminderSchedulingTarget` — schedule **next** eligible occurrence only (skips completed dates + recurrence exceptions)
+- [x] Resync on task update / fetch (including per-occurrence completion via `recurrence_completions`)
+- [ ] Day rollover while app backgrounded (no background fetch) — next occurrence picked up on next fetch / task edit
+
+### Phase 2.1 — Planner wind-down (local)
+
+- [x] Default **5 min before** sleep anchor — copy **`Wind Down scheduled in {n} min`**
+- [x] Per-day synthetic task ids + 14-day lookahead via `syncPlannerWindDownReminders`
+- [x] Resync on tasks fetch + wake/sleep prefs PATCH
 
 ### Phase 3 — Push (future)
 
@@ -379,7 +396,7 @@ await Notifications.scheduleNotificationAsync({
 | 1 | All-day tasks (date, no `time`) | **No notification** in v1 |
 | 2 | `x === 0` copy | **`{title} starting now`** instead of “0 mins” |
 | 3 | Default offset if user picks `start` only | v1 ignores picker; **always 15‑min mandatory** until Phase 1.1 |
-| 4 | Tap notification → navigation | v1: open app (default). v1.1: deep link to task detail via `taskId` in `data` |
+| 4 | Tap notification → navigation | **Shipped (v1.1):** `NotificationResponseHandler` + `notificationNavigation.ts` — task edit or planner |
 | 5 | Quiet hours / sleep window | Defer — respect `wakeTime`/`sleepTime` in Phase 2 |
 | 6 | Onboarding first task | Onboarding `createTask` should schedule like any other timed task |
 
@@ -401,3 +418,5 @@ After Phase 1 ships, update `docs/development-journals/back-log.md`:
 | Date | Change |
 | --- | --- |
 | 2026-05 | Initial plan — v1 mandatory local task reminder, `{title} scheduled in {x} mins`, integration with existing alert metadata and expo-notifications bootstrap. |
+| 2026-05-23 | Phase 1.1 multi-alert + dynamic offsets; alert/time/date picker sheet UX; wind-down 5‑min reminders; settings wake/sleep 5‑min spinners. |
+| 2026-05-23 | Phase 1.3 tap-to-open; Phase 2 recurring next-occurrence scheduling (`taskRecurrenceReminderScheduling.ts`). |

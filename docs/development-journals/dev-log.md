@@ -2011,3 +2011,19 @@ TODO:
 - `CalendarView` takes **`contentInsetHandledByParent`** on date select so horizontal padding isn’t doubled against `ALERT_SHEET_HORIZONTAL_INSET`.
 
 ---
+## [23/05/2026] - [Saturday] (continued)
+
+### Today's Goals
+- [x] I added **notification tap → deep link** — `NotificationResponseHandler` opens `/task/[taskId]` (with `occurrenceDate` when recurring) or planner for wind-down reminders.
+- [x] I implemented **recurring task reminder scheduling** — `resolveTaskReminderSchedulingTarget` schedules the next eligible occurrence only (skips completed dates and recurrence exceptions).
+- [x] I updated **`notification-implementation.md`** to reflect shipped Phase 1.1, 1.2, 1.3, wind-down, and recurring scheduling.
+
+### Plans For Future
+- Manual QA on device (dev client) — timed task, custom alerts, recurring next occurrence after complete, wind-down copy, tap-to-open.
+- Day-rollover background resync for recurring reminders (optional AppState listener).
+- Phase 3 push tokens when ready.
+
+### Notes
+- Recurring reminders resync on task fetch and after `updateTask` (including per-occurrence completion); overnight rollover relies on next app open / fetch until background hook is added.
+
+---
