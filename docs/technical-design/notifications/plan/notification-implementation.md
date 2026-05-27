@@ -9,6 +9,7 @@
 **See also:**
 
 - [`../../onboarding/onboarding-backlog-reconciliation.md`](../../onboarding/onboarding-backlog-reconciliation.md) — onboarding permission step (shipped)
+- [`notification-manual-qa-checklist.md`](notification-manual-qa-checklist.md) — device QA checklist (Phase 1 step 7)
 - [`../../authentication/design/logout-implementation.md`](../../authentication/design/logout-implementation.md) — session teardown (must cancel pending notifications on logout)
 - [`../../api/plan/tasks/tasks-api-integration.md`](../../api/plan/tasks/tasks-api-integration.md) — task CRUD thunks (integration hooks)
 - [`../../../development-journals/decisions-log.md`](../../../development-journals/decisions-log.md) — **toasts removed**; use OS notifications + haptics for off-screen feedback
@@ -276,7 +277,8 @@ frontend/dailyflo/
 4. [x] **`taskReminderScheduler`** — sync / cancel / cancelAll
 5. [x] **Wire thunks** — create / update / delete / duplicate (complete cancels via eligibility)
 6. [x] **Wire logout** — `logoutUser` path
-7. [ ] **Manual QA** — create timed task 20+ min in future → notification at T−15
+7. [ ] **Manual QA** — create timed task 20+ min in future → notification at T−15  
+   → use **[notification-manual-qa-checklist.md](notification-manual-qa-checklist.md)**
 
 **Acceptance:**
 
@@ -363,6 +365,8 @@ await Notifications.scheduleNotificationAsync({
 ---
 
 ## 10. Testing plan
+
+**Full device checklist:** [`notification-manual-qa-checklist.md`](notification-manual-qa-checklist.md) — pass/fail tables for Phase 1 step 7 (timed, custom alerts, CRUD, recurring, wind-down, tap, logout).
 
 ### Manual (required for v1)
 
