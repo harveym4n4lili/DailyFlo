@@ -42,6 +42,7 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
   onPress,
   disabled = false,
   showChevron = true, // default to showing chevron for backward compatibility
+  labelAlign = 'left',
   customStyles,
 }) => {
   // get theme-aware colors from the color palette system
@@ -52,8 +53,9 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
   const iconSize = customStyles?.icon?.size || 18;
   const showValue =
     value != null && (typeof value !== 'string' || value.trim().length > 0);
-  const showLeftIcon = iconComponent != null || icon != null;
+  const showLeftIcon = labelAlign !== 'center' && (iconComponent != null || icon != null);
   const labelColor = themeColors.text.secondary();
+  const isCenteredLabel = labelAlign === 'center';
 
   // render the value - can be a string or custom component
   const renderValue = () => {
@@ -80,7 +82,7 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
   const containerStyle: ViewStyle = {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+    justifyContent: isCenteredLabel ? ('center' as const) : ('space-between' as const),
     ...customStyles?.container, // allow custom container style override
   };
 
@@ -115,19 +117,28 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
 
       {/* middle section: label and values */}
       <View
-        style={{
-          flex: 1,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
+        style={
+          isCenteredLabel
+            ? {
+                flex: 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }
+            : {
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }
+        }
       >
-        {/* label text on the left */}
+        {/* label text */}
         <Text
           style={[
             getTextStyle('body-large'),
             {
               color: themeColors.text.primary(),
+              ...(isCenteredLabel ? { textAlign: 'center' as const, width: '100%' as const } : null),
             },
             customStyles?.label,
           ]}
@@ -135,7 +146,7 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
           {label}
         </Text>
 
-        {(secondaryValue || showValue) && (
+        {!isCenteredLabel && (secondaryValue || showValue) && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             {secondaryValue && (
               <Text
@@ -156,7 +167,7 @@ export const FormDetailButton: React.FC<FormDetailButtonProps> = ({
       </View>
 
       {/* right chevron icon - only shown if showChevron is true */}
-      {showChevron && (
+      {!isCenteredLabel && showChevron && (
         <Ionicons
           name="chevron-forward"
           size={16}

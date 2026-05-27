@@ -58,6 +58,9 @@ export type TodayScreenContentProps = {
 export function TodayScreenContent({ mode }: TodayScreenContentProps) {
   const isSelectRoute = mode === 'select';
   const router = useGuardedRouter();
+  const openDisplaySettings = useCallback(() => {
+    router.push('/(tabs)/today/display' as any);
+  }, [router]);
   const scrollY = useSharedValue(0);
 
   const miniHeaderOpacity = useSharedValue(0);
@@ -465,7 +468,12 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
                 style={styles.topSectionSelectAllButton}
               />
             ) : Platform.OS === 'android' ? (
-              <ScreenHeaderActions variant="dashboard" style={styles.topSectionContextButton} tint="primary" />
+              <ScreenHeaderActions
+                variant="dashboard"
+                onDashboardPress={openDisplaySettings}
+                style={styles.topSectionContextButton}
+                tint="primary"
+              />
             ) : null}
           </View>
         </View>

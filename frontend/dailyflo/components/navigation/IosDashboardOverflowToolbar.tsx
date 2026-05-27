@@ -42,6 +42,17 @@ export function IosDashboardOverflowToolbar({ hidden = false }: IosDashboardOver
     [beginIosLiquidChromePreSelectFade],
   );
 
+  // today / planner: layout icon opens display modal (list vs timeline — content TBD)
+  const onOpenDisplaySettings = useCallback(() => {
+    if (segments.includes('today')) {
+      router.push('/(tabs)/today/display' as any);
+      return;
+    }
+    if (segments.includes('planner')) {
+      router.push('/(tabs)/planner/display' as any);
+    }
+  }, [router, segments]);
+
   // ios-only component: task multi-select uses pushed routes (today/select, planner/select, browse/task-select).
   const onSelectTasks = useCallback(() => {
     if (segments.includes('select') || segments.includes('task-select')) {
@@ -84,8 +95,8 @@ export function IosDashboardOverflowToolbar({ hidden = false }: IosDashboardOver
     <Stack.Toolbar placement="right">
       <Stack.Toolbar.View>
         <Pressable
-          onPress={() => {}}
-          accessibilityLabel="Timeline"
+          onPress={onOpenDisplaySettings}
+          accessibilityLabel="Display settings"
           accessibilityRole="button"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={{ minWidth: toolbarHitPx, minHeight: toolbarHitPx, justifyContent: 'center', alignItems: 'center' }}

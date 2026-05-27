@@ -17,6 +17,8 @@ export type ScreenHeaderActionsVariant = 'dashboard' | 'browse';
 export interface ScreenHeaderActionsProps {
   /** which icon set to show: dashboard (Today/Planner) or browse */
   variant: ScreenHeaderActionsVariant;
+  /** for dashboard variant: opens display settings (list vs timeline) */
+  onDashboardPress?: () => void;
   /** for browse variant: called when settings (cog) icon is tapped */
   onSettingsPress?: () => void;
   /** for browse variant: called when alerts (bell) icon is tapped */
@@ -34,6 +36,7 @@ const GLASS_BORDER_RADIUS = 24;
 
 export function ScreenHeaderActions({
   variant,
+  onDashboardPress,
   onSettingsPress,
   onAlertsPress,
   style,
@@ -64,8 +67,9 @@ export function ScreenHeaderActions({
     ) : (
       <HeaderIconButton
         iconComponent={<DashboardIcon size={24} color={themeColors.text.primary()} />}
+        onPress={onDashboardPress}
         tint={tint}
-        accessibilityLabel="Dashboard"
+        accessibilityLabel="Display settings"
         noWrapper
       />
     );

@@ -95,9 +95,15 @@ export const Paddings = {
   groupedListContentHorizontal: 16,
   // used by: GroupedList
   groupedListContentVertical: 16,
+  // extra per-row vertical padding on display settings grouped lists (dashboard layout modal)
+  groupedListContentVerticalExtra: 2,
   // icon-to-text spacing in GroupedList rows (FormDetailButton, etc.)
   // used by: FormDetailButton, CustomFormDetailButton
   groupedListIconTextSpacing: 12,
+  // default GroupedList / FormDetailButton row icon size (SFSymbolIcon, Ionicons fallbacks)
+  groupedListIconSize: 18,
+  // display settings modal — larger row icons (+2pt vs groupedListIconSize)
+  displayGroupedListIconSizeExtra: 2,
   // gap between GroupedListHeader and content below (grouped list or pills)
   // used by: browse screen (groupedListSection, listsPillsContainer)
   groupedListHeaderContentGap: 10,
