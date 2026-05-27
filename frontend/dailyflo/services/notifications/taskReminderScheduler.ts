@@ -8,6 +8,8 @@ import { Platform } from 'react-native';
 
 import type { Task, UserPreferences } from '@/types';
 
+import { isPlannerWindDownReminderTaskId } from '@/components/features/timeline/plannerScheduleAnchors';
+
 import { ANDROID_DEFAULT_CHANNEL_ID, ensureAndroidNotificationChannel } from './notificationsSetup';
 import { getNotificationPermissionSnapshot } from './requestNotificationPermission';
 import {
@@ -19,6 +21,7 @@ import {
   buildTaskReminderNotificationId,
   TASK_REMINDER_NOTIFICATION_ID_PREFIX,
 } from './taskReminderConstants';
+import { formatWindDownReminderBody } from './taskReminderCopy';
 import { getTaskLocalStartDate } from './taskReminderDateMath';
 import {
   areUserNotificationPrefsAllowed,
@@ -166,7 +169,9 @@ export async function syncTaskReminders(
     }
 
     const identifier = buildTaskReminderNotificationId(task.id, alertId);
-    const body = formatNotificationBodyForAlert(alertId, task.title, taskStart, fireDate);
+    const body = isPlannerWindDownReminderTaskId(task.id)
+      ? formatWindDownReminderBody(taskStart, fireDate)
+      : formatNotificationBodyForAlert(alertId, task.title, taskStart, fireDate);
 
     const trigger: Notifications.DateTriggerInput = {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -184,7 +189,7 @@ export async function syncTaskReminders(
           body,
           sound: true,
           data: {
-            type: 'task_reminder',
+            type: isPlannerWindDownReminderTaskId(task.id) ? 'wind_down_reminder' : 'task_reminder',
             taskId: task.id,
             alertId,
             taskStartIso: taskStart.toISOString(),

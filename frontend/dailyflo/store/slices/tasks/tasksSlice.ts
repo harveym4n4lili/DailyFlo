@@ -27,12 +27,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // this service makes HTTP requests and returns formatted responses
 import tasksApiService from '../../../services/api/tasks';
 import { syncTaskReminders, cancelTaskReminders, syncAllTaskReminders } from '../../../services/notifications/taskReminderScheduler';
+import { syncPlannerWindDownReminders } from '../../../services/notifications/plannerWindDownReminders';
 import { normalizeTimeToHHMM } from '../../../utils/taskFormatters';
 import { isExpandedRecurrenceId, getBaseTaskId } from '../../../utils/recurrenceUtils';
 
 /** read signed-in user notification prefs for local reminder scheduling */
 function getNotificationPrefsFromAuthState(getState: () => unknown) {
   return (getState() as { auth: Readonly<{ user: User | null }> }).auth.user?.preferences?.notifications;
+}
+
+/** sleep time from profile — used to schedule wind-down reminders */
+function getSleepTimeFromAuthState(getState: () => unknown) {
+  return (getState() as { auth: Readonly<{ user: User | null }> }).auth.user?.preferences?.sleepTime;
 }
 
 /** fire-and-forget — task api success must not fail if expo schedule fails */
@@ -48,6 +54,10 @@ async function scheduleRemindersAfterTaskChange(task: Task, getState: () => unkn
 async function scheduleRemindersAfterTasksFetch(tasks: Task[], getState: () => unknown): Promise<void> {
   try {
     await syncAllTaskReminders(tasks, getNotificationPrefsFromAuthState(getState));
+    await syncPlannerWindDownReminders(
+      getSleepTimeFromAuthState(getState),
+      getNotificationPrefsFromAuthState(getState),
+    );
   } catch (err) {
     console.warn('[notifications] bulk reminder sync skipped', err);
   }
