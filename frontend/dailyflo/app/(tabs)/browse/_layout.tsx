@@ -93,7 +93,7 @@ export default function BrowseLayout() {
               }
         }
       />
-      {/* inbox, completed, tags: push + back + big/mini header */}
+      {/* inbox, completed: push + back + big/mini header */}
       <Stack.Screen
         name="inbox"
         options={
@@ -145,24 +145,6 @@ export default function BrowseLayout() {
               }
             : {
                 title: 'Completed',
-                headerShown: false,
-              }
-        }
-      />
-      <Stack.Screen
-        name="tags"
-        options={
-          Platform.OS === 'ios'
-            ? {
-                headerShown: true,
-                headerTransparent: true,
-                headerTitle: '',
-                headerShadowVisible: false,
-                headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
-              }
-            : {
-                title: 'Tags',
                 headerShown: false,
               }
         }

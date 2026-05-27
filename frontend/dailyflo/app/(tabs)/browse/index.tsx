@@ -72,14 +72,6 @@ function BrowseListsColumn({
             onPress={() => router.push('/(tabs)/browse/completed')}
             showChevron={false}
           />
-          <FormDetailButton
-            key="tags"
-            iconComponent={<SFSymbolIcon name="tag" size={18} color={groupedListIconColor} fallback={<BrowseIcon size={18} color={groupedListIconColor} />} />}
-            label="Tags"
-            value=""
-            onPress={() => router.push('/(tabs)/browse/tags')}
-            showChevron={false}
-          />
         </GroupedList>
       </View>
 
@@ -272,7 +264,7 @@ const createStyles = (
       paddingBottom: 120,
     },
     contentWrapper: {
-      // keep browse home list start aligned to the same top-chrome geometry used by inbox/completed/tags.
+      // keep browse home list start aligned to the same top-chrome geometry used by inbox/completed.
       paddingTop: insets.top + TOP_SECTION_ANCHOR_HEIGHT + 12,
       paddingHorizontal: Paddings.screen,
       overflow: 'visible',
