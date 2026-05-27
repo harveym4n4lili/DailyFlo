@@ -1,13 +1,13 @@
 /**
  * Display settings modal — list view vs timeline view, sort options, reset.
  * Same modal chrome as browse manage-lists / list-create:
- * ios: Stack.Toolbar xmark + checkmark + native headerTitle "Display"
- * android: glass close + submit in overlay, in-screen title row.
+ * ios: Stack.Toolbar xmark + marple glass apply; android: glass close + submit in overlay.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, Alert, Switch } from 'react-native';
 import { Stack } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -24,6 +24,8 @@ import {
 } from '@/components/navigation/IosBrowseModalStackToolbars';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
 import { SFSymbolIcon, CalendarIcon, TickIcon } from '@/components/ui/Icon';
+import { DISPLAY_SETTINGS_ROW_TO_ROUTE, type DisplaySettingsContext } from '@/components/features/display/displayStackChrome';
+import { useDisplaySettingsDraft } from '@/components/features/display/DisplaySettingsDraftContext';
 import { Paddings } from '@/constants/Paddings';
 import { getTextStyle } from '@/constants/Typography';
 
@@ -32,11 +34,8 @@ const HEADER_TOP = Paddings.screen;
 const FADE_OVERFLOW = 48;
 const TOP_SECTION_HEIGHT = HEADER_TOP + HEADER_ROW_HEIGHT + FADE_OVERFLOW;
 
-/** which field tasks are sorted by on today/planner list views */
-type DisplaySortBy = 'sort' | 'date' | 'priority';
-
-const DEFAULT_SORT_BY: DisplaySortBy = 'date';
-const DEFAULT_SHOW_COMPLETED_TASKS = true;
+/** display picker rows — sort section vs filter section on the Display root */
+type DisplaySettingsPickerRow = keyof typeof DISPLAY_SETTINGS_ROW_TO_ROUTE;
 
 // display grouped lists: base icon size + extra, column width = icon + label gap (separator alignment)
 const DISPLAY_GROUPED_LIST_ICON_SIZE =
@@ -47,8 +46,15 @@ const DISPLAY_GROUPED_LIST_ICON_COLUMN_WIDTH =
 const DISPLAY_GROUPED_LIST_CONTENT_PADDING_VERTICAL =
   Paddings.groupedListContentVertical + Paddings.groupedListContentVerticalExtra;
 
-export default function DisplaySettingsModalScreen() {
+export type { DisplaySettingsContext } from '@/components/features/display/displayStackChrome';
+
+export type DisplaySettingsModalScreenProps = {
+  context: DisplaySettingsContext;
+};
+
+export default function DisplaySettingsModalScreen({ context }: DisplaySettingsModalScreenProps) {
   const router = useGuardedRouter();
+  const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
   const semanticColors = useSemanticColors();
@@ -59,12 +65,23 @@ export default function DisplaySettingsModalScreen() {
   const groupedListIconColor = getMarpleBrandColor(500);
   const resetLabelColor = semanticColors.error();
 
-  // local layout/sort prefs — save enables when any value differs from defaults (redux wiring later)
-  const [selectedSortBy, setSelectedSortBy] = useState<DisplaySortBy>(DEFAULT_SORT_BY);
-  const [showCompletedTasks, setShowCompletedTasks] = useState(DEFAULT_SHOW_COMPLETED_TASKS);
-  const hasChanges =
-    selectedSortBy !== DEFAULT_SORT_BY ||
-    showCompletedTasks !== DEFAULT_SHOW_COMPLETED_TASKS;
+  // shared draft across display root + sort pickers — save button lives on this screen only
+  const {
+    draft,
+    hasChanges,
+    setShowCompletedTasks,
+    resetAll,
+  } = useDisplaySettingsDraft();
+
+  const { sortOption, orderingOption, dateSortOption, prioritySortSublabel, showCompletedTasks } = draft;
+
+  // tertiary sublabel on the right — matches FormDetailSection date/time picker rows
+  const sortValueTextStyle = useMemo(
+    () => ({
+      color: themeColors.text.tertiary(),
+    }),
+    [themeColors]
+  );
 
   const listGroupProps = useMemo(
     () => ({
@@ -85,20 +102,17 @@ export default function DisplaySettingsModalScreen() {
   const handleResetAll = useCallback(() => {
     Alert.alert(
       'Reset all display settings?',
-      'Layout and sort preferences will return to their defaults.',
+      'Layout, sort, and filter preferences will return to their defaults.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Reset all',
           style: 'destructive',
-          onPress: () => {
-            setSelectedSortBy(DEFAULT_SORT_BY);
-            setShowCompletedTasks(DEFAULT_SHOW_COMPLETED_TASKS);
-          },
+          onPress: resetAll,
         },
       ]
     );
-  }, []);
+  }, [resetAll]);
 
   const headerHeight = useHeaderHeight();
   const headerTitleStyle = useMemo(
@@ -115,36 +129,19 @@ export default function DisplaySettingsModalScreen() {
 
   const handleSave = useCallback(() => {
     if (!hasChanges) return;
-    // placeholder: persist selectedSortBy to redux / user prefs then dismiss
+    // placeholder: persist sort/layout prefs to redux / user prefs then dismiss
     router.back();
   }, [hasChanges, router]);
 
-  const renderSortCheckmark = useCallback(
-    (option: DisplaySortBy) =>
-      selectedSortBy === option ? (
-        <SFSymbolIcon
-          name="checkmark"
-          size={DISPLAY_GROUPED_LIST_ICON_SIZE}
-          color={themeColors.text.primary()}
-          fallback={
-            <Ionicons
-              name="checkmark"
-              size={DISPLAY_GROUPED_LIST_ICON_SIZE}
-              color={themeColors.text.primary()}
-            />
-          }
-        />
-      ) : (
-        ''
-      ),
-    [selectedSortBy, themeColors]
+  // push onto the nested display stack (same slide transition as browse → inbox)
+  const handleOpenPicker = useCallback(
+    (row: DisplaySettingsPickerRow) => {
+      const route = DISPLAY_SETTINGS_ROW_TO_ROUTE[row];
+      router.push(`/(tabs)/${context}/display/${route}` as any);
+    },
+    [context, router]
   );
 
-  const handleSelectSortBy = useCallback((option: DisplaySortBy) => {
-    setSelectedSortBy(option);
-  }, []);
-
-  // same 18pt icons as browse/settings FormDetailButton rows — keeps SF Symbol + fallback sizes in sync
   const renderGroupedListIcon = useCallback(
     (name: string, fallback: React.ReactNode) => (
       <SFSymbolIcon
@@ -168,13 +165,15 @@ export default function DisplaySettingsModalScreen() {
           }}
         />
       ) : null}
-      <IosBrowseModalCloseStackToolbar />
-      <IosBrowseModalTrailingStackToolbar
-        icon="checkmark"
-        onPress={handleSave}
-        disabled={!hasChanges}
-        accessibilityLabel="Save display settings"
-      />
+      {isFocused ? <IosBrowseModalCloseStackToolbar /> : null}
+      {isFocused && hasChanges ? (
+        <IosBrowseModalTrailingStackToolbar
+          icon="checkmark"
+          onPress={handleSave}
+          brandActive
+          accessibilityLabel="Save display settings"
+        />
+      ) : null}
       <View style={styles.contentArea}>
         <ScrollView
           style={styles.scroll}
@@ -234,24 +233,51 @@ export default function DisplaySettingsModalScreen() {
                       color={groupedListIconColor}
                     />
                   )}
-                  label="Sort"
-                  value={renderSortCheckmark('sort')}
-                  onPress={() => handleSelectSortBy('sort')}
-                  showChevron={false}
+                  label="Sorting"
+                  value={sortOption}
+                  onPress={() => handleOpenPicker('sorting')}
+                  showChevron
+                  customStyles={{ value: sortValueTextStyle }}
                 />
                 <FormDetailButton
-                  key="sort-by-date"
+                  key="sort-ordering"
                   iconComponent={renderGroupedListIcon(
-                    'calendar',
-                    <CalendarIcon size={DISPLAY_GROUPED_LIST_ICON_SIZE} color={groupedListIconColor} />
+                    'arrow.up.and.down.circle',
+                    <Ionicons
+                      name="reorder-three"
+                      size={DISPLAY_GROUPED_LIST_ICON_SIZE}
+                      color={groupedListIconColor}
+                    />
                   )}
-                  label="Date"
-                  value={renderSortCheckmark('date')}
-                  onPress={() => handleSelectSortBy('date')}
-                  showChevron={false}
+                  label="Ordering"
+                  value={orderingOption}
+                  onPress={() => handleOpenPicker('ordering')}
+                  showChevron
+                  customStyles={{ value: sortValueTextStyle }}
                 />
+              </GroupedList>
+            </View>
+
+            <GroupedListHeader title="Filter" style={styles.sectionHeader} />
+            <View style={styles.groupedListSection}>
+              <GroupedList {...listGroupProps}>
+                {/* today tab is always today-scoped — no date filter row */}
+                {context !== 'today' ? (
+                  <FormDetailButton
+                    key="filter-by-date"
+                    iconComponent={renderGroupedListIcon(
+                      'calendar',
+                      <CalendarIcon size={DISPLAY_GROUPED_LIST_ICON_SIZE} color={groupedListIconColor} />
+                    )}
+                    label="Date"
+                    value={dateSortOption}
+                    onPress={() => handleOpenPicker('date')}
+                    showChevron
+                    customStyles={{ value: sortValueTextStyle }}
+                  />
+                ) : null}
                 <FormDetailButton
-                  key="sort-by-priority"
+                  key="filter-by-priority"
                   iconComponent={renderGroupedListIcon(
                     'flag.fill',
                     <Ionicons
@@ -261,9 +287,10 @@ export default function DisplaySettingsModalScreen() {
                     />
                   )}
                   label="Priority"
-                  value={renderSortCheckmark('priority')}
-                  onPress={() => handleSelectSortBy('priority')}
-                  showChevron={false}
+                  value={prioritySortSublabel}
+                  onPress={() => handleOpenPicker('priority')}
+                  showChevron
+                  customStyles={{ value: sortValueTextStyle }}
                 />
               </GroupedList>
             </View>
@@ -304,7 +331,7 @@ export default function DisplaySettingsModalScreen() {
             pointerEvents="none"
           />
         </View>
-        {Platform.OS === 'android' ? (
+        {Platform.OS === 'android' && isFocused ? (
           <>
             <View style={[styles.headerRow, { top: HEADER_TOP }]} pointerEvents="box-none">
               <View style={styles.headerPlaceholder} pointerEvents="none" />
@@ -315,13 +342,20 @@ export default function DisplaySettingsModalScreen() {
             </View>
             <View style={styles.headerActionsContainer} pointerEvents="box-none">
               <MainCloseButton onPress={() => router.back()} top={Paddings.screen} left={Paddings.screen} />
-              <MainSubmitButton
-                onPress={handleSave}
-                disabled={!hasChanges}
-                top={Paddings.screen}
-                right={Paddings.screen}
-                accessibilityLabel="Save display settings"
-              />
+              {hasChanges ? (
+                <View
+                  style={styles.androidApplyButtonAnchor}
+                  pointerEvents="box-none"
+                >
+                  <MainSubmitButton
+                    layout="inline"
+                    onPress={handleSave}
+                    brandActive
+                    animateVisibility={false}
+                    accessibilityLabel="Save display settings"
+                  />
+                </View>
+              ) : null}
             </View>
           </>
         ) : null}
@@ -432,5 +466,11 @@ const createStyles = (typography: ReturnType<typeof useTypography>) =>  StyleShe
       height: TOP_SECTION_HEIGHT,
       zIndex: 11,
       overflow: 'visible',
+    },
+    // top-right anchor for inline apply — avoids full-screen touch wrapper swallowing taps
+    androidApplyButtonAnchor: {
+      position: 'absolute',
+      top: Paddings.screen,
+      right: Paddings.screen,
     },
   });
