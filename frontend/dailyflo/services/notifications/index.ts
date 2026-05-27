@@ -13,6 +13,10 @@ export {
   hasNotificationPermissionForReminders,
 } from './taskReminderScheduler';
 export {
+  syncPlannerWindDownReminders,
+  cancelPlannerWindDownReminders,
+} from './plannerWindDownReminders';
+export {
   MANDATORY_TASK_REMINDER_ALERT_ID,
   MANDATORY_TASK_REMINDER_OFFSET_MINUTES,
 } from './taskReminderConstants';

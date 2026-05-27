@@ -12,6 +12,7 @@ import { User, RegisterUserInput, LoginUserInput, SocialAuthInput, UpdateUserInp
 // this service makes HTTP requests to login, register, and other auth endpoints
 import authApiService from '../../../services/api/auth';
 import { cancelAllTaskReminders } from '../../../services/notifications/taskReminderScheduler';
+import { syncPlannerWindDownReminders } from '../../../services/notifications/plannerWindDownReminders';
 // token storage functions - secure storage for authentication tokens using Expo SecureStore
 // these functions store and retrieve tokens from encrypted device storage
 import {
@@ -849,7 +850,19 @@ export const patchUserSchedulePreferences = createAsyncThunk<
       });
 
       const bodyUser = response.user ?? response;
-      return serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
+      const serialized = serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
+
+      // reschedule wind-down os reminders when sleep time changes
+      try {
+        await syncPlannerWindDownReminders(
+          patch.sleepTime,
+          serialized.preferences?.notifications,
+        );
+      } catch (reminderErr) {
+        console.warn('[notifications] wind-down sync after schedule prefs skipped', reminderErr);
+      }
+
+      return serialized;
     } catch (error: any) {
       const prefsErr = error?.response?.data?.preferences;
       const message =
