@@ -26,6 +26,7 @@ import {
 } from '@/components/features/display/displaySortOptions';
 
 const DEFAULT_PRIORITY_SUBLABEL = 'All';
+const DEFAULT_SHOW_ALL_DAY_TASKS = true;
 
 function getDefaultDateSortOption(context: DisplaySettingsContext): DisplayDateSortOption {
   return context === 'today' ? DEFAULT_DISPLAY_DATE_SORT_OPTION_TODAY : DEFAULT_DISPLAY_DATE_SORT_OPTION_PLANNER;
@@ -37,6 +38,8 @@ export type DisplaySettingsDraft = {
   dateSortOption: DisplayDateSortOption;
   prioritySortSublabel: string;
   showCompletedTasks: boolean;
+  /** planner layout — show tasks with no scheduled time in the timeline */
+  showAllDayTasks: boolean;
 };
 
 function buildDefaults(context: DisplaySettingsContext): DisplaySettingsDraft {
@@ -46,6 +49,7 @@ function buildDefaults(context: DisplaySettingsContext): DisplaySettingsDraft {
     dateSortOption: getDefaultDateSortOption(context),
     prioritySortSublabel: DEFAULT_PRIORITY_SUBLABEL,
     showCompletedTasks: true,
+    showAllDayTasks: DEFAULT_SHOW_ALL_DAY_TASKS,
   };
 }
 
@@ -57,6 +61,7 @@ type DisplaySettingsDraftContextValue = {
   setDateSortOption: (option: DisplayDateSortOption) => void;
   setPrioritySortSublabel: (value: string) => void;
   setShowCompletedTasks: (value: boolean) => void;
+  setShowAllDayTasks: (value: boolean) => void;
   resetAll: () => void;
 };
 
@@ -78,7 +83,8 @@ export function DisplaySettingsDraftProvider({ context, children }: DisplaySetti
       // today tab is always scoped to today — date filter is hidden so ignore draft drift
       (context !== 'today' && draft.dateSortOption !== defaults.dateSortOption) ||
       draft.prioritySortSublabel !== defaults.prioritySortSublabel ||
-      draft.showCompletedTasks !== defaults.showCompletedTasks,
+      draft.showCompletedTasks !== defaults.showCompletedTasks ||
+      (context === 'planner' && draft.showAllDayTasks !== defaults.showAllDayTasks),
     [context, draft, defaults]
   );
 
@@ -102,6 +108,10 @@ export function DisplaySettingsDraftProvider({ context, children }: DisplaySetti
     setDraft((prev) => ({ ...prev, showCompletedTasks: value }));
   }, []);
 
+  const setShowAllDayTasks = useCallback((value: boolean) => {
+    setDraft((prev) => ({ ...prev, showAllDayTasks: value }));
+  }, []);
+
   const resetAll = useCallback(() => {
     setDraft(defaults);
   }, [defaults]);
@@ -115,6 +125,7 @@ export function DisplaySettingsDraftProvider({ context, children }: DisplaySetti
       setDateSortOption,
       setPrioritySortSublabel,
       setShowCompletedTasks,
+      setShowAllDayTasks,
       resetAll,
     }),
     [
@@ -125,6 +136,7 @@ export function DisplaySettingsDraftProvider({ context, children }: DisplaySetti
       setDateSortOption,
       setPrioritySortSublabel,
       setShowCompletedTasks,
+      setShowAllDayTasks,
       resetAll,
     ]
   );

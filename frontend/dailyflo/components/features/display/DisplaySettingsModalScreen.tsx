@@ -70,10 +70,12 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
     draft,
     hasChanges,
     setShowCompletedTasks,
+    setShowAllDayTasks,
     resetAll,
   } = useDisplaySettingsDraft();
 
-  const { sortOption, orderingOption, dateSortOption, prioritySortSublabel, showCompletedTasks } = draft;
+  const { sortOption, orderingOption, dateSortOption, prioritySortSublabel, showCompletedTasks, showAllDayTasks } =
+    draft;
 
   // tertiary sublabel on the right — matches FormDetailSection date/time picker rows
   const sortValueTextStyle = useMemo(
@@ -217,6 +219,33 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
                     ios_backgroundColor={themeColors.interactive.tertiary()}
                   />
                 </View>
+                {context === 'planner' ? (
+                  <View style={styles.completedTasksRow}>
+                    <View style={styles.groupedListIconWrap}>
+                      {renderGroupedListIcon(
+                        'sun.max.fill',
+                        <Ionicons name="sunny" size={DISPLAY_GROUPED_LIST_ICON_SIZE} color={groupedListIconColor} />
+                      )}
+                    </View>
+                    <Text
+                      style={[styles.completedTasksLabel, { color: themeColors.text.primary() }]}
+                      numberOfLines={1}
+                    >
+                      All-day tasks
+                    </Text>
+                    <Switch
+                      value={showAllDayTasks}
+                      onValueChange={setShowAllDayTasks}
+                      accessibilityLabel="Show all-day tasks"
+                      trackColor={{
+                        false: themeColors.interactive.tertiary(),
+                        true: groupedListIconColor,
+                      }}
+                      thumbColor={themeColors.background.elevated()}
+                      ios_backgroundColor={themeColors.interactive.tertiary()}
+                    />
+                  </View>
+                ) : null}
               </GroupedList>
             </View>
 
