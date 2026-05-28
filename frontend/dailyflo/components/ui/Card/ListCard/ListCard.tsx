@@ -50,6 +50,7 @@ import { DropdownList, DropdownListItem } from '@/components/ui/List';
 import GroupHeader from './GroupHeader';
 import EmptyState from './EmptyState';
 import LoadingState from './LoadingState';
+import { TodayBigScrollHeader } from '@/components/features/today/TodayBigScrollHeader';
 
 // import utility functions for task grouping and sorting
 import { groupTasks, sortTasks, sortGroupEntries, formatDateForGroup } from '@/utils/taskGrouping';
@@ -760,14 +761,7 @@ export default function ListCard({
   );
 
   // animated style for Today header - fades out when scrollY passes 48px (uses reanimated for smooth 60fps)
-  const bigTodayHeaderAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      scrollY.value,
-      [0, 48],
-      [1, 0],
-      Extrapolation.CLAMP
-    ),
-  }));
+  // shared TodayBigScrollHeader handles fade; keep wrapper only if needed for standard header
 
   // render header component with optional big today header and dropdown button
   const renderHeader = () => {
@@ -776,14 +770,12 @@ export default function ListCard({
 
     return (
       <View style={styles.listHeaderWrapper}>
-        {/* big "Today" header - large typography at top when bigTodayHeader is true, fades on scroll; in selection mode shows "X selected" */}
-        {bigTodayHeader && (
-          <AnimatedReanimated.View style={bigTodayHeaderAnimatedStyle}>
-            <Text style={styles.bigTodayHeader}>
-              {selectionMode ? `${selectedTaskIds.length} selected` : 'Today'}
-            </Text>
-          </AnimatedReanimated.View>
-        )}
+        {bigTodayHeader ? (
+          <TodayBigScrollHeader
+            scrollY={scrollY}
+            label={selectionMode ? `${selectedTaskIds.length} selected` : 'Today'}
+          />
+        ) : null}
         {/* standard header: title, subtitle, dropdown button */}
         {hasStandardHeader && (
           <View style={styles.headerContainer}>
@@ -1071,11 +1063,6 @@ const createStyles = (
     },
 
     // --- TYPOGRAPHY STYLES ---
-    bigTodayHeader: {
-      ...typography.getTextStyle('heading-1'),
-      color: themeColors.text.primary(),
-      marginBottom: 8,
-    },
     headerTitle: {
       ...typography.getTextStyle('heading-1'),
       color: themeColors.text.primary(),

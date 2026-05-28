@@ -2,7 +2,6 @@
 import React, { useCallback, useMemo, useState, useEffect, useLayoutEffect, useTransition, useRef } from 'react';
 import { StyleSheet, View, Platform, Text, TouchableOpacity } from 'react-native';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from 'expo-router';
 
@@ -18,13 +17,11 @@ import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboar
 import { IosPlannerBulkSelectionToolbar } from '@/components/navigation/IosPlannerBulkSelectionToolbar';
 import { IosTaskSelectionCloseStackToolbar } from '@/components/navigation/IosTaskSelectionCloseStackToolbar';
 import { WeekView } from '@/components/features/calendar/sections';
-import { ListCard } from '@/components/ui/Card';
-import { TimelineView } from '@/components/features/timeline';
+import { DayTimelineWithAllDayFooter } from '@/components/features/timeline';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
-import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
-import { mapPlannerDisplayPrefsToAllDayList } from '@/components/features/display/displayPreferenceMappers';
+import { mapTimelineAllDayListDisplayProps } from '@/components/features/display/displayPreferenceMappers';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTasks, useUI } from '@/store/hooks';
 import { useAppDispatch, useAppSelector, store } from '@/store';
@@ -46,7 +43,6 @@ import {
   DEFAULT_WAKE_HHMM,
   timelinePlannerHoursFromWakeSleepHHMM,
 } from '@/utils/preferenceScheduleTimes';
-import { ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES } from '@/utils/taskGrouping';
 
 type PlannerIosNavMonthTitleProps = {
   label: string;
@@ -272,23 +268,16 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
     return selectedDateTasks.filter((task) => !task.time || task.time === '');
   }, [selectedDateTasks]);
 
-  // saved display prefs — sort/completed/all-day toggle apply to footer ListCard only, not the timeline
+  // saved display prefs — sort/completed/all-day toggle apply to shared timeline footer
   const plannerDisplayPrefs = useAppSelector(
     (state) => state.auth.user?.preferences?.displayPreferences?.planner
   );
   const plannerAllDayDisplayProps = useMemo(
-    () => mapPlannerDisplayPrefsToAllDayList(plannerDisplayPrefs),
+    () => mapTimelineAllDayListDisplayProps(plannerDisplayPrefs),
     [plannerDisplayPrefs]
   );
 
-  // hide footer when all-day toggle off, empty day, or all rows completed while completed tasks hidden
-  const shouldShowPlannerAllDayFooter = useMemo(() => {
-    if (!plannerAllDayDisplayProps.showAllDayTasks || allDayTasks.length === 0) return false;
-    if (!plannerAllDayDisplayProps.hideCompletedTasks) return true;
-    return allDayTasks.some((task) => !task.isCompleted);
-  }, [allDayTasks, plannerAllDayDisplayProps.hideCompletedTasks, plannerAllDayDisplayProps.showAllDayTasks]);
-
-  // must match selectedDateTasks filtering — changing day remounts ListCard below so all-day collapses again (fresh hook state per day)
+  // must match selectedDateTasks filtering — changing day remounts footer ListCard (fresh hook state per day)
   const plannerDisplayedDayKey = useMemo(() => {
     const sourceDate = timelineDate || selectedDate;
     if (!sourceDate) return '';
@@ -469,66 +458,33 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
           </View>
 
           <View style={styles.contentContainer}>
-            <>
-              <View style={styles.fadeOverlay} pointerEvents="none">
-                <LinearGradient
-                  colors={[
-                    themeColors.background.primary(),
-                    themeColors.withOpacity(themeColors.background.primary(), 0),
-                  ]}
-                  locations={[0.0, 1]}
-                  style={StyleSheet.absoluteFill}
-                />
-              </View>
-              <TimelineView
-                key={timelineDate ? toLocalCalendarDayString(new Date(timelineDate)) : 'planner-timeline'}
-                tasks={selectedDateTasks}
-                onTaskTimeChange={handleTaskTimeChange}
-                onTaskPress={handleTaskPress}
-                onTaskComplete={handleTaskComplete}
-                selectionMode={timelineListSelection}
-                selectedTaskIds={selection.selectedItems}
-                onToggleTaskSelection={timelineListSelection ? toggleItemSelection : undefined}
-                plannerScheduleAnchors={plannerScheduleAnchorsPayload}
-                startHour={plannerTimelineStartHour}
-                endHour={plannerTimelineEndHour}
-                timeInterval={60}
-                scrollContentPaddingTop={16}
-                scrollContentPaddingBottom={
-                  mode === 'select' && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
-                }
-                // planner: footer always mounts so Timeline keeps footer margin below chrome fade — empty/incomplete-less day passes [] + silentWhenEmpty so ListCard is height 0 (no empty copy)
-                footerComponent={
-                  <View style={styles.allDayFooter}>
-                    <ListCard
-                      key={`planner-allday-${plannerDisplayedDayKey || 'unknown'}`}
-                      tasks={shouldShowPlannerAllDayFooter ? allDayTasks : []}
-                      selectionMode={timelineListSelection}
-                      selectedTaskIds={selection.selectedItems}
-                      onToggleTaskSelection={timelineListSelection ? toggleItemSelection : undefined}
-                      hideCompletedTasks={plannerAllDayDisplayProps.hideCompletedTasks}
-                      onTaskPress={handleTaskPress}
-                      onTaskComplete={handleTaskComplete}
-                      onTaskEdit={handleTaskEdit}
-                      onTaskDelete={handleTaskDelete}
-                      {...LIST_CARD_TASK_ROW_PRESET_TODAY}
-                      showListRecurrenceRow
-                      initialCollapsedGroupTitles={ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES}
-                      silentWhenEmpty
-                      emptyMessage="No all-day tasks for this date."
-                      loading={false}
-                      groupBy="allDay"
-                      sortBy={plannerAllDayDisplayProps.sortBy}
-                      sortDirection={plannerAllDayDisplayProps.sortDirection}
-                      paddingHorizontal={Paddings.screen}
-                      paddingBottom={8}
-                      scrollEnabled={false}
-                      disableInitialLayoutTransition={true}
-                    />
-                  </View>
-                }
-              />
-            </>
+            <DayTimelineWithAllDayFooter
+              dayKey={
+                timelineDate
+                  ? toLocalCalendarDayString(new Date(timelineDate))
+                  : plannerDisplayedDayKey || 'planner-timeline'
+              }
+              tasks={selectedDateTasks}
+              allDayListDisplayProps={plannerAllDayDisplayProps}
+              hideCompletedOnTimeline={plannerAllDayDisplayProps.hideCompletedTasks}
+              onTaskTimeChange={handleTaskTimeChange}
+              onTaskPress={handleTaskPress}
+              onTaskComplete={handleTaskComplete}
+              onTaskEdit={handleTaskEdit}
+              onTaskDelete={handleTaskDelete}
+              selectionMode={timelineListSelection}
+              selectedTaskIds={selection.selectedItems}
+              onToggleTaskSelection={timelineListSelection ? toggleItemSelection : undefined}
+              plannerScheduleAnchors={plannerScheduleAnchorsPayload}
+              startHour={plannerTimelineStartHour}
+              endHour={plannerTimelineEndHour}
+              scrollContentPaddingTop={16}
+              scrollContentPaddingBottom={
+                mode === 'select' && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
+              }
+              showTopFade
+              allDayFooterKeyPrefix="planner-allday"
+            />
           </View>
 
           {mode === 'index' && !USE_CUSTOM_LIQUID_TAB_BAR ? (
@@ -608,18 +564,6 @@ const createStyles = (
       margin: 0,
       paddingHorizontal: Paddings.none,
       paddingTop: Paddings.none,
-      overflow: 'hidden',
-    },
-
-    allDayFooter: {},
-
-    fadeOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: 32,
-      zIndex: 5,
       overflow: 'hidden',
     },
   });

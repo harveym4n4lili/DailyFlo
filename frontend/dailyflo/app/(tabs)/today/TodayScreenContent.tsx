@@ -22,6 +22,7 @@ import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 
 import { ScreenContainer } from '@/components/index';
 import { ListCard } from '@/components/ui/Card';
+import { DayTimelineWithAllDayFooter } from '@/components/features/timeline';
 import { SelectionCloseButton, SelectAllButton } from '@/components/ui/Button';
 import { ScreenHeaderActions } from '@/components/ui';
 import { IosTaskSelectionCloseStackToolbar } from '@/components/navigation/IosTaskSelectionCloseStackToolbar';
@@ -32,7 +33,11 @@ import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
-import { mapTodayDisplayPrefsToListCard } from '@/components/features/display/displayPreferenceMappers';
+import { DEFAULT_DISPLAY_LAYOUT_VIEW_TODAY } from '@/components/features/display/displayLayoutOptions';
+import {
+  mapTodayDisplayPrefsToListCard,
+  mapTimelineAllDayListDisplayProps,
+} from '@/components/features/display/displayPreferenceMappers';
 
 import { useTasks, useUI } from '@/store/hooks';
 import { useAppDispatch, useAppSelector, store } from '@/store';
@@ -44,11 +49,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { flushAllPendingCheckboxSyncs } from '@/utils/pendingCheckboxSyncRegistry';
 import {
   expandTasksForDates,
+  filterTasksForCalendarDay,
   getTargetDatesForTodayScreen,
   isExpandedRecurrenceId,
   getBaseTaskId,
   getOccurrenceDateFromId,
+  toLocalCalendarDayString,
 } from '@/utils/recurrenceUtils';
+import {
+  coerceWakeSleepHHMM,
+  DEFAULT_SLEEP_HHMM,
+  DEFAULT_WAKE_HHMM,
+  timelinePlannerHoursFromWakeSleepHHMM,
+} from '@/utils/preferenceScheduleTimes';
 
 export type TodayScreenContentMode = 'index' | 'select';
 
@@ -136,6 +149,27 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
     () => mapTodayDisplayPrefsToListCard(todayDisplayPrefs),
     [todayDisplayPrefs]
   );
+  const layoutView = todayDisplayPrefs?.layoutView ?? DEFAULT_DISPLAY_LAYOUT_VIEW_TODAY;
+  const todayTimelineDisplayProps = useMemo(
+    () => mapTimelineAllDayListDisplayProps(todayDisplayPrefs),
+    [todayDisplayPrefs]
+  );
+
+  // reset scroll offset when switching list ↔ timeline so header + mini title state match
+  useEffect(() => {
+    scrollY.value = 0;
+  }, [layoutView, scrollY]);
+
+  const wakeHHMMFromProfile = useAppSelector((s) =>
+    coerceWakeSleepHHMM(s.auth.user?.preferences.wakeTime, DEFAULT_WAKE_HHMM)
+  );
+  const sleepHHMMFromProfile = useAppSelector((s) =>
+    coerceWakeSleepHHMM(s.auth.user?.preferences.sleepTime, DEFAULT_SLEEP_HHMM)
+  );
+  const { startHour: todayTimelineStartHour, endHour: todayTimelineEndHour } = useMemo(
+    () => timelinePlannerHoursFromWakeSleepHHMM(wakeHHMMFromProfile, sleepHHMMFromProfile),
+    [wakeHHMMFromProfile, sleepHHMMFromProfile]
+  );
   const listsLastFetched = useAppSelector((state) => state.lists.lastFetched);
   const listsLoading = useAppSelector((state) => state.lists.isLoading);
   const listsError = useAppSelector((state) => state.lists.error);
@@ -147,7 +181,22 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
     });
   }, [tasks]);
 
-  const todayDateStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const todayDateStr = useMemo(() => toLocalCalendarDayString(new Date()), []);
+
+  // timeline layout: calendar today only — no overdue section
+  const todayCalendarTasks = useMemo(
+    () => filterTasksForCalendarDay(todaysTasks, todayDateStr),
+    [todaysTasks, todayDateStr]
+  );
+
+  const todayScheduleAnchorsPayload = useMemo(
+    () => ({
+      wakeHHMM: wakeHHMMFromProfile,
+      sleepHHMM: sleepHHMMFromProfile,
+      dueDateIso: `${todayDateStr}T12:00:00`,
+    }),
+    [wakeHHMMFromProfile, sleepHHMMFromProfile, todayDateStr]
+  );
   const eligibleTodayTaskIds = useMemo(() => {
     return todaysTasks
       .filter((t) => !t.isCompleted && !t.softDeleted && t.dueDate?.slice(0, 10) === todayDateStr)
@@ -293,6 +342,26 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
     [dispatch]
   );
 
+  const handleTaskTimeChange = useCallback(
+    async (taskId: string, newTime: string, newDuration?: number) => {
+      try {
+        const baseId = isExpandedRecurrenceId(taskId) ? getBaseTaskId(taskId) : taskId;
+        const task = tasks.find((t) => t.id === baseId);
+        if (!task) return;
+
+        const updates: { id: string; time: string; duration?: number } = {
+          id: baseId,
+          time: newTime,
+        };
+        if (newDuration !== undefined) updates.duration = newDuration;
+        await dispatch(updateTask({ id: baseId, updates })).unwrap();
+      } catch (err) {
+        console.error('Failed to update task time:', err);
+      }
+    },
+    [dispatch, tasks]
+  );
+
   useFocusEffect(
     React.useCallback(() => {
       clearOverdueReschedule();
@@ -346,6 +415,9 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
       ? `${selection.selectedItems.length} selected`
       : 'Today';
 
+  const todayBigHeaderLabel =
+    listSelectionMode ? `${selection.selectedItems.length} selected` : 'Today';
+
   // authed user but fetch not dispatched/pending yet (one frame gap) — avoids flashing empty copy before loading UI
   const awaitingFirstTaskFetch =
     isAuthenticated && lastFetched === null && !error;
@@ -393,39 +465,71 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
           safeAreaBottom={false}
           backgroundColor="transparent"
         >
-          <ListCard
-            key={isSelectRoute ? 'today-select-listcard' : 'today-screen-listcard'}
-            tasks={todaysTasks}
-            selectionMode={listSelectionMode}
-            selectedTaskIds={selection.selectedItems}
-            onToggleTaskSelection={listSelectionMode ? toggleItemSelection : undefined}
-            hideCompletedTasks={todayListDisplayProps.hideCompletedTasks}
-            onTaskPress={handleTaskPress}
-            onTaskComplete={handleTaskComplete}
-            onTaskEdit={handleTaskEdit}
-            onTaskDelete={handleTaskDelete}
-            {...LIST_CARD_TASK_ROW_PRESET_TODAY}
-            showListRecurrenceRow
-            emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
-            loading={isLoading && todaysTasks.length === 0}
-            groupBy="dueDate"
-            lockTodayGroupExpanded
-            sortBy={todayListDisplayProps.sortBy}
-            sortDirection={todayListDisplayProps.sortDirection}
-            onOverdueReschedule={handleOverdueReschedulePress}
-            hideTodayHeader={false}
-            bigTodayHeader={true}
-            onRefresh={handleRefresh}
-            refreshing={isLoading}
-            scrollYSharedValue={scrollY}
-            showsVerticalScrollIndicator={true}
-            paddingTop={64}
-            paddingHorizontal={Paddings.screen}
-            scrollPastTopInset={true}
-            paddingBottom={
-              isSelectRoute && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
-            }
-          />
+          {layoutView === 'list' ? (
+            <ListCard
+              key={isSelectRoute ? 'today-select-listcard' : 'today-screen-listcard'}
+              tasks={todaysTasks}
+              selectionMode={listSelectionMode}
+              selectedTaskIds={selection.selectedItems}
+              onToggleTaskSelection={listSelectionMode ? toggleItemSelection : undefined}
+              hideCompletedTasks={todayListDisplayProps.hideCompletedTasks}
+              onTaskPress={handleTaskPress}
+              onTaskComplete={handleTaskComplete}
+              onTaskEdit={handleTaskEdit}
+              onTaskDelete={handleTaskDelete}
+              {...LIST_CARD_TASK_ROW_PRESET_TODAY}
+              showListRecurrenceRow
+              emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
+              loading={isLoading && todaysTasks.length === 0}
+              groupBy="dueDate"
+              lockTodayGroupExpanded
+              sortBy={todayListDisplayProps.sortBy}
+              sortDirection={todayListDisplayProps.sortDirection}
+              onOverdueReschedule={handleOverdueReschedulePress}
+              hideTodayHeader={false}
+              bigTodayHeader={true}
+              onRefresh={handleRefresh}
+              refreshing={isLoading}
+              scrollYSharedValue={scrollY}
+              showsVerticalScrollIndicator={true}
+              paddingTop={64}
+              paddingHorizontal={Paddings.screen}
+              scrollPastTopInset={true}
+              paddingBottom={
+                isSelectRoute && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
+              }
+            />
+          ) : (
+            <View style={styles.todayTimelineContainer}>
+              <DayTimelineWithAllDayFooter
+              dayKey={todayDateStr}
+              tasks={todayCalendarTasks}
+              allDayListDisplayProps={todayTimelineDisplayProps}
+              hideCompletedOnTimeline={todayTimelineDisplayProps.hideCompletedTasks}
+              onTaskTimeChange={handleTaskTimeChange}
+              onTaskPress={handleTaskPress}
+              onTaskComplete={handleTaskComplete}
+              onTaskEdit={handleTaskEdit}
+              onTaskDelete={handleTaskDelete}
+              selectionMode={listSelectionMode}
+              selectedTaskIds={selection.selectedItems}
+              onToggleTaskSelection={listSelectionMode ? toggleItemSelection : undefined}
+              plannerScheduleAnchors={todayScheduleAnchorsPayload}
+              startHour={todayTimelineStartHour}
+              endHour={todayTimelineEndHour}
+              scrollContentPaddingTop={64}
+              scrollPastTopInset={true}
+              scrollYSharedValue={scrollY}
+              showTodayBigHeader={true}
+              todayHeaderLabel={todayBigHeaderLabel}
+              scrollContentPaddingBottom={
+                isSelectRoute && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
+              }
+              emptyAllDayMessage="No all-day tasks for today."
+              allDayFooterKeyPrefix="today-allday"
+            />
+            </View>
+          )}
         </ScreenContainer>
         {screenBackdrop}
         <View style={[styles.topSectionAnchor, { height: insets.top + 64 }]}>
@@ -560,5 +664,9 @@ const createStyles = (
       marginTop: 8,
       textAlign: 'center',
       color: themeColors.text.tertiary(),
+    },
+    todayTimelineContainer: {
+      flex: 1,
+      overflow: 'hidden',
     },
   });

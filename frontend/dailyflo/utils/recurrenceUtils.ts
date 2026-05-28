@@ -137,6 +137,20 @@ export function getTargetDatesForTodayScreen(): string[] {
   return dates;
 }
 
+/**
+ * keep only tasks whose effective calendar day matches dayStr.
+ * used by today timeline layout — excludes overdue rows from list view.
+ */
+export function filterTasksForCalendarDay(tasks: Task[], dayStr: string): Task[] {
+  return tasks.filter((task) => {
+    if (isExpandedRecurrenceId(task.id)) {
+      return getOccurrenceDateFromId(task.id) === dayStr;
+    }
+    if (!task.dueDate) return false;
+    return toLocalCalendarDayString(new Date(task.dueDate)) === dayStr;
+  });
+}
+
 export interface ExpandTasksOptions {
   /** when true, also include one-off tasks with dueDate before min(targetDates) (e.g. old overdue) */
   includeOneOffBeforeRange?: boolean;

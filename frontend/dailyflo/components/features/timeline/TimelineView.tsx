@@ -10,7 +10,8 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text, Platform } from 'react-native';
-import AnimatedReanimated, { useSharedValue, withTiming, makeMutable, withSpring, LinearTransition, createAnimatedComponent } from 'react-native-reanimated';
+import AnimatedReanimated, { useSharedValue, withTiming, makeMutable, withSpring, LinearTransition, createAnimatedComponent, useAnimatedScrollHandler, type SharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors, useColorPalette } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
@@ -79,6 +80,12 @@ interface TimelineViewProps {
   scrollContentPaddingTop?: number;
   /** optional extra bottom inset (e.g. ios native bottom selection toolbar) */
   scrollContentPaddingBottom?: number;
+  /** when true, adds safe-area top inset to scrollContentPaddingTop (Today screen parity with ListCard) */
+  scrollPastTopInset?: boolean;
+  /** optional header at top of scroll content (e.g. big Today title) */
+  headerComponent?: React.ReactNode;
+  /** parent-owned scroll offset — drives Today big header fade + mini topSection header */
+  scrollYSharedValue?: SharedValue<number>;
   // selection mode - when true, tap toggles selection instead of opening task
   selectionMode?: boolean;
   selectedTaskIds?: string[];
@@ -109,6 +116,9 @@ export default function TimelineView({
   footerComponent,
   scrollContentPaddingTop,
   scrollContentPaddingBottom,
+  scrollPastTopInset = false,
+  headerComponent,
+  scrollYSharedValue,
   endHour = 23,
   timeInterval = 60,
   selectionMode = false,
@@ -119,6 +129,18 @@ export default function TimelineView({
 }: TimelineViewProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
+  const insets = useSafeAreaInsets();
+  const fallbackScrollY = useSharedValue(0);
+  const scrollY = scrollYSharedValue ?? fallbackScrollY;
+
+  const timelineScrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
+
+  const resolvedScrollPaddingTop =
+    (scrollContentPaddingTop ?? 0) + (scrollPastTopInset ? insets.top : 0);
   const { getMossBrandColor, getSageBrandColor } = useColorPalette();
   const plannerWakeIconColor = getMossBrandColor(600);
   const plannerSleepIconColor = getSageBrandColor(600);
@@ -1754,14 +1776,19 @@ export default function TimelineView({
           // when footer: content = list + timeline only (no minHeight) so timeline moves up when list collapses
           // when no footer: minHeight ensures timeline is scrollable
           ...(footerComponent ? [] : [{ minHeight: timelineHeight + 220 }]),
-          ...(scrollContentPaddingTop !== undefined ? [{ paddingTop: scrollContentPaddingTop }] : []),
+          ...(resolvedScrollPaddingTop > 0 ? [{ paddingTop: resolvedScrollPaddingTop }] : []),
           ...(scrollContentPaddingBottom !== undefined
             ? [{ paddingBottom: Paddings.timelineScrollBottom + scrollContentPaddingBottom }]
             : []),
         ]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={scrollEnabled}
+        onScroll={scrollYSharedValue ? timelineScrollHandler : undefined}
+        scrollEventThrottle={16}
       >
+        {headerComponent ? (
+          <View style={styles.scrollHeader}>{headerComponent}</View>
+        ) : null}
         {/* ListCard + timeline as one stack - layout enabled after mount so they appear in final position */}
         <AnimatedReanimated.View
           layout={layoutTransitionEnabled && footerComponent && !suppressLayoutForTaskSetChange ? LAYOUT_TRANSITION : undefined}
@@ -2156,6 +2183,10 @@ const createStyles = (
     flexDirection: 'column',
     paddingTop: Paddings.timelineScrollTop,
     paddingBottom: Paddings.timelineScrollBottom,
+  },
+
+  scrollHeader: {
+    paddingHorizontal: Paddings.screen,
   },
 
   // list + timeline stack - flexGrow: 0 so height = footer + timeline only; timeline moves up when list collapses
