@@ -15,6 +15,7 @@ import React, {
 } from 'react';
 
 import type { DisplaySettingsContext } from '@/components/features/display/displayStackChrome';
+import { DEFAULT_DISPLAY_LAYOUT_VIEW, type DisplayLayoutView } from '@/components/features/display/displayLayoutOptions';
 import {
   DEFAULT_DISPLAY_DATE_SORT_OPTION_PLANNER,
   DEFAULT_DISPLAY_DATE_SORT_OPTION_TODAY,
@@ -33,6 +34,7 @@ function getDefaultDateSortOption(context: DisplaySettingsContext): DisplayDateS
 }
 
 export type DisplaySettingsDraft = {
+  layoutView: DisplayLayoutView;
   sortOption: DisplaySortingOption;
   orderingOption: DisplayOrderingOption;
   dateSortOption: DisplayDateSortOption;
@@ -44,6 +46,7 @@ export type DisplaySettingsDraft = {
 
 function buildDefaults(context: DisplaySettingsContext): DisplaySettingsDraft {
   return {
+    layoutView: DEFAULT_DISPLAY_LAYOUT_VIEW,
     sortOption: DEFAULT_DISPLAY_SORTING_OPTION,
     orderingOption: DEFAULT_DISPLAY_ORDERING_OPTION,
     dateSortOption: getDefaultDateSortOption(context),
@@ -56,6 +59,7 @@ function buildDefaults(context: DisplaySettingsContext): DisplaySettingsDraft {
 type DisplaySettingsDraftContextValue = {
   draft: DisplaySettingsDraft;
   hasChanges: boolean;
+  setLayoutView: (view: DisplayLayoutView) => void;
   setSortOption: (option: DisplaySortingOption) => void;
   setOrderingOption: (option: DisplayOrderingOption) => void;
   setDateSortOption: (option: DisplayDateSortOption) => void;
@@ -78,6 +82,7 @@ export function DisplaySettingsDraftProvider({ context, children }: DisplaySetti
 
   const hasChanges = useMemo(
     () =>
+      draft.layoutView !== defaults.layoutView ||
       draft.sortOption !== defaults.sortOption ||
       draft.orderingOption !== defaults.orderingOption ||
       // today tab is always scoped to today — date filter is hidden so ignore draft drift
@@ -87,6 +92,10 @@ export function DisplaySettingsDraftProvider({ context, children }: DisplaySetti
       (context === 'planner' && draft.showAllDayTasks !== defaults.showAllDayTasks),
     [context, draft, defaults]
   );
+
+  const setLayoutView = useCallback((view: DisplayLayoutView) => {
+    setDraft((prev) => ({ ...prev, layoutView: view }));
+  }, []);
 
   const setSortOption = useCallback((option: DisplaySortingOption) => {
     setDraft((prev) => ({ ...prev, sortOption: option }));
@@ -120,6 +129,7 @@ export function DisplaySettingsDraftProvider({ context, children }: DisplaySetti
     () => ({
       draft,
       hasChanges,
+      setLayoutView,
       setSortOption,
       setOrderingOption,
       setDateSortOption,
@@ -131,6 +141,7 @@ export function DisplaySettingsDraftProvider({ context, children }: DisplaySetti
     [
       draft,
       hasChanges,
+      setLayoutView,
       setSortOption,
       setOrderingOption,
       setDateSortOption,

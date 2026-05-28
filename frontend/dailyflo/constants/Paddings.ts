@@ -107,6 +107,8 @@ export const Paddings = {
   // gap between GroupedListHeader and content below (grouped list or pills)
   // used by: browse screen (groupedListSection, listsPillsContainer)
   groupedListHeaderContentGap: 10,
+  // display settings — gap between layout view picker row (incl. labels) and toggles grouped list
+  displayLayoutSelectorToGroupedListGap: 24,
 
   // modal/sheet padding (not yet used - modalBottomExtra used instead)
   modalHorizontal: 24,
