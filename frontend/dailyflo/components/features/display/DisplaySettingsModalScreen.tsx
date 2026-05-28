@@ -24,6 +24,7 @@ import {
 } from '@/components/navigation/IosBrowseModalStackToolbars';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
 import { SFSymbolIcon, CalendarIcon, TickIcon } from '@/components/ui/Icon';
+import { DisplayLayoutViewSelector } from '@/components/features/display/DisplayLayoutViewSelector';
 import { DISPLAY_SETTINGS_ROW_TO_ROUTE, type DisplaySettingsContext } from '@/components/features/display/displayStackChrome';
 import { useDisplaySettingsDraft } from '@/components/features/display/DisplaySettingsDraftContext';
 import { Paddings } from '@/constants/Paddings';
@@ -189,10 +190,11 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
         >
           <View style={styles.contentWrapper}>
             <GroupedListHeader title="Layout" />
+            <View style={styles.layoutViewSelectorSection}>
+              <DisplayLayoutViewSelector />
+            </View>
             <View style={styles.groupedListSection}>
               <GroupedList {...listGroupProps}>
-                {/* reserved slot — custom list/timeline layout picker will mount here */}
-                <View style={styles.layoutSelectorSlot} pointerEvents="box-none" />
                 <View style={styles.completedTasksRow}>
                   <View style={styles.groupedListIconWrap}>
                     {renderGroupedListIcon(
@@ -414,16 +416,16 @@ const createStyles = (typography: ReturnType<typeof useTypography>) =>  StyleShe
     groupedListSection: {
       paddingTop: 0,
     },
+    // list/timeline picker sits between Layout header and the toggles grouped list
+    layoutViewSelectorSection: {
+      paddingTop: Paddings.groupedListHeaderContentGap,
+      paddingBottom: Paddings.displayLayoutSelectorToGroupedListGap,
+    },
     sectionHeader: {
       marginTop: 24,
     },
     listContainer: {
       marginVertical: 0,
-    },
-    // empty first layout row — tall enough for a future list vs timeline selector UI
-    layoutSelectorSlot: {
-      minHeight: 128,
-      width: '100%',
     },
     completedTasksRow: {
       flexDirection: 'row',
