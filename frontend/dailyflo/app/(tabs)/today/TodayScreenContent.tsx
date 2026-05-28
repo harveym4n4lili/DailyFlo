@@ -32,6 +32,7 @@ import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
+import { mapTodayDisplayPrefsToListCard } from '@/components/features/display/displayPreferenceMappers';
 
 import { useTasks, useUI } from '@/store/hooks';
 import { useAppDispatch, useAppSelector, store } from '@/store';
@@ -128,6 +129,13 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
   }, [isLoading, scrollY]);
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const todayDisplayPrefs = useAppSelector(
+    (state) => state.auth.user?.preferences?.displayPreferences?.today
+  );
+  const todayListDisplayProps = useMemo(
+    () => mapTodayDisplayPrefsToListCard(todayDisplayPrefs),
+    [todayDisplayPrefs]
+  );
   const listsLastFetched = useAppSelector((state) => state.lists.lastFetched);
   const listsLoading = useAppSelector((state) => state.lists.isLoading);
   const listsError = useAppSelector((state) => state.lists.error);
@@ -391,7 +399,7 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
             selectionMode={listSelectionMode}
             selectedTaskIds={selection.selectedItems}
             onToggleTaskSelection={listSelectionMode ? toggleItemSelection : undefined}
-            hideCompletedTasks={true}
+            hideCompletedTasks={todayListDisplayProps.hideCompletedTasks}
             onTaskPress={handleTaskPress}
             onTaskComplete={handleTaskComplete}
             onTaskEdit={handleTaskEdit}
@@ -402,8 +410,8 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
             loading={isLoading && todaysTasks.length === 0}
             groupBy="dueDate"
             lockTodayGroupExpanded
-            sortBy="dueDate"
-            sortDirection="asc"
+            sortBy={todayListDisplayProps.sortBy}
+            sortDirection={todayListDisplayProps.sortDirection}
             onOverdueReschedule={handleOverdueReschedulePress}
             hideTodayHeader={false}
             bigTodayHeader={true}

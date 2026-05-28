@@ -67,6 +67,9 @@ export const store = configureStore({
           'auth/patchUserSchedulePreferences/pending',
           'auth/patchUserSchedulePreferences/fulfilled',
           'auth/patchUserSchedulePreferences/rejected',
+          'auth/patchUserDisplayPreferences/pending',
+          'auth/patchUserDisplayPreferences/fulfilled',
+          'auth/patchUserDisplayPreferences/rejected',
           // list thunks put full List objects in the fulfilled payload (Date on createdAt/updatedAt/metadata)
           'lists/fetchLists/fulfilled',
           'lists/createList/fulfilled',

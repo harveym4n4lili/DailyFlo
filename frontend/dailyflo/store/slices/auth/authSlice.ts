@@ -8,6 +8,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, RegisterUserInput, LoginUserInput, SocialAuthInput, UpdateUserInput, UserPreferences } from '../../../types';
+import type { TabDisplayPreferences, UserDisplayPreferences } from '../../../types/common/User';
 // auth API service - handles API calls to Django backend for authentication
 // this service makes HTTP requests to login, register, and other auth endpoints
 import authApiService from '../../../services/api/auth';
@@ -240,6 +241,57 @@ function deserializeUserThunkPayload(payload: UserThunkSerializablePayload): Use
 }
 
 /**
+ * Map API display_preferences tab object → frontend TabDisplayPreferences (snake or camel keys).
+ */
+function transformApiDisplayTabPrefs(raw: unknown): TabDisplayPreferences | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  const out: TabDisplayPreferences = {};
+
+  const sortOption = r.sort_option ?? r.sortOption;
+  if (typeof sortOption === 'string') out.sortOption = sortOption as TabDisplayPreferences['sortOption'];
+
+  const orderingOption = r.ordering_option ?? r.orderingOption;
+  if (typeof orderingOption === 'string') {
+    out.orderingOption = orderingOption as TabDisplayPreferences['orderingOption'];
+  }
+
+  const showCompletedTasks = r.show_completed_tasks ?? r.showCompletedTasks;
+  if (typeof showCompletedTasks === 'boolean') out.showCompletedTasks = showCompletedTasks;
+
+  const layoutView = r.layout_view ?? r.layoutView;
+  if (layoutView === 'list' || layoutView === 'timeline') out.layoutView = layoutView;
+
+  const showAllDayTasks = r.show_all_day_tasks ?? r.showAllDayTasks;
+  if (typeof showAllDayTasks === 'boolean') out.showAllDayTasks = showAllDayTasks;
+
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function transformApiDisplayPreferences(apiPrefs: Record<string, unknown>): UserDisplayPreferences | undefined {
+  const raw = apiPrefs.display_preferences ?? apiPrefs.displayPreferences;
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  const today = transformApiDisplayTabPrefs(r.today);
+  const planner = transformApiDisplayTabPrefs(r.planner);
+  if (!today && !planner) return undefined;
+  return {
+    ...(today ? { today } : {}),
+    ...(planner ? { planner } : {}),
+  };
+}
+
+function tabDisplayPrefsToSnake(tab: TabDisplayPreferences): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (tab.sortOption !== undefined) out.sort_option = tab.sortOption;
+  if (tab.orderingOption !== undefined) out.ordering_option = tab.orderingOption;
+  if (tab.showCompletedTasks !== undefined) out.show_completed_tasks = tab.showCompletedTasks;
+  if (tab.layoutView !== undefined) out.layout_view = tab.layoutView;
+  if (tab.showAllDayTasks !== undefined) out.show_all_day_tasks = tab.showAllDayTasks;
+  return out;
+}
+
+/**
  * Helper function to transform API preferences to UserPreferences interface
  * Backend uses snake_case for preference field names, frontend uses camelCase
  * 
@@ -266,6 +318,7 @@ function transformApiPreferencesToPreferences(apiPrefs: any): UserPreferences {
     autoArchiveCompleted: apiPrefs.auto_archive_completed || apiPrefs.autoArchiveCompleted || false,
     showCompletedTasks: (apiPrefs.show_completed_tasks || apiPrefs.showCompletedTasks) ?? true,
     sortTasksBy: apiPrefs.sort_tasks_by || apiPrefs.sortTasksBy || 'dueDate',
+    displayPreferences: transformApiDisplayPreferences(apiPrefs),
     analyticsEnabled: (apiPrefs.analytics_enabled || apiPrefs.analyticsEnabled) ?? true,
     crashReportingEnabled: (apiPrefs.crash_reporting_enabled || apiPrefs.crashReportingEnabled) ?? true,
     wakeTime: coerceWakeSleepHHMM(apiPrefs.wake_time || apiPrefs.wakeTime, DEFAULT_WAKE_HHMM),
@@ -330,6 +383,16 @@ export function preferencesPartialToSnakePayload(prefs: Partial<UserPreferences>
   if (prefs.autoArchiveCompleted !== undefined) out.auto_archive_completed = prefs.autoArchiveCompleted;
   if (prefs.showCompletedTasks !== undefined) out.show_completed_tasks = prefs.showCompletedTasks;
   if (prefs.sortTasksBy !== undefined) out.sort_tasks_by = prefs.sortTasksBy;
+  if (prefs.displayPreferences !== undefined) {
+    const dp: Record<string, unknown> = {};
+    if (prefs.displayPreferences.today !== undefined) {
+      dp.today = tabDisplayPrefsToSnake(prefs.displayPreferences.today);
+    }
+    if (prefs.displayPreferences.planner !== undefined) {
+      dp.planner = tabDisplayPrefsToSnake(prefs.displayPreferences.planner);
+    }
+    if (Object.keys(dp).length > 0) out.display_preferences = dp;
+  }
   if (prefs.analyticsEnabled !== undefined) out.analytics_enabled = prefs.analyticsEnabled;
   if (prefs.crashReportingEnabled !== undefined) out.crash_reporting_enabled = prefs.crashReportingEnabled;
   if (prefs.wakeTime !== undefined) out.wake_time = prefs.wakeTime;
@@ -874,6 +937,42 @@ export const patchUserSchedulePreferences = createAsyncThunk<
   },
 );
 
+export const patchUserDisplayPreferences = createAsyncThunk<
+  UserThunkSerializablePayload,
+  { context: 'today' | 'planner'; patch: TabDisplayPreferences }
+>(
+  'auth/patchUserDisplayPreferences',
+  async (
+    { context, patch }: { context: 'today' | 'planner'; patch: TabDisplayPreferences },
+    { getState, rejectWithValue }
+  ) => {
+    try {
+      const loggedInUser = (getState() as { auth: Readonly<{ user: User | null }> }).auth.user;
+      if (!loggedInUser?.id) {
+        return rejectWithValue('Sign in required to save display settings.');
+      }
+
+      const response = await authApiService.patchProfileUpdate({
+        preferences: {
+          display_preferences: {
+            [context]: tabDisplayPrefsToSnake(patch),
+          },
+        },
+      });
+
+      const bodyUser = response.user ?? response;
+      return serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
+    } catch (error: any) {
+      const prefsErr = error?.response?.data?.preferences;
+      const message =
+        (Array.isArray(prefsErr) ? prefsErr[0] : undefined) ??
+        error?.response?.data?.detail ??
+        (error instanceof Error ? error.message : 'Could not save display settings.');
+      return rejectWithValue(typeof message === 'string' ? message : 'Could not save display settings.');
+    }
+  },
+);
+
 /** PATCH habit/task branch answers into django `preferences.onboarding_questionnaire` on questionnaire finish */
 export const patchUserOnboardingQuestionnaire = createAsyncThunk<
   UserThunkSerializablePayload,
@@ -1229,6 +1328,20 @@ const authSlice = createSlice({
       .addCase(patchUserSchedulePreferences.rejected, (state, action) => {
         state.isUpdatingProfile = false;
         state.profileError = (action.payload as string) || 'Schedule update failed';
+      })
+
+      .addCase(patchUserDisplayPreferences.pending, (state) => {
+        state.isUpdatingProfile = true;
+        state.profileError = null;
+      })
+      .addCase(patchUserDisplayPreferences.fulfilled, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = null;
+        state.user = deserializeUserThunkPayload(action.payload);
+      })
+      .addCase(patchUserDisplayPreferences.rejected, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = (action.payload as string) || 'Display settings update failed';
       })
 
       .addCase(patchUserOnboardingQuestionnaire.pending, (state) => {

@@ -101,7 +101,7 @@ export interface ListCardProps {
   groupBy?: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'none'; // routine = one-time vs recurring (browse list detail); allDay = planner all-day bucket
   /** titles that render collapsed until the user taps the header — planner seeds `ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES`; remount with a day key resets per day */
   initialCollapsedGroupTitles?: readonly string[];
-  sortBy?: 'createdAt' | 'dueDate' | 'priority' | 'title'; // how to sort tasks
+  sortBy?: 'none' | 'createdAt' | 'dueDate' | 'priority' | 'title'; // how to sort tasks
   sortDirection?: 'asc' | 'desc'; // sort direction
 
   // pull-to-refresh support
@@ -475,6 +475,7 @@ export default function ListCard({
 
   // process and organize tasks based on grouping and sorting options
   const processedTasks = useMemo(() => {
+    if (sortBy === 'none') return visibleTasks;
     return sortTasks(visibleTasks, sortBy, sortDirection);
   }, [visibleTasks, sortBy, sortDirection]);
 

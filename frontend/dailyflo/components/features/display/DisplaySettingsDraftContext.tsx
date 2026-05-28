@@ -3,6 +3,7 @@
  *
  * Holds draft display prefs for the nested display modal stack (index + sort/filter pickers).
  * Sub-screens write here immediately; the Display root reads draft + hasChanges and owns the save button.
+ * Applied prefs hydrate from auth.user.preferences.displayPreferences (per account).
  */
 
 import React, {
@@ -15,52 +16,37 @@ import React, {
 } from 'react';
 
 import type { DisplaySettingsContext } from '@/components/features/display/displayStackChrome';
-import { DEFAULT_DISPLAY_LAYOUT_VIEW, type DisplayLayoutView } from '@/components/features/display/displayLayoutOptions';
 import {
-  DEFAULT_DISPLAY_DATE_SORT_OPTION_PLANNER,
-  DEFAULT_DISPLAY_DATE_SORT_OPTION_TODAY,
-  DEFAULT_DISPLAY_ORDERING_OPTION,
-  DEFAULT_DISPLAY_SORTING_OPTION,
+  buildDisplayDraftDefaults,
+  getSavedTabDisplayPrefs,
+  mergeSavedDisplayPrefsIntoDraft,
+} from '@/components/features/display/displayPreferenceDefaults';
+import type { DisplayLayoutView } from '@/components/features/display/displayLayoutOptions';
+import {
   type DisplayDateSortOption,
   type DisplayOrderingOption,
-  type DisplaySortingOption,
+  type DisplayTabSortingOption,
 } from '@/components/features/display/displaySortOptions';
+import { useAppSelector } from '@/store';
 
-const DEFAULT_PRIORITY_SUBLABEL = 'All';
-const DEFAULT_SHOW_ALL_DAY_TASKS = true;
+export type DisplaySettingsDraft = ReturnType<typeof buildDisplayDraftDefaults>;
 
-function getDefaultDateSortOption(context: DisplaySettingsContext): DisplayDateSortOption {
-  return context === 'today' ? DEFAULT_DISPLAY_DATE_SORT_OPTION_TODAY : DEFAULT_DISPLAY_DATE_SORT_OPTION_PLANNER;
-}
-
-export type DisplaySettingsDraft = {
-  layoutView: DisplayLayoutView;
-  sortOption: DisplaySortingOption;
-  orderingOption: DisplayOrderingOption;
-  dateSortOption: DisplayDateSortOption;
-  prioritySortSublabel: string;
-  showCompletedTasks: boolean;
-  /** planner layout — show tasks with no scheduled time in the timeline */
-  showAllDayTasks: boolean;
-};
-
-function buildDefaults(context: DisplaySettingsContext): DisplaySettingsDraft {
-  return {
-    layoutView: DEFAULT_DISPLAY_LAYOUT_VIEW,
-    sortOption: DEFAULT_DISPLAY_SORTING_OPTION,
-    orderingOption: DEFAULT_DISPLAY_ORDERING_OPTION,
-    dateSortOption: getDefaultDateSortOption(context),
-    prioritySortSublabel: DEFAULT_PRIORITY_SUBLABEL,
-    showCompletedTasks: true,
-    showAllDayTasks: DEFAULT_SHOW_ALL_DAY_TASKS,
-  };
+function draftsEqual(a: DisplaySettingsDraft, b: DisplaySettingsDraft, context: DisplaySettingsContext): boolean {
+  return (
+    a.layoutView === b.layoutView &&
+    a.sortOption === b.sortOption &&
+    a.orderingOption === b.orderingOption &&
+    a.showCompletedTasks === b.showCompletedTasks &&
+    a.prioritySortSublabel === b.prioritySortSublabel &&
+    a.showAllDayTasks === b.showAllDayTasks
+  );
 }
 
 type DisplaySettingsDraftContextValue = {
   draft: DisplaySettingsDraft;
   hasChanges: boolean;
   setLayoutView: (view: DisplayLayoutView) => void;
-  setSortOption: (option: DisplaySortingOption) => void;
+  setSortOption: (option: DisplayTabSortingOption) => void;
   setOrderingOption: (option: DisplayOrderingOption) => void;
   setDateSortOption: (option: DisplayDateSortOption) => void;
   setPrioritySortSublabel: (value: string) => void;
@@ -77,27 +63,28 @@ export type DisplaySettingsDraftProviderProps = {
 };
 
 export function DisplaySettingsDraftProvider({ context, children }: DisplaySettingsDraftProviderProps) {
-  const defaults = useMemo(() => buildDefaults(context), [context]);
-  const [draft, setDraft] = useState<DisplaySettingsDraft>(() => buildDefaults(context));
+  const displayPreferences = useAppSelector((s) => s.auth.user?.preferences?.displayPreferences);
+  const savedTabPrefs = getSavedTabDisplayPrefs(displayPreferences, context);
+
+  // applied = saved server prefs merged with defaults — hasChanges compares draft to this
+  const appliedDraft = useMemo(
+    () => mergeSavedDisplayPrefsIntoDraft(context, savedTabPrefs),
+    [context, savedTabPrefs]
+  );
+
+  const defaults = useMemo(() => buildDisplayDraftDefaults(context), [context]);
+  const [draft, setDraft] = useState<DisplaySettingsDraft>(() => appliedDraft);
 
   const hasChanges = useMemo(
-    () =>
-      draft.layoutView !== defaults.layoutView ||
-      draft.sortOption !== defaults.sortOption ||
-      draft.orderingOption !== defaults.orderingOption ||
-      // today tab is always scoped to today — date filter is hidden so ignore draft drift
-      (context !== 'today' && draft.dateSortOption !== defaults.dateSortOption) ||
-      draft.prioritySortSublabel !== defaults.prioritySortSublabel ||
-      draft.showCompletedTasks !== defaults.showCompletedTasks ||
-      (context === 'planner' && draft.showAllDayTasks !== defaults.showAllDayTasks),
-    [context, draft, defaults]
+    () => !draftsEqual(draft, appliedDraft, context),
+    [draft, appliedDraft, context]
   );
 
   const setLayoutView = useCallback((view: DisplayLayoutView) => {
     setDraft((prev) => ({ ...prev, layoutView: view }));
   }, []);
 
-  const setSortOption = useCallback((option: DisplaySortingOption) => {
+  const setSortOption = useCallback((option: DisplayTabSortingOption) => {
     setDraft((prev) => ({ ...prev, sortOption: option }));
   }, []);
 
