@@ -60,16 +60,26 @@ export function mapTodayDisplayPrefsToListCard(
 }
 
 export type PlannerAllDayListDisplayProps = TodayListCardDisplayProps & {
-  /** when false, planner hides the all-day footer ListCard entirely */
+  /** when false, timeline layout hides the all-day footer ListCard */
   showAllDayTasks: boolean;
 };
 
-/** planner tab: sort/completed apply to all-day footer only — timeline order unchanged */
-export function mapPlannerDisplayPrefsToAllDayList(
+/** alias — same shape for today + planner timeline footers */
+export type TimelineAllDayListDisplayProps = PlannerAllDayListDisplayProps;
+
+/** timeline layout: sort/completed/all-day apply to footer ListCard only */
+export function mapTimelineAllDayListDisplayProps(
   saved?: TabDisplayPreferences | null
-): PlannerAllDayListDisplayProps {
+): TimelineAllDayListDisplayProps {
   return {
     ...mapTabDisplayPrefsToListCardSort(saved),
     showAllDayTasks: saved?.showAllDayTasks ?? true,
   };
+}
+
+/** @deprecated use mapTimelineAllDayListDisplayProps */
+export function mapPlannerDisplayPrefsToAllDayList(
+  saved?: TabDisplayPreferences | null
+): PlannerAllDayListDisplayProps {
+  return mapTimelineAllDayListDisplayProps(saved);
 }
