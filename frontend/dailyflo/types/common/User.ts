@@ -10,6 +10,21 @@
 // This matches the auth_provider choices in the backend CustomUser model
 export type AuthProvider = 'email' | 'google' | 'apple' | 'facebook';
 
+/** per-tab display modal prefs persisted under preferences.display_preferences */
+export interface TabDisplayPreferences {
+  sortOption?: 'None' | 'Due Date' | 'Added Date' | 'Priority';
+  orderingOption?: 'Ascending' | 'Descending';
+  showCompletedTasks?: boolean;
+  layoutView?: 'list' | 'timeline';
+  /** timeline layout — show/hide all-day footer list; list view ignores this */
+  showAllDayTasks?: boolean;
+}
+
+export interface UserDisplayPreferences {
+  today?: TabDisplayPreferences;
+  planner?: TabDisplayPreferences;
+}
+
 // Define user preferences structure
 // This matches the preferences JSON field in the backend CustomUser model
 export interface UserPreferences {
@@ -64,6 +79,9 @@ export interface UserPreferences {
   autoArchiveCompleted: boolean;    // Auto-archive completed tasks
   showCompletedTasks: boolean;      // Show completed tasks in lists
   sortTasksBy: 'dueDate' | 'priority' | 'createdAt' | 'title'; // Default task sorting
+
+  /** today / planner display modal prefs — per-account, nested on server as display_preferences */
+  displayPreferences?: UserDisplayPreferences;
   
   // Privacy and data preferences
   analyticsEnabled: boolean;        // Allow usage analytics
@@ -155,6 +173,7 @@ export interface UpdateUserPreferencesInput {
   autoArchiveCompleted?: boolean;   // Optional: Auto-archive setting
   showCompletedTasks?: boolean;     // Optional: Show completed tasks setting
   sortTasksBy?: UserPreferences['sortTasksBy']; // Optional: New default sorting
+  displayPreferences?: UserDisplayPreferences;
   analyticsEnabled?: boolean;       // Optional: Analytics preference
   crashReportingEnabled?: boolean;  // Optional: Crash reporting preference
 }

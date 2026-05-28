@@ -12,4 +12,11 @@ export const DISPLAY_LAYOUT_VIEW_OPTIONS: ReadonlyArray<{
   { id: 'timeline', label: 'Timeline view' },
 ];
 
+/** fallback when no tab context — same as today */
 export const DEFAULT_DISPLAY_LAYOUT_VIEW: DisplayLayoutView = 'list';
+
+/** today dashboard default — list of tasks for the day */
+export const DEFAULT_DISPLAY_LAYOUT_VIEW_TODAY: DisplayLayoutView = 'list';
+
+/** planner dashboard default — timed timeline + optional all-day footer */
+export const DEFAULT_DISPLAY_LAYOUT_VIEW_PLANNER: DisplayLayoutView = 'timeline';

@@ -6,6 +6,7 @@
 
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, Alert, Switch } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Stack } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -23,12 +24,22 @@ import {
   IosBrowseModalTrailingStackToolbar,
 } from '@/components/navigation/IosBrowseModalStackToolbars';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
-import { SFSymbolIcon, CalendarIcon, TickIcon } from '@/components/ui/Icon';
+import { SFSymbolIcon, TickIcon } from '@/components/ui/Icon';
 import { DisplayLayoutViewSelector } from '@/components/features/display/DisplayLayoutViewSelector';
+import { DisplaySettingsAnimatedSection } from '@/components/features/display/DisplaySettingsAnimatedSection';
 import { DISPLAY_SETTINGS_ROW_TO_ROUTE, type DisplaySettingsContext } from '@/components/features/display/displayStackChrome';
 import { useDisplaySettingsDraft } from '@/components/features/display/DisplaySettingsDraftContext';
+import { draftToDisplayPreferencesPatch } from '@/components/features/display/displayPreferenceDefaults';
+import {
+  shouldFilterBeforeSort,
+  shouldShowDisplayAllDayToggle,
+  shouldShowDisplaySortSection,
+} from '@/components/features/display/displayModalSectionVisibility';
+import { LAYOUT_TRANSITION_SPRING } from '@/constants/LayoutTransitions';
 import { Paddings } from '@/constants/Paddings';
 import { getTextStyle } from '@/constants/Typography';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { patchUserDisplayPreferences } from '@/store/slices/auth/authSlice';
 
 const HEADER_ROW_HEIGHT = 42;
 const HEADER_TOP = Paddings.screen;
@@ -55,6 +66,8 @@ export type DisplaySettingsModalScreenProps = {
 
 export default function DisplaySettingsModalScreen({ context }: DisplaySettingsModalScreenProps) {
   const router = useGuardedRouter();
+  const dispatch = useAppDispatch();
+  const isSaving = useAppSelector((s) => s.auth.isUpdatingProfile);
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
@@ -75,8 +88,14 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
     resetAll,
   } = useDisplaySettingsDraft();
 
-  const { sortOption, orderingOption, dateSortOption, prioritySortSublabel, showCompletedTasks, showAllDayTasks } =
+  const { layoutView, sortOption, orderingOption, prioritySortSublabel, showCompletedTasks, showAllDayTasks } =
     draft;
+
+  // timeline: filters only until all-day is on — then sort section appears for the all-day list
+  const showSortSection = shouldShowDisplaySortSection(layoutView, showAllDayTasks);
+  const showAllDayToggle = shouldShowDisplayAllDayToggle(layoutView);
+  // timeline: filter above sort; list: sort above filter
+  const filterBeforeSort = shouldFilterBeforeSort(layoutView);
 
   // tertiary sublabel on the right — matches FormDetailSection date/time picker rows
   const sortValueTextStyle = useMemo(
@@ -131,10 +150,22 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
     Platform.OS === 'ios' ? headerHeight + 24 : HEADER_TOP + HEADER_ROW_HEIGHT + 24;
 
   const handleSave = useCallback(() => {
-    if (!hasChanges) return;
-    // placeholder: persist sort/layout prefs to redux / user prefs then dismiss
-    router.back();
-  }, [hasChanges, router]);
+    if (!hasChanges || isSaving) return;
+    void (async () => {
+      try {
+        await dispatch(
+          patchUserDisplayPreferences({
+            context,
+            patch: draftToDisplayPreferencesPatch(context, draft),
+          })
+        ).unwrap();
+        router.back();
+      } catch (e) {
+        const msg = typeof e === 'string' ? e : 'Could not save display settings.';
+        Alert.alert('Save failed', msg);
+      }
+    })();
+  }, [hasChanges, isSaving, dispatch, context, draft, router]);
 
   // push onto the nested display stack (same slide transition as browse → inbox)
   const handleOpenPicker = useCallback(
@@ -157,6 +188,79 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
     [groupedListIconColor]
   );
 
+  const sortSectionContent = (
+    <>
+      <GroupedListHeader title="Sort" style={styles.sectionHeader} />
+      <View style={styles.groupedListSection}>
+        <GroupedList {...listGroupProps}>
+          <FormDetailButton
+            key="sort-by-sort"
+            iconComponent={renderGroupedListIcon(
+              'arrow.up.arrow.down',
+              <Ionicons
+                name="swap-vertical"
+                size={DISPLAY_GROUPED_LIST_ICON_SIZE}
+                color={groupedListIconColor}
+              />
+            )}
+            label="Sorting"
+            value={sortOption}
+            onPress={() => handleOpenPicker('sorting')}
+            showChevron
+            customStyles={{ value: sortValueTextStyle }}
+          />
+          <FormDetailButton
+            key="sort-ordering"
+            iconComponent={renderGroupedListIcon(
+              'arrow.up.and.down.circle',
+              <Ionicons
+                name="reorder-three"
+                size={DISPLAY_GROUPED_LIST_ICON_SIZE}
+                color={groupedListIconColor}
+              />
+            )}
+            label="Ordering"
+            value={orderingOption}
+            onPress={() => handleOpenPicker('ordering')}
+            showChevron
+            customStyles={{ value: sortValueTextStyle }}
+          />
+        </GroupedList>
+      </View>
+    </>
+  );
+
+  const sortSection = showSortSection ? (
+    <DisplaySettingsAnimatedSection key="display-sort-section">{sortSectionContent}</DisplaySettingsAnimatedSection>
+  ) : null;
+
+  const filterSection = (
+    <DisplaySettingsAnimatedSection key="display-filter-section">
+      <GroupedListHeader title="Filter" style={styles.sectionHeader} />
+      <View style={styles.groupedListSection}>
+        <GroupedList {...listGroupProps}>
+          {/* date filter hidden on today + planner — row not shown until list wiring exists */}
+          <FormDetailButton
+            key="filter-by-priority"
+            iconComponent={renderGroupedListIcon(
+              'flag.fill',
+              <Ionicons
+                name="flag"
+                size={DISPLAY_GROUPED_LIST_ICON_SIZE}
+                color={groupedListIconColor}
+              />
+            )}
+            label="Priority"
+            value={prioritySortSublabel}
+            onPress={() => handleOpenPicker('priority')}
+            showChevron
+            customStyles={{ value: sortValueTextStyle }}
+          />
+        </GroupedList>
+      </View>
+    </DisplaySettingsAnimatedSection>
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
       {Platform.OS === 'ios' ? (
@@ -169,7 +273,7 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
         />
       ) : null}
       {isFocused ? <IosBrowseModalCloseStackToolbar /> : null}
-      {isFocused && hasChanges ? (
+      {isFocused && hasChanges && !isSaving ? (
         <IosBrowseModalTrailingStackToolbar
           icon="checkmark"
           onPress={handleSave}
@@ -188,12 +292,12 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         >
-          <View style={styles.contentWrapper}>
+          <Animated.View layout={LAYOUT_TRANSITION_SPRING} style={styles.contentWrapper}>
             <GroupedListHeader title="Layout" />
             <View style={styles.layoutViewSelectorSection}>
               <DisplayLayoutViewSelector />
             </View>
-            <View style={styles.groupedListSection}>
+            <Animated.View layout={LAYOUT_TRANSITION_SPRING} style={styles.groupedListSection}>
               <GroupedList {...listGroupProps}>
                 <View style={styles.completedTasksRow}>
                   <View style={styles.groupedListIconWrap}>
@@ -221,126 +325,58 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
                     ios_backgroundColor={themeColors.interactive.tertiary()}
                   />
                 </View>
-                {context === 'planner' ? (
-                  <View style={styles.completedTasksRow}>
-                    <View style={styles.groupedListIconWrap}>
-                      {renderGroupedListIcon(
-                        'sun.max.fill',
-                        <Ionicons name="sunny" size={DISPLAY_GROUPED_LIST_ICON_SIZE} color={groupedListIconColor} />
-                      )}
+                {showAllDayToggle ? (
+                  <DisplaySettingsAnimatedSection key="display-all-day-toggle">
+                    <View style={styles.completedTasksRow}>
+                      <View style={styles.groupedListIconWrap}>
+                        {renderGroupedListIcon(
+                          'sun.max.fill',
+                          <Ionicons name="sunny" size={DISPLAY_GROUPED_LIST_ICON_SIZE} color={groupedListIconColor} />
+                        )}
+                      </View>
+                      <Text
+                        style={[styles.completedTasksLabel, { color: themeColors.text.primary() }]}
+                        numberOfLines={1}
+                      >
+                        All-day tasks
+                      </Text>
+                      <Switch
+                        value={showAllDayTasks}
+                        onValueChange={setShowAllDayTasks}
+                        accessibilityLabel="Show all-day tasks"
+                        trackColor={{
+                          false: themeColors.interactive.tertiary(),
+                          true: groupedListIconColor,
+                        }}
+                        thumbColor={themeColors.background.elevated()}
+                        ios_backgroundColor={themeColors.interactive.tertiary()}
+                      />
                     </View>
-                    <Text
-                      style={[styles.completedTasksLabel, { color: themeColors.text.primary() }]}
-                      numberOfLines={1}
-                    >
-                      All-day tasks
-                    </Text>
-                    <Switch
-                      value={showAllDayTasks}
-                      onValueChange={setShowAllDayTasks}
-                      accessibilityLabel="Show all-day tasks"
-                      trackColor={{
-                        false: themeColors.interactive.tertiary(),
-                        true: groupedListIconColor,
-                      }}
-                      thumbColor={themeColors.background.elevated()}
-                      ios_backgroundColor={themeColors.interactive.tertiary()}
-                    />
-                  </View>
+                  </DisplaySettingsAnimatedSection>
                 ) : null}
               </GroupedList>
-            </View>
+            </Animated.View>
 
-            <GroupedListHeader title="Sort" style={styles.sectionHeader} />
-            <View style={styles.groupedListSection}>
-              <GroupedList {...listGroupProps}>
-                <FormDetailButton
-                  key="sort-by-sort"
-                  iconComponent={renderGroupedListIcon(
-                    'arrow.up.arrow.down',
-                    <Ionicons
-                      name="swap-vertical"
-                      size={DISPLAY_GROUPED_LIST_ICON_SIZE}
-                      color={groupedListIconColor}
-                    />
-                  )}
-                  label="Sorting"
-                  value={sortOption}
-                  onPress={() => handleOpenPicker('sorting')}
-                  showChevron
-                  customStyles={{ value: sortValueTextStyle }}
-                />
-                <FormDetailButton
-                  key="sort-ordering"
-                  iconComponent={renderGroupedListIcon(
-                    'arrow.up.and.down.circle',
-                    <Ionicons
-                      name="reorder-three"
-                      size={DISPLAY_GROUPED_LIST_ICON_SIZE}
-                      color={groupedListIconColor}
-                    />
-                  )}
-                  label="Ordering"
-                  value={orderingOption}
-                  onPress={() => handleOpenPicker('ordering')}
-                  showChevron
-                  customStyles={{ value: sortValueTextStyle }}
-                />
-              </GroupedList>
-            </View>
+            {filterBeforeSort ? filterSection : sortSection}
+            {filterBeforeSort ? sortSection : filterSection}
 
-            <GroupedListHeader title="Filter" style={styles.sectionHeader} />
-            <View style={styles.groupedListSection}>
-              <GroupedList {...listGroupProps}>
-                {/* today tab is always today-scoped — no date filter row */}
-                {context !== 'today' ? (
+            <Animated.View layout={LAYOUT_TRANSITION_SPRING} style={styles.resetSectionWrap}>
+              <View style={[styles.groupedListSection, styles.resetGroupedListSection]}>
+                <GroupedList {...listGroupProps} separatorConsiderIconColumn={false}>
                   <FormDetailButton
-                    key="filter-by-date"
-                    iconComponent={renderGroupedListIcon(
-                      'calendar',
-                      <CalendarIcon size={DISPLAY_GROUPED_LIST_ICON_SIZE} color={groupedListIconColor} />
-                    )}
-                    label="Date"
-                    value={dateSortOption}
-                    onPress={() => handleOpenPicker('date')}
-                    showChevron
-                    customStyles={{ value: sortValueTextStyle }}
+                    key="reset-all"
+                    label="Reset all"
+                    onPress={handleResetAll}
+                    showChevron={false}
+                    labelAlign="center"
+                    customStyles={{ label: { color: resetLabelColor } }}
                   />
-                ) : null}
-                <FormDetailButton
-                  key="filter-by-priority"
-                  iconComponent={renderGroupedListIcon(
-                    'flag.fill',
-                    <Ionicons
-                      name="flag"
-                      size={DISPLAY_GROUPED_LIST_ICON_SIZE}
-                      color={groupedListIconColor}
-                    />
-                  )}
-                  label="Priority"
-                  value={prioritySortSublabel}
-                  onPress={() => handleOpenPicker('priority')}
-                  showChevron
-                  customStyles={{ value: sortValueTextStyle }}
-                />
-              </GroupedList>
-            </View>
-
-            <View style={[styles.groupedListSection, styles.resetGroupedListSection]}>
-              <GroupedList {...listGroupProps} separatorConsiderIconColumn={false}>
-                <FormDetailButton
-                  key="reset-all"
-                  label="Reset all"
-                  onPress={handleResetAll}
-                  showChevron={false}
-                  labelAlign="center"
-                  customStyles={{ label: { color: resetLabelColor } }}
-                />
-              </GroupedList>
-            </View>
+                </GroupedList>
+              </View>
+            </Animated.View>
 
             <View style={styles.bottomSpacer} />
-          </View>
+          </Animated.View>
         </ScrollView>
       </View>
 
@@ -373,7 +409,7 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
             </View>
             <View style={styles.headerActionsContainer} pointerEvents="box-none">
               <MainCloseButton onPress={() => router.back()} top={Paddings.screen} left={Paddings.screen} />
-              {hasChanges ? (
+              {hasChanges && !isSaving ? (
                 <View
                   style={styles.androidApplyButtonAnchor}
                   pointerEvents="box-none"
@@ -445,6 +481,9 @@ const createStyles = (typography: ReturnType<typeof useTypography>) =>  StyleShe
     resetGroupedListSection: {
       // same vertical gap as stacked GroupedLists in list-create (above standalone reset card)
       marginTop: Paddings.section,
+    },
+    resetSectionWrap: {
+      width: '100%',
     },
     bottomSpacer: {
       height: 120,

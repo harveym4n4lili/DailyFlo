@@ -9,6 +9,10 @@ from .models import CustomUser
 _HH_MM_RE = re.compile(r'^([01]\d|2[0-3]):([0-5]\d)$')
 _ONBOARDING_BRANCHES = frozenset({'habit', 'task'})
 _ONBOARDING_HABIT_FREQUENCIES = frozenset({'daily', 'weekly', 'weekends'})
+_DISPLAY_SORT_OPTIONS = frozenset({'None', 'Due Date', 'Added Date', 'Priority'})
+_DISPLAY_ORDERING_OPTIONS = frozenset({'Ascending', 'Descending'})
+_DISPLAY_LAYOUT_VIEWS = frozenset({'list', 'timeline'})
+_DISPLAY_TAB_KEYS = frozenset({'today', 'planner'})
 
 
 def _validate_hh_mm_string(value):
@@ -17,6 +21,62 @@ def _validate_hh_mm_string(value):
         return
     if not isinstance(value, str) or not _HH_MM_RE.match(value):
         raise serializers.ValidationError('Expected time as HH:MM in 24h format')
+
+
+def _validate_display_tab_preferences(value, tab_name):
+    """per-tab display modal prefs (today / planner) — labels match frontend pickers"""
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        raise serializers.ValidationError(f'display_preferences.{tab_name} must be a JSON object')
+
+    allowed_tab_keys = {
+        'sort_option', 'ordering_option', 'show_completed_tasks',
+        'layout_view', 'show_all_day_tasks',
+        # camelCase tolerated when clients send mixed keys
+        'sortOption', 'orderingOption', 'showCompletedTasks',
+        'layoutView', 'showAllDayTasks',
+    }
+    for key in value.keys():
+        if key not in allowed_tab_keys:
+            raise serializers.ValidationError(f'Invalid display_preferences.{tab_name} key: {key}')
+
+    sort_option = value.get('sort_option', value.get('sortOption'))
+    if sort_option is not None and sort_option not in _DISPLAY_SORT_OPTIONS:
+        raise serializers.ValidationError(f'Invalid sort_option on display_preferences.{tab_name}')
+
+    ordering_option = value.get('ordering_option', value.get('orderingOption'))
+    if ordering_option is not None and ordering_option not in _DISPLAY_ORDERING_OPTIONS:
+        raise serializers.ValidationError(f'Invalid ordering_option on display_preferences.{tab_name}')
+
+    layout_view = value.get('layout_view', value.get('layoutView'))
+    if layout_view is not None and layout_view not in _DISPLAY_LAYOUT_VIEWS:
+        raise serializers.ValidationError(f'Invalid layout_view on display_preferences.{tab_name}')
+
+    show_completed = value.get('show_completed_tasks', value.get('showCompletedTasks'))
+    if show_completed is not None and not isinstance(show_completed, bool):
+        raise serializers.ValidationError(f'show_completed_tasks on display_preferences.{tab_name} must be a boolean')
+
+    show_all_day = value.get('show_all_day_tasks', value.get('showAllDayTasks'))
+    if show_all_day is not None and not isinstance(show_all_day, bool):
+        raise serializers.ValidationError(f'show_all_day_tasks on display_preferences.{tab_name} must be a boolean')
+
+
+def _validate_display_preferences(value):
+    """nested display modal prefs — today / planner tabs"""
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        raise serializers.ValidationError('display_preferences must be a JSON object')
+
+    for key in value.keys():
+        if key not in _DISPLAY_TAB_KEYS:
+            raise serializers.ValidationError(f'Invalid display_preferences key: {key}')
+
+    if 'today' in value:
+        _validate_display_tab_preferences(value.get('today'), 'today')
+    if 'planner' in value:
+        _validate_display_tab_preferences(value.get('planner'), 'planner')
 
 
 def _validate_onboarding_questionnaire(value):
@@ -137,6 +197,18 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 n = dict(current.get('notifications') or {})
                 n.update(nested_notifications)
                 current['notifications'] = n
+            nested_display = prefs_patch.pop('display_preferences', None)
+            if nested_display is not None and isinstance(nested_display, dict):
+                dp = dict(current.get('display_preferences') or {})
+                for tab_key in ('today', 'planner'):
+                    if tab_key in nested_display and isinstance(nested_display[tab_key], dict):
+                        tab = dict(dp.get(tab_key) or {})
+                        tab.update(nested_display[tab_key])
+                        dp[tab_key] = tab
+                for key, val in nested_display.items():
+                    if key not in ('today', 'planner'):
+                        dp[key] = val
+                current['display_preferences'] = dp
             nested_onboarding = prefs_patch.pop('onboarding_questionnaire', None)
             if nested_onboarding is not None and isinstance(nested_onboarding, dict):
                 o = dict(current.get('onboarding_questionnaire') or {})
@@ -175,6 +247,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             'auto_archive_completed',
             'show_completed_tasks',
             'sort_tasks_by',
+            'display_preferences',
             'analytics_enabled',
             'crash_reporting_enabled',
         }
@@ -205,6 +278,9 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
         if 'onboarding_questionnaire' in value:
             _validate_onboarding_questionnaire(value.get('onboarding_questionnaire'))
+
+        if 'display_preferences' in value:
+            _validate_display_preferences(value.get('display_preferences'))
         
         return value
 

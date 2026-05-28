@@ -24,6 +24,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
+import { mapPlannerDisplayPrefsToAllDayList } from '@/components/features/display/displayPreferenceMappers';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTasks, useUI } from '@/store/hooks';
 import { useAppDispatch, useAppSelector, store } from '@/store';
@@ -271,11 +272,21 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
     return selectedDateTasks.filter((task) => !task.time || task.time === '');
   }, [selectedDateTasks]);
 
-  // show footer list only while there is at least one incomplete all-day row (ListCard hides completed with hideCompletedTasks)
-  const shouldShowPlannerAllDayFooter = useMemo(
-    () => allDayTasks.some((task) => !task.isCompleted),
-    [allDayTasks],
+  // saved display prefs — sort/completed/all-day toggle apply to footer ListCard only, not the timeline
+  const plannerDisplayPrefs = useAppSelector(
+    (state) => state.auth.user?.preferences?.displayPreferences?.planner
   );
+  const plannerAllDayDisplayProps = useMemo(
+    () => mapPlannerDisplayPrefsToAllDayList(plannerDisplayPrefs),
+    [plannerDisplayPrefs]
+  );
+
+  // hide footer when all-day toggle off, empty day, or all rows completed while completed tasks hidden
+  const shouldShowPlannerAllDayFooter = useMemo(() => {
+    if (!plannerAllDayDisplayProps.showAllDayTasks || allDayTasks.length === 0) return false;
+    if (!plannerAllDayDisplayProps.hideCompletedTasks) return true;
+    return allDayTasks.some((task) => !task.isCompleted);
+  }, [allDayTasks, plannerAllDayDisplayProps.hideCompletedTasks, plannerAllDayDisplayProps.showAllDayTasks]);
 
   // must match selectedDateTasks filtering — changing day remounts ListCard below so all-day collapses again (fresh hook state per day)
   const plannerDisplayedDayKey = useMemo(() => {
@@ -495,7 +506,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                       selectionMode={timelineListSelection}
                       selectedTaskIds={selection.selectedItems}
                       onToggleTaskSelection={timelineListSelection ? toggleItemSelection : undefined}
-                      hideCompletedTasks={true}
+                      hideCompletedTasks={plannerAllDayDisplayProps.hideCompletedTasks}
                       onTaskPress={handleTaskPress}
                       onTaskComplete={handleTaskComplete}
                       onTaskEdit={handleTaskEdit}
@@ -507,8 +518,8 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                       emptyMessage="No all-day tasks for this date."
                       loading={false}
                       groupBy="allDay"
-                      sortBy="createdAt"
-                      sortDirection="desc"
+                      sortBy={plannerAllDayDisplayProps.sortBy}
+                      sortDirection={plannerAllDayDisplayProps.sortDirection}
                       paddingHorizontal={Paddings.screen}
                       paddingBottom={8}
                       scrollEnabled={false}
