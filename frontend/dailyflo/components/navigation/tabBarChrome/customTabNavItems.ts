@@ -1,34 +1,26 @@
-import { getTodayTabIcon } from '@/utils/todayIcon';
+import {
+  DEFAULT_NAV_TAB_ORDER,
+  NAV_TAB_REGISTRY,
+  type NavTabKey,
+} from '@/components/features/settings/navigation/navigationTabRegistry';
+import { normalizeNavTabOrder } from '@/components/features/settings/navigation/navigationPreferenceUtils';
 import type { CustomTabNavItem } from './tabBarChrome.types';
 
-// static icons — same assets as NativeTabs.Trigger routes in app/(tabs)/_layout.tsx
-const PLANNER_TAB_ICON = require('@/assets/icons/Timeline.png');
-const AI_TAB_ICON = require('@/assets/icons/Sparkles.png');
-const BROWSE_TAB_ICON = require('@/assets/icons/Browse.png');
+export { DEFAULT_NAV_TAB_ORDER };
 
 /**
- * tab list for the custom navbar only — add/remove entries together with NativeTabs.Trigger + folders under app/(tabs)/
+ * build liquid navbar items from a saved tab order (redux auth prefs) or the app default.
+ * keep in sync with NativeTabs.Trigger entries in app/(tabs)/_layout.tsx.
  */
-export function buildCustomTabNavItems(): CustomTabNavItem[] {
-  return [
-    {
-      key: 'today',
-      href: '/(tabs)/today',
-      source: getTodayTabIcon(),
-      label: 'Today',
-    },
-    {
-      key: 'planner',
-      href: '/(tabs)/planner',
-      source: PLANNER_TAB_ICON,
-      label: 'Planner',
-    },
-    { key: 'ai', href: '/(tabs)/ai', source: AI_TAB_ICON, label: 'AI' },
-    {
-      key: 'browse',
-      href: '/(tabs)/browse',
-      source: BROWSE_TAB_ICON,
-      label: 'Browse',
-    },
-  ];
+export function buildCustomTabNavItems(tabOrder?: NavTabKey[]): CustomTabNavItem[] {
+  const order = normalizeNavTabOrder(tabOrder ?? DEFAULT_NAV_TAB_ORDER);
+  return order.map((key) => {
+    const meta = NAV_TAB_REGISTRY[key];
+    return {
+      key,
+      href: meta.href,
+      source: meta.getIconSource(),
+      label: meta.label,
+    };
+  });
 }

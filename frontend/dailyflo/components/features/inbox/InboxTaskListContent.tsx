@@ -1,0 +1,394 @@
+/**
+ * shared inbox task list — used by browse/inbox push screen and the inbox tab root.
+ * fetches GET /tasks/inbox/ on focus; ListCard handles complete/delete via redux thunks.
+ */
+
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedScrollHandler,
+  useAnimatedReaction,
+  withTiming,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
+import { useThemeColors } from '@/hooks/useColorPalette';
+import { useTypography } from '@/hooks/useTypography';
+import { MainBackButton } from '@/components/ui/Button';
+import { ScreenHeaderActions } from '@/components/ui';
+import { IosBrowseBackStackToolbar } from '@/components/navigation/IosBrowseBackStackToolbar';
+import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
+import { ListCard } from '@/components/ui/Card';
+import { Paddings } from '@/constants/Paddings';
+import { browseScrollPaddingTop } from '@/constants/browseScrollPaddingTop';
+import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
+import { useUI } from '@/store/hooks';
+import { useAppDispatch, store } from '@/store';
+import { updateTask, deleteTask, transformApiTaskToTask } from '@/store/slices/tasks/tasksSlice';
+import tasksApi from '@/services/api/tasks';
+import { Task } from '@/types';
+import {
+  isExpandedRecurrenceId,
+  getBaseTaskId,
+  getOccurrenceDateFromId,
+} from '@/utils/recurrenceUtils';
+
+const TOP_SECTION_ROW_HEIGHT = 48;
+const TOP_SECTION_ANCHOR_HEIGHT = 64;
+const SCROLL_THRESHOLD = 16;
+
+export type InboxScreenChromeVariant = 'browse-stack' | 'tab-root';
+
+export type InboxTaskListContentProps = {
+  /** browse-stack shows back chrome; tab-root is a main navbar destination */
+  chromeVariant?: InboxScreenChromeVariant;
+};
+
+export function InboxTaskListContent({ chromeVariant = 'browse-stack' }: InboxTaskListContentProps) {
+  const isBrowseStack = chromeVariant === 'browse-stack';
+  const router = useGuardedRouter();
+  const themeColors = useThemeColors();
+  const typography = useTypography();
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(typography, insets);
+  const dispatch = useAppDispatch();
+  const { selection, toggleItemSelection } = useUI();
+
+  const [inboxTasks, setInboxTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadInbox = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const raw = await tasksApi.fetchInboxTasks();
+      setInboxTasks(raw.map((row) => transformApiTaskToTask(row)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load inbox');
+      setInboxTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadInbox();
+    }, [loadInbox])
+  );
+
+  const scrollY = useSharedValue(0);
+  const miniHeaderOpacity = useSharedValue(0);
+
+  useAnimatedReaction(
+    () => scrollY.value > SCROLL_THRESHOLD,
+    (shouldShow) => {
+      miniHeaderOpacity.value = withTiming(shouldShow ? 1 : 0, { duration: 200 });
+    }
+  );
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
+
+  const miniHeaderStyle = useAnimatedStyle(() => ({
+    opacity: miniHeaderOpacity.value,
+  }));
+
+  const bigHeaderStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, SCROLL_THRESHOLD], [1, 0], Extrapolation.CLAMP),
+  }));
+
+  const backButtonTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
+
+  const handleTaskPress = useCallback(
+    (task: Task) => {
+      const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+      const occurrenceDate = isExpandedRecurrenceId(task.id)
+        ? getOccurrenceDateFromId(task.id)
+        : undefined;
+      router.push({
+        pathname: '/task/[taskId]',
+        params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) },
+      } as any);
+    },
+    [router]
+  );
+
+  const handleTaskComplete = useCallback(
+    (task: Task, targetCompleted?: boolean) => {
+      const isCompleted = targetCompleted ?? !task.isCompleted;
+      if (isExpandedRecurrenceId(task.id)) {
+        const baseId = getBaseTaskId(task.id);
+        const occurrenceDate = getOccurrenceDateFromId(task.id);
+        if (!occurrenceDate) return;
+        const tasksFromStore = store.getState().tasks.tasks;
+        const baseTask =
+          tasksFromStore.find((t) => t.id === baseId) ?? inboxTasks.find((t) => t.id === baseId);
+        if (!baseTask) return;
+        const completions = baseTask.metadata?.recurrence_completions ?? [];
+        const newCompletions = isCompleted
+          ? [...completions, occurrenceDate]
+          : completions.filter((d) => d !== occurrenceDate);
+        void (async () => {
+          try {
+            await dispatch(
+              updateTask({
+                id: baseId,
+                updates: {
+                  id: baseId,
+                  metadata: { ...baseTask.metadata, recurrence_completions: newCompletions },
+                },
+              })
+            ).unwrap();
+            void loadInbox();
+          } catch {
+            void loadInbox();
+          }
+        })();
+      } else {
+        void (async () => {
+          try {
+            await dispatch(
+              updateTask({
+                id: task.id,
+                updates: { id: task.id, isCompleted },
+              })
+            ).unwrap();
+            void loadInbox();
+          } catch {
+            void loadInbox();
+          }
+        })();
+      }
+    },
+    [dispatch, loadInbox, inboxTasks]
+  );
+
+  const handleTaskEdit = useCallback(
+    (task: Task) => {
+      const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+      const occurrenceDate = isExpandedRecurrenceId(task.id)
+        ? getOccurrenceDateFromId(task.id)
+        : undefined;
+      router.push({
+        pathname: '/task/[taskId]',
+        params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) },
+      } as any);
+    },
+    [router]
+  );
+
+  const handleTaskDelete = useCallback(
+    (task: Task) => {
+      const taskId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
+      void (async () => {
+        try {
+          await dispatch(deleteTask(taskId)).unwrap();
+        } finally {
+          void loadInbox();
+        }
+      })();
+    },
+    [dispatch, loadInbox]
+  );
+
+  const isSelectionMode = selection.isSelectionMode && selection.selectionType === 'tasks';
+  const listSelectionMode = Platform.OS === 'android' && isSelectionMode;
+
+  return (
+    <>
+      {isBrowseStack && Platform.OS === 'ios' ? <IosBrowseBackStackToolbar /> : null}
+      <IosDashboardOverflowToolbar hidden={listSelectionMode} />
+      <View style={{ flex: 1 }}>
+        <View
+          style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}
+        >
+          <BlurView
+            tint={themeColors.isDark ? 'dark' : 'light'}
+            intensity={1}
+            style={StyleSheet.absoluteFill}
+          />
+          <LinearGradient
+            colors={[
+              themeColors.background.primary(),
+              themeColors.withOpacity(themeColors.background.primary(), 0),
+            ]}
+            locations={[0.4, 1]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <View style={styles.topSectionRow} pointerEvents="box-none">
+            <View style={styles.topSectionPlaceholder} pointerEvents="none" />
+            <Animated.View style={[styles.miniHeader, miniHeaderStyle]} pointerEvents="none">
+              <Text style={[styles.miniHeaderText, { color: themeColors.text.primary() }]}>
+                Inbox
+              </Text>
+            </Animated.View>
+            {Platform.OS === 'android' ? (
+              <ScreenHeaderActions
+                variant="dashboard"
+                style={styles.topSectionContextButton}
+                tint="primary"
+              />
+            ) : null}
+          </View>
+        </View>
+
+        {isBrowseStack && Platform.OS === 'android' ? (
+          <View style={styles.backButtonContainer} pointerEvents="box-none">
+            <MainBackButton
+              onPress={() => router.back()}
+              top={backButtonTop}
+              left={Paddings.screen}
+            />
+          </View>
+        ) : null}
+
+        <Animated.ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        >
+          <View style={styles.paddedHorizontal}>
+            <Animated.View style={bigHeaderStyle}>
+              <Text style={[styles.bigHeader, { color: themeColors.text.primary() }]}>Inbox</Text>
+            </Animated.View>
+            {error ? (
+              <Text style={[styles.mutedLead, { color: themeColors.text.tertiary() }]}>{error}</Text>
+            ) : null}
+          </View>
+
+          {loading && inboxTasks.length === 0 ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator color={themeColors.text.tertiary()} />
+            </View>
+          ) : (
+            <ListCard
+              key={isBrowseStack ? 'browse-inbox' : 'tab-inbox'}
+              {...LIST_CARD_TASK_ROW_PRESET_TODAY}
+              tasks={inboxTasks}
+              groupBy="routine"
+              sortBy="createdAt"
+              sortDirection="desc"
+              selectionMode={listSelectionMode}
+              selectedTaskIds={selection.selectedItems}
+              onToggleTaskSelection={listSelectionMode ? toggleItemSelection : undefined}
+              hideCompletedTasks
+              onTaskPress={handleTaskPress}
+              onTaskComplete={handleTaskComplete}
+              onTaskEdit={handleTaskEdit}
+              onTaskDelete={handleTaskDelete}
+              paddingHorizontal={Paddings.screen}
+              emptyMessage="Inbox is empty."
+              loading={loading && inboxTasks.length > 0}
+              scrollEnabled={false}
+              disableInitialLayoutTransition
+            />
+          )}
+
+          <View style={styles.bottomSpacer} />
+        </Animated.ScrollView>
+      </View>
+    </>
+  );
+}
+
+const createStyles = (
+  typography: ReturnType<typeof useTypography>,
+  insets: ReturnType<typeof useSafeAreaInsets>
+) =>
+  StyleSheet.create({
+    topSectionAnchor: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+      overflow: 'hidden',
+    },
+    topSectionRow: {
+      position: 'absolute',
+      top: insets.top,
+      left: 0,
+      right: 0,
+      height: TOP_SECTION_ROW_HEIGHT,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: Paddings.screen,
+    },
+    topSectionPlaceholder: {
+      width: 44,
+      height: 44,
+    },
+    topSectionContextButton: {
+      marginLeft: 'auto',
+      alignSelf: 'center',
+      backgroundColor: 'transparent',
+    },
+    miniHeader: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 56,
+    },
+    miniHeaderText: {
+      ...typography.getTextStyle('heading-3'),
+    },
+    backButtonContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: insets.top + TOP_SECTION_ROW_HEIGHT,
+      zIndex: 11,
+      overflow: 'visible',
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingTop: browseScrollPaddingTop(insets.top),
+      flexGrow: 1,
+    },
+    paddedHorizontal: {
+      paddingHorizontal: Paddings.screen,
+    },
+    bigHeader: {
+      ...typography.getTextStyle('heading-1'),
+      marginBottom: 8,
+    },
+    mutedLead: {
+      ...typography.getTextStyle('body-large'),
+      marginBottom: 16,
+    },
+    loadingWrap: {
+      paddingVertical: 32,
+      alignItems: 'center',
+    },
+    bottomSpacer: {
+      height: 200,
+    },
+  });

@@ -43,7 +43,7 @@ export function IosBrowseModalCloseStackToolbar({ onPress }: IosBrowseModalClose
 }
 
 export type IosBrowseModalTrailingStackToolbarProps = {
-  icon: 'plus' | 'checkmark';
+  icon: 'plus' | 'checkmark' | 'square.and.pencil';
   onPress: () => void;
   accessibilityLabel: string;
   /** when true, the bar button still renders but does nothing (native item may not gray out like glass) */

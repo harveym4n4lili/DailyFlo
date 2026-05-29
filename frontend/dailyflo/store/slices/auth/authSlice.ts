@@ -8,7 +8,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, RegisterUserInput, LoginUserInput, SocialAuthInput, UpdateUserInput, UserPreferences } from '../../../types';
-import type { TabDisplayPreferences, UserDisplayPreferences } from '../../../types/common/User';
+import type { TabDisplayPreferences, UserDisplayPreferences, UserNavigationPreferences, NavigationTabKey } from '../../../types/common/User';
 // auth API service - handles API calls to Django backend for authentication
 // this service makes HTTP requests to login, register, and other auth endpoints
 import authApiService from '../../../services/api/auth';
@@ -281,6 +281,37 @@ function transformApiDisplayPreferences(apiPrefs: Record<string, unknown>): User
   };
 }
 
+const NAVIGATION_TAB_KEYS = new Set<NavigationTabKey>(['today', 'planner', 'ai', 'browse', 'inbox']);
+
+function transformApiNavigationPreferences(apiPrefs: Record<string, unknown>): UserNavigationPreferences | undefined {
+  const raw = apiPrefs.navigation_preferences ?? apiPrefs.navigationPreferences;
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  const tabOrderRaw = r.tab_order ?? r.tabOrder;
+  if (!Array.isArray(tabOrderRaw)) return undefined;
+  const tabOrder = tabOrderRaw.filter(
+    (key): key is NavigationTabKey => typeof key === 'string' && NAVIGATION_TAB_KEYS.has(key as NavigationTabKey)
+  );
+  if (tabOrder.length === 0) return undefined;
+  const pinnedRaw = r.pinned_tab ?? r.pinnedTab;
+  const pinnedTab =
+    typeof pinnedRaw === 'string' && NAVIGATION_TAB_KEYS.has(pinnedRaw as NavigationTabKey)
+      ? (pinnedRaw as NavigationTabKey)
+      : undefined;
+  return {
+    tabOrder,
+    ...(pinnedTab ? { pinnedTab } : {}),
+  };
+}
+
+function navigationPreferencesToSnake(prefs: UserNavigationPreferences): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    tab_order: prefs.tabOrder,
+  };
+  if (prefs.pinnedTab !== undefined) out.pinned_tab = prefs.pinnedTab;
+  return out;
+}
+
 function tabDisplayPrefsToSnake(tab: TabDisplayPreferences): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (tab.sortOption !== undefined) out.sort_option = tab.sortOption;
@@ -319,6 +350,7 @@ function transformApiPreferencesToPreferences(apiPrefs: any): UserPreferences {
     showCompletedTasks: (apiPrefs.show_completed_tasks || apiPrefs.showCompletedTasks) ?? true,
     sortTasksBy: apiPrefs.sort_tasks_by || apiPrefs.sortTasksBy || 'dueDate',
     displayPreferences: transformApiDisplayPreferences(apiPrefs),
+    navigationPreferences: transformApiNavigationPreferences(apiPrefs),
     analyticsEnabled: (apiPrefs.analytics_enabled || apiPrefs.analyticsEnabled) ?? true,
     crashReportingEnabled: (apiPrefs.crash_reporting_enabled || apiPrefs.crashReportingEnabled) ?? true,
     wakeTime: coerceWakeSleepHHMM(apiPrefs.wake_time || apiPrefs.wakeTime, DEFAULT_WAKE_HHMM),
@@ -392,6 +424,9 @@ export function preferencesPartialToSnakePayload(prefs: Partial<UserPreferences>
       dp.planner = tabDisplayPrefsToSnake(prefs.displayPreferences.planner);
     }
     if (Object.keys(dp).length > 0) out.display_preferences = dp;
+  }
+  if (prefs.navigationPreferences !== undefined) {
+    out.navigation_preferences = navigationPreferencesToSnake(prefs.navigationPreferences);
   }
   if (prefs.analyticsEnabled !== undefined) out.analytics_enabled = prefs.analyticsEnabled;
   if (prefs.crashReportingEnabled !== undefined) out.crash_reporting_enabled = prefs.crashReportingEnabled;
@@ -973,6 +1008,37 @@ export const patchUserDisplayPreferences = createAsyncThunk<
   },
 );
 
+export const patchUserNavigationPreferences = createAsyncThunk<
+  UserThunkSerializablePayload,
+  UserNavigationPreferences
+>(
+  'auth/patchUserNavigationPreferences',
+  async (navigationPreferences, { getState, rejectWithValue }) => {
+    try {
+      const loggedInUser = (getState() as { auth: Readonly<{ user: User | null }> }).auth.user;
+      if (!loggedInUser?.id) {
+        return rejectWithValue('Sign in required to save navigation settings.');
+      }
+
+      const response = await authApiService.patchProfileUpdate({
+        preferences: {
+          navigation_preferences: navigationPreferencesToSnake(navigationPreferences),
+        },
+      });
+
+      const bodyUser = response.user ?? response;
+      return serializeUserForThunkPayload(transformApiUserToUser(bodyUser));
+    } catch (error: any) {
+      const prefsErr = error?.response?.data?.preferences;
+      const message =
+        (Array.isArray(prefsErr) ? prefsErr[0] : undefined) ??
+        error?.response?.data?.detail ??
+        (error instanceof Error ? error.message : 'Could not save navigation settings.');
+      return rejectWithValue(typeof message === 'string' ? message : 'Could not save navigation settings.');
+    }
+  },
+);
+
 /** PATCH habit/task branch answers into django `preferences.onboarding_questionnaire` on questionnaire finish */
 export const patchUserOnboardingQuestionnaire = createAsyncThunk<
   UserThunkSerializablePayload,
@@ -1342,6 +1408,20 @@ const authSlice = createSlice({
       .addCase(patchUserDisplayPreferences.rejected, (state, action) => {
         state.isUpdatingProfile = false;
         state.profileError = (action.payload as string) || 'Display settings update failed';
+      })
+
+      .addCase(patchUserNavigationPreferences.pending, (state) => {
+        state.isUpdatingProfile = true;
+        state.profileError = null;
+      })
+      .addCase(patchUserNavigationPreferences.fulfilled, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = null;
+        state.user = deserializeUserThunkPayload(action.payload);
+      })
+      .addCase(patchUserNavigationPreferences.rejected, (state, action) => {
+        state.isUpdatingProfile = false;
+        state.profileError = (action.payload as string) || 'Navigation settings update failed';
       })
 
       .addCase(patchUserOnboardingQuestionnaire.pending, (state) => {

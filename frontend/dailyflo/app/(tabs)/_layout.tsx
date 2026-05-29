@@ -140,6 +140,11 @@ export default function TabLayout() {
             <NativeTabs.Trigger.Icon src={require('@/assets/icons/Browse.png')} renderingMode="template" />
           </NativeTabs.Trigger>
 
+          <NativeTabs.Trigger name="inbox" hidden={false}>
+            <NativeTabs.Trigger.Label>Inbox</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon src={require('@/assets/icons/Browse.png')} renderingMode="template" />
+          </NativeTabs.Trigger>
+
           <NativeTabs.Trigger name="test" hidden={false}>
             <NativeTabs.Trigger.Label>Test</NativeTabs.Trigger.Label>
             <NativeTabs.Trigger.Icon src={require('@/assets/icons/Today.png')} renderingMode="template" />
