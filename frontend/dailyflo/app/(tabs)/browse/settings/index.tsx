@@ -10,6 +10,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Platform, Alert } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+import { useIsFocused } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Stack, router as expoRouter, type Href } from 'expo-router';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
@@ -41,7 +42,7 @@ import {
 
 const WAKE_TIME_SELECT_HREF = '/(tabs)/browse/wake-time-select' as Href;
 const SLEEP_TIME_SELECT_HREF = '/(tabs)/browse/sleep-time-select' as Href;
-const NAVIGATION_SETTINGS_HREF = '/(tabs)/browse/navigation' as Href;
+const NAVIGATION_SETTINGS_HREF = '/(tabs)/browse/settings/navigation' as Href;
 
 // header row height matches close button (42) – same as Activity Log
 const HEADER_ROW_HEIGHT = 42;
@@ -53,6 +54,7 @@ const TOP_SECTION_HEIGHT = HEADER_TOP + HEADER_ROW_HEIGHT + FADE_OVERFLOW;
 export default function BrowseSettingsScreen() {
   const dispatch = useAppDispatch();
   const router = useGuardedRouter();
+  const isFocused = useIsFocused();
   const [loggingOut, setLoggingOut] = useState(false);
   const themeColors = useThemeColors();
   const semanticColors = useSemanticColors();
@@ -195,7 +197,7 @@ export default function BrowseSettingsScreen() {
           }}
         />
       ) : null}
-      <IosBrowseModalCloseStackToolbar onPress={handleCloseSettings} />
+      {isFocused ? <IosBrowseModalCloseStackToolbar onPress={handleCloseSettings} /> : null}
       {/* content first (behind) – scrollable settings sections */}
       <View style={styles.contentArea}>
         <ScrollView
@@ -205,6 +207,7 @@ export default function BrowseSettingsScreen() {
             // ios: below native modal header; android: below glass close + title row
             { paddingTop: scrollPaddingTop },
           ]}
+          contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
         >

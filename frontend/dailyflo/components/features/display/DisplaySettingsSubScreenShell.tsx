@@ -69,6 +69,7 @@ export function DisplaySettingsSubScreenShell({ title, children }: DisplaySettin
             styles.scrollContent,
             { paddingTop: scrollTopPadding, paddingBottom: 120 + insets.bottom },
           ]}
+          contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
           showsVerticalScrollIndicator={false}
         >
           {children}

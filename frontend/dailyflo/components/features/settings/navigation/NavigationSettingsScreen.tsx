@@ -1,6 +1,5 @@
 /**
- * Navigation settings — reorder/remove navbar tabs (browse pinned). pushed from browse/settings.
- * phase 1: local draft + apply commits in-screen only; phase 3: apply PATCHes navigation_preferences.
+ * Navigation settings — reorder/remove navbar tabs (browse always present). pushed from browse/settings.
  */
 
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -9,101 +8,94 @@ import {
   Text,
   StyleSheet,
   Platform,
-  Alert,
   Pressable,
   ScrollView,
 } from 'react-native';
-import { Stack } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
+import { Stack, type Href } from 'expo-router';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainBackButton, MainSubmitButton } from '@/components/ui/Button';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
+import SolidSeparator from '@/components/ui/borders/SolidSeparator';
 import { SFSymbolIcon, GearIcon } from '@/components/ui/Icon';
-import { IosBrowseBackStackToolbar } from '@/components/navigation/IosBrowseBackStackToolbar';
-import {
-  IosBrowseModalTrailingStackToolbar,
-} from '@/components/navigation/IosBrowseModalStackToolbars';
+import { IosNavigationSettingsStackToolbar } from './IosNavigationSettingsStackToolbar';
 import { Paddings } from '@/constants/Paddings';
-import { useAppDispatch, useAppSelector } from '@/store';
-import { patchUserNavigationPreferences } from '@/store/slices/auth/authSlice';
+import { LAYOUT_TRANSITION_SPRING } from '@/constants/LayoutTransitions';
 
+import { useNavigationSettingsDraft } from './NavigationSettingsDraftContext';
 import { NavigationTabRow } from './NavigationTabRow';
 import {
-  ADDABLE_NAV_TAB_KEYS,
   NAV_TAB_REGISTRY,
   PINNED_NAV_TAB,
   type NavTabKey,
 } from './navigationTabRegistry';
 import {
-  mergeNavTabOrderFromEdit,
-  navTabOrdersEqual,
   normalizeNavTabOrder,
-  resolveNavTabOrderFromPreferences,
-  splitNavTabOrderForEdit,
 } from './navigationPreferenceUtils';
 
 const HEADER_ROW_HEIGHT = 42;
 const HEADER_TOP = Paddings.screen;
 const FADE_OVERFLOW = 48;
 const TOP_SECTION_HEIGHT = HEADER_TOP + HEADER_ROW_HEIGHT + FADE_OVERFLOW;
-const DRAG_ACTIVE_SCALE = 1.02;
+const DRAG_ACTIVE_SCALE = 1.05;
 const GROUPED_LIST_RADIUS = 24;
+const GROUPED_LIST_ICON_COLUMN = 30;
+const TAB_BAR_OPTIONS_HREF = '/(tabs)/browse/settings/navigation/tab-bar-options' as Href;
 
 export function NavigationSettingsScreen() {
   const router = useGuardedRouter();
-  const dispatch = useAppDispatch();
+  const navigation = useNavigation();
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
   const { getMarpleBrandColor } = useColorPalette();
   const typography = useTypography();
-  const styles = createStyles(typography);
+  const styles = createStyles(typography, themeColors);
+  const {
+    draftOrder,
+    setDraftOrder,
+    hasChanges,
+    isEditMode,
+    setIsEditMode,
+    saveDraftIfNeeded,
+  } = useNavigationSettingsDraft();
 
-  const savedPrefs = useAppSelector((s) => s.auth.user?.preferences?.navigationPreferences);
-  const isSaving = useAppSelector((s) => s.auth.isUpdatingProfile);
+  const editOrder = useMemo(() => normalizeNavTabOrder(draftOrder), [draftOrder]);
 
-  const savedOrder = useMemo(
-    () => resolveNavTabOrderFromPreferences(savedPrefs),
-    [savedPrefs]
-  );
-
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [committedOrder, setCommittedOrder] = useState<NavTabKey[]>(savedOrder);
-  const [draftOrder, setDraftOrder] = useState<NavTabKey[]>(savedOrder);
-
-  // when redux prefs hydrate (login / patch fulfilled), sync local state
-  React.useEffect(() => {
-    setCommittedOrder(savedOrder);
-    if (!isEditMode) {
-      setDraftOrder(savedOrder);
-    }
-  }, [savedOrder, isEditMode]);
-
-  const { draggableKeys, pinnedBrowse } = splitNavTabOrderForEdit(draftOrder);
-
-  // local display list for DraggableFlatList — avoids one-frame jump after drop (same as manage-lists)
   const displayDataRef = useRef<NavTabKey[]>([]);
-  const [displayDraggableKeys, setDisplayDraggableKeys] = useState<NavTabKey[]>(draggableKeys);
+  const [displayEditKeys, setDisplayEditKeys] = useState<NavTabKey[]>(editOrder);
+  // lock flat list height to its content so scrollEnabled={false} cannot rubber-band inside a tall viewport
+  const [editListContentHeight, setEditListContentHeight] = useState<number | undefined>(undefined);
 
   useLayoutEffect(() => {
-    const nextSig = draggableKeys.join(',');
+    const nextSig = editOrder.join(',');
     const prevSig = displayDataRef.current.join(',');
-    if (nextSig === prevSig && draggableKeys.length === displayDataRef.current.length) {
+    if (nextSig === prevSig && editOrder.length === displayDataRef.current.length) {
       return;
     }
-    displayDataRef.current = draggableKeys;
-    setDisplayDraggableKeys(draggableKeys);
-  }, [draggableKeys]);
+    displayDataRef.current = editOrder;
+    setDisplayEditKeys(editOrder);
+  }, [editOrder]);
 
-  const hasChanges = !navTabOrdersEqual(draftOrder, committedOrder);
+  React.useEffect(() => {
+    if (!isEditMode) {
+      setEditListContentHeight(undefined);
+    }
+  }, [isEditMode]);
+
+  React.useEffect(() => {
+    setEditListContentHeight(undefined);
+  }, [displayEditKeys.join(',')]);
+
   const groupedListIconColor = getMarpleBrandColor(500);
 
   const headerHeight = useHeaderHeight();
@@ -119,135 +111,218 @@ export function NavigationSettingsScreen() {
   const scrollTopPadding =
     Platform.OS === 'ios' ? headerHeight + 24 : HEADER_TOP + HEADER_ROW_HEIGHT + 24;
 
-  const listGroupProps = useMemo(
+  // shared grouped-list chrome — same tokens as view mode GroupedList below
+  const groupedListWrapperProps = useMemo(
     () => ({
-      backgroundColor: themeColors.background.primarySecondaryBlend(),
+      borderRadius: GROUPED_LIST_RADIUS,
       separatorColor: themeColors.border.primary(),
+      separatorInsetLeft: Paddings.groupedListContentHorizontal + GROUPED_LIST_ICON_COLUMN,
       separatorInsetRight: Paddings.groupedListContentHorizontal,
       separatorVariant: 'solid' as const,
-      borderRadius: GROUPED_LIST_RADIUS,
+      backgroundColor: themeColors.background.primarySecondaryBlend(),
+      contentPaddingHorizontal: Paddings.groupedListContentHorizontal,
+      contentPaddingVertical: Paddings.groupedListContentVertical,
+      contentMinHeight: 44,
+    }),
+    [themeColors]
+  );
+
+  // delete column + icon gap + tab icon column — keeps separator aligned under labels
+  const editSeparatorInsetLeft =
+    Paddings.groupedListContentHorizontal +
+    Paddings.groupedListIconSize +
+    Paddings.groupedListIconTextSpacing +
+    GROUPED_LIST_ICON_COLUMN;
+
+  const listGroupProps = useMemo(
+    () => ({
+      ...groupedListWrapperProps,
       minimalStyle: false,
       separatorConsiderIconColumn: true,
-      iconColumnWidth: 30,
+      iconColumnWidth: GROUPED_LIST_ICON_COLUMN,
       containerStyle: styles.listContainer,
     }),
-    [styles.listContainer, themeColors]
+    [groupedListWrapperProps, styles.listContainer]
+  );
+
+  // view rows render inside the shared animated shell — shell owns background + radius
+  const viewListInsideShellProps = useMemo(
+    () => ({
+      ...listGroupProps,
+      backgroundColor: 'transparent',
+      borderRadius: 0,
+    }),
+    [listGroupProps]
   );
 
   const handleBack = useCallback(() => {
-    if (hasChanges) {
-      Alert.alert(
-        'Discard changes?',
-        'Your navigation bar changes will not be saved.',
-        [
-          { text: 'Keep editing', style: 'cancel' },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => router.back(),
-          },
-        ]
-      );
-      return;
-    }
+    if (isEditMode) return;
+    // beforeRemove listener saves the draft when this pop actually runs
     router.back();
-  }, [hasChanges, router]);
+  }, [isEditMode, router]);
 
   const handleEditPress = useCallback(() => {
-    if (isEditMode && !hasChanges) {
-      setIsEditMode(false);
-      return;
-    }
     setIsEditMode(true);
-  }, [hasChanges, isEditMode]);
+  }, [setIsEditMode]);
 
-  const handleApply = useCallback(async () => {
-    if (!hasChanges || isSaving) return;
-    const normalized = normalizeNavTabOrder(draftOrder);
-    try {
-      await dispatch(
-        patchUserNavigationPreferences({
-          tabOrder: normalized,
-          pinnedTab: PINNED_NAV_TAB,
-        })
-      ).unwrap();
-      setCommittedOrder(normalized);
-      setDraftOrder(normalized);
-      setIsEditMode(false);
-    } catch (err) {
-      Alert.alert(
-        'Could not save',
-        typeof err === 'string' ? err : 'Navigation settings could not be saved. Try again.'
-      );
-    }
-  }, [dispatch, draftOrder, hasChanges, isSaving]);
+  // tick exits edit mode only — draft persists until the user leaves this screen
+  const handleApply = useCallback(() => {
+    setIsEditMode(false);
+  }, [setIsEditMode]);
+
+  // swipe-back / pop: save draft before leaving navigation settings (same as back button)
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!hasChanges) return;
+
+      e.preventDefault();
+      void (async () => {
+        const saved = await saveDraftIfNeeded();
+        if (saved) {
+          navigation.dispatch(e.data.action);
+        }
+      })();
+    });
+
+    return unsubscribe;
+  }, [hasChanges, navigation, saveDraftIfNeeded]);
 
   const handleDeleteTab = useCallback((key: NavTabKey) => {
     if (key === PINNED_NAV_TAB) return;
     setDraftOrder((prev) => prev.filter((k) => k !== key));
-  }, []);
+  }, [setDraftOrder]);
 
   const onDragEnd = useCallback(({ data }: { data: NavTabKey[] }) => {
-    displayDataRef.current = data;
-    setDisplayDraggableKeys(data);
-    setDraftOrder(mergeNavTabOrderFromEdit(data));
-  }, []);
+    const normalized = normalizeNavTabOrder(data);
+    displayDataRef.current = normalized;
+    setDisplayEditKeys(normalized);
+    setDraftOrder(normalized);
+  }, [setDraftOrder]);
 
-  const availableToAdd = useMemo(
-    () => ADDABLE_NAV_TAB_KEYS.filter((key) => !draftOrder.includes(key)),
-    [draftOrder]
-  );
+  const keyExtractor = useCallback((item: NavTabKey) => item, []);
 
   const handleAddPress = useCallback(() => {
-    if (availableToAdd.length === 0) return;
-    Alert.alert(
-      'Add tab',
-      'Choose a tab to add to your navigation bar.',
-      [
-        ...availableToAdd.map((key) => ({
-          text: NAV_TAB_REGISTRY[key].label,
-          onPress: () => {
-            setDraftOrder((prev) => {
-              const { draggableKeys: drag } = splitNavTabOrderForEdit(prev);
-              return mergeNavTabOrderFromEdit([...drag, key]);
-            });
-          },
-        })),
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  }, [availableToAdd]);
+    router.push(TAB_BAR_OPTIONS_HREF);
+  }, [router]);
+
+  const groupedListCardBg = themeColors.background.primarySecondaryBlend();
+
+  const groupedListShellStyle = useMemo(
+    () => [
+      styles.groupedListShell,
+      {
+        backgroundColor: groupedListCardBg,
+        borderRadius: GROUPED_LIST_RADIUS,
+      },
+    ],
+    [groupedListCardBg, styles.groupedListShell]
+  );
+
+  const pageInnerStyle = useMemo(
+    () => ({
+      paddingHorizontal: Paddings.screen,
+      paddingTop: scrollTopPadding,
+      paddingBottom: isEditMode ? insets.bottom + 24 : 120 + insets.bottom,
+    }),
+    [insets.bottom, isEditMode, scrollTopPadding]
+  );
+
+  const renderEditListSeparator = useCallback(
+    () => (
+      <SolidSeparator
+        paddingLeft={editSeparatorInsetLeft}
+        paddingRight={Paddings.groupedListContentHorizontal}
+        color={themeColors.border.primary()}
+      />
+    ),
+    [editSeparatorInsetLeft, themeColors]
+  );
 
   const renderDraggableItem = useCallback(
-    ({ item, drag, isActive, getIndex }: RenderItemParams<NavTabKey>) => {
-      const index = getIndex() ?? 0;
-      const isPinned = item === PINNED_NAV_TAB;
+    ({ item, drag, isActive }: RenderItemParams<NavTabKey>) => {
+      const isBrowse = item === PINNED_NAV_TAB;
+
       return (
         <ScaleDecorator activeScale={DRAG_ACTIVE_SCALE}>
-          <NavigationTabRow
-            tabKey={item}
-            iconColor={groupedListIconColor}
-            mode="edit"
-            showDelete={!isPinned}
-            onLongPressDrag={isPinned ? undefined : drag}
-            onDelete={() => handleDeleteTab(item)}
-            isDragActive={isActive}
-            showSeparator={index < displayDraggableKeys.length - 1}
-            separatorColor={themeColors.border.primary()}
-          />
+          <View style={styles.editRowContent}>
+            <NavigationTabRow
+              tabKey={item}
+              iconColor={groupedListIconColor}
+              showDelete={!isBrowse}
+              reserveDeleteColumn={isBrowse}
+              onDrag={drag}
+              onDelete={() => handleDeleteTab(item)}
+              isDragActive={isActive}
+            />
+          </View>
         </ScaleDecorator>
       );
     },
-    [
-      displayDraggableKeys.length,
-      groupedListIconColor,
-      handleDeleteTab,
-      themeColors,
-    ]
+    [groupedListIconColor, handleDeleteTab, styles.editRowContent]
   );
 
-  const cardBg = themeColors.background.primarySecondaryBlend();
-  const separatorColor = themeColors.border.primary();
+  const listHeader = useMemo(
+    () => <GroupedListHeader title="Navigation Bar" />,
+    []
+  );
+
+  const listFooterSubtext = useMemo(
+    () => (
+      <Text style={styles.listFooterSubtext}>
+        {'Edit the navigation tab bar to align with your workflow. Tap "Edit" to rearrange where needed.'}
+      </Text>
+    ),
+    [styles.listFooterSubtext]
+  );
+
+  const editDraggableListStyle = useMemo(
+    () => [
+      styles.editDraggableList,
+      editListContentHeight != null ? { height: editListContentHeight } : null,
+    ],
+    [editListContentHeight, styles.editDraggableList]
+  );
+
+  const handleEditListContentSizeChange = useCallback((_width: number, height: number) => {
+    setEditListContentHeight(Math.round(height));
+  }, []);
+
+  const renderViewModeRows = () => (
+    <GroupedList {...viewListInsideShellProps}>
+      {draftOrder.map((key) => (
+        <FormDetailButton
+          key={key}
+          iconComponent={
+            <SFSymbolIcon
+              name={NAV_TAB_REGISTRY[key].sfSymbol as any}
+              size={18}
+              color={groupedListIconColor}
+              fallback={<GearIcon size={18} color={groupedListIconColor} />}
+            />
+          }
+          label={NAV_TAB_REGISTRY[key].label}
+          value=""
+          onPress={() => {}}
+          showChevron={false}
+        />
+      ))}
+      <FormDetailButton
+        key="add"
+        iconComponent={
+          <SFSymbolIcon
+            name="plus"
+            size={18}
+            color={groupedListIconColor}
+            fallback={<GearIcon size={18} color={groupedListIconColor} />}
+          />
+        }
+        label="Add"
+        value=""
+        onPress={handleAddPress}
+        showChevron={false}
+      />
+    </GroupedList>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
@@ -261,91 +336,66 @@ export function NavigationSettingsScreen() {
         />
       ) : null}
 
-      {isFocused ? <IosBrowseBackStackToolbar onPress={handleBack} /> : null}
-      {isFocused && hasChanges && !isSaving ? (
-        <IosBrowseModalTrailingStackToolbar
-          icon="checkmark"
-          onPress={() => void handleApply()}
-          brandActive
-          accessibilityLabel="Apply navigation changes"
-        />
-      ) : isFocused && !hasChanges ? (
-        <IosBrowseModalTrailingStackToolbar
-          icon="square.and.pencil"
-          onPress={handleEditPress}
-          accessibilityLabel={isEditMode ? 'Done editing navigation' : 'Edit navigation bar'}
+      {isFocused ? (
+        <IosNavigationSettingsStackToolbar
+          isEditMode={isEditMode}
+          onBack={handleBack}
+          onEdit={handleEditPress}
+          onApply={handleApply}
         />
       ) : null}
 
       <View style={styles.contentArea}>
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingTop: scrollTopPadding, paddingBottom: 120 + insets.bottom },
-          ]}
+          contentContainerStyle={pageInnerStyle}
+          contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
+          scrollEnabled={!isEditMode}
+          bounces={!isEditMode}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <GroupedListHeader title="Navigation Bar" />
+          {listHeader}
           <View style={styles.groupedListSection}>
-            {!isEditMode ? (
-              <GroupedList {...listGroupProps}>
-                {draftOrder.map((key) => (
-                  <FormDetailButton
-                    key={key}
-                    iconComponent={
-                      <SFSymbolIcon
-                        name={NAV_TAB_REGISTRY[key].sfSymbol as any}
-                        size={18}
-                        color={groupedListIconColor}
-                        fallback={
-                          <GearIcon size={18} color={groupedListIconColor} />
-                        }
-                      />
-                    }
-                    label={NAV_TAB_REGISTRY[key].label}
-                    value=""
-                    onPress={() => {}}
-                    showChevron={false}
-                  />
-                ))}
-                <FormDetailButton
-                  key="add"
-                  iconComponent={
-                    <SFSymbolIcon
-                      name="plus"
-                      size={18}
-                      color={groupedListIconColor}
-                      fallback={<GearIcon size={18} color={groupedListIconColor} />}
-                    />
-                  }
-                  label="Add"
-                  value=""
-                  onPress={availableToAdd.length > 0 ? handleAddPress : () => {}}
-                  showChevron={false}
-                />
-              </GroupedList>
-            ) : (
-              <View style={[styles.editCard, { backgroundColor: cardBg, borderRadius: GROUPED_LIST_RADIUS }]}>
+            <Animated.View layout={LAYOUT_TRANSITION_SPRING} style={groupedListShellStyle}>
+            {isEditMode ? (
+              <Animated.View
+                key="navigation-edit-list"
+                entering={FadeIn.duration(220)}
+                exiting={FadeOut.duration(180)}
+              >
                 <DraggableFlatList
-                  data={displayDraggableKeys}
-                  keyExtractor={(item) => item}
+                  data={displayEditKeys}
+                  keyExtractor={keyExtractor}
                   renderItem={renderDraggableItem}
+                  ItemSeparatorComponent={renderEditListSeparator}
                   onDragEnd={onDragEnd}
+                  onContentSizeChange={handleEditListContentSizeChange}
+                  dragItemOverflow
                   scrollEnabled={false}
-                  activationDistance={12}
+                  bounces={false}
+                  alwaysBounceVertical={false}
+                  overScrollMode="never"
+                  nestedScrollEnabled={false}
+                  extraData={displayEditKeys.join(',')}
+                  style={editDraggableListStyle}
+                  contentContainerStyle={styles.editDraggableListContent}
+                  contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
                 />
-                <NavigationTabRow
-                  tabKey={pinnedBrowse}
-                  iconColor={groupedListIconColor}
-                  mode="edit"
-                  showDelete={false}
-                  showSeparator={displayDraggableKeys.length > 0}
-                  separatorColor={separatorColor}
-                />
-              </View>
+              </Animated.View>
+            ) : (
+              <Animated.View
+                key="navigation-view-list"
+                entering={FadeIn.duration(220)}
+                exiting={FadeOut.duration(180)}
+              >
+                {renderViewModeRows()}
+              </Animated.View>
             )}
+          </Animated.View>
+          {listFooterSubtext}
           </View>
         </ScrollView>
       </View>
@@ -378,27 +428,39 @@ export function NavigationSettingsScreen() {
               <View style={styles.headerPlaceholder} pointerEvents="none" />
             </View>
             <View style={styles.headerActionsContainer} pointerEvents="box-none">
-              <MainBackButton onPress={handleBack} top={Paddings.screen} left={Paddings.screen} />
-              {hasChanges && !isSaving ? (
-                <View style={styles.androidApplyButtonAnchor} pointerEvents="box-none">
+              {!isEditMode ? (
+                <Animated.View
+                  entering={FadeIn.duration(220)}
+                  exiting={FadeOut.duration(180)}
+                  style={styles.androidBackButtonAnchor}
+                >
+                  <MainBackButton onPress={handleBack} top={0} left={0} />
+                </Animated.View>
+              ) : null}
+              <View style={styles.androidTrailingButtonAnchor} pointerEvents="box-none">
+                {!isEditMode ? (
+                  <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(180)}>
+                    <Pressable
+                      onPress={handleEditPress}
+                      style={styles.androidEditButtonInner}
+                      accessibilityRole="button"
+                      accessibilityLabel="Edit navigation bar"
+                    >
+                      <Text style={[styles.androidEditLabel, { color: groupedListIconColor }]}>Edit</Text>
+                    </Pressable>
+                  </Animated.View>
+                ) : (
                   <MainSubmitButton
                     layout="inline"
-                    onPress={() => void handleApply()}
+                    top={0}
+                    right={0}
+                    onPress={handleApply}
                     brandActive
-                    animateVisibility={false}
-                    accessibilityLabel="Apply navigation changes"
+                    animateVisibility
+                    accessibilityLabel="Done editing navigation"
                   />
-                </View>
-              ) : (
-                <Pressable
-                  onPress={handleEditPress}
-                  style={styles.androidEditButton}
-                  accessibilityRole="button"
-                  accessibilityLabel={isEditMode ? 'Done editing navigation' : 'Edit navigation bar'}
-                >
-                  <Text style={[styles.androidEditLabel, { color: groupedListIconColor }]}>Edit</Text>
-                </Pressable>
-              )}
+                )}
+              </View>
             </View>
           </>
         ) : null}
@@ -407,10 +469,19 @@ export function NavigationSettingsScreen() {
   );
 }
 
-const createStyles = (typography: ReturnType<typeof useTypography>) =>
+const createStyles = (
+  typography: ReturnType<typeof useTypography>,
+  themeColors: ReturnType<typeof useThemeColors>
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
+    },
+    listFooterSubtext: {
+      ...typography.getTextStyle('body-medium'),
+      color: themeColors.text.tertiary(),
+      paddingHorizontal: Paddings.touchTargetSmall,
+      paddingTop: Paddings.groupedListHeaderContentGap,
     },
     contentArea: {
       flex: 1,
@@ -419,18 +490,28 @@ const createStyles = (typography: ReturnType<typeof useTypography>) =>
     scroll: {
       flex: 1,
     },
-    scrollContent: {
-      paddingHorizontal: Paddings.screen,
-      flexGrow: 1,
+    groupedListShell: {
+      overflow: 'visible',
     },
     groupedListSection: {
-      paddingTop: Paddings.groupedListHeaderContentGap,
+      // match browse/settings — header sits directly above grouped list (no extra gap)
+      paddingTop: 0,
     },
     listContainer: {
       marginVertical: 0,
     },
-    editCard: {
-      overflow: 'hidden',
+    editDraggableList: {
+      backgroundColor: 'transparent',
+      flexGrow: 0,
+      flexShrink: 0,
+    },
+    editDraggableListContent: {
+      flexGrow: 0,
+    },
+    editRowContent: {
+      paddingHorizontal: Paddings.groupedListContentHorizontal,
+      paddingVertical: Paddings.groupedListContentVertical,
+      minHeight: 44,
     },
     headerOverlay: {
       position: 'absolute',
@@ -481,15 +562,19 @@ const createStyles = (typography: ReturnType<typeof useTypography>) =>
       zIndex: 11,
       overflow: 'visible',
     },
-    androidApplyButtonAnchor: {
+    androidBackButtonAnchor: {
       position: 'absolute',
       top: Paddings.screen,
-      right: Paddings.screen,
+      left: Paddings.screen,
     },
-    androidEditButton: {
+    androidTrailingButtonAnchor: {
       position: 'absolute',
       top: Paddings.screen,
       right: Paddings.screen,
+      height: 42,
+      justifyContent: 'center',
+    },
+    androidEditButtonInner: {
       height: 42,
       justifyContent: 'center',
       paddingHorizontal: 4,

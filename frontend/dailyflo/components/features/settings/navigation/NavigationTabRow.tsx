@@ -1,155 +1,199 @@
 /**
- * single row inside the Navigation Bar grouped list — view mode (plain) or edit mode (delete + drag).
+ * edit-mode row for Navigation Bar grouped list — mirrors manage-lists drag/delete layout:
+ * delete is a sibling Pressable (left); long-press on rowMain starts drag; handle is visual-only (right).
+ * padding + separators come from NavigationSettingsScreen editRowContent / SolidSeparator.
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, {
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { SFSymbolIcon } from '@/components/ui/Icon';
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
-import { useTypography } from '@/hooks/useTypography';
-import { getFontFamilyWithWeight } from '@/constants/Typography';
+import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 
 import { NAV_TAB_REGISTRY, type NavTabKey } from './navigationTabRegistry';
 
-const ROW_ICON_SIZE = 18;
-const ACTION_COLUMN_WIDTH = 32;
+const ROW_ICON_SIZE = Paddings.groupedListIconSize;
+const DRAG_HANDLE_COLUMN = ROW_ICON_SIZE;
+const EDIT_CHROME_DURATION_MS = 260;
+const EDIT_CHROME_EASING = Easing.out(Easing.cubic);
 
 export type NavigationTabRowProps = {
   tabKey: NavTabKey;
   iconColor: string;
-  /** view mode — no delete/drag affordances */
-  mode: 'view' | 'edit';
-  /** edit mode — show trash on the left (never true for browse) */
   showDelete?: boolean;
-  /** edit mode — long-press starts drag when provided */
-  onLongPressDrag?: () => void;
+  /** empty delete column so rows without trash (browse) stay aligned with deletable rows */
+  reserveDeleteColumn?: boolean;
+  /** from DraggableFlatList renderItem — wire to rowMain onLongPress */
+  onDrag?: () => void;
   onDelete?: () => void;
   isDragActive?: boolean;
-  /** bottom hairline between rows inside the grouped card */
-  showSeparator?: boolean;
-  separatorColor: string;
 };
 
 export function NavigationTabRow({
   tabKey,
   iconColor,
-  mode,
   showDelete = false,
-  onLongPressDrag,
+  reserveDeleteColumn = false,
+  onDrag,
   onDelete,
   isDragActive = false,
-  showSeparator = false,
-  separatorColor,
 }: NavigationTabRowProps) {
   const themeColors = useThemeColors();
   const semanticColors = useSemanticColors();
-  const typography = useTypography();
   const meta = NAV_TAB_REGISTRY[tabKey];
+  const tertiary = themeColors.text.tertiary();
 
   const labelStyle = {
-    ...typography.getTextStyle('body-large'),
-    fontFamily: getFontFamilyWithWeight('medium'),
+    ...getTextStyle('body-large'),
     color: themeColors.text.primary(),
     flex: 1,
   };
 
-  const content = (
-    <View style={styles.rowInner}>
-      {mode === 'edit' ? (
-        <View style={styles.actionColumn}>
+  const hasEditChrome = showDelete || reserveDeleteColumn || Boolean(onDrag);
+  const editChromeProgress = useSharedValue(0);
+
+  // slide delete + drag columns in when edit mode mounts this row
+  useEffect(() => {
+    if (!hasEditChrome) {
+      editChromeProgress.value = 0;
+      return;
+    }
+    editChromeProgress.value = withTiming(1, {
+      duration: EDIT_CHROME_DURATION_MS,
+      easing: EDIT_CHROME_EASING,
+    });
+  }, [editChromeProgress, hasEditChrome]);
+
+  const deleteSlotStyle = useAnimatedStyle(() => ({
+    width: interpolate(editChromeProgress.value, [0, 1], [0, ROW_ICON_SIZE]),
+    marginRight: interpolate(
+      editChromeProgress.value,
+      [0, 1],
+      [0, Paddings.groupedListIconTextSpacing]
+    ),
+    opacity: editChromeProgress.value,
+    // width-only clip for slide-in — row height comes from alignSelf stretch so icons are not cropped vertically
+    overflow: 'hidden' as const,
+  }));
+
+  const dragSlotStyle = useAnimatedStyle(() => ({
+    width: interpolate(editChromeProgress.value, [0, 1], [0, DRAG_HANDLE_COLUMN]),
+    opacity: editChromeProgress.value,
+    overflow: 'hidden' as const,
+  }));
+
+  return (
+    <View style={styles.row}>
+      {hasEditChrome ? (
+        <Animated.View style={[styles.deletePressable, deleteSlotStyle]}>
           {showDelete ? (
             <Pressable
               onPress={onDelete}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel={`Remove ${meta.label}`}
+              style={styles.deleteIconWrap}
             >
-              <Ionicons name="trash-outline" size={22} color={semanticColors.error()} />
+              <Ionicons name="trash-outline" size={ROW_ICON_SIZE} color={semanticColors.error()} />
             </Pressable>
-          ) : null}
+          ) : (
+            <View style={styles.deleteIconWrap} />
+          )}
+        </Animated.View>
+      ) : null}
+
+      <Pressable
+        onLongPress={onDrag}
+        delayLongPress={220}
+        disabled={isDragActive || !onDrag}
+        style={({ pressed }) => [
+          styles.rowMain,
+          pressed && !isDragActive ? styles.rowPressed : null,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={onDrag ? `Reorder ${meta.label}` : meta.label}
+      >
+        <View style={styles.iconWrap}>
+          <SFSymbolIcon
+            name={meta.sfSymbol as any}
+            size={ROW_ICON_SIZE}
+            color={iconColor}
+            fallback={
+              <Image
+                source={meta.getIconSource()}
+                style={[styles.fallbackIcon, { tintColor: iconColor }]}
+                resizeMode="contain"
+              />
+            }
+          />
         </View>
-      ) : null}
 
-      <View style={styles.iconColumn}>
-        <SFSymbolIcon
-          name={meta.sfSymbol as any}
-          size={ROW_ICON_SIZE}
-          color={iconColor}
-          fallback={
-            <Image
-              source={meta.getIconSource()}
-              style={[styles.fallbackIcon, { tintColor: iconColor }]}
-              resizeMode="contain"
-            />
-          }
-        />
-      </View>
+        <Text style={labelStyle} numberOfLines={1}>
+          {meta.label}
+        </Text>
 
-      <Text style={labelStyle} numberOfLines={1}>
-        {meta.label}
-      </Text>
-
-      {mode === 'edit' && onLongPressDrag ? (
-        <Pressable
-          onLongPress={onLongPressDrag}
-          delayLongPress={220}
-          disabled={isDragActive}
-          style={styles.actionColumn}
-          accessibilityRole="button"
-          accessibilityLabel={`Reorder ${meta.label}`}
-        >
-          <Ionicons name="reorder-three" size={22} color={themeColors.text.tertiary()} />
-        </Pressable>
-      ) : mode === 'edit' ? (
-        <View style={styles.actionColumn} />
-      ) : null}
-    </View>
-  );
-
-  return (
-    <View>
-      <View style={styles.row}>{content}</View>
-      {showSeparator ? (
-        <View style={[styles.separator, { backgroundColor: separatorColor, marginLeft: Paddings.groupedListContentHorizontal + ROW_ICON_SIZE + Paddings.groupedListIconTextSpacing }]} />
-      ) : null}
+        {onDrag ? (
+          <Animated.View style={[styles.dragHandleColumn, dragSlotStyle]} pointerEvents="none">
+            <Ionicons name="reorder-three" size={ROW_ICON_SIZE} color={tertiary} />
+          </Animated.View>
+        ) : null}
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    paddingHorizontal: Paddings.groupedListContentHorizontal,
-    paddingVertical: Paddings.groupedListContentVertical,
-    minHeight: 44,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  rowPressed: {
-    opacity: 0.85,
-  },
-  rowInner: {
+  rowMain: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Paddings.groupedListIconTextSpacing,
   },
-  actionColumn: {
-    width: ACTION_COLUMN_WIDTH,
-    alignItems: 'center',
-    justifyContent: 'center',
+  rowPressed: {
+    opacity: 0.85,
   },
-  iconColumn: {
-    width: ROW_ICON_SIZE,
-    alignItems: 'center',
+  deletePressable: {
+    alignSelf: 'stretch',
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteIconWrap: {
+    width: ROW_ICON_SIZE,
+    height: ROW_ICON_SIZE,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconWrap: {
+    width: ROW_ICON_SIZE,
+    height: ROW_ICON_SIZE,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   fallbackIcon: {
     width: ROW_ICON_SIZE,
     height: ROW_ICON_SIZE,
   },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    marginRight: Paddings.groupedListContentHorizontal,
+  dragHandleColumn: {
+    width: DRAG_HANDLE_COLUMN,
+    height: DRAG_HANDLE_COLUMN,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
+
+export default NavigationTabRow;
