@@ -9,8 +9,8 @@ import type { AuthSlideUiConfig } from './types';
 export const AUTH_LANDING_SLIDE_UI: AuthSlideUiConfig = {
   background: 'primary',
   continueButtonBackground: 'marple:500',
-  /** same contrast recipe as questionnaire continue (`continueButtonIcon` → `background.primarySecondaryBlend`) */
-  continueButtonIcon: 'primarySecondaryBlend',
+  /** marple 600 label/icon on marple 500 fill — matches tab FAB + quick-add primary action */
+  continueButtonIcon: 'marple:600',
   sloganEmphasisColor: 'marple:500',
   sloganMiddleColor: 'primary',
   wordmarkMarkColor: 'marple:500',

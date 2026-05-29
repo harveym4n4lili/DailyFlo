@@ -252,6 +252,7 @@ export function useThemeColors() {
       primarySecondaryBlend: () => getThemeColor('background', 'primarySecondaryBlend'),
       tertiary: () => getThemeColor('background', 'tertiary'),
       quaternary: () => getThemeColor('background', 'quaternary'),
+      quinary: () => getThemeColor('background', 'quinary'),
       elevated: () => getThemeColor('background', 'elevated'),
       overlay: () => getThemeColor('background', 'overlay'),
       darkOverlay: () => getThemeColor('background', 'darkOverlay'),

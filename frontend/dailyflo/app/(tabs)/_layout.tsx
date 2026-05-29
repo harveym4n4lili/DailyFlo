@@ -36,18 +36,18 @@ export default function TabLayout() {
   const tabIconUnselected =
     Platform.OS === 'ios'
       ? DynamicColorIOS({
-          light: ThemeColors.light.text.tertiary,
-          dark: ThemeColors.dark.text.tertiary,
+          light: ThemeColors.light.background.quinary,
+          dark: ThemeColors.dark.background.quinary,
         })
-      : themeColors.text.tertiary();
+      : themeColors.background.quinary();
 
   const tabIconSelected =
     Platform.OS === 'ios'
       ? DynamicColorIOS({
-          light: MarpleBrandColors[500],
-          dark: MarpleBrandColors[500],
+          light: MarpleBrandColors[600],
+          dark: MarpleBrandColors[600],
         })
-      : MarpleBrandColors[500];
+      : MarpleBrandColors[600];
 
   const tabBarBgIos =
     Platform.OS === 'ios'

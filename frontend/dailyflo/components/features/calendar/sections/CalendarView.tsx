@@ -84,6 +84,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const themeColors = useThemeColors();
   const { getMarpleBrandColor } = useColorPalette();
   const selectedDayFill = getMarpleBrandColor(500);
+  const marpleCalendarAccent = getMarpleBrandColor(600);
   const selectedDayLabel = themeColors.background.primary();
   
   // state for current displayed month - this is what month the calendar shows
@@ -229,10 +230,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
    * Get month and year display text
    * Formats the current month for display in the header (e.g., "September 2025")
    */
-  const monthYearText = currentMonth.toLocaleDateString('en-US', { 
-    month: 'long', 
-    year: 'numeric' 
-  });
+  const monthLabel = currentMonth.toLocaleDateString('en-US', { month: 'long' });
+  const yearLabel = String(currentMonth.getFullYear());
   
   return (
     <View
@@ -247,13 +246,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         Layout: flexDirection: 'row', justifyContent: 'space-between'
       */}
       <View style={styles.header}>
-        {/* month/year text - shows current month and year */}
-        <Text style={[
-          getTextStyle('heading-3'),
-          styles.monthYearText,
-          { color: themeColors.text.primary() }
-        ]}>
-          {monthYearText}
+        {/* month name + year — year uses marple brand accent to match planner chrome */}
+        <Text style={[getTextStyle('heading-3'), styles.monthYearText]}>
+          <Text style={{ color: themeColors.text.primary() }}>{monthLabel} </Text>
+          <Text style={{ color: marpleCalendarAccent }}>{yearLabel}</Text>
         </Text>
         
         {/* navigation arrows - allows month switching */}
@@ -275,7 +271,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             <Ionicons 
               name="chevron-back" 
               size={20} 
-              color={themeColors.text.primary()} 
+              color={marpleCalendarAccent} 
             />
           </Pressable>
           
@@ -296,7 +292,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             <Ionicons 
               name="chevron-forward" 
               size={20} 
-              color={themeColors.text.primary()} 
+              color={marpleCalendarAccent} 
             />
           </Pressable>
         </View>

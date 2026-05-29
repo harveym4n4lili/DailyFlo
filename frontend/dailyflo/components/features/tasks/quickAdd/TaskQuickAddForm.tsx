@@ -440,8 +440,8 @@ export function TaskQuickAddForm({
       : quickAddMarpleFill;
   // caret + selection tint follow the same marple accent so the title field doesn’t pick system blue
   const titleCaretAndSelectionColor = quickAddMarpleFill;
-  // glyph on marple fill — same “canvas” ink as `FloatingActionButton` (primary background), not plant on-fill token
-  const primaryFabIconColor = themeColors.background.primary();
+  // glyph on marple fill — marple 600 matches tab FAB / onboarding marple continue buttons
+  const primaryFabIconColor = colors.getMarpleBrandColor(600);
 
   return (
     <View style={styles.formTapRoot} pointerEvents="box-none">

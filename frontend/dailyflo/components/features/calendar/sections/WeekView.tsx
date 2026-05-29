@@ -189,6 +189,8 @@ export const WeekView: React.FC<WeekViewProps> = ({
   const themeColors = useThemeColors();
   const { getMarpleBrandColor } = useColorPalette();
   const selectedDayFill = getMarpleBrandColor(500);
+  const yearAccent = getMarpleBrandColor(500);
+  const arrowAccent = getMarpleBrandColor(500);
   const selectedDayLabel = themeColors.background.primary();
   
   // get typography system for consistent text styling
@@ -378,6 +380,18 @@ export const WeekView: React.FC<WeekViewProps> = ({
       year: 'numeric'
     });
   }, [selectedDate]);
+
+  // split day/month vs year so year can use marple 600 while the chevron uses marple 500
+  const headerDateParts = useMemo(() => {
+    const date = selectedDate ? new Date(selectedDate) : new Date();
+    const locale = selectedDate ? 'en-UK' : 'en-US';
+    const month = date.toLocaleDateString(locale, { month: 'long' });
+
+    return {
+      dayMonthLabel: `${date.getDate()} ${month} `,
+      yearLabel: String(date.getFullYear()),
+    };
+  }, [selectedDate]);
   
   /**
    * Check if a date is the selected date
@@ -430,13 +444,14 @@ export const WeekView: React.FC<WeekViewProps> = ({
             accessibilityLabel={`${formattedDateText}. Opens monthly calendar`}
             accessibilityHint="Double tap to open the monthly date picker"
           >
-            <Text key={selectedDate} style={styles.headerTitle}>
-              {formattedDateText}
+            <Text key={selectedDate} style={[styles.headerTitle, { flexShrink: 1 }]}>
+              <Text style={{ color: themeColors.text.primary() }}>{headerDateParts.dayMonthLabel}</Text>
+              <Text style={{ color: yearAccent, fontSize: 28 }}>{headerDateParts.yearLabel}</Text>
             </Text>
             <Ionicons
               name="chevron-forward"
-              size={24}
-              color={themeColors.text.primary()}
+              size={28}
+              color={arrowAccent}
               style={styles.chevronIcon}
             />
           </TouchableOpacity>
@@ -561,12 +576,12 @@ const createStyles = (
     alignItems: 'center',
     marginTop: 16,
   },
-  
-  // chevron icon styling - positioned to the right of the date header
+
   chevronIcon: {
-    marginLeft: 8,
+    marginLeft: -2,
+    marginRight: 0,
   },
-  
+
   // week grid section - padding for the swipeable list (listWrapper breaks out with negative margin)
   weekSectionContainer: {
     paddingHorizontal: 16,
