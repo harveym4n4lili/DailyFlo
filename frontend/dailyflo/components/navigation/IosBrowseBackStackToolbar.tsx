@@ -11,7 +11,12 @@ import { Stack } from 'expo-router';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
-export function IosBrowseBackStackToolbar() {
+export type IosBrowseBackStackToolbarProps = {
+  /** optional — e.g. confirm discard before back; defaults to router.back() */
+  onPress?: () => void;
+};
+
+export function IosBrowseBackStackToolbar({ onPress }: IosBrowseBackStackToolbarProps = {}) {
   const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const tint = themeColors.text.secondary();
@@ -20,11 +25,13 @@ export function IosBrowseBackStackToolbar() {
     return null;
   }
 
+  const handlePress = onPress ?? (() => router.back());
+
   return (
     <Stack.Toolbar placement="left">
       <Stack.Toolbar.Button
         icon="chevron.left"
-        onPress={() => router.back()}
+        onPress={handlePress}
         accessibilityLabel="Back"
         tintColor={tint}
       />

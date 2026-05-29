@@ -93,6 +93,25 @@ export default function BrowseLayout() {
               }
         }
       />
+      {/* navigation: push from settings — back + edit/apply toolbar */}
+      <Stack.Screen
+        name="navigation"
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+            : {
+                title: 'Navigation',
+                headerShown: false,
+              }
+        }
+      />
       {/* inbox, completed: push + back + big/mini header */}
       <Stack.Screen
         name="inbox"

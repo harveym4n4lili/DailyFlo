@@ -13,6 +13,7 @@ _DISPLAY_SORT_OPTIONS = frozenset({'None', 'Due Date', 'Added Date', 'Priority'}
 _DISPLAY_ORDERING_OPTIONS = frozenset({'Ascending', 'Descending'})
 _DISPLAY_LAYOUT_VIEWS = frozenset({'list', 'timeline'})
 _DISPLAY_TAB_KEYS = frozenset({'today', 'planner'})
+_NAVIGATION_TAB_KEYS = frozenset({'today', 'planner', 'ai', 'browse', 'inbox'})
 
 
 def _validate_hh_mm_string(value):
@@ -77,6 +78,39 @@ def _validate_display_preferences(value):
         _validate_display_tab_preferences(value.get('today'), 'today')
     if 'planner' in value:
         _validate_display_tab_preferences(value.get('planner'), 'planner')
+
+
+def _validate_navigation_preferences(value):
+    """navbar tab order saved from the Navigation settings screen"""
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        raise serializers.ValidationError('navigation_preferences must be a JSON object')
+
+    allowed_keys = {'tab_order', 'pinned_tab', 'tabOrder', 'pinnedTab'}
+    for key in value.keys():
+        if key not in allowed_keys:
+            raise serializers.ValidationError(f'Invalid navigation_preferences key: {key}')
+
+    tab_order = value.get('tab_order', value.get('tabOrder'))
+    if tab_order is not None:
+        if not isinstance(tab_order, list):
+            raise serializers.ValidationError('navigation_preferences.tab_order must be a list')
+        if len(tab_order) == 0:
+            raise serializers.ValidationError('navigation_preferences.tab_order cannot be empty')
+        seen = set()
+        for item in tab_order:
+            if not isinstance(item, str) or item not in _NAVIGATION_TAB_KEYS:
+                raise serializers.ValidationError('Invalid navigation_preferences.tab_order entry')
+            if item in seen:
+                raise serializers.ValidationError('navigation_preferences.tab_order must not contain duplicates')
+            seen.add(item)
+        if 'browse' not in seen:
+            raise serializers.ValidationError('navigation_preferences.tab_order must include browse')
+
+    pinned_tab = value.get('pinned_tab', value.get('pinnedTab'))
+    if pinned_tab is not None and pinned_tab not in _NAVIGATION_TAB_KEYS:
+        raise serializers.ValidationError('Invalid navigation_preferences.pinned_tab')
 
 
 def _validate_onboarding_questionnaire(value):
@@ -209,6 +243,11 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                     if key not in ('today', 'planner'):
                         dp[key] = val
                 current['display_preferences'] = dp
+            nested_navigation = prefs_patch.pop('navigation_preferences', None)
+            if nested_navigation is not None and isinstance(nested_navigation, dict):
+                nav = dict(current.get('navigation_preferences') or {})
+                nav.update(nested_navigation)
+                current['navigation_preferences'] = nav
             nested_onboarding = prefs_patch.pop('onboarding_questionnaire', None)
             if nested_onboarding is not None and isinstance(nested_onboarding, dict):
                 o = dict(current.get('onboarding_questionnaire') or {})
@@ -248,6 +287,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             'show_completed_tasks',
             'sort_tasks_by',
             'display_preferences',
+            'navigation_preferences',
             'analytics_enabled',
             'crash_reporting_enabled',
         }
@@ -281,6 +321,9 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
         if 'display_preferences' in value:
             _validate_display_preferences(value.get('display_preferences'))
+
+        if 'navigation_preferences' in value:
+            _validate_navigation_preferences(value.get('navigation_preferences'))
         
         return value
 

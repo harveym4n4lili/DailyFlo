@@ -41,6 +41,7 @@ import {
 
 const WAKE_TIME_SELECT_HREF = '/(tabs)/browse/wake-time-select' as Href;
 const SLEEP_TIME_SELECT_HREF = '/(tabs)/browse/sleep-time-select' as Href;
+const NAVIGATION_SETTINGS_HREF = '/(tabs)/browse/navigation' as Href;
 
 // header row height matches close button (42) – same as Activity Log
 const HEADER_ROW_HEIGHT = 42;
@@ -386,7 +387,7 @@ export default function BrowseSettingsScreen() {
                 }
                 label="Navigation"
                 value=""
-                onPress={() => {}}
+                onPress={() => router.push(NAVIGATION_SETTINGS_HREF)}
                 showChevron={true}
               />
               <FormDetailButton

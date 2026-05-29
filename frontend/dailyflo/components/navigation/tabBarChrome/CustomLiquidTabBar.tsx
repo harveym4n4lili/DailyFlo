@@ -18,6 +18,8 @@ import { useTypography } from '@/hooks/useTypography';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { FAB_SCREEN_INSET } from '@/components/ui/Button';
 import { useCustomTabNavMetrics } from '@/contexts/CustomTabNavMetricsContext';
+import { useAppSelector } from '@/store';
+import { resolveNavTabOrderFromPreferences } from '@/components/features/settings/navigation/navigationPreferenceUtils';
 
 import { buildCustomTabNavItems } from './customTabNavItems';
 import { computeTabBarChromeLayout } from './computeTabBarChromeLayout';
@@ -45,6 +47,11 @@ export function CustomLiquidTabBar() {
 
   const { measuredNavBarHeight, setMeasuredNavBarHeight } = useCustomTabNavMetrics();
 
+  // read saved navbar order from account prefs — falls back to today/planner/ai/browse
+  const savedNavTabOrder = useAppSelector((s) =>
+    resolveNavTabOrderFromPreferences(s.auth.user?.preferences?.navigationPreferences)
+  );
+
   React.useEffect(
     () => () => {
       setMeasuredNavBarHeight(null);
@@ -65,7 +72,10 @@ export function CustomLiquidTabBar() {
 
   // root stack modals (e.g. /task/[id]) drop tab keys from segments; planner/month-select can list month-select without planner.
   // keep last resolved tab so the bar stays highlighted.
-  const tabKeys = React.useMemo(() => buildCustomTabNavItems().map((i) => i.key), []);
+  const tabKeys = React.useMemo(
+    () => buildCustomTabNavItems(savedNavTabOrder).map((i) => i.key),
+    [savedNavTabOrder]
+  );
   const lastTabKeyWhenInTabsRef = React.useRef<string>(tabKeys[0] ?? 'today');
   React.useEffect(() => {
     const found = tabKeyFromSegments(segments, tabKeys);
@@ -90,8 +100,11 @@ export function CustomLiquidTabBar() {
     FAB_SCREEN_INSET
   );
 
-  // recompute each render so getTodayTabIcon() can update when the calendar day changes
-  const customTabItems = buildCustomTabNavItems();
+  // recompute when saved order or today icon (day-of-month) changes
+  const customTabItems = React.useMemo(
+    () => buildCustomTabNavItems(savedNavTabOrder),
+    [savedNavTabOrder]
+  );
 
   const customTabBarItems = customTabItems.map((item) => {
     const selected = resolvedSelectedTabKey === item.key;

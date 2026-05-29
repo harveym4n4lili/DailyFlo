@@ -25,6 +25,17 @@ export interface UserDisplayPreferences {
   planner?: TabDisplayPreferences;
 }
 
+/** navbar tab keys — must match app/(tabs)/ route folders */
+export type NavigationTabKey = 'today' | 'planner' | 'ai' | 'browse' | 'inbox';
+
+/** saved under preferences.navigation_preferences on django */
+export interface UserNavigationPreferences {
+  /** ordered tabs shown in the liquid navbar — browse is always last when present */
+  tabOrder: NavigationTabKey[];
+  /** tab that cannot be removed/reordered — always browse for now */
+  pinnedTab?: NavigationTabKey;
+}
+
 // Define user preferences structure
 // This matches the preferences JSON field in the backend CustomUser model
 export interface UserPreferences {
@@ -82,6 +93,9 @@ export interface UserPreferences {
 
   /** today / planner display modal prefs — per-account, nested on server as display_preferences */
   displayPreferences?: UserDisplayPreferences;
+
+  /** custom navbar tab order — nested on server as navigation_preferences */
+  navigationPreferences?: UserNavigationPreferences;
   
   // Privacy and data preferences
   analyticsEnabled: boolean;        // Allow usage analytics
@@ -174,6 +188,7 @@ export interface UpdateUserPreferencesInput {
   showCompletedTasks?: boolean;     // Optional: Show completed tasks setting
   sortTasksBy?: UserPreferences['sortTasksBy']; // Optional: New default sorting
   displayPreferences?: UserDisplayPreferences;
+  navigationPreferences?: UserNavigationPreferences;
   analyticsEnabled?: boolean;       // Optional: Analytics preference
   crashReportingEnabled?: boolean;  // Optional: Crash reporting preference
 }
