@@ -66,51 +66,17 @@ export default function BrowseLayout() {
               }
         }
       />
-      {/* settings: modal — ios native header + Stack.Toolbar close; android glass MainCloseButton in-screen */}
+      {/* settings: modal — inner settings/_layout owns ios headers (same as today/display) */}
       <Stack.Screen
         name="settings"
-        options={
-          Platform.OS === 'ios'
-            ? {
-                headerShown: true,
-                headerTransparent: true,
-                headerTitle: '',
-                headerShadowVisible: false,
-                headerBackVisible: false,
-                presentation: 'modal',
-                gestureEnabled: false,
-                contentStyle: {
-                  backgroundColor: themeColors.background.primary(),
-                },
-              }
-            : {
-                headerShown: false,
-                presentation: 'modal',
-                gestureEnabled: false,
-                contentStyle: {
-                  backgroundColor: themeColors.background.primary(),
-                },
-              }
-        }
-      />
-      {/* navigation: push from settings — back + edit/apply toolbar */}
-      <Stack.Screen
-        name="navigation"
-        options={
-          Platform.OS === 'ios'
-            ? {
-                headerShown: true,
-                headerTransparent: true,
-                headerTitle: '',
-                headerShadowVisible: false,
-                headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
-              }
-            : {
-                title: 'Navigation',
-                headerShown: false,
-              }
-        }
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+          gestureEnabled: false,
+          contentStyle: {
+            backgroundColor: themeColors.background.primary(),
+          },
+        }}
       />
       {/* inbox, completed: push + back + big/mini header */}
       <Stack.Screen

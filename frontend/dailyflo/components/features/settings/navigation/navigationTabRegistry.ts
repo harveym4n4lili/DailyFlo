@@ -5,7 +5,7 @@ import { getTodayTabIcon } from '@/utils/todayIcon';
 /** keys that can appear in the navbar — synced with app/(tabs)/ folders + NativeTabs.Trigger names */
 export type NavTabKey = 'today' | 'planner' | 'ai' | 'browse' | 'inbox';
 
-/** browse is always pinned last and cannot be removed or reordered in settings */
+/** browse is always present in the navbar and cannot be removed from settings */
 export const PINNED_NAV_TAB: NavTabKey = 'browse';
 
 /** default navbar order when the account has no saved navigation_preferences yet */
@@ -63,6 +63,15 @@ export const NAV_TAB_REGISTRY: Record<NavTabKey, NavTabMeta> = {
     href: '/(tabs)/inbox',
   },
 };
+
+/** every tab the user may show in the navbar — order for Tab Bar options grouped list */
+export const ALL_NAV_TAB_OPTION_KEYS: NavTabKey[] = [
+  'today',
+  'planner',
+  'ai',
+  'inbox',
+  'browse',
+];
 
 /** tabs the user can pick from the Add row (excludes browse — always present) */
 export const ADDABLE_NAV_TAB_KEYS: NavTabKey[] = ['today', 'planner', 'ai', 'inbox'];
