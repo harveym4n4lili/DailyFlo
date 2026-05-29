@@ -122,6 +122,10 @@ export const Paddings = {
   timelineFreeTimeLeft: 36,
   timelineScrollTop: 56,
   timelineScrollBottom: 200,
+  /** gap between all-day footer and timed timeline row (TimelineView timelineRowWithFooterAbove) */
+  timelineFooterToRowGap: 32,
+  /** spacer above timed rows when all-day footer is hidden — between header and timeline (not full collapsed footer height) */
+  timelineTopWhenAllDayHidden: 56,
   timelineEmptyHorizontal: 40,
   timelineEmptyTop: 100,
 

@@ -82,8 +82,6 @@ export function DayTimelineWithAllDayFooter({
   emptyAllDayMessage = 'No all-day tasks for this date.',
   allDayFooterKeyPrefix = 'day-allday',
 }: DayTimelineWithAllDayFooterProps) {
-  const themeColors = useThemeColors();
-
   const allDayTasks = useMemo(
     () => tasks.filter((task) => !task.time || task.time === ''),
     [tasks]
@@ -99,6 +97,58 @@ export function DayTimelineWithAllDayFooter({
     allDayListDisplayProps.showAllDayTasks,
   ]);
 
+  // all-day footer not shown: fixed spacer above timed rows only (Today header scroll position unchanged)
+  const timelineRowPaddingTop = shouldShowAllDayFooter
+    ? undefined
+    : Paddings.timelineTopWhenAllDayHidden;
+
+  const allDayFooter = useMemo(
+    () =>
+      shouldShowAllDayFooter ? (
+        <View style={styles.allDayFooter}>
+          <ListCard
+            key={`${allDayFooterKeyPrefix}-${dayKey || 'unknown'}`}
+            tasks={allDayTasks}
+            selectionMode={selectionMode}
+            selectedTaskIds={selectedTaskIds}
+            onToggleTaskSelection={selectionMode ? onToggleTaskSelection : undefined}
+            hideCompletedTasks={allDayListDisplayProps.hideCompletedTasks}
+            onTaskPress={onTaskPress}
+            onTaskComplete={onTaskComplete}
+            onTaskEdit={onTaskEdit}
+            onTaskDelete={onTaskDelete}
+            {...LIST_CARD_TASK_ROW_PRESET_TODAY}
+            showListRecurrenceRow
+            initialCollapsedGroupTitles={ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES}
+            emptyMessage={emptyAllDayMessage}
+            loading={false}
+            groupBy="allDay"
+            sortBy={allDayListDisplayProps.sortBy}
+            sortDirection={allDayListDisplayProps.sortDirection}
+            paddingHorizontal={Paddings.screen}
+            paddingBottom={8}
+            scrollEnabled={false}
+            disableInitialLayoutTransition={true}
+          />
+        </View>
+      ) : undefined,
+    [
+      shouldShowAllDayFooter,
+      allDayFooterKeyPrefix,
+      dayKey,
+      allDayTasks,
+      selectionMode,
+      selectedTaskIds,
+      onToggleTaskSelection,
+      allDayListDisplayProps,
+      onTaskPress,
+      onTaskComplete,
+      onTaskEdit,
+      onTaskDelete,
+      emptyAllDayMessage,
+    ]
+  );
+
   const todayHeader = useMemo(() => {
     if (!showTodayBigHeader || !scrollYSharedValue) return null;
     return <TodayBigScrollHeader scrollY={scrollYSharedValue} label={todayHeaderLabel} />;
@@ -106,18 +156,7 @@ export function DayTimelineWithAllDayFooter({
 
   return (
     <>
-      {showTopFade ? (
-        <View style={styles.fadeOverlay} pointerEvents="none">
-          <LinearGradient
-            colors={[
-              themeColors.background.primary(),
-              themeColors.withOpacity(themeColors.background.primary(), 0),
-            ]}
-            locations={[0.0, 1]}
-            style={StyleSheet.absoluteFill}
-          />
-        </View>
-      ) : null}
+      {showTopFade ? <PlannerWeekChromeTopFade /> : null}
       <TimelineView
         key={dayKey || 'day-timeline'}
         tasks={tasks}
@@ -137,43 +176,33 @@ export function DayTimelineWithAllDayFooter({
         scrollPastTopInset={scrollPastTopInset}
         scrollYSharedValue={scrollYSharedValue}
         headerComponent={todayHeader}
-        footerComponent={
-          <View style={styles.allDayFooter}>
-            <ListCard
-              key={`${allDayFooterKeyPrefix}-${dayKey || 'unknown'}`}
-              tasks={shouldShowAllDayFooter ? allDayTasks : []}
-              selectionMode={selectionMode}
-              selectedTaskIds={selectedTaskIds}
-              onToggleTaskSelection={selectionMode ? onToggleTaskSelection : undefined}
-              hideCompletedTasks={allDayListDisplayProps.hideCompletedTasks}
-              onTaskPress={onTaskPress}
-              onTaskComplete={onTaskComplete}
-              onTaskEdit={onTaskEdit}
-              onTaskDelete={onTaskDelete}
-              {...LIST_CARD_TASK_ROW_PRESET_TODAY}
-              showListRecurrenceRow
-              initialCollapsedGroupTitles={ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES}
-              silentWhenEmpty
-              emptyMessage={emptyAllDayMessage}
-              loading={false}
-              groupBy="allDay"
-              sortBy={allDayListDisplayProps.sortBy}
-              sortDirection={allDayListDisplayProps.sortDirection}
-              paddingHorizontal={Paddings.screen}
-              paddingBottom={8}
-              scrollEnabled={false}
-              disableInitialLayoutTransition={true}
-            />
-          </View>
-        }
+        timelineRowPaddingTop={timelineRowPaddingTop}
+        footerComponent={allDayFooter}
       />
     </>
   );
 }
 
-const styles = StyleSheet.create({
-  allDayFooter: {},
-  fadeOverlay: {
+/** short primary→transparent gradient under planner WeekView — softens scroll edge below week chrome */
+export function PlannerWeekChromeTopFade() {
+  const themeColors = useThemeColors();
+
+  return (
+    <View style={plannerWeekChromeTopFadeStyles.overlay} pointerEvents="none">
+      <LinearGradient
+        colors={[
+          themeColors.background.primary(),
+          themeColors.withOpacity(themeColors.background.primary(), 0),
+        ]}
+        locations={[0.0, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
+const plannerWeekChromeTopFadeStyles = StyleSheet.create({
+  overlay: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -182,6 +211,10 @@ const styles = StyleSheet.create({
     zIndex: 5,
     overflow: 'hidden',
   },
+});
+
+const styles = StyleSheet.create({
+  allDayFooter: {},
 });
 
 export default DayTimelineWithAllDayFooter;

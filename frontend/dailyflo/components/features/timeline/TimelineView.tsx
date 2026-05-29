@@ -84,6 +84,8 @@ interface TimelineViewProps {
   scrollPastTopInset?: boolean;
   /** optional header at top of scroll content (e.g. big Today title) */
   headerComponent?: React.ReactNode;
+  /** margin above timed timeline row only — e.g. when all-day footer pref is off; does not shift headerComponent */
+  timelineRowPaddingTop?: number;
   /** parent-owned scroll offset — drives Today big header fade + mini topSection header */
   scrollYSharedValue?: SharedValue<number>;
   // selection mode - when true, tap toggles selection instead of opening task
@@ -118,6 +120,7 @@ export default function TimelineView({
   scrollContentPaddingBottom,
   scrollPastTopInset = false,
   headerComponent,
+  timelineRowPaddingTop,
   scrollYSharedValue,
   endHour = 23,
   timeInterval = 60,
@@ -1802,6 +1805,9 @@ export default function TimelineView({
               {footerComponent}
             </AnimatedReanimated.View>
           ) : null}
+          {!footerComponent && timelineRowPaddingTop ? (
+            <View style={{ height: timelineRowPaddingTop }} pointerEvents="none" />
+          ) : null}
           {/* timeline row - layout enabled after mount so no initial slide up */}
           <AnimatedReanimated.View
             layout={layoutTransitionEnabled && footerComponent && !suppressLayoutForTaskSetChange ? LAYOUT_TRANSITION : undefined}
@@ -2208,7 +2214,7 @@ const createStyles = (
 
   // when footer (e.g. list) is above timeline - add top spacing
   timelineRowWithFooterAbove: {
-    marginTop: 32,
+    marginTop: Paddings.timelineFooterToRowGap,
   },
 
   // time labels container on the left side - more compact
