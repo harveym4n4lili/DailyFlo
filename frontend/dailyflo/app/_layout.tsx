@@ -7,12 +7,9 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { useFonts } from 'expo-font';
-import { Stack, type Href, usePathname, useSegments } from 'expo-router';
+import { Stack, type Href, router } from 'expo-router';
 
-import { useGuardedRouter } from '@/hooks/useGuardedRouter';
-import { fetchLists } from '@/store/slices/lists/listsSlice';
-import { fetchTasks } from '@/store/slices/tasks/tasksSlice';
-import { isRouteAlreadyShowingToday } from '@/utils/navigation/bootstrapRouteUtils';
+import { runAppColdStartBootstrap } from '@/utils/navigation/appColdStartBootstrap';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
 import { InteractionManager, Platform, TextInput } from 'react-native';
@@ -30,12 +27,6 @@ import { CustomTabNavMetricsProvider } from '@/contexts/CustomTabNavMetricsConte
 import { CreateTaskDraftProvider } from './task/CreateTaskDraftContext';
 import { DuplicateTaskProvider } from './task/DuplicateTaskContext';
 import { PlannerMonthSelectProvider } from './PlannerMonthSelectContext';
-import { store } from '@/store';
-import { logout, checkAuthStatus } from '@/store/slices/auth/authSlice';
-import {
-  getDeviceOnboardingComplete,
-  hasUserEverCompletedOnboarding,
-} from '@/utils/onboarding/onboardingUserStatus';
 import { setupNotifications } from '@/services/notifications/notificationsSetup';
 import { NotificationResponseHandler } from '@/components/navigation/NotificationResponseHandler';
 
@@ -48,25 +39,6 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const router = useGuardedRouter();
-  const pathname = usePathname();
-  const segments = useSegments();
-  // read inside async bootstrap after delays — ref always holds latest tree position
-  const routeSnapshotRef = useRef({ pathname: '', segments: [] as string[] });
-  routeSnapshotRef.current = { pathname, segments: [...segments] };
-  // theme background used when liquid glass is not available (android or older ios)
-  const themeColors = useThemeColors();
-  const tabBarBackgroundColor = themeColors.background.primary();
-  // liquid glass: on iOS (not iPad) we let expo-glass-effect decide if glass is supported internally.
-  // older SDKs may not export isGlassEffectAPIAvailable, so we avoid calling it directly.
-  const useLiquidGlass = Platform.OS === 'ios' && !Platform.isPad;
-  
-  // ref to track if we've already done the initial navigation check
-  // this prevents the useEffect from running multiple times and causing flashing
-  const hasNavigatedRef = useRef(false);
-  
-  // inter: app-wide — satoshi (auth landing): prefer **.otf** from `assets/fonts` (`useFonts` keys must match `getSatoshiFontFamilyWithWeight` in `constants/Typography.ts`)
   const [loaded] = useFonts({
     'Inter': Inter_400Regular,
     'Inter-Light': Inter_300Light,
@@ -81,67 +53,39 @@ export default function RootLayout() {
     'Satoshi-Black': require('../assets/fonts/Satoshi-Black.ttf'),
   });
 
-  // register foreground handler + android channel once — required before any notification can display
   useEffect(() => {
     void setupNotifications();
   }, []);
 
-  /**
-   * bootstrap navigation: land on today first, then stack-present onboarding when needed.
-   *
-   * flow:
-   * 1. hydrate auth (tokens / user) via checkAuthStatus
-   * 2. if intro not finished but redux says logged in, logout so first-run stays clean
-   * 3. replace to today tab (main app is always underneath)
-   * 4. if user is new (intro incomplete) or logged out, push onboarding as a root-stack modal
-   *    so it slides up over today instead of replacing the whole app
-   */
+  if (!loaded) {
+    return null;
+  }
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ReduxProvider>
+        <RootLayoutNavigation />
+      </ReduxProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+function RootLayoutNavigation() {
+  const colorScheme = useColorScheme();
+  const hasBootstrappedRef = useRef(false);
+  // theme background used when liquid glass is not available (android or older ios)
+  const themeColors = useThemeColors();
+  // liquid glass: on iOS (not iPad) we let expo-glass-effect decide if glass is supported internally.
+  // older SDKs may not export isGlassEffectAPIAvailable, so we avoid calling it directly.
+  const useLiquidGlass = Platform.OS === 'ios' && !Platform.isPad;
+
+  // hydrate auth + prefetch tasks/lists; primary tab navigation runs in (tabs)/_layout.tsx
   useEffect(() => {
-    // prevent multiple navigation checks - only do this once
-    if (hasNavigatedRef.current || !loaded) {
-      return;
-    }
+    if (hasBootstrappedRef.current) return;
+    hasBootstrappedRef.current = true;
 
-    const checkOnboardingStatus = async () => {
-      try {
-        hasNavigatedRef.current = true;
-
-        // small delay so expo-router's stack mounts before we replace/push
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        const onboardingComplete = await getDeviceOnboardingComplete();
-
-        await store.dispatch(checkAuthStatus());
-
-        let authState = store.getState().auth;
-
-        // stale session on a fresh install — but keep tokens when this account already finished onboarding before (returning re-login)
-        const accountFinishedOnboardingBefore =
-          authState.user != null && (await hasUserEverCompletedOnboarding(authState.user));
-        if (!onboardingComplete && authState.isAuthenticated && !accountFinishedOnboardingBefore) {
-          store.dispatch(logout());
-          authState = store.getState().auth;
-        }
-
-        // start task/list loads before Today paints when session restores — reduces empty-state flicker
-        if (authState.isAuthenticated) {
-          const { tasks, lists } = store.getState();
-          if (tasks.lastFetched === null) {
-            void store.dispatch(fetchTasks());
-          }
-          if (lists.lastFetched === null) {
-            void store.dispatch(fetchLists());
-          }
-        }
-
-        // skip redundant replace when tabs already on Today — second replace was animating like a duplicate screen
-        const { pathname: bootstrapPath, segments: bootstrapSegs } = routeSnapshotRef.current;
-        if (!isRouteAlreadyShowingToday(bootstrapPath, bootstrapSegs)) {
-          router.replace('/(tabs)/today');
-        }
-
-        const needsOnboarding = !onboardingComplete || !authState.isAuthenticated;
-        // push on the same tick as replace can hard-crash the native stack — wait until transitions settle
+    void runAppColdStartBootstrap()
+      .then(({ needsOnboarding }) => {
         if (needsOnboarding) {
           InteractionManager.runAfterInteractions(() => {
             requestAnimationFrame(() => {
@@ -149,38 +93,16 @@ export default function RootLayout() {
             });
           });
         }
-      } catch (error) {
-        console.error('Failed to check onboarding status:', error);
-
-        hasNavigatedRef.current = true;
-
-        const authState = store.getState().auth;
-        if (authState.isAuthenticated) {
-          store.dispatch(logout());
-        }
-
-        const { pathname: errPath, segments: errSegs } = routeSnapshotRef.current;
-        if (!isRouteAlreadyShowingToday(errPath, errSegs)) {
-          router.replace('/(tabs)/today');
-        }
+      })
+      .catch((error) => {
+        console.error('Cold start bootstrap failed:', error);
         InteractionManager.runAfterInteractions(() => {
           requestAnimationFrame(() => {
             router.push(ONBOARDING_AUTH_HREF);
           });
         });
-      }
-    };
-
-    // bootstrap runs after the root Stack mounts (we only return null until fonts load). calling replace/push
-    // before the Stack existed could strand navigation on a blank screen.
-    checkOnboardingStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded]);
-
-  // wait for fonts only — the root Stack must mount before bootstrap runs router.replace/push (see useEffect above)
-  if (!loaded) {
-    return null;
-  }
+      });
+  }, []);
 
   // custom theme matching app background – prevents white flash in corners during screen transitions
   const navTheme = {
@@ -193,9 +115,7 @@ export default function RootLayout() {
   };
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ReduxProvider>
-        <CustomTabNavMetricsProvider>
+    <CustomTabNavMetricsProvider>
         <ThemeProvider value={navTheme}>
           {/* Task stack and sub-screens share draft via context; DuplicateTaskProvider for pre-filling create from Duplicate */}
           <CreateTaskDraftProvider>
@@ -369,8 +289,6 @@ export default function RootLayout() {
           <NotificationResponseHandler />
           <AuthSessionGate />
         </ThemeProvider>
-        </CustomTabNavMetricsProvider>
-      </ReduxProvider>
-    </GestureHandlerRootView>
+    </CustomTabNavMetricsProvider>
   );
 }

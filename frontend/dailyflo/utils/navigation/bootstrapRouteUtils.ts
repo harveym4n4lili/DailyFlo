@@ -1,14 +1,17 @@
 /**
  * cold-start bootstrap helpers for `app/_layout.tsx` —
- * avoid redundant `replace('/(tabs)/today')` when native tabs already focused Today (duplicate transition + empty flash).
+ * avoid redundant replace when native tabs already focused the user's primary tab.
  */
 
-/** true when pathname/segments already imply the Today tab is active (nested `index` under today still counts). */
-export function isRouteAlreadyShowingToday(
+import type { NavTabKey } from '@/components/features/settings/navigation/navigationTabRegistry';
+
+/** true when pathname/segments already imply the given tab is active (nested routes under that tab still count). */
+export function isRouteAlreadyShowingTab(
   pathname: string,
   segments: readonly string[],
+  tabKey: NavTabKey,
 ): boolean {
-  if (segments.includes('today')) return true;
+  if (segments.includes(tabKey)) return true;
   const p = (pathname || '').replace(/\/$/, '');
-  return p.endsWith('/today') || p === '/today' || p.endsWith('(tabs)/today');
+  return p.endsWith(`/${tabKey}`) || p === `/${tabKey}` || p.endsWith(`(tabs)/${tabKey}`);
 }
