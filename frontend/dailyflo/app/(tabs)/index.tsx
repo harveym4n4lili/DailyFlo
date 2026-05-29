@@ -8,9 +8,11 @@ import {
   resolvePrimaryNavTabHref,
 } from '@/components/features/settings/navigation/navigationPreferenceUtils';
 import { loadPersistedNavTabOrder } from '@/utils/navigation/navigationTabOrderStorage';
+import { useOnboardingBlocksTabReveal } from '@/hooks/useOnboardingBlocksTabReveal';
 
 /** tabs group index — redirect to the user's first navbar tab once auth is hydrated */
 export default function TabsIndex() {
+  const onboardingBlocksTabReveal = useOnboardingBlocksTabReveal();
   const isLoading = useAppSelector((s) => s.auth.isLoading);
   const navPrefs = useAppSelector((s) => s.auth.user?.preferences?.navigationPreferences);
   const userId = useAppSelector((s) => s.auth.user?.id);
@@ -30,7 +32,7 @@ export default function TabsIndex() {
     };
   }, [userId]);
 
-  if (isLoading || !cacheLoaded) {
+  if (isLoading || !cacheLoaded || onboardingBlocksTabReveal) {
     return null;
   }
 
