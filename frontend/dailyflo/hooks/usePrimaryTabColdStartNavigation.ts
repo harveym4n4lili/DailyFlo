@@ -39,6 +39,7 @@ export function usePrimaryTabColdStartNavigation() {
   const userId = useAppSelector((s) => s.auth.user?.id);
   const hasPushedRef = useRef(false);
   const cachedOrderRef = useRef<NavTabKey[] | null>(null);
+  const wasOnboardingBlockedRef = useRef(onboardingBlocksTabReveal);
   const [cacheReady, setCacheReady] = useState(false);
   // overlay is cold-start only — once bootstrap finishes, never block tab switches
   const [coldStartComplete, setColdStartComplete] = useState(false);
@@ -48,6 +49,7 @@ export function usePrimaryTabColdStartNavigation() {
     setColdStartComplete(false);
     cachedOrderRef.current = null;
     setCacheReady(false);
+    wasOnboardingBlockedRef.current = onboardingBlocksTabReveal;
 
     let cancelled = false;
     void loadPersistedNavTabOrder(userId).then((order) => {
@@ -63,6 +65,18 @@ export function usePrimaryTabColdStartNavigation() {
   const order = resolveNavTabOrderForBootstrap(navPrefs, cachedOrderRef.current);
   const primaryKey = order[0];
   const activeKey = activeTabKeyFromSegments(segments, order);
+
+  // onboarding dismissTo already lands on primary — do not let a deferred cold-start push fire on the first manual tab tap
+  useEffect(() => {
+    const wasBlocked = wasOnboardingBlockedRef.current;
+    wasOnboardingBlockedRef.current = onboardingBlocksTabReveal;
+
+    if (!wasBlocked || onboardingBlocksTabReveal) return;
+    if (!cacheReady || !isAuthenticated) return;
+
+    hasPushedRef.current = true;
+    setColdStartComplete(true);
+  }, [onboardingBlocksTabReveal, cacheReady, isAuthenticated]);
 
   useEffect(() => {
     if (coldStartComplete || isLoading || !cacheReady || onboardingBlocksTabReveal) return;
@@ -96,7 +110,15 @@ export function usePrimaryTabColdStartNavigation() {
           activeKey !== primaryKey)));
 
   useEffect(() => {
-    if (isLoading || !isAuthenticated || !cacheReady || onboardingBlocksTabReveal) return;
+    if (
+      isLoading ||
+      !isAuthenticated ||
+      !cacheReady ||
+      onboardingBlocksTabReveal ||
+      coldStartComplete
+    ) {
+      return;
+    }
 
     const resolvedOrder = resolveNavTabOrderForBootstrap(navPrefs, cachedOrderRef.current);
     const resolvedPrimaryKey = resolvedOrder[0];
@@ -105,7 +127,13 @@ export function usePrimaryTabColdStartNavigation() {
       navPrefs?.tabOrder?.length ? navPrefs : { tabOrder: resolvedOrder },
     ) as Href;
 
-    if (resolvedActiveKey === resolvedPrimaryKey) return;
+    // dismissTo / prior navigation already on primary — mark handled without router.push
+    if (resolvedActiveKey === resolvedPrimaryKey) {
+      hasPushedRef.current = true;
+      setColdStartComplete(true);
+      return;
+    }
+
     if (hasPushedRef.current) return;
 
     hasPushedRef.current = true;
@@ -116,6 +144,7 @@ export function usePrimaryTabColdStartNavigation() {
     });
   }, [
     cacheReady,
+    coldStartComplete,
     isAuthenticated,
     isLoading,
     navPrefs,
