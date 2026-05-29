@@ -23,6 +23,7 @@ import {
   setUserOnboardingComplete,
 } from '@/utils/onboarding/onboardingUserStatus';
 import { getNotificationPromptAlreadyShown } from '@/utils/notifications/notificationPromptStorage';
+import { resolvePrimaryTabHomeHref } from '@/utils/navigation/resolvePrimaryTabHomeHref';
 
 import type { OnboardingQuestionnaireStoredAnswersV1 } from '@/components/features/onboarding/onboarding/constants/onboardingQuestionnaireAnswers';
 import { ONBOARDING_QUESTIONNAIRE_ANSWERS_STORAGE_KEY } from '@/components/features/onboarding/onboarding/constants/onboardingQuestionnaireAnswers';
@@ -38,13 +39,14 @@ import {
 /** re-export so existing imports from this hook keep working */
 export { ONBOARDING_COMPLETE_STORAGE_KEY };
 
-/** questionnaire finish → optional notifications step → Today tab */
+/** questionnaire finish → optional notifications step → user's primary navbar tab */
 const NOTIFICATIONS_HREF = '/(onboarding)/notifications' as Href;
 
 export function useCompleteOnboardingAndExit() {
   const router = useGuardedRouter();
   const dispatch = useAppDispatch();
   const userId = useAppSelector((state) => state.auth.user?.id);
+  const navPrefs = useAppSelector((state) => state.auth.user?.preferences?.navigationPreferences);
   const [busy, setBusy] = useState(false);
 
   // optional `answers` — questionnaire snapshot saved as json; also drives `createTask` payload for today
@@ -90,10 +92,11 @@ export function useCompleteOnboardingAndExit() {
         } catch (flagErr) {
           console.warn('[onboarding] server onboarding_completed sync skipped', flagErr);
         }
-        // first-time installs see the native notification prompt once; returning installs skip straight to Today
+        // first-time installs see the native notification prompt once; returning installs go straight to primary tab
         const alreadyPrompted = await getNotificationPromptAlreadyShown();
         if (alreadyPrompted) {
-          router.dismissTo('/(tabs)/today' as Href);
+          const homeHref = await resolvePrimaryTabHomeHref(userId, navPrefs);
+          router.dismissTo(homeHref);
         } else {
           router.push(NOTIFICATIONS_HREF);
         }
@@ -101,7 +104,7 @@ export function useCompleteOnboardingAndExit() {
         setBusy(false);
       }
     },
-    [busy, router, dispatch, userId],
+    [busy, router, dispatch, userId, navPrefs],
   );
 
   return { completeAndExit, busy };

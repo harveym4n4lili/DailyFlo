@@ -1,16 +1,17 @@
 /**
- * last onboarding step — native os permission prompt + django preferences sync, then dismiss to Today.
+ * last onboarding step — native os permission prompt + django preferences sync, then dismiss to primary tab.
  */
 
-import type { Href } from 'expo-router';
+
 import { useCallback, useState } from 'react';
 import { Alert, Linking } from 'react-native';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { requestAppNotificationPermission } from '@/services/notifications/requestNotificationPermission';
-import { useAppDispatch } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { patchUserNotificationPreferences } from '@/store/slices/auth/authSlice';
 import { markNotificationPromptShown } from '@/utils/notifications/notificationPromptStorage';
+import { resolvePrimaryTabHomeHref } from '@/utils/navigation/resolvePrimaryTabHomeHref';
 
 import {
   ONBOARDING_NOTIFICATIONS_CONTINUE_LABEL,
@@ -18,8 +19,6 @@ import {
   ONBOARDING_NOTIFICATIONS_DENIED_TITLE,
   ONBOARDING_NOTIFICATIONS_OPEN_SETTINGS_LABEL,
 } from '../constants';
-
-const TODAY_HREF = '/(tabs)/today' as Href;
 
 /** maps os grant/deny into django `preferences.notifications` merge payload */
 async function syncNotificationPreferences(
@@ -44,13 +43,16 @@ async function syncNotificationPreferences(
 export function useOnboardingNotificationPrompt() {
   const router = useGuardedRouter();
   const dispatch = useAppDispatch();
+  const userId = useAppSelector((s) => s.auth.user?.id);
+  const navPrefs = useAppSelector((s) => s.auth.user?.preferences?.navigationPreferences);
   const [busy, setBusy] = useState(false);
 
-  // close onboarding modal stack and land on Today tab
+  // close onboarding modal stack and land on the user's first navbar tab (same as cold start)
   const finishAndGoHome = useCallback(async () => {
     await markNotificationPromptShown();
-    router.dismissTo(TODAY_HREF);
-  }, [router]);
+    const homeHref = await resolvePrimaryTabHomeHref(userId, navPrefs);
+    router.dismissTo(homeHref);
+  }, [router, userId, navPrefs]);
 
   const onNotNow = useCallback(async () => {
     if (busy) return;

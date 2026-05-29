@@ -38,8 +38,7 @@ import {
   DEFAULT_SLEEP_HHMM,
   DEFAULT_WAKE_HHMM,
 } from '../../../utils/preferenceScheduleTimes';
-import { resolveNavTabOrderFromPreferences } from '../../../components/features/settings/navigation/navigationPreferenceUtils';
-import { persistNavTabOrder } from '../../../utils/navigation/navigationTabOrderStorage';
+import { persistNavTabOrderForUser } from '../../../utils/navigation/navigationTabOrderStorage';
 
 /**
  * Define the shape of the authentication state
@@ -149,9 +148,7 @@ export const checkAuthStatus = createAsyncThunk(
       const loadProfile = async () => {
         const userResponse = await authApiService.getCurrentUser();
         const user: User = transformApiUserToUser(userResponse.user || userResponse);
-        // cache navbar order locally so cold start can open the right tab before redux re-renders
-        const tabOrder = resolveNavTabOrderFromPreferences(user.preferences?.navigationPreferences);
-        await persistNavTabOrder(tabOrder, user.id);
+        await persistNavTabOrderForUser(user);
         return {
           user,
           accessToken: accessToken!,
@@ -542,6 +539,8 @@ export const loginUser = createAsyncThunk(
       const expiryTime = resolveAccessTokenExpiryMs(accessToken);
       await storeTokenExpiry(expiryTime);
 
+      await persistNavTabOrderForUser(user);
+
       return {
         user,
         accessToken,
@@ -688,7 +687,9 @@ export const registerUser = createAsyncThunk(
       
       const expiryTime = resolveAccessTokenExpiryMs(accessToken);
       await storeTokenExpiry(expiryTime);
-      
+
+      await persistNavTabOrderForUser(user);
+
       // Return user data and tokens FIRST
       // Redux will automatically update the state with this data via the reducer
       // User is automatically logged in after successful registration
@@ -794,6 +795,8 @@ export const socialAuth = createAsyncThunk(
 
       // django sets `is_new_user` from get_or_create — existing google accounts get false (show onboarding Skip)
       const isNewUser = response.is_new_user === true || response.isNewUser === true;
+
+      await persistNavTabOrderForUser(user);
 
       return {
         user,
@@ -1033,8 +1036,7 @@ export const patchUserNavigationPreferences = createAsyncThunk<
 
       const bodyUser = response.user ?? response;
       const user = transformApiUserToUser(bodyUser);
-      const tabOrder = resolveNavTabOrderFromPreferences(user.preferences?.navigationPreferences);
-      await persistNavTabOrder(tabOrder, user.id);
+      await persistNavTabOrderForUser(user);
       return serializeUserForThunkPayload(user);
     } catch (error: any) {
       const prefsErr = error?.response?.data?.preferences;

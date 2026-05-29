@@ -1,6 +1,8 @@
 /**
  * cold-start: push the user's first navbar tab when NativeTabs lands on Today,
  * and keep a full-screen overlay up until the primary tab is active (hides the Today flash).
+ * skipped entirely while the onboarding modal stack is open — login mid-funnel must not
+ * router.push tabs on top of slides.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -14,6 +16,7 @@ import {
   resolvePrimaryNavTabHref,
 } from '@/components/features/settings/navigation/navigationPreferenceUtils';
 import { loadPersistedNavTabOrder } from '@/utils/navigation/navigationTabOrderStorage';
+import { useOnboardingBlocksTabReveal } from '@/hooks/useOnboardingBlocksTabReveal';
 
 const PLANNER_NESTED_TAB_SEGMENTS = new Set(['month-select']);
 
@@ -29,6 +32,7 @@ function activeTabKeyFromSegments(
 
 export function usePrimaryTabColdStartNavigation() {
   const segments = useSegments();
+  const onboardingBlocksTabReveal = useOnboardingBlocksTabReveal();
   const isLoading = useAppSelector((s) => s.auth.isLoading);
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const navPrefs = useAppSelector((s) => s.auth.user?.preferences?.navigationPreferences);
@@ -40,6 +44,11 @@ export function usePrimaryTabColdStartNavigation() {
   const [coldStartComplete, setColdStartComplete] = useState(false);
 
   useEffect(() => {
+    hasPushedRef.current = false;
+    setColdStartComplete(false);
+    cachedOrderRef.current = null;
+    setCacheReady(false);
+
     let cancelled = false;
     void loadPersistedNavTabOrder(userId).then((order) => {
       if (cancelled) return;
@@ -56,7 +65,7 @@ export function usePrimaryTabColdStartNavigation() {
   const activeKey = activeTabKeyFromSegments(segments, order);
 
   useEffect(() => {
-    if (coldStartComplete || isLoading || !cacheReady) return;
+    if (coldStartComplete || isLoading || !cacheReady || onboardingBlocksTabReveal) return;
 
     if (!isAuthenticated || primaryKey === 'today') {
       setColdStartComplete(true);
@@ -72,20 +81,22 @@ export function usePrimaryTabColdStartNavigation() {
     coldStartComplete,
     isAuthenticated,
     isLoading,
+    onboardingBlocksTabReveal,
     primaryKey,
   ]);
 
-  // cover Today while auth loads or until the first navigation to the primary tab finishes
+  // cover tabs while auth loads, onboarding is open, or until primary-tab cold start finishes
   const isBootOverlayVisible =
-    !coldStartComplete &&
-    (isLoading ||
-      (isAuthenticated &&
-        cacheReady &&
-        primaryKey !== 'today' &&
-        activeKey !== primaryKey));
+    onboardingBlocksTabReveal ||
+    (!coldStartComplete &&
+      (isLoading ||
+        (isAuthenticated &&
+          cacheReady &&
+          primaryKey !== 'today' &&
+          activeKey !== primaryKey)));
 
   useEffect(() => {
-    if (isLoading || !isAuthenticated || !cacheReady) return;
+    if (isLoading || !isAuthenticated || !cacheReady || onboardingBlocksTabReveal) return;
 
     const resolvedOrder = resolveNavTabOrderForBootstrap(navPrefs, cachedOrderRef.current);
     const resolvedPrimaryKey = resolvedOrder[0];
@@ -103,7 +114,15 @@ export function usePrimaryTabColdStartNavigation() {
         router.push(primaryHref);
       });
     });
-  }, [cacheReady, isAuthenticated, isLoading, navPrefs, primaryKey, segments]);
+  }, [
+    cacheReady,
+    isAuthenticated,
+    isLoading,
+    navPrefs,
+    onboardingBlocksTabReveal,
+    primaryKey,
+    segments,
+  ]);
 
   return { isBootOverlayVisible };
-}
+};

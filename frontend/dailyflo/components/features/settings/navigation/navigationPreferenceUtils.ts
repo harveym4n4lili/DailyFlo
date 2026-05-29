@@ -49,12 +49,13 @@ export function resolveNavTabOrderFromPreferences(
   return normalizeNavTabOrder(saved);
 }
 
-/** merge server prefs with asyncstorage cache for cold-start bootstrap */
+/** merge server prefs with per-user asyncstorage cache for cold-start bootstrap */
 export function resolveNavTabOrderForBootstrap(
   prefs?: UserNavigationPreferences | null,
   cachedOrder?: NavTabKey[] | null,
 ): NavTabKey[] {
   if (prefs?.tabOrder?.length) return resolveNavTabOrderFromPreferences(prefs);
+  // cachedOrder must come from loadPersistedNavTabOrder(userId) — never another account's order
   if (cachedOrder?.length) return normalizeNavTabOrder(cachedOrder);
   return [...DEFAULT_NAV_TAB_ORDER];
 }

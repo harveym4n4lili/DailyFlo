@@ -9,7 +9,8 @@ import {
   DEFAULT_NAV_TAB_ORDER,
   type NavTabKey,
 } from '@/components/features/settings/navigation/navigationTabRegistry';
-import { normalizeNavTabOrder } from '@/components/features/settings/navigation/navigationPreferenceUtils';
+import { normalizeNavTabOrder, resolveNavTabOrderFromPreferences } from '@/components/features/settings/navigation/navigationPreferenceUtils';
+import type { UserNavigationPreferences } from '@/types/common/User';
 
 /** last-known order for any signed-in user — read before profile id is available */
 const NAV_TAB_ORDER_LAST_KEY = '@dailyflo/navigation_tab_order/last';
@@ -36,19 +37,28 @@ export async function persistNavTabOrder(
 ): Promise<void> {
   const normalized = normalizeNavTabOrder(order);
   const json = JSON.stringify(normalized);
-  await AsyncStorage.setItem(NAV_TAB_ORDER_LAST_KEY, json);
   if (userId) {
     await AsyncStorage.setItem(userNavTabOrderKey(userId), json);
   }
+  // legacy mirror — not read when a user id is known (avoids leaking order across accounts)
+  await AsyncStorage.setItem(NAV_TAB_ORDER_LAST_KEY, json);
 }
 
-/** read cached order — prefer per-user key when id is known */
+/** cache navbar order from django profile prefs — call on every successful auth/session restore */
+export async function persistNavTabOrderForUser(user: {
+  id: string;
+  preferences?: { navigationPreferences?: UserNavigationPreferences | null };
+}): Promise<void> {
+  const tabOrder = resolveNavTabOrderFromPreferences(user.preferences?.navigationPreferences);
+  await persistNavTabOrder(tabOrder, user.id);
+}
+
+/** read cached order — per-user only when id is known; never fall back to another account's last order */
 export async function loadPersistedNavTabOrder(
   userId?: string | null,
 ): Promise<NavTabKey[] | null> {
   if (userId) {
-    const forUser = parseStoredOrder(await AsyncStorage.getItem(userNavTabOrderKey(userId)));
-    if (forUser) return forUser;
+    return parseStoredOrder(await AsyncStorage.getItem(userNavTabOrderKey(userId)));
   }
   return parseStoredOrder(await AsyncStorage.getItem(NAV_TAB_ORDER_LAST_KEY));
 }
