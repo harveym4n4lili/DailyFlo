@@ -49,3 +49,28 @@ export function resolveNavTabOrderFromPreferences(
   return normalizeNavTabOrder(saved);
 }
 
+/** merge server prefs with asyncstorage cache for cold-start bootstrap */
+export function resolveNavTabOrderForBootstrap(
+  prefs?: UserNavigationPreferences | null,
+  cachedOrder?: NavTabKey[] | null,
+): NavTabKey[] {
+  if (prefs?.tabOrder?.length) return resolveNavTabOrderFromPreferences(prefs);
+  if (cachedOrder?.length) return normalizeNavTabOrder(cachedOrder);
+  return [...DEFAULT_NAV_TAB_ORDER];
+}
+
+/** first tab in the user's navbar — used for cold-start bootstrap when Today may be absent */
+export function resolvePrimaryNavTabKey(
+  prefs?: UserNavigationPreferences | null
+): NavTabKey {
+  const order = resolveNavTabOrderFromPreferences(prefs);
+  return order[0] ?? DEFAULT_NAV_TAB_ORDER[0];
+}
+
+/** expo-router href for the user's primary navbar tab */
+export function resolvePrimaryNavTabHref(
+  prefs?: UserNavigationPreferences | null
+): string {
+  return NAV_TAB_REGISTRY[resolvePrimaryNavTabKey(prefs)].href;
+}
+

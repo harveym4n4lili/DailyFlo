@@ -76,7 +76,7 @@ export function CustomLiquidTabBar() {
     () => buildCustomTabNavItems(savedNavTabOrder).map((i) => i.key),
     [savedNavTabOrder]
   );
-  const lastTabKeyWhenInTabsRef = React.useRef<string>(tabKeys[0] ?? 'today');
+  const lastTabKeyWhenInTabsRef = React.useRef<string | undefined>(undefined);
   React.useEffect(() => {
     const found = tabKeyFromSegments(segments, tabKeys);
     if (found) lastTabKeyWhenInTabsRef.current = found;
@@ -85,7 +85,7 @@ export function CustomLiquidTabBar() {
   const resolvedSelectedTabKey =
     optimisticCustomTabKey !== null
       ? optimisticCustomTabKey
-      : (activeTabKeyFromSegments ?? lastTabKeyWhenInTabsRef.current);
+      : (activeTabKeyFromSegments ?? lastTabKeyWhenInTabsRef.current ?? tabKeys[0] ?? 'today');
 
   // starts from navbar token, then bumps size (global navbar is 10pt — see Typography TextStyles)
   const labelBase = {
@@ -108,9 +108,10 @@ export function CustomLiquidTabBar() {
 
   const customTabBarItems = customTabItems.map((item) => {
     const selected = resolvedSelectedTabKey === item.key;
-    // dark: unselected matches primary body text; light: keep softer secondary so tabs don’t compete with content
-    const unselectedTint =
-      themeColors.isDark ? themeColors.text.primary() : themeColors.text.secondary();
+    // light: tertiary is softer than secondary; dark: secondary is dimmer than primary body text
+    const unselectedTint = themeColors.isDark
+      ? themeColors.text.secondary()
+      : themeColors.text.tertiary();
     const marpleAccent = getMarpleBrandColor(500);
     const tint = selected ? marpleAccent : unselectedTint;
     const labelColor = selected ? marpleAccent : unselectedTint;

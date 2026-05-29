@@ -136,20 +136,38 @@ export const SageBrandColors = {
 /** Marple ramp — same weight keys as other brand palettes; initial hexes match Sage for an easy starting point */
 export const MarpleBrandColors = {
   // muted brand chrome on dark
-  200: '#1D2024',
+  200: '#060A1E',
   // tertiary brand emphasis
-  300: '#F16768',
+  300: '#202F5F',
   // secondary brand icons on dark
-  400: '#F5B273',
+  400: '#3A5180',
   // main brand accent on dark (same hue anchor as light 500)
-  500: '#F8DD86',
+  500: '#8B9EBF',
   // hover / lift on dark (slightly lighter coral)
-  600: '#FAE3B2',
+  600: '#D1DFF3',
 
   700: '#FFF4DB',
 
   800: '#FFF4DB',
 } as const;
+
+// /** Marple ramp — same weight keys as other brand palettes; initial hexes match Sage for an easy starting point */
+// export const MarpleBrandColors = {
+//   // muted brand chrome on dark
+//   200: '#1D2024',
+//   // tertiary brand emphasis
+//   300: '#F16768',
+//   // secondary brand icons on dark
+//   400: '#F5B273',
+//   // main brand accent on dark (same hue anchor as light 500)
+//   500: '#F8DD86',
+//   // hover / lift on dark (slightly lighter coral)
+//   600: '#FAE3B2',
+
+//   700: '#FFF4DB',
+
+//   800: '#FFF4DB',
+// } as const;
 
 /** maps string id → ramp object — used by `getBrandPaletteColor` and intro `plant:` / `sage:` / `marple:` / `moss:` tokens */
 export const BrandPalettes = {

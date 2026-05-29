@@ -20,8 +20,11 @@ import { getTodayTabIcon } from '@/utils/todayIcon';
 import { CustomLiquidTabBar, USE_CUSTOM_LIQUID_TAB_BAR } from '@/components/navigation/tabBarChrome';
 import { TabFabOverlayLayer } from '@/components/navigation/tabBarChrome/TabFabOverlayLayer';
 import { TabFabOverlayProvider } from '@/contexts/TabFabOverlayContext';
+import { usePrimaryTabColdStartNavigation } from '@/hooks/usePrimaryTabColdStartNavigation';
 
 export default function TabLayout() {
+  const { isBootOverlayVisible } = usePrimaryTabColdStartNavigation();
+
   const typography = useTypography();
   const themeColors = useThemeColors();
   const dispatch = useAppDispatch();
@@ -33,12 +36,11 @@ export default function TabLayout() {
   const tabIconUnselected =
     Platform.OS === 'ios'
       ? DynamicColorIOS({
-          light: ThemeColors.light.text.secondary,
-          dark: ThemeColors.dark.text.secondary,
+          light: ThemeColors.light.text.tertiary,
+          dark: ThemeColors.dark.text.tertiary,
         })
-      : themeColors.text.secondary();
+      : themeColors.text.tertiary();
 
-  // selected tab + tint — marple 500 to match onboarding / FAB brand accent (native tabs when liquid chrome is off)
   const tabIconSelected =
     Platform.OS === 'ios'
       ? DynamicColorIOS({
@@ -71,7 +73,6 @@ export default function TabLayout() {
     Platform.OS === 'ios' &&
     (segments.includes('select') || segments.includes('task-select'));
 
-  // root routes (e.g. /date-select) drop "select" from segments while redux task selection stays on — keep chrome hidden
   const iosTaskMultiSelectActive =
     Platform.OS === 'ios' && selection.isSelectionMode && selection.selectionType === 'tasks';
 
@@ -82,8 +83,16 @@ export default function TabLayout() {
 
   const liquidChromeInactive = !USE_CUSTOM_LIQUID_TAB_BAR || shouldHideLiquidChromeIos;
 
-  // 1 = visible pill + fab; 0 = hidden — eased to feel like chrome travels into the native selection toolbar
   const chromeProgress = useSharedValue(shouldHideLiquidChromeIos ? 0 : 1);
+  const bootOverlayOpacity = useSharedValue(isBootOverlayVisible ? 1 : 0);
+
+  useEffect(() => {
+    if (isBootOverlayVisible) {
+      bootOverlayOpacity.value = 1;
+    } else {
+      bootOverlayOpacity.value = withTiming(0, { duration: 200 });
+    }
+  }, [bootOverlayOpacity, isBootOverlayVisible]);
 
   useEffect(() => {
     chromeProgress.value = withTiming(shouldHideLiquidChromeIos ? 0 : 1, {
@@ -102,9 +111,14 @@ export default function TabLayout() {
     transform: [{ translateY: interpolate(chromeProgress.value, [0, 1], [22, 0]) }],
   }));
 
+  const bootOverlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: bootOverlayOpacity.value,
+  }));
+
   return (
     <TabFabOverlayProvider>
       <View style={styles.root}>
+        {/* trigger order must stay fixed — reordering breaks expo-router tab content on cold start */}
         <NativeTabs
           labelStyle={{
             default: { ...labelBase, color: tabIconUnselected },
@@ -168,6 +182,15 @@ export default function TabLayout() {
             <TabFabOverlayLayer />
           </View>
         )}
+        {/* blocks a one-frame Today flash while cold-start navigation runs */}
+        <Animated.View
+          pointerEvents={isBootOverlayVisible ? 'auto' : 'none'}
+          style={[
+            styles.bootOverlay,
+            { backgroundColor: tabBarBackgroundColor },
+            bootOverlayAnimatedStyle,
+          ]}
+        />
       </View>
     </TabFabOverlayProvider>
   );
@@ -180,5 +203,9 @@ const styles = StyleSheet.create({
   },
   liquidChromeInactive: {
     opacity: 0,
+  },
+  bootOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
   },
 });

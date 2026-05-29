@@ -12,7 +12,7 @@ import { SolidSeparator } from '@/components/ui/borders';
 import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/Button';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Task, type List } from '@/types';
 import type { RecentlyViewedEntry } from '@/app/(tabs)/browse/browseSearchHistory';
@@ -104,13 +104,15 @@ function BrowseSearchFilterChip({
   onToggle: (id: string) => void;
 }) {
   const themeColors = useThemeColors();
+  const { getMarpleBrandColor } = useColorPalette();
   const typography = useTypography();
   const styles = createStyles(themeColors, typography);
   const progress = useSharedValue(selected ? 1 : 0);
   // cache theme colors on JS thread so worklets never call theme color functions directly
-  // match selected chips to the same fill token the FAB uses
-  const selectedTint = themeColors.primaryButton.fill();
-  const primaryText = themeColors.text.primary();
+  // selected chip fill — marple brand (matches FAB / settings accent, not plant primaryButton)
+  const selectedTint = getMarpleBrandColor(500);
+  // unselected label — one step lighter than primary in light mode, one step darker in dark mode
+  const unselectedText = themeColors.text.secondary();
   const invertedText = '#FFFFFF';
   const idlePill = themeColors.background.primarySecondaryBlend();
 
@@ -125,7 +127,7 @@ function BrowseSearchFilterChip({
     backgroundColor: interpolateColor(progress.value, [0, 1], ['rgba(0,0,0,0)', selectedTint]),
   }));
   const labelAnimStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(progress.value, [0, 1], [primaryText, invertedText]),
+    color: interpolateColor(progress.value, [0, 1], [unselectedText, invertedText]),
   }));
   const androidPillStyle = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(progress.value, [0, 1], [idlePill, selectedTint]),
