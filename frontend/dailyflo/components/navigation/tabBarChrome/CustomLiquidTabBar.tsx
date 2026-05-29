@@ -108,11 +108,9 @@ export function CustomLiquidTabBar() {
 
   const customTabBarItems = customTabItems.map((item) => {
     const selected = resolvedSelectedTabKey === item.key;
-    // light: tertiary is softer than secondary; dark: secondary is dimmer than primary body text
-    const unselectedTint = themeColors.isDark
-      ? themeColors.text.secondary()
-      : themeColors.text.tertiary();
-    const marpleAccent = getMarpleBrandColor(500);
+    // unselected tabs use background quinary — one step softer than quaternary; selected uses marple 600
+    const unselectedTint = themeColors.background.quinary();
+    const marpleAccent = getMarpleBrandColor(600);
     const tint = selected ? marpleAccent : unselectedTint;
     const labelColor = selected ? marpleAccent : unselectedTint;
     return (

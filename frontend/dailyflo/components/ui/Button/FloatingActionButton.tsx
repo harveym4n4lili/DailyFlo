@@ -126,9 +126,9 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   const fabSide =
     measuredNavBarHeight != null && measuredNavBarHeight > 8 ? measuredNavBarHeight : 64;
   const fabRadius = fabSide / 2;
-  // brand-aligned with onboarding continue on marple slides (`marple:500` + label on primary canvas)
+  // brand-aligned with onboarding continue on marple slides (500 fill + 600 icon)
   const backgroundColor = customBackgroundColor ?? getMarpleBrandColor(500);
-  const iconColor = customIconColor ?? themeColors.background.primary();
+  const iconColor = customIconColor ?? getMarpleBrandColor(600);
   // tintColor: iOS uses DynamicColorIOS so the system can treat this as a "dynamic" color
   // just like the navbar; Android falls back to the plain hex value.
   const tintColor =
@@ -229,7 +229,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
  * 
  * Follows the design system specifications:
  * - 56px diameter circular button
- * - marple fill + primary-background icon — matches onboarding `OnboardingContinueButton` marple slides
+ * - marple 500 fill + marple 600 icon — matches onboarding marple slides
  * - Bottom right: FAB_SCREEN_INSET (flush when 0; exported for tab layout sync)
  * - Large elevation shadow
  * - High z-index for overlay positioning

@@ -61,7 +61,7 @@ export const PrimaryColors = {
     // tertiary labels, disabled text, muted chips on dark
     300: '#525252',
     // secondary text, helper copy; secondary / outline buttons on dark
-    400: '#373737',
+    400: '#828282',
     // not wired into the theme yet (reserved)
     500: '#ADBBD5',
     // focus outline on dark UI; focus on light-on-dark strips
@@ -340,6 +340,7 @@ export const ThemeColors = {
       primarySecondaryBlend: PrimaryColors.light[50], // blend between primary and secondary
       tertiary: PrimaryColors.light[200],    // medium gray - tertiary surfaces
       quaternary: PrimaryColors.light[25],   // very light - quaternary surfaces
+      quinary: PrimaryColors.light[50],      // lightest wash — inactive chrome on bright surfaces
       elevated: PrimaryColors.light[25],     // white - elevated surfaces (modals, cards)
       overlay: 'rgba(0, 0, 0, 0.5)',        // black overlay - modal backdrops
       darkOverlay: 'rgba(0, 0, 0, 0.7)',    // darker black overlay - stronger backdrops
@@ -412,6 +413,7 @@ export const ThemeColors = {
       primarySecondaryBlend: PrimaryColors.dark[50], // blend between primary and secondary
       tertiary: PrimaryColors.dark[200],     // medium gray - tertiary surfaces
       quaternary: PrimaryColors.dark[300],   // darker - quaternary surfaces
+      quinary: PrimaryColors.dark[400],      // softer inactive chrome than quaternary
       elevated: PrimaryColors.dark[100],     // darker gray - elevated surfaces
       overlay: 'rgba(0, 0, 0, 0.5)',        // black overlay - modal backdrops
       darkOverlay: 'rgba(0, 0, 0, 0.9)',    // darker black overlay - stronger backdrops

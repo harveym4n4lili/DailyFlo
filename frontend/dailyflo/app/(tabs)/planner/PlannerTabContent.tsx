@@ -19,7 +19,7 @@ import { IosTaskSelectionCloseStackToolbar } from '@/components/navigation/IosTa
 import { WeekView } from '@/components/features/calendar/sections';
 import { DayTimelineWithAllDayFooter, PlannerWeekChromeTopFade } from '@/components/features/timeline';
 import { ListCard } from '@/components/ui/Card';
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
@@ -55,25 +55,46 @@ import {
 } from '@/utils/preferenceScheduleTimes';
 
 type PlannerIosNavMonthTitleProps = {
-  label: string;
+  dayMonthLabel: string;
+  yearLabel: string;
   onPress: () => void;
-  color: string;
+  textColor: string;
+  yearColor: string;
+  arrowColor: string;
 };
 
-function PlannerIosNavMonthTitle({ label, onPress, color }: PlannerIosNavMonthTitleProps) {
+function PlannerIosNavMonthTitle({
+  dayMonthLabel,
+  yearLabel,
+  onPress,
+  textColor,
+  yearColor,
+  arrowColor,
+}: PlannerIosNavMonthTitleProps) {
+  const fullLabel = `${dayMonthLabel}${yearLabel}`;
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      style={{ flexDirection: 'row', alignItems: 'center', maxWidth: 280 }}
+      style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'center', maxWidth: 280 }}
       accessibilityRole="button"
-      accessibilityLabel={`${label}. Opens monthly calendar`}
+      accessibilityLabel={`${fullLabel}. Opens monthly calendar`}
     >
-      <Text style={[getTextStyle('heading-2'), { color }]} numberOfLines={1}>
-        {label}
+      <Text
+        style={[getTextStyle('heading-2'), { color: textColor, flexShrink: 1 }]}
+        numberOfLines={1}
+      >
+        {dayMonthLabel}
+        <Text style={{ color: yearColor, fontSize: 28 }}>{yearLabel}</Text>
       </Text>
-      <Ionicons name="chevron-forward" size={22} color={color} style={{ marginLeft: 6 }} />
+      <Ionicons
+        name="chevron-forward"
+        size={26}
+        color={arrowColor}
+        style={{ marginLeft: -2, marginRight: 0 }}
+      />
     </TouchableOpacity>
   );
 }
@@ -119,6 +140,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
   const navigation = useNavigation();
 
   const themeColors = useThemeColors();
+  const { getMarpleBrandColor } = useColorPalette();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
   const nativeStackHeaderHeight = useHeaderHeight();
@@ -181,19 +203,15 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const { openMonthSelect } = usePlannerMonthSelect();
 
-  const plannerNavMonthLabel = useMemo(() => {
-    if (selectedDate) {
-      return new Date(selectedDate).toLocaleDateString('en-UK', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      });
-    }
-    return new Date().toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
+  const plannerNavDateParts = useMemo(() => {
+    const date = selectedDate ? new Date(selectedDate) : new Date();
+    const locale = selectedDate ? 'en-UK' : 'en-US';
+    const month = date.toLocaleDateString(locale, { month: 'long' });
+
+    return {
+      dayMonthLabel: `${date.getDate()} ${month} `,
+      yearLabel: String(date.getFullYear()),
+    };
   }, [selectedDate]);
 
   const styles = useMemo(
@@ -223,12 +241,22 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
   useLayoutEffect(() => {
     if (mode !== 'index' || Platform.OS !== 'ios') return;
     const primary = themeColors.text.primary();
+    const yearAccent = getMarpleBrandColor(500);
+    const arrowAccent = getMarpleBrandColor(500);
+
     navigation.setOptions({
       headerTitle: () => (
-        <PlannerIosNavMonthTitle label={plannerNavMonthLabel} onPress={handleOpenMonthSelect} color={primary} />
+        <PlannerIosNavMonthTitle
+          dayMonthLabel={plannerNavDateParts.dayMonthLabel}
+          yearLabel={plannerNavDateParts.yearLabel}
+          onPress={handleOpenMonthSelect}
+          textColor={primary}
+          yearColor={yearAccent}
+          arrowColor={arrowAccent}
+        />
       ),
     });
-  }, [mode, navigation, plannerNavMonthLabel, handleOpenMonthSelect, themeColors]);
+  }, [mode, navigation, plannerNavDateParts, handleOpenMonthSelect, themeColors, getMarpleBrandColor]);
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
