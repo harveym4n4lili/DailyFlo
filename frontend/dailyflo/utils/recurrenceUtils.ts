@@ -138,6 +138,32 @@ export function getTargetDatesForTodayScreen(): string[] {
 }
 
 /**
+ * calendar days from (today - lookback) through yesterday — planner list overdue expansion only.
+ */
+export function getTargetDatesForOverdueExpansion(): string[] {
+  const today = new Date();
+  const dates: string[] = [];
+  for (let i = MAX_OVERDUE_RECURRENCE_DAYS; i >= 1; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    dates.push(toDateStr(d));
+  }
+  return dates;
+}
+
+/** planner list: overdue rows first, then selected-day tasks — dedupe by expanded task id */
+export function buildPlannerListTasks(overdueTasks: Task[], selectedDayTasks: Task[]): Task[] {
+  const seen = new Set<string>();
+  const merged: Task[] = [];
+  for (const task of [...overdueTasks, ...selectedDayTasks]) {
+    if (seen.has(task.id)) continue;
+    seen.add(task.id);
+    merged.push(task);
+  }
+  return merged;
+}
+
+/**
  * keep only tasks whose effective calendar day matches dayStr.
  * used by today timeline layout — excludes overdue rows from list view.
  */

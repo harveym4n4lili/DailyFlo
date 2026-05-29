@@ -17,11 +17,18 @@ import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboar
 import { IosPlannerBulkSelectionToolbar } from '@/components/navigation/IosPlannerBulkSelectionToolbar';
 import { IosTaskSelectionCloseStackToolbar } from '@/components/navigation/IosTaskSelectionCloseStackToolbar';
 import { WeekView } from '@/components/features/calendar/sections';
-import { DayTimelineWithAllDayFooter } from '@/components/features/timeline';
+import { DayTimelineWithAllDayFooter, PlannerWeekChromeTopFade } from '@/components/features/timeline';
+import { ListCard } from '@/components/ui/Card';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
-import { mapTimelineAllDayListDisplayProps } from '@/components/features/display/displayPreferenceMappers';
+import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
+import { DEFAULT_DISPLAY_LAYOUT_VIEW_PLANNER } from '@/components/features/display/displayLayoutOptions';
+import {
+  mapTimelineAllDayListDisplayProps,
+  mapTodayDisplayPrefsToListCard,
+} from '@/components/features/display/displayPreferenceMappers';
+import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTasks, useUI } from '@/store/hooks';
 import { useAppDispatch, useAppSelector, store } from '@/store';
@@ -31,12 +38,15 @@ import { usePlannerMonthSelect } from '@/app/PlannerMonthSelectContext';
 import { Task } from '@/types';
 import { flushAllPendingCheckboxSyncs } from '@/utils/pendingCheckboxSyncRegistry';
 import {
+  buildPlannerListTasks,
   expandTasksForDates,
+  getTargetDatesForOverdueExpansion,
   isExpandedRecurrenceId,
   getBaseTaskId,
   getOccurrenceDateFromId,
   toLocalCalendarDayString,
 } from '@/utils/recurrenceUtils';
+import { getTaskGroupKey } from '@/utils/taskGrouping';
 import {
   coerceWakeSleepHHMM,
   DEFAULT_SLEEP_HHMM,
@@ -117,6 +127,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
   const dispatch = useAppDispatch();
   const { tasks } = useTasks();
   const { selection, toggleItemSelection, selectAllItems, clearSelection, setPlannerSelectionAnchorDate } = useUI();
+  const { setDraft, registerOverdueReschedule, clearOverdueReschedule } = useCreateTaskDraft();
 
   // when opening ios select route, match the week/day the user had on the planner index (stored in redux for overflow push)
   useEffect(() => {
@@ -199,8 +210,9 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
           void dispatch(fetchLists());
         }
       }
+      clearOverdueReschedule();
       return () => flushAllPendingCheckboxSyncs();
-    }, [isAuthenticated, dispatch]),
+    }, [isAuthenticated, dispatch, clearOverdueReschedule]),
   );
 
   const handleOpenMonthSelect = useCallback(() => {
@@ -276,6 +288,24 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
     () => mapTimelineAllDayListDisplayProps(plannerDisplayPrefs),
     [plannerDisplayPrefs]
   );
+  const layoutView = plannerDisplayPrefs?.layoutView ?? DEFAULT_DISPLAY_LAYOUT_VIEW_PLANNER;
+  const plannerListDisplayProps = useMemo(
+    () => mapTodayDisplayPrefsToListCard(plannerDisplayPrefs),
+    [plannerDisplayPrefs]
+  );
+
+  const overdueTasks = useMemo(() => {
+    if (tasks.length === 0) return [];
+    const expanded = expandTasksForDates(tasks, getTargetDatesForOverdueExpansion(), {
+      includeOneOffBeforeRange: true,
+    });
+    return expanded.filter((task) => getTaskGroupKey(task, 'dueDate') === 'Overdue');
+  }, [tasks]);
+
+  const plannerListTasks = useMemo(
+    () => buildPlannerListTasks(overdueTasks, selectedDateTasks),
+    [overdueTasks, selectedDateTasks]
+  );
 
   // must match selectedDateTasks filtering — changing day remounts footer ListCard (fresh hook state per day)
   const plannerDisplayedDayKey = useMemo(() => {
@@ -346,11 +376,46 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
     }
   };
 
+  const handleOverdueReschedulePress = useCallback(
+    (overdueTasksForReschedule: Task[]) => {
+      const ids = [
+        ...new Set(
+          overdueTasksForReschedule.map((t) =>
+            isExpandedRecurrenceId(t.id) ? getBaseTaskId(t.id) : t.id
+          )
+        ),
+      ];
+      const initialDate = overdueTasksForReschedule[0]?.dueDate ?? new Date().toISOString();
+      setDraft({ dueDate: initialDate, time: undefined, duration: undefined, alerts: [] });
+
+      registerOverdueReschedule((date) => {
+        void (async () => {
+          try {
+            await Promise.all(
+              ids.map((taskId) =>
+                dispatch(updateTask({ id: taskId, updates: { id: taskId, dueDate: date } }))
+              )
+            );
+          } catch (err) {
+            console.error('Failed to bulk reschedule overdue tasks:', err);
+          }
+        })();
+      });
+
+      router.push('/date-select');
+    },
+    [dispatch, registerOverdueReschedule, router, setDraft]
+  );
+
   const eligiblePlannerTaskIds = useMemo(() => {
-    const combined = [...selectedDateTasks, ...allDayTasks];
-    const uniqueById = Array.from(new Map(combined.map((t) => [t.id, t])).values());
-    return uniqueById.filter((t) => !t.isCompleted && !t.softDeleted).map((t) => t.id);
-  }, [selectedDateTasks, allDayTasks]);
+    const source =
+      layoutView === 'list'
+        ? plannerListTasks
+        : Array.from(
+            new Map([...selectedDateTasks, ...allDayTasks].map((t) => [t.id, t])).values()
+          );
+    return source.filter((t) => !t.isCompleted && !t.softDeleted).map((t) => t.id);
+  }, [layoutView, plannerListTasks, selectedDateTasks, allDayTasks]);
 
   const allEligiblePlannerSelected =
     eligiblePlannerTaskIds.length > 0 && eligiblePlannerTaskIds.every((id) => selection.selectedItems.includes(id));
@@ -457,34 +522,70 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
             />
           </View>
 
-          <View style={styles.contentContainer}>
-            <DayTimelineWithAllDayFooter
-              dayKey={
-                timelineDate
-                  ? toLocalCalendarDayString(new Date(timelineDate))
-                  : plannerDisplayedDayKey || 'planner-timeline'
-              }
-              tasks={selectedDateTasks}
-              allDayListDisplayProps={plannerAllDayDisplayProps}
-              hideCompletedOnTimeline={plannerAllDayDisplayProps.hideCompletedTasks}
-              onTaskTimeChange={handleTaskTimeChange}
-              onTaskPress={handleTaskPress}
-              onTaskComplete={handleTaskComplete}
-              onTaskEdit={handleTaskEdit}
-              onTaskDelete={handleTaskDelete}
-              selectionMode={timelineListSelection}
-              selectedTaskIds={selection.selectedItems}
-              onToggleTaskSelection={timelineListSelection ? toggleItemSelection : undefined}
-              plannerScheduleAnchors={plannerScheduleAnchorsPayload}
-              startHour={plannerTimelineStartHour}
-              endHour={plannerTimelineEndHour}
-              scrollContentPaddingTop={16}
-              scrollContentPaddingBottom={
-                mode === 'select' && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
-              }
-              showTopFade
-              allDayFooterKeyPrefix="planner-allday"
-            />
+          <View
+            style={[
+              styles.contentContainer,
+              layoutView === 'list' && styles.contentContainerList,
+            ]}
+          >
+            <PlannerWeekChromeTopFade />
+            {layoutView === 'list' ? (
+              <ListCard
+                key={`planner-list-${plannerDisplayedDayKey || 'unknown'}`}
+                tasks={plannerListTasks}
+                selectionMode={timelineListSelection}
+                selectedTaskIds={selection.selectedItems}
+                onToggleTaskSelection={timelineListSelection ? toggleItemSelection : undefined}
+                hideCompletedTasks={plannerListDisplayProps.hideCompletedTasks}
+                onTaskPress={handleTaskPress}
+                onTaskComplete={handleTaskComplete}
+                onTaskEdit={handleTaskEdit}
+                onTaskDelete={handleTaskDelete}
+                {...LIST_CARD_TASK_ROW_PRESET_TODAY}
+                showListRecurrenceRow
+                emptyMessage="No tasks for this date yet."
+                loading={false}
+                groupBy="dueDate"
+                sortBy={plannerListDisplayProps.sortBy}
+                sortDirection={plannerListDisplayProps.sortDirection}
+                onOverdueReschedule={handleOverdueReschedulePress}
+                bigTodayHeader={false}
+                hideTodayHeader={false}
+                paddingHorizontal={Paddings.screen}
+                paddingTop={16}
+                scrollEnabled={true}
+                paddingBottom={
+                  mode === 'select' && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
+                }
+              />
+            ) : (
+              <DayTimelineWithAllDayFooter
+                dayKey={
+                  timelineDate
+                    ? toLocalCalendarDayString(new Date(timelineDate))
+                    : plannerDisplayedDayKey || 'planner-timeline'
+                }
+                tasks={selectedDateTasks}
+                allDayListDisplayProps={plannerAllDayDisplayProps}
+                hideCompletedOnTimeline={plannerAllDayDisplayProps.hideCompletedTasks}
+                onTaskTimeChange={handleTaskTimeChange}
+                onTaskPress={handleTaskPress}
+                onTaskComplete={handleTaskComplete}
+                onTaskEdit={handleTaskEdit}
+                onTaskDelete={handleTaskDelete}
+                selectionMode={timelineListSelection}
+                selectedTaskIds={selection.selectedItems}
+                onToggleTaskSelection={timelineListSelection ? toggleItemSelection : undefined}
+                plannerScheduleAnchors={plannerScheduleAnchorsPayload}
+                startHour={plannerTimelineStartHour}
+                endHour={plannerTimelineEndHour}
+                scrollContentPaddingTop={16}
+                scrollContentPaddingBottom={
+                  mode === 'select' && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
+                }
+                allDayFooterKeyPrefix="planner-allday"
+              />
+            )}
           </View>
 
           {mode === 'index' && !USE_CUSTOM_LIQUID_TAB_BAR ? (
@@ -565,5 +666,9 @@ const createStyles = (
       paddingHorizontal: Paddings.none,
       paddingTop: Paddings.none,
       overflow: 'hidden',
+    },
+    // list layout: no blend panel — primary ScreenContainer shows through (matches Today list)
+    contentContainerList: {
+      backgroundColor: 'transparent',
     },
   });
