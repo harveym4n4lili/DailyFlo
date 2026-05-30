@@ -276,10 +276,12 @@ function transformApiDisplayPreferences(apiPrefs: Record<string, unknown>): User
   const r = raw as Record<string, unknown>;
   const today = transformApiDisplayTabPrefs(r.today);
   const planner = transformApiDisplayTabPrefs(r.planner);
-  if (!today && !planner) return undefined;
+  const inbox = transformApiDisplayTabPrefs(r.inbox);
+  if (!today && !planner && !inbox) return undefined;
   return {
     ...(today ? { today } : {}),
     ...(planner ? { planner } : {}),
+    ...(inbox ? { inbox } : {}),
   };
 }
 
@@ -424,6 +426,9 @@ export function preferencesPartialToSnakePayload(prefs: Partial<UserPreferences>
     }
     if (prefs.displayPreferences.planner !== undefined) {
       dp.planner = tabDisplayPrefsToSnake(prefs.displayPreferences.planner);
+    }
+    if (prefs.displayPreferences.inbox !== undefined) {
+      dp.inbox = tabDisplayPrefsToSnake(prefs.displayPreferences.inbox);
     }
     if (Object.keys(dp).length > 0) out.display_preferences = dp;
   }
@@ -982,11 +987,11 @@ export const patchUserSchedulePreferences = createAsyncThunk<
 
 export const patchUserDisplayPreferences = createAsyncThunk<
   UserThunkSerializablePayload,
-  { context: 'today' | 'planner'; patch: TabDisplayPreferences }
+  { context: 'today' | 'planner' | 'inbox'; patch: TabDisplayPreferences }
 >(
   'auth/patchUserDisplayPreferences',
   async (
-    { context, patch }: { context: 'today' | 'planner'; patch: TabDisplayPreferences },
+    { context, patch }: { context: 'today' | 'planner' | 'inbox'; patch: TabDisplayPreferences },
     { getState, rejectWithValue }
   ) => {
     try {
@@ -1121,6 +1126,10 @@ export const logoutUser = createAsyncThunk(
       const { clearTasks } = await import('../tasks/tasksSlice');
       dispatch(clearTasks());
 
+      // clear activity logs so the next account never sees the previous user's entries in redux
+      const { clearActivityLogs } = await import('../activityLogs/activityLogsSlice');
+      dispatch(clearActivityLogs());
+
       try {
         await cancelAllTaskReminders();
       } catch (reminderErr) {
@@ -1153,6 +1162,13 @@ export const logoutUser = createAsyncThunk(
         dispatch(clearTasks());
       } catch (taskClearError) {
         console.error('Error clearing tasks during logout:', taskClearError);
+      }
+
+      try {
+        const { clearActivityLogs } = await import('../activityLogs/activityLogsSlice');
+        dispatch(clearActivityLogs());
+      } catch (activityLogClearError) {
+        console.error('Error clearing activity logs during logout:', activityLogClearError);
       }
 
       try {
