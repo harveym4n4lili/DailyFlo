@@ -7,6 +7,7 @@ import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { FloatingActionButton } from '@/components/ui/Button';
 import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
+import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { InboxTaskListContent } from '@/components/features/inbox/InboxTaskListContent';
 import { useUI } from '@/store/hooks';
 import { buildTaskQuickAddRouteParams } from '@/utils/taskQuickAddRouteParams';
@@ -59,8 +60,10 @@ export default function InboxTabScreen() {
   }, [modals.createTask, closeModal, router]);
 
   return (
-    <View style={{ flex: 1 }}>
-      <InboxTaskListContent chromeVariant="tab-root" />
+    <>
+      <IosDashboardOverflowToolbar hidden={androidInPlaceSelection} />
+      <View style={{ flex: 1 }}>
+        <InboxTaskListContent chromeVariant="tab-root" mode="index" />
       {!USE_CUSTOM_LIQUID_TAB_BAR ? (
         <AnimatedReanimated.View
           style={[
@@ -76,6 +79,7 @@ export default function InboxTabScreen() {
           />
         </AnimatedReanimated.View>
       ) : null}
-    </View>
+      </View>
+    </>
   );
 }

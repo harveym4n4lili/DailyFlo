@@ -12,7 +12,7 @@ _ONBOARDING_HABIT_FREQUENCIES = frozenset({'daily', 'weekly', 'weekends'})
 _DISPLAY_SORT_OPTIONS = frozenset({'None', 'Due Date', 'Added Date', 'Priority'})
 _DISPLAY_ORDERING_OPTIONS = frozenset({'Ascending', 'Descending'})
 _DISPLAY_LAYOUT_VIEWS = frozenset({'list', 'timeline'})
-_DISPLAY_TAB_KEYS = frozenset({'today', 'planner'})
+_DISPLAY_TAB_KEYS = frozenset({'today', 'planner', 'inbox'})
 _NAVIGATION_TAB_KEYS = frozenset({'today', 'planner', 'ai', 'browse', 'inbox'})
 
 
@@ -25,7 +25,7 @@ def _validate_hh_mm_string(value):
 
 
 def _validate_display_tab_preferences(value, tab_name):
-    """per-tab display modal prefs (today / planner) — labels match frontend pickers"""
+    """per-tab display modal prefs (today / planner / inbox) — labels match frontend pickers"""
     if value is None:
         return
     if not isinstance(value, dict):
@@ -64,7 +64,7 @@ def _validate_display_tab_preferences(value, tab_name):
 
 
 def _validate_display_preferences(value):
-    """nested display modal prefs — today / planner tabs"""
+    """nested display modal prefs — today / planner / inbox tabs"""
     if value is None:
         return
     if not isinstance(value, dict):
@@ -78,6 +78,8 @@ def _validate_display_preferences(value):
         _validate_display_tab_preferences(value.get('today'), 'today')
     if 'planner' in value:
         _validate_display_tab_preferences(value.get('planner'), 'planner')
+    if 'inbox' in value:
+        _validate_display_tab_preferences(value.get('inbox'), 'inbox')
 
 
 def _validate_navigation_preferences(value):
@@ -234,13 +236,13 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             nested_display = prefs_patch.pop('display_preferences', None)
             if nested_display is not None and isinstance(nested_display, dict):
                 dp = dict(current.get('display_preferences') or {})
-                for tab_key in ('today', 'planner'):
+                for tab_key in ('today', 'planner', 'inbox'):
                     if tab_key in nested_display and isinstance(nested_display[tab_key], dict):
                         tab = dict(dp.get(tab_key) or {})
                         tab.update(nested_display[tab_key])
                         dp[tab_key] = tab
                 for key, val in nested_display.items():
-                    if key not in ('today', 'planner'):
+                    if key not in ('today', 'planner', 'inbox'):
                         dp[key] = val
                 current['display_preferences'] = dp
             nested_navigation = prefs_patch.pop('navigation_preferences', None)

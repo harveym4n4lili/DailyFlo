@@ -42,7 +42,10 @@ export function IosDashboardOverflowToolbar({ hidden = false }: IosDashboardOver
     [beginIosLiquidChromePreSelectFade],
   );
 
-  // today / planner: layout icon opens display modal (list vs timeline — content TBD)
+  // inbox tab (not browse push) uses its own display modal stack
+  const isInboxTab = segments.includes('inbox') && !segments.includes('browse');
+
+  // today / planner / inbox tab: layout icon opens display modal (list vs timeline — content TBD)
   const onOpenDisplaySettings = useCallback(() => {
     if (segments.includes('today')) {
       router.push('/(tabs)/today/display' as any);
@@ -50,8 +53,12 @@ export function IosDashboardOverflowToolbar({ hidden = false }: IosDashboardOver
     }
     if (segments.includes('planner')) {
       router.push('/(tabs)/planner/display' as any);
+      return;
     }
-  }, [router, segments]);
+    if (isInboxTab) {
+      router.push('/(tabs)/inbox/display' as any);
+    }
+  }, [isInboxTab, router, segments]);
 
   // ios-only component: task multi-select uses pushed routes (today/select, planner/select, browse/task-select).
   const onSelectTasks = useCallback(() => {
@@ -66,10 +73,8 @@ export function IosDashboardOverflowToolbar({ hidden = false }: IosDashboardOver
       pushSelectAfterChromeFade(() => router.push('/(tabs)/planner/select' as any));
       return;
     }
-    if (segments.includes('inbox')) {
-      pushSelectAfterChromeFade(() =>
-        router.push({ pathname: '/(tabs)/browse/task-select' as any, params: { source: 'inbox' } }),
-      );
+    if (isInboxTab) {
+      pushSelectAfterChromeFade(() => router.push('/(tabs)/inbox/select' as any));
       return;
     }
     if (segments.includes('list') && listId) {
@@ -83,7 +88,7 @@ export function IosDashboardOverflowToolbar({ hidden = false }: IosDashboardOver
     }
     // browse home / tags / etc.: no ios select route yet — toggle redux only
     enterSelectionMode('tasks');
-  }, [enterSelectionMode, listId, pushSelectAfterChromeFade, router, segments]);
+  }, [enterSelectionMode, isInboxTab, listId, pushSelectAfterChromeFade, router, segments]);
 
   if (hidden || Platform.OS !== 'ios') {
     return null;

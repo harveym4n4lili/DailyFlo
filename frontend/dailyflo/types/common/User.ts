@@ -23,6 +23,7 @@ export interface TabDisplayPreferences {
 export interface UserDisplayPreferences {
   today?: TabDisplayPreferences;
   planner?: TabDisplayPreferences;
+  inbox?: TabDisplayPreferences;
 }
 
 /** navbar tab keys — must match app/(tabs)/ route folders */

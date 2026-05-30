@@ -12,7 +12,7 @@
  */
 
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, ListRenderItem, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ListRenderItem, RefreshControl, TouchableOpacity, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UIManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -145,9 +145,11 @@ export interface ListCardProps {
   // when true, the group header that shows today's date will be hidden
   hideTodayHeader?: boolean;
 
-  // optional big "Today" header at top of list (used on Today screen)
-  // when true, renders a large "Today" title as the first element in the list header
+  // optional big scroll header at top of list (Today / Inbox tab roots)
+  // when true, renders a large title as the first element in the list header
   bigTodayHeader?: boolean;
+  /** label for bigTodayHeader — defaults to "Today" */
+  bigHeaderLabel?: string;
 
   // when true, list content extends under top safe area (status bar) so user can scroll past it
   // use with safeAreaTop={false} on parent ScreenContainer - content starts below status bar
@@ -238,10 +240,12 @@ export default function ListCard({
   onOverdueReschedule,
   hideTodayHeader = false,
   bigTodayHeader = false,
+  bigHeaderLabel = 'Today',
   scrollPastTopInset = false,
   scrollYSharedValue,
   scrollEnabled = true,
   showsVerticalScrollIndicator = false,
+  contentInsetAdjustmentBehavior,
   hideCompletedTasks = false,
   delayHeightChangeOnTaskComplete = true,
   disableInitialLayoutTransition = false,
@@ -258,6 +262,11 @@ export default function ListCard({
 
   // SAFE AREA INSETS - Get safe area insets for proper positioning
   const insets = useSafeAreaInsets();
+
+  // ios: scrollPastTopInset already adds insets.top to padding — 'never' avoids uikit double-insetting the list
+  const resolvedContentInsetAdjustmentBehavior =
+    contentInsetAdjustmentBehavior ??
+    (scrollPastTopInset && Platform.OS === 'ios' ? 'never' : undefined);
 
   // use separatorPaddingHorizontal if provided, otherwise default to paddingHorizontal
   const finalSeparatorPaddingHorizontal = separatorPaddingHorizontal ?? paddingHorizontal;
@@ -305,15 +314,21 @@ export default function ListCard({
   // RESET SCROLL POSITION ON MOUNT - Ensure each ListCard starts at the top
   // this prevents scroll position from being shared between instances
   useEffect(() => {
+    if (scrollYSharedValue) {
+      scrollYSharedValue.value = 0;
+    }
     // reset scroll position to top when component mounts
     // small delay ensures FlatList is fully rendered before scrolling
     const timer = setTimeout(() => {
       flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
       groupedFlatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+      if (scrollYSharedValue) {
+        scrollYSharedValue.value = 0;
+      }
     }, 100);
-    
+
     return () => clearTimeout(timer);
-  }, []);
+  }, [scrollYSharedValue]);
   
   // RESET SCROLL POSITION AFTER REFRESH - Ensure scroll position resets after refresh completes
   // this prevents scroll position from accumulating between refresh cycles
@@ -773,7 +788,9 @@ export default function ListCard({
         {bigTodayHeader ? (
           <TodayBigScrollHeader
             scrollY={scrollY}
-            label={selectionMode ? `${selectedTaskIds.length} selected` : 'Today'}
+            label={
+              selectionMode ? `${selectedTaskIds.length} selected` : bigHeaderLabel
+            }
           />
         ) : null}
         {/* standard header: title, subtitle, dropdown button */}
@@ -870,6 +887,7 @@ export default function ListCard({
           onScroll={scrollHandler}
           scrollEventThrottle={scrollEventThrottle}
           showsVerticalScrollIndicator={showsVerticalScrollIndicator}
+          contentInsetAdjustmentBehavior={resolvedContentInsetAdjustmentBehavior}
           ListHeaderComponent={renderHeader}
           scrollEnabled={scrollEnabled}
           removeClippedSubviews={!hideCompletedTasks}
@@ -900,6 +918,7 @@ export default function ListCard({
           />
         )}
         <AnimatedFlatList
+          ref={groupedFlatListRef as any}
           data={sortedGroupEntries}
           itemLayoutAnimation={layoutTransitionEnabled && (hideCompletedTasks || groupBy !== 'none') ? LAYOUT_TRANSITION_SPRING : undefined}
           onContentSizeChange={handleGroupedListContentSizeChange}
@@ -993,6 +1012,7 @@ export default function ListCard({
           onScroll={scrollHandler}
           scrollEventThrottle={scrollEventThrottle}
           showsVerticalScrollIndicator={showsVerticalScrollIndicator}
+          contentInsetAdjustmentBehavior={resolvedContentInsetAdjustmentBehavior}
           ListHeaderComponent={renderHeader}
           scrollEnabled={scrollEnabled}
           removeClippedSubviews={!hideCompletedTasks}

@@ -82,5 +82,7 @@ export function getSavedTabDisplayPrefs(
   displayPreferences: UserDisplayPreferences | undefined,
   context: DisplaySettingsContext
 ): TabDisplayPreferences | undefined {
-  return context === 'today' ? displayPreferences?.today : displayPreferences?.planner;
+  if (context === 'today') return displayPreferences?.today;
+  if (context === 'planner') return displayPreferences?.planner;
+  return displayPreferences?.inbox;
 }

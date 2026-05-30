@@ -33,6 +33,7 @@ import { draftToDisplayPreferencesPatch } from '@/components/features/display/di
 import {
   shouldFilterBeforeSort,
   shouldShowDisplayAllDayToggle,
+  shouldShowDisplayLayoutViewSelector,
   shouldShowDisplaySortSection,
 } from '@/components/features/display/displayModalSectionVisibility';
 import { LAYOUT_TRANSITION_SPRING } from '@/constants/LayoutTransitions';
@@ -92,10 +93,11 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
     draft;
 
   // timeline: filters only until all-day is on — then sort section appears for the all-day list
-  const showSortSection = shouldShowDisplaySortSection(layoutView, showAllDayTasks);
-  const showAllDayToggle = shouldShowDisplayAllDayToggle(layoutView);
-  // timeline: filter above sort; list: sort above filter
-  const filterBeforeSort = shouldFilterBeforeSort(layoutView);
+  const showSortSection = shouldShowDisplaySortSection(layoutView, showAllDayTasks, context);
+  const showAllDayToggle = shouldShowDisplayAllDayToggle(layoutView, context);
+  const showLayoutViewSelector = shouldShowDisplayLayoutViewSelector(context);
+  // timeline: filter above sort; list: sort above filter; inbox always list order
+  const filterBeforeSort = shouldFilterBeforeSort(layoutView, context);
 
   // tertiary sublabel on the right — matches FormDetailSection date/time picker rows
   const sortValueTextStyle = useMemo(
@@ -294,9 +296,11 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
         >
           <Animated.View layout={LAYOUT_TRANSITION_SPRING} style={styles.contentWrapper}>
             <GroupedListHeader title="Layout" />
-            <View style={styles.layoutViewSelectorSection}>
-              <DisplayLayoutViewSelector />
-            </View>
+            {showLayoutViewSelector ? (
+              <View style={styles.layoutViewSelectorSection}>
+                <DisplayLayoutViewSelector />
+              </View>
+            ) : null}
             <Animated.View layout={LAYOUT_TRANSITION_SPRING} style={styles.groupedListSection}>
               <GroupedList {...listGroupProps}>
                 <View style={styles.completedTasksRow}>

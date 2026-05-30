@@ -7,22 +7,39 @@
  */
 
 import type { DisplayLayoutView } from '@/components/features/display/displayLayoutOptions';
+import type { DisplaySettingsContext } from '@/components/features/display/displayStackChrome';
 
-/** Sort + Ordering rows — hidden on timeline until all-day tasks are enabled */
+/** Sort + Ordering rows — hidden on timeline until all-day is on; inbox always shows sort (list-only UI) */
 export function shouldShowDisplaySortSection(
   layoutView: DisplayLayoutView,
-  showAllDayTasks: boolean
+  showAllDayTasks: boolean,
+  context?: DisplaySettingsContext
 ): boolean {
+  if (context === 'inbox') return true;
   if (layoutView === 'list') return true;
   return showAllDayTasks;
 }
 
-/** All-day tasks switch — timeline only (list view merges all tasks into one list) */
-export function shouldShowDisplayAllDayToggle(layoutView: DisplayLayoutView): boolean {
+/** List vs timeline picker — inbox is list-only for now */
+export function shouldShowDisplayLayoutViewSelector(context?: DisplaySettingsContext): boolean {
+  if (context === 'inbox') return false;
+  return true;
+}
+
+/** All-day tasks switch — timeline only; inbox has no timeline implementation yet */
+export function shouldShowDisplayAllDayToggle(
+  layoutView: DisplayLayoutView,
+  context?: DisplaySettingsContext
+): boolean {
+  if (context === 'inbox') return false;
   return layoutView === 'timeline';
 }
 
-/** timeline puts Filter above Sort; list puts Sort above Filter */
-export function shouldFilterBeforeSort(layoutView: DisplayLayoutView): boolean {
+/** timeline puts Filter above Sort; list puts Sort above Filter; inbox uses list order */
+export function shouldFilterBeforeSort(
+  layoutView: DisplayLayoutView,
+  context?: DisplaySettingsContext
+): boolean {
+  if (context === 'inbox') return false;
   return layoutView === 'timeline';
 }
