@@ -19,7 +19,6 @@ import { TaskScreenContent } from '@/components/features/tasks/TaskScreen/TaskSc
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
 import type { PriorityLevel, RoutineType, CreateTaskInput, TaskColor, Subtask as TaskSubtask } from '@/types';
 import { mapAlertIdsToTaskReminders } from '@/utils/taskAlertReminders';
-import { DEFAULT_NEW_TASK_ALERT_IDS } from '@/services/notifications/taskReminderConstants';
 import type { Subtask } from '@/components/features/subtasks';
 import { validateAll } from '@/components/forms/TaskForm/TaskValidation';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
@@ -34,7 +33,7 @@ const getDefaults = (themeColor: TaskColor = 'red'): TaskFormValues => ({
   icon: undefined,
   routineType: 'once' as RoutineType,
   listId: undefined,
-  alerts: [...DEFAULT_NEW_TASK_ALERT_IDS],
+  alerts: [],
 });
 
 export default function TaskCreateScreen() {
@@ -83,7 +82,7 @@ export default function TaskCreateScreen() {
       dueDate: initialDueDate,
       time: undefined,
       duration: undefined,
-      alerts: [...DEFAULT_NEW_TASK_ALERT_IDS],
+      alerts: [],
       pickedListId: undefined,
       routineType: 'once',
     });
@@ -181,7 +180,10 @@ export default function TaskCreateScreen() {
       listId: values.listId || undefined,
       metadata: {
         subtasks: taskSubtasks,
-        reminders: mapAlertIdsToTaskReminders(values.alerts),
+        reminders: mapAlertIdsToTaskReminders(values.alerts, {
+          dueDate: values.dueDate,
+          time: values.time,
+        }),
         notes: values.description?.trim() || undefined,
         tags: [],
       },
@@ -196,7 +198,7 @@ export default function TaskCreateScreen() {
           dueDate: undefined,
           time: undefined,
           duration: undefined,
-          alerts: [...DEFAULT_NEW_TASK_ALERT_IDS],
+          alerts: [],
           pickedListId: undefined,
           routineType: 'once',
         });

@@ -28,6 +28,7 @@ import { getListDisplayName } from '@/utils/listDisplayName';
 import { FormDetailSection, SubtaskSection } from './sections';
 import { SaveButton, MainCloseButton } from '@/components/ui/Button';
 import { getDatePickerDisplay, getTimeDurationPickerDisplay, getAlertsPickerDisplay } from '@/components/ui/Button';
+import { getConfigurableAlertsCount } from '@/utils/taskAlertReminders';
 import { getTypographyStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -502,7 +503,7 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
             dateSecondaryValue={getDatePickerDisplay(values.dueDate, colors, themeColors).secondaryText}
             time={values.time}
             duration={values.duration}
-            alertsCount={values.alerts?.length ?? 0}
+            alertsCount={getConfigurableAlertsCount(values.alerts, values.dueDate, values.time)}
             routineType={(values.routineType as RoutineType) || 'once'}
             onRoutineTypeChange={(routineType) => onChange('routineType', routineType)}
             onOpenListPicker={handleOpenListPicker}

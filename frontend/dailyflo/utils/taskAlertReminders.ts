@@ -4,10 +4,17 @@
  */
 
 import { withoutEndAlertUnlessDuration } from '@/components/features/tasks/TaskScreen/modals/alertOptions';
+import { canTaskHaveAlertReminders } from '@/services/notifications/taskReminderEligibility';
 import type { Task, TaskReminder } from '@/types';
 
 /** alert ids from picker → metadata rows for create/update api payloads */
-export function mapAlertIdsToTaskReminders(alertIds: string[] | undefined | null): TaskReminder[] {
+export function mapAlertIdsToTaskReminders(
+  alertIds: string[] | undefined | null,
+  taskSchedule?: { dueDate?: string | null; time?: string | null },
+): TaskReminder[] {
+  if (taskSchedule && !canTaskHaveAlertReminders(taskSchedule.dueDate, taskSchedule.time)) {
+    return [];
+  }
   if (!alertIds?.length) return [];
   return alertIds.map((id) => ({
     id,
@@ -27,4 +34,14 @@ export function getAlertIdsFromTask(
     .filter((r) => r && r.isEnabled !== false && typeof r.id === 'string')
     .map((r) => r.id);
   return withoutEndAlertUnlessDuration(ids, task?.duration);
+}
+
+/** pill/chip label count — dateless or all-day drafts show zero even if draft still holds ids */
+export function getConfigurableAlertsCount(
+  alerts: string[] | undefined | null,
+  dueDate?: string | null,
+  time?: string | null,
+): number {
+  if (!canTaskHaveAlertReminders(dueDate, time)) return 0;
+  return alerts?.length ?? 0;
 }

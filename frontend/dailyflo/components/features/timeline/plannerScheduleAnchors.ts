@@ -58,7 +58,10 @@ function baseAnchorPartial(
     metadata: {
       subtasks: [],
       reminders: options?.includeWindDownDefaultAlert
-        ? mapAlertIdsToTaskReminders([PLANNER_WIND_DOWN_REMINDER_ALERT_ID])
+        ? mapAlertIdsToTaskReminders([PLANNER_WIND_DOWN_REMINDER_ALERT_ID], {
+            dueDate: dueDateIso,
+            time: timeHm,
+          })
         : [],
     },
     softDeleted: false,

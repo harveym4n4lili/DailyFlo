@@ -16,6 +16,10 @@ import { getReminderFireDate } from './taskReminderDateMath';
 
 /** saved reminders on task — missing metadata defaults to mandatory 15-min; explicit empty array = no alerts */
 export function getEffectiveAlertIdsForTask(task: Task): string[] {
+  if (!task.dueDate || !task.time?.trim()) {
+    return [];
+  }
+
   const reminders = task.metadata?.reminders;
 
   if (reminders === undefined || reminders === null) {

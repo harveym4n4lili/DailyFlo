@@ -200,7 +200,10 @@ export default function TaskEditScreen() {
           duration: draft.duration ?? undefined,
           metadata: {
             ...(task.metadata ?? {}),
-            reminders: mapAlertIdsToTaskReminders(draft.alerts),
+            reminders: mapAlertIdsToTaskReminders(draft.alerts, {
+              dueDate: draft.dueDate ?? task.dueDate,
+              time: draft.time ?? task.time,
+            }),
           },
         },
       })
@@ -378,7 +381,10 @@ export default function TaskEditScreen() {
             listId: values.listId || undefined,
             metadata: {
               subtasks: taskSubtasks,
-              reminders: mapAlertIdsToTaskReminders(values.alerts),
+              reminders: mapAlertIdsToTaskReminders(values.alerts, {
+                dueDate: values.dueDate,
+                time: values.time,
+              }),
               notes: values.description?.trim() || undefined,
               tags: [],
             },
@@ -416,7 +422,10 @@ export default function TaskEditScreen() {
             listId: values.listId || undefined,
             metadata: {
               subtasks: taskSubtasks,
-              reminders: mapAlertIdsToTaskReminders(values.alerts),
+              reminders: mapAlertIdsToTaskReminders(values.alerts, {
+                dueDate: values.dueDate,
+                time: values.time,
+              }),
               notes: values.description?.trim() || undefined,
               tags: [],
             },

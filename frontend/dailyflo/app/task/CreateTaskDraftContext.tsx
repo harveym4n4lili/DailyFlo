@@ -45,7 +45,7 @@ const defaultDraft: CreateTaskDraftSlice = {
   dueDate: undefined,
   time: undefined,
   duration: undefined,
-  alerts: [...DEFAULT_NEW_TASK_ALERT_IDS],
+  alerts: [],
 };
 
 const CreateTaskDraftContext = createContext<CreateTaskDraftContextValue | null>(null);
@@ -60,10 +60,32 @@ export function CreateTaskDraftProvider({ children }: { children: ReactNode }) {
       overdueRescheduleRef.current = null;
       cb(date);
     }
-    setDraftState((prev) => ({ ...prev, dueDate: date }));
+    setDraftState((prev) => {
+      if (!date) {
+        return { ...prev, dueDate: date, alerts: [] };
+      }
+      const shouldSeedDefault =
+        Boolean(prev.time?.trim()) && (prev.alerts?.length ?? 0) === 0;
+      return {
+        ...prev,
+        dueDate: date,
+        alerts: shouldSeedDefault ? [...DEFAULT_NEW_TASK_ALERT_IDS] : prev.alerts,
+      };
+    });
   }, []);
   const setTime = useCallback((time: string | undefined) => {
-    setDraftState((prev) => ({ ...prev, time }));
+    setDraftState((prev) => {
+      if (!time?.trim()) {
+        return { ...prev, time, alerts: [] };
+      }
+      const shouldSeedDefault =
+        Boolean(prev.dueDate) && (prev.alerts?.length ?? 0) === 0;
+      return {
+        ...prev,
+        time,
+        alerts: shouldSeedDefault ? [...DEFAULT_NEW_TASK_ALERT_IDS] : prev.alerts,
+      };
+    });
   }, []);
   const setDuration = useCallback((duration: number | undefined) => {
     setDraftState((prev) => ({
