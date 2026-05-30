@@ -21,8 +21,9 @@ import type { Subtask } from '@/components/features/subtasks';
 import { validateAll } from '@/components/forms/TaskForm/TaskValidation';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { useDuplicateTask } from '@/app/task/DuplicateTaskContext';
-import { isRecurringTask } from '@/utils/recurrenceUtils';
+import { isRecurringTask, resolveRecurrenceAnchorDueDate } from '@/utils/recurrenceUtils';
 import { getAlertIdsFromTask, mapAlertIdsToTaskReminders } from '@/utils/taskAlertReminders';
+import { buildTaskQuickAddRouteParams } from '@/utils/taskQuickAddRouteParams';
 
 // map metadata subtasks to form rows; api may use is_completed while ts types use isCompleted
 function taskToFormSubtasks(
@@ -229,12 +230,31 @@ export default function TaskEditScreen() {
 
   const handleRoutineTypeChange = useCallback(
     (routineType: RoutineType) => {
-      setLocalValues((prev) => ({ ...prev, routineType }));
+      const currentDue = draft.dueDate ?? localValues.dueDate ?? task?.dueDate;
+      const currentTime = draft.time ?? localValues.time ?? task?.time;
+      const anchoredDue = resolveRecurrenceAnchorDueDate(currentDue, routineType, currentTime);
+      if (anchoredDue && anchoredDue !== draft.dueDate) {
+        setDueDate(anchoredDue);
+      }
+      setLocalValues((prev) => ({
+        ...prev,
+        routineType,
+        ...(anchoredDue ? { dueDate: anchoredDue } : {}),
+      }));
       if (taskId) {
-        dispatch(updateTask({ id: taskId, updates: { id: taskId, routineType } }));
+        dispatch(
+          updateTask({
+            id: taskId,
+            updates: {
+              id: taskId,
+              routineType,
+              ...(anchoredDue ? { dueDate: anchoredDue } : {}),
+            },
+          }),
+        );
       }
     },
-    [taskId, dispatch],
+    [taskId, dispatch, draft.dueDate, draft.time, localValues.dueDate, localValues.time, setDueDate, task?.dueDate, task?.time],
   );
 
   const onChange = <K extends keyof TaskFormValues>(key: K, v: TaskFormValues[K]) => {
@@ -362,6 +382,11 @@ export default function TaskEditScreen() {
 
     const occurrenceDate = params.occurrenceDate ?? (values.dueDate ? new Date(values.dueDate).toISOString().slice(0, 10) : null);
     const isRecurring = task && isRecurringTask(task);
+    const anchoredDueDate = resolveRecurrenceAnchorDueDate(
+      values.dueDate,
+      values.routineType || 'once',
+      values.time,
+    );
 
     const performUpdateAll = async () => {
       const result = await dispatch(
@@ -374,7 +399,7 @@ export default function TaskEditScreen() {
             icon: values.icon && values.icon.trim() ? values.icon.trim() : undefined,
             time: values.time || undefined,
             duration: values.duration ?? undefined,
-            dueDate: values.dueDate || undefined,
+            dueDate: anchoredDueDate || undefined,
             priorityLevel: values.priorityLevel || 3,
             color: values.color || themeColor,
             routineType: values.routineType || 'once',
@@ -382,7 +407,7 @@ export default function TaskEditScreen() {
             metadata: {
               subtasks: taskSubtasks,
               reminders: mapAlertIdsToTaskReminders(values.alerts, {
-                dueDate: values.dueDate,
+                dueDate: anchoredDueDate,
                 time: values.time,
               }),
               notes: values.description?.trim() || undefined,
@@ -524,7 +549,7 @@ export default function TaskEditScreen() {
         isEditing: false,
       })),
     });
-    router.replace('/task-quick-add' as any);
+    router.replace({ pathname: '/task-quick-add' as any, params: buildTaskQuickAddRouteParams() });
   }, [values, subtasks, setDuplicateData, router]);
 
   const pickerHandlers = useMemo(

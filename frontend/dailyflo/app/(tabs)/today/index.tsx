@@ -13,12 +13,13 @@ import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboar
 import { TodayScreenContent } from './TodayScreenContent';
 
 import { useUI } from '@/store/hooks';
+import { buildTaskQuickAddRouteParams } from '@/utils/taskQuickAddRouteParams';
 
 // same shape as planner quick-add — ISO dueDate seeds CreateTaskDraft so Date pill shows Today
 function pushQuickAddWithTodayDue(router: ReturnType<typeof useGuardedRouter>) {
   router.push({
     pathname: '/task-quick-add' as any,
-    params: { dueDate: new Date().toISOString() },
+    params: buildTaskQuickAddRouteParams({ dueDate: new Date().toISOString() }),
   });
 }
 

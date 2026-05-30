@@ -98,6 +98,31 @@ export function isRecurringTask(task: Task): boolean {
 }
 
 /**
+ * recurring tasks need a dueDate anchor for planner/today expansion (`taskOccursOnDate`).
+ * keep an explicit user date; when none exists yet, default the anchor to today (local).
+ */
+export function resolveRecurrenceAnchorDueDate(
+  dueDate: string | undefined | null,
+  routineType: RoutineType | undefined | null,
+  time?: string | null,
+): string | undefined {
+  if (!routineType || routineType === 'once') {
+    return dueDate ?? undefined;
+  }
+  if (dueDate) {
+    return dueDate;
+  }
+  const anchor = new Date();
+  if (time?.trim()) {
+    const [h, m] = time.split(':').map(Number);
+    anchor.setHours(h, m ?? 0, 0, 0);
+  } else {
+    anchor.setHours(12, 0, 0, 0);
+  }
+  return anchor.toISOString();
+}
+
+/**
  * check if task id is an expanded recurring occurrence id
  */
 export function isExpandedRecurrenceId(id: string): boolean {
@@ -213,18 +238,26 @@ export function expandTasksForDates(
     // skip dates in recurrence_exceptions (user edited "this instance only" - one-off created instead)
     const exceptions = (task.metadata as any)?.recurrence_exceptions ?? [];
     const exceptionSet = new Set(exceptions);
+    // legacy rows may lack due_date — treat missing anchor as today so planner/today still expand
+    const anchoredTask =
+      task.dueDate || !task.routineType || task.routineType === 'once'
+        ? task
+        : {
+            ...task,
+            dueDate: resolveRecurrenceAnchorDueDate(undefined, task.routineType, task.time)!,
+          };
 
     for (const dateStr of targetDates) {
       if (exceptionSet.has(dateStr)) continue; // this occurrence was overridden by a one-off
-      if (!taskOccursOnDate(task, dateStr)) continue;
+      if (!taskOccursOnDate(anchoredTask, dateStr)) continue;
 
       const completions = getRecurrenceCompletionDates(task);
       const occurrenceCompleted = completions.includes(dateStr);
 
       // build effective dueDate: dateStr with task's time if any
       let effectiveDueDate: string;
-      if (task.time) {
-        const [h, m] = task.time.split(':').map(Number);
+      if (anchoredTask.time) {
+        const [h, m] = anchoredTask.time.split(':').map(Number);
         const d = new Date(dateStr + 'T12:00:00');
         d.setHours(h, m ?? 0, 0, 0);
         effectiveDueDate = d.toISOString();
@@ -233,7 +266,7 @@ export function expandTasksForDates(
       }
 
       const expandedTask: Task = {
-        ...task,
+        ...anchoredTask,
         id: `${task.id}${RECURRENCE_ID_SEPARATOR}${dateStr}`,
         dueDate: effectiveDueDate,
         isCompleted: occurrenceCompleted,

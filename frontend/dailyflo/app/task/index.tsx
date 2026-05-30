@@ -7,6 +7,7 @@ import { useLocalSearchParams } from 'expo-router';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useEffect } from 'react';
+import { buildTaskQuickAddRouteParams } from '@/utils/taskQuickAddRouteParams';
 
 export default function TaskIndexRedirect() {
   const router = useGuardedRouter();
@@ -21,7 +22,9 @@ export default function TaskIndexRedirect() {
     } else {
       router.replace({
         pathname: '/task-quick-add',
-        params: params.dueDate ? { dueDate: params.dueDate } : {},
+        params: buildTaskQuickAddRouteParams(
+          params.dueDate ? { dueDate: params.dueDate } : undefined,
+        ),
       });
     }
   }, [params.taskId, params.dueDate, params.occurrenceDate, router]);

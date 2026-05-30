@@ -57,6 +57,7 @@ import { Paddings } from '@/constants/Paddings';
 import { getTextStyle, getTypographyStyle } from '@/constants/Typography';
 import type { CreateTaskInput, RoutineType, Subtask as TaskSubtask } from '@/types';
 import { mapAlertIdsToTaskReminders, getConfigurableAlertsCount } from '@/utils/taskAlertReminders';
+import { resolveRecurrenceAnchorDueDate } from '@/utils/recurrenceUtils';
 
 // same labels as FormDetailSection repeating menu — keeps quick-add repeat options aligned with task create
 const ROUTINE_TYPE_LABELS: Record<RoutineType, string> = {
@@ -298,10 +299,14 @@ export function TaskQuickAddForm({
         label: opt.label,
         onPress: () => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          setDraft({ routineType: opt.id });
+          const anchoredDue = resolveRecurrenceAnchorDueDate(draft.dueDate, opt.id, draft.time);
+          setDraft({
+            routineType: opt.id,
+            ...(anchoredDue ? { dueDate: anchoredDue } : {}),
+          });
         },
       })),
-    [setDraft],
+    [draft.dueDate, draft.time, setDraft],
   );
 
   // title filled → primary fab shows save (create task); empty → sparkles / ai hint. submit still blocked while request in flight
@@ -351,13 +356,20 @@ export function TaskQuickAddForm({
       return;
     }
 
+    const routineType = draft.routineType ?? 'once';
+    const anchoredDueDate = resolveRecurrenceAnchorDueDate(
+      draft.dueDate,
+      routineType,
+      draft.time,
+    );
+
     const formValues: TaskFormValues = {
       title: title.trim(),
       description: description.trim() || undefined,
-      dueDate: draft.dueDate,
+      dueDate: anchoredDueDate,
       time: draft.time,
       duration: draft.duration,
-      routineType: draft.routineType ?? 'once',
+      routineType,
       priorityLevel: 3,
       color: themeColor,
       listId: listIdForCreate,
@@ -378,7 +390,7 @@ export function TaskQuickAddForm({
       description: formValues.description,
       time: formValues.time || undefined,
       duration: formValues.duration || undefined,
-      dueDate: formValues.dueDate || undefined,
+      dueDate: anchoredDueDate || undefined,
       priorityLevel: formValues.priorityLevel || 3,
       color: formValues.color || themeColor,
       routineType: formValues.routineType || 'once',
@@ -387,7 +399,7 @@ export function TaskQuickAddForm({
       metadata: {
         subtasks: taskSubtasks,
         reminders: mapAlertIdsToTaskReminders(formValues.alerts, {
-          dueDate: formValues.dueDate,
+          dueDate: anchoredDueDate,
           time: formValues.time,
         }),
         notes: formValues.description,
@@ -635,7 +647,15 @@ export function TaskQuickAddForm({
                       key={opt.id}
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setDraft({ routineType: opt.id });
+                        const anchoredDue = resolveRecurrenceAnchorDueDate(
+                          draft.dueDate,
+                          opt.id,
+                          draft.time,
+                        );
+                        setDraft({
+                          routineType: opt.id,
+                          ...(anchoredDue ? { dueDate: anchoredDue } : {}),
+                        });
                         refocusTitleInput();
                       }}
                       label={opt.label}

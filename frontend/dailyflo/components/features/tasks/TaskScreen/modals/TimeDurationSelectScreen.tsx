@@ -3,7 +3,7 @@
  * Draft via CreateTaskDraftProvider — onboarding time wheel + glass duration slider.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,6 +53,8 @@ export function TimeDurationSelectScreen() {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { draft, setTime, setDuration } = useCreateTaskDraft();
+  // user tapped "No time" — don't re-apply wheel default when closing the sheet
+  const userClearedTimeRef = useRef(false);
 
   const useLiquidGlass = Platform.OS === 'ios' && !Platform.isPad;
   const backgroundColor = useLiquidGlass
@@ -66,12 +68,14 @@ export function TimeDurationSelectScreen() {
 
   const handleTimeChange = useCallback(
     (next: Date) => {
+      userClearedTimeRef.current = false;
       setTime(wheelDateToTimeString(next));
     },
     [setTime],
   );
 
   const handleClearTime = useCallback(() => {
+    userClearedTimeRef.current = true;
     setTime(undefined);
   }, [setTime]);
 
@@ -87,8 +91,12 @@ export function TimeDurationSelectScreen() {
   }, [setDuration]);
 
   const handleClose = useCallback(() => {
+    // wheel shows a default time before first onChange — commit it on close so alert-select sees a time
+    if (!selectedTime?.trim() && !userClearedTimeRef.current) {
+      setTime(wheelDateToTimeString(wheelDate));
+    }
     router.back();
-  }, [router]);
+  }, [router, selectedTime, setTime, wheelDate]);
 
   return (
     <View style={[styles.container, { backgroundColor }]}>

@@ -6,7 +6,7 @@
  * query: showSubtasks=1 | true — shows subtasks + description block in the composer (default hidden).
  */
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
@@ -15,8 +15,10 @@ import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 
 export default function TaskQuickAddScreen() {
   const router = useGuardedRouter();
-  const params = useLocalSearchParams<{ dueDate?: string; showSubtasks?: string }>();
+  const params = useLocalSearchParams<{ dueDate?: string; showSubtasks?: string; sessionKey?: string }>();
   const { setDraft } = useCreateTaskDraft();
+  // remounting after date/time pickers must not wipe draft — init once per sessionKey from the push site
+  const initializedSessionRef = useRef<string | null>(null);
 
   const showSubtasksAndDescription =
     params.showSubtasks === '1' ||
@@ -24,6 +26,10 @@ export default function TaskQuickAddScreen() {
     params.showSubtasks === 'yes';
 
   useEffect(() => {
+    const sessionKey = params.sessionKey ?? params.dueDate ?? 'default';
+    if (initializedSessionRef.current === sessionKey) return;
+    initializedSessionRef.current = sessionKey;
+
     // inbox quick-add has no dueDate — start with no alerts; default 15-min is seeded only after day + time are set
     setDraft({
       dueDate: params.dueDate,
@@ -33,7 +39,7 @@ export default function TaskQuickAddScreen() {
       pickedListId: null,
       routineType: 'once',
     });
-  }, [params.dueDate, setDraft]);
+  }, [params.sessionKey, params.dueDate, setDraft]);
 
   const close = useCallback(() => {
     router.back();

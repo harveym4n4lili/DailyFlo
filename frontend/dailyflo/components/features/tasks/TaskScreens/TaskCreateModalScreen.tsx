@@ -19,6 +19,7 @@ import { TaskScreenContent } from '@/components/features/tasks/TaskScreen/TaskSc
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
 import type { PriorityLevel, RoutineType, CreateTaskInput, TaskColor, Subtask as TaskSubtask } from '@/types';
 import { mapAlertIdsToTaskReminders } from '@/utils/taskAlertReminders';
+import { resolveRecurrenceAnchorDueDate } from '@/utils/recurrenceUtils';
 import type { Subtask } from '@/components/features/subtasks';
 import { validateAll } from '@/components/forms/TaskForm/TaskValidation';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
@@ -113,8 +114,20 @@ export default function TaskCreateScreen() {
     else if (key === 'time') setTime(v as string | undefined);
     else if (key === 'duration') setDuration(v as number | undefined);
     else if (key === 'alerts') setAlerts((v as string[]) ?? []);
-    else if (key === 'routineType') setLocalValues((prev) => ({ ...prev, routineType: v as RoutineType }));
-    else setLocalValues((prev) => ({ ...prev, [key]: v }));
+    else if (key === 'routineType') {
+      const routineType = v as RoutineType;
+      const anchoredDue = resolveRecurrenceAnchorDueDate(
+        draft.dueDate ?? localValues.dueDate,
+        routineType,
+        draft.time ?? localValues.time,
+      );
+      if (anchoredDue) setDueDate(anchoredDue);
+      setLocalValues((prev) => ({
+        ...prev,
+        routineType,
+        ...(anchoredDue ? { dueDate: anchoredDue } : {}),
+      }));
+    } else setLocalValues((prev) => ({ ...prev, [key]: v }));
   };
 
   const handleCreateSubtask = () => {
@@ -167,21 +180,28 @@ export default function TaskCreateScreen() {
       sortOrder: index,
     }));
 
+    const routineType = values.routineType || 'once';
+    const anchoredDueDate = resolveRecurrenceAnchorDueDate(
+      values.dueDate,
+      routineType,
+      values.time,
+    );
+
     const taskData: CreateTaskInput = {
       title: values.title!.trim(),
       description: values.description?.trim() || undefined,
       icon: values.icon && values.icon.trim() ? values.icon.trim() : undefined,
       time: values.time || undefined,
       duration: values.duration || undefined,
-      dueDate: values.dueDate || undefined,
+      dueDate: anchoredDueDate || undefined,
       priorityLevel: values.priorityLevel || 3,
       color: values.color || themeColor,
-      routineType: values.routineType || 'once',
+      routineType,
       listId: values.listId || undefined,
       metadata: {
         subtasks: taskSubtasks,
         reminders: mapAlertIdsToTaskReminders(values.alerts, {
-          dueDate: values.dueDate,
+          dueDate: anchoredDueDate,
           time: values.time,
         }),
         notes: values.description?.trim() || undefined,
