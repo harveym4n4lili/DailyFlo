@@ -262,13 +262,8 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
     }
   }, [setDraft, values.listId, pickerHandlers, router]);
 
-  // date/time/alert: use stack screens (seed draft and push, or use passed pickerHandlers)
-  const handleShowDatePicker = () => {
-    if (pickerHandlers?.onShowDatePicker) {
-      pickerHandlers.onShowDatePicker();
-      return;
-    }
-    Keyboard.dismiss();
+  // stack pickers read CreateTaskDraft — sync form values before push (edit modal uses pickerHandlers too)
+  const seedPickerDraftFromValues = useCallback(() => {
     setDraft({
       dueDate: values.dueDate ?? new Date().toISOString(),
       time: values.time,
@@ -276,6 +271,16 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
       alerts: values.alerts ?? [],
       routineType: (values.routineType as RoutineType) || 'once',
     });
+  }, [setDraft, values.alerts, values.dueDate, values.duration, values.routineType, values.time]);
+
+  // date/time/alert: use stack screens (seed draft and push, or use passed pickerHandlers)
+  const handleShowDatePicker = () => {
+    Keyboard.dismiss();
+    seedPickerDraftFromValues();
+    if (pickerHandlers?.onShowDatePicker) {
+      pickerHandlers.onShowDatePicker();
+      return;
+    }
     router.push('/date-select');
   };
 
@@ -291,34 +296,22 @@ export const TaskScreenContent: React.FC<TaskCreationContentProps> = ({
   const handleIconSelect = (icon: string) => onChange('icon', icon);
 
   const handleShowTimeDurationPicker = () => {
+    Keyboard.dismiss();
+    seedPickerDraftFromValues();
     if (pickerHandlers?.onShowTimeDurationPicker) {
       pickerHandlers.onShowTimeDurationPicker();
       return;
     }
-    Keyboard.dismiss();
-    setDraft({
-      dueDate: values.dueDate ?? new Date().toISOString(),
-      time: values.time,
-      duration: values.duration,
-      alerts: values.alerts ?? [],
-      routineType: (values.routineType as RoutineType) || 'once',
-    });
     router.push('/time-duration-select');
   };
 
   const handleShowAlertsPicker = () => {
+    Keyboard.dismiss();
+    seedPickerDraftFromValues();
     if (pickerHandlers?.onShowAlertsPicker) {
       pickerHandlers.onShowAlertsPicker();
       return;
     }
-    Keyboard.dismiss();
-    setDraft({
-      dueDate: values.dueDate ?? new Date().toISOString(),
-      time: values.time,
-      duration: values.duration,
-      alerts: values.alerts ?? [],
-      routineType: (values.routineType as RoutineType) || 'once',
-    });
     router.push('/alert-select');
   };
 

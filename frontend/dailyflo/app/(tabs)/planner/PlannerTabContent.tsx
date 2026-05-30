@@ -53,6 +53,7 @@ import {
   DEFAULT_WAKE_HHMM,
   timelinePlannerHoursFromWakeSleepHHMM,
 } from '@/utils/preferenceScheduleTimes';
+import { buildTaskQuickAddRouteParams } from '@/utils/taskQuickAddRouteParams';
 
 type PlannerIosNavMonthTitleProps = {
   dayMonthLabel: string;
@@ -182,7 +183,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
       if (mode !== 'index' || !USE_CUSTOM_LIQUID_TAB_BAR) return undefined;
       setTabFabRegistration({
         onPress: () => {
-          router.push({ pathname: '/task-quick-add' as any, params: { dueDate: selectedDate } });
+          router.push({ pathname: '/task-quick-add' as any, params: buildTaskQuickAddRouteParams({ dueDate: selectedDate }) });
         },
         accessibilityLabel: 'Add new task',
         accessibilityHint: 'Double tap to create a new task',
@@ -626,7 +627,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
             >
               <FloatingActionButton
                 onPress={() => {
-                  router.push({ pathname: '/task-quick-add' as any, params: { dueDate: selectedDate } });
+                  router.push({ pathname: '/task-quick-add' as any, params: buildTaskQuickAddRouteParams({ dueDate: selectedDate }) });
                 }}
                 accessibilityLabel="Add new task"
                 accessibilityHint="Double tap to create a new task"

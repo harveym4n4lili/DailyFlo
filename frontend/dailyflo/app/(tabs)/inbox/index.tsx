@@ -9,10 +9,11 @@ import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navi
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 import { InboxTaskListContent } from '@/components/features/inbox/InboxTaskListContent';
 import { useUI } from '@/store/hooks';
+import { buildTaskQuickAddRouteParams } from '@/utils/taskQuickAddRouteParams';
 
 /** inbox quick-add — no dueDate param so new tasks stay in inbox until user picks a date */
 function pushQuickAddForInbox(router: ReturnType<typeof useGuardedRouter>) {
-  router.push({ pathname: '/task-quick-add' as any });
+  router.push({ pathname: '/task-quick-add' as any, params: buildTaskQuickAddRouteParams() });
 }
 
 /** inbox tab root — main navbar destination when user adds Inbox to their bar */
