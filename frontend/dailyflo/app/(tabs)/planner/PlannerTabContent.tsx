@@ -571,7 +571,6 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                 onTaskEdit={handleTaskEdit}
                 onTaskDelete={handleTaskDelete}
                 {...LIST_CARD_TASK_ROW_PRESET_TODAY}
-                showListRecurrenceRow
                 emptyMessage="No tasks for this date yet."
                 loading={false}
                 groupBy="dueDate"

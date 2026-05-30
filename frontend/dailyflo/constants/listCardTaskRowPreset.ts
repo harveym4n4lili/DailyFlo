@@ -14,6 +14,8 @@ export type ListCardTaskRowPreset = {
   showDashedSeparator: boolean;
   hideBackground: boolean;
   removeInnerPadding: boolean;
+  /** leaf + list name + recurrence row under the title (planner all-day / today / inbox) */
+  showListRecurrenceRow: boolean;
 };
 
 /** use on ListCard together with screen-specific props (tasks, groupBy, scroll, handlers) — Today, browse lists, planner all-day strip */
@@ -28,4 +30,5 @@ export const LIST_CARD_TASK_ROW_PRESET_TODAY: ListCardTaskRowPreset = {
   showDashedSeparator: true,
   hideBackground: true,
   removeInnerPadding: true,
+  showListRecurrenceRow: true,
 };

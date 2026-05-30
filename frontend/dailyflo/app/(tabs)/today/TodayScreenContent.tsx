@@ -478,7 +478,6 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
               onTaskEdit={handleTaskEdit}
               onTaskDelete={handleTaskDelete}
               {...LIST_CARD_TASK_ROW_PRESET_TODAY}
-              showListRecurrenceRow
               emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
               loading={isLoading && todaysTasks.length === 0}
               groupBy="dueDate"
