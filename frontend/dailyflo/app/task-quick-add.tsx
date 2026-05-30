@@ -12,7 +12,6 @@ import { useLocalSearchParams } from 'expo-router';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { TaskQuickAddOverlay } from '@/components/features/tasks/quickAdd';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
-import { DEFAULT_NEW_TASK_ALERT_IDS } from '@/services/notifications/taskReminderConstants';
 
 export default function TaskQuickAddScreen() {
   const router = useGuardedRouter();
@@ -25,12 +24,12 @@ export default function TaskQuickAddScreen() {
     params.showSubtasks === 'yes';
 
   useEffect(() => {
-    // initialize quick-add picker draft once for this open instance, including planner dueDate prefill
+    // inbox quick-add has no dueDate — start with no alerts; default 15-min is seeded only after day + time are set
     setDraft({
       dueDate: params.dueDate,
       time: undefined,
       duration: undefined,
-      alerts: [...DEFAULT_NEW_TASK_ALERT_IDS],
+      alerts: [],
       pickedListId: null,
       routineType: 'once',
     });

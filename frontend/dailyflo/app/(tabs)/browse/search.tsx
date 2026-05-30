@@ -10,7 +10,7 @@ import { useHeaderHeight } from '@react-navigation/elements';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { useAppDispatch, store } from '@/store';
+import { useAppDispatch, store, useAppSelector } from '@/store';
 import { useLists, useTasks } from '@/store/hooks';
 import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
 import { MainCloseButton } from '@/components/ui/Button';
@@ -46,6 +46,7 @@ const TOP_SECTION_ANCHOR_HEIGHT = 64;
 export default function BrowseSearchScreen() {
   const router = useGuardedRouter();
   const dispatch = useAppDispatch();
+  const userId = useAppSelector((state) => state.auth.user?.id);
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
@@ -73,11 +74,11 @@ export default function BrowseSearchScreen() {
     }
   }, [hasQuery, activeSearchFilterId]);
 
-  // keep search scoped to this pushed screen so back resets state naturally
+  // load persisted history for the signed-in account; reload when account changes
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [qs, rv] = await Promise.all([loadRecentSearches(), loadRecentlyViewed()]);
+      const [qs, rv] = await Promise.all([loadRecentSearches(userId), loadRecentlyViewed(userId)]);
       if (!cancelled) {
         setRecentSearches(qs);
         setRecentlyViewed(rv);
@@ -86,7 +87,7 @@ export default function BrowseSearchScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [userId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -100,10 +101,10 @@ export default function BrowseSearchScreen() {
     setRecentSearches((prev) => {
       const next = pushRecentSearch(raw, prev);
       if (next === prev) return prev;
-      void persistRecentSearches(next);
+      void persistRecentSearches(next, userId);
       return next;
     });
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (activeSearchFilterId === 'task' || activeSearchFilterId === 'description' || activeSearchFilterId === 'top' || activeSearchFilterId === 'recent') {
@@ -142,7 +143,7 @@ export default function BrowseSearchScreen() {
     (entry: RecentlyViewedEntry) => {
       setRecentlyViewed((prev) => {
         const next = pushRecentlyViewed(entry, prev);
-        void persistRecentlyViewed(next);
+        void persistRecentlyViewed(next, userId);
         return next;
       });
       if (entry.kind === 'task') {
@@ -151,7 +152,7 @@ export default function BrowseSearchScreen() {
         router.push(`/(tabs)/browse/list/${entry.id}` as any);
       }
     },
-    [router]
+    [router, userId]
   );
 
   const handleBrowseSearchTaskPress = useCallback(
@@ -160,7 +161,7 @@ export default function BrowseSearchScreen() {
       const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
       setRecentlyViewed((prev) => {
         const next = pushRecentlyViewed({ kind: 'task', id: baseId, label: task.title }, prev);
-        void persistRecentlyViewed(next);
+        void persistRecentlyViewed(next, userId);
         return next;
       });
       router.push({
@@ -168,7 +169,7 @@ export default function BrowseSearchScreen() {
         params: { taskId: baseId, ...(occurrenceDate ? { occurrenceDate } : {}) },
       });
     },
-    [router]
+    [router, userId]
   );
 
   const handleBrowseSearchTaskComplete = useCallback(
@@ -204,12 +205,12 @@ export default function BrowseSearchScreen() {
     (list: List) => {
       setRecentlyViewed((prev) => {
         const next = pushRecentlyViewed({ kind: 'list', id: list.id, label: list.name }, prev);
-        void persistRecentlyViewed(next);
+        void persistRecentlyViewed(next, userId);
         return next;
       });
       router.push(`/(tabs)/browse/list/${list.id}` as any);
     },
-    [router]
+    [router, userId]
   );
 
   const searchInput = (

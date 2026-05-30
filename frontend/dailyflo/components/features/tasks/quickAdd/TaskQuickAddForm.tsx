@@ -56,8 +56,7 @@ import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation'
 import { Paddings } from '@/constants/Paddings';
 import { getTextStyle, getTypographyStyle } from '@/constants/Typography';
 import type { CreateTaskInput, RoutineType, Subtask as TaskSubtask } from '@/types';
-import { mapAlertIdsToTaskReminders } from '@/utils/taskAlertReminders';
-import { DEFAULT_NEW_TASK_ALERT_IDS } from '@/services/notifications/taskReminderConstants';
+import { mapAlertIdsToTaskReminders, getConfigurableAlertsCount } from '@/utils/taskAlertReminders';
 
 // same labels as FormDetailSection repeating menu — keeps quick-add repeat options aligned with task create
 const ROUTINE_TYPE_LABELS: Record<RoutineType, string> = {
@@ -264,7 +263,12 @@ export function TaskQuickAddForm({
   // selected/empty state per pill — "selected" means user has chosen a non-empty value
   const hasDeadline = !!draft.dueDate;
   const hasDuration = !!draft.time || (typeof draft.duration === 'number' && draft.duration > 0);
-  const hasAlerts = (draft.alerts?.length ?? 0) > 0;
+  const configurableAlertsCount = getConfigurableAlertsCount(
+    draft.alerts,
+    draft.dueDate,
+    draft.time,
+  );
+  const hasAlerts = configurableAlertsCount > 0;
   const routineType = draft.routineType ?? 'once';
   const hasRepeat = routineType !== 'once';
 
@@ -274,7 +278,7 @@ export function TaskQuickAddForm({
     ? getTimeDurationPickerDisplay(draft.time, draft.duration, themeColors)
     : null;
   const alertsDisplay = hasAlerts
-    ? getAlertsPickerDisplay(draft.alerts?.length ?? 0, themeColors)
+    ? getAlertsPickerDisplay(configurableAlertsCount, themeColors)
     : null;
 
   // for deadline pill prefer the relative copy ("Today" / "Tomorrow" / "in 3 days") — falls back to formatted date
@@ -382,7 +386,10 @@ export function TaskQuickAddForm({
       isCompleted: titleChecked,
       metadata: {
         subtasks: taskSubtasks,
-        reminders: mapAlertIdsToTaskReminders(formValues.alerts),
+        reminders: mapAlertIdsToTaskReminders(formValues.alerts, {
+          dueDate: formValues.dueDate,
+          time: formValues.time,
+        }),
         notes: formValues.description,
         tags: [],
       },
@@ -396,7 +403,7 @@ export function TaskQuickAddForm({
           dueDate: undefined,
           time: undefined,
           duration: undefined,
-          alerts: [...DEFAULT_NEW_TASK_ALERT_IDS],
+          alerts: [],
           pickedListId: null,
           routineType: 'once',
         });

@@ -19,6 +19,14 @@ export function isTaskEligibleForLocalReminder(task: Task): boolean {
   );
 }
 
+/** picker + api — reminders only apply when the task has a due day and start time */
+export function canTaskHaveAlertReminders(
+  dueDate?: string | null,
+  time?: string | null,
+): boolean {
+  return Boolean(dueDate) && Boolean(time?.trim());
+}
+
 /** reads django-synced notification toggles on the signed-in user */
 export function areUserNotificationPrefsAllowed(
   prefs: UserPreferences['notifications'] | undefined,

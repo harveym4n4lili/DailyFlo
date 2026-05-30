@@ -14,6 +14,7 @@ import { MainCloseButton } from '@/components/ui/Button';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle, getTypographyStyle } from '@/constants/Typography';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
+import { canTaskHaveAlertReminders } from '@/services/notifications/taskReminderEligibility';
 import { BellIcon, ClockIcon, SFSymbolIcon, TrashIcon } from '@/components/ui/Icon';
 import { GroupedList } from '@/components/ui/List/GroupedList';
 import { Paddings } from '@/constants/Paddings';
@@ -32,15 +33,22 @@ import {
 const ALERTS_HEADING_GAP = Paddings.listItemVertical + Paddings.groupedListHeaderContentGap;
 const GROUPED_LIST_ICON_SIZE = 18;
 const DELETE_ICON_SIZE = 20;
+const GHOST_LABEL_OPACITY = 0.55;
 
 /** one saved alert row — leading icon + label + delete */
 function AlertSavedRow({
   alertId,
   iconColor,
+  labelColor,
+  labelOpacity = 1,
+  ghosted = false,
   onDelete,
 }: {
   alertId: string;
   iconColor: string;
+  labelColor: string;
+  labelOpacity?: number;
+  ghosted?: boolean;
   onDelete: () => void;
 }) {
   const typographyPlatform =
@@ -69,34 +77,44 @@ function AlertSavedRow({
         style={[
           getTypographyStyle('body-large', typographyPlatform),
           styles.label,
-          { color: themeColors.text.secondary() },
+          { color: labelColor, opacity: labelOpacity },
         ]}
       >
         {display.label}
       </Text>
 
-      <TouchableOpacity
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onDelete();
-        }}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityRole="button"
-        accessibilityLabel={`Delete ${display.label}`}
-      >
-        <SFSymbolIcon
-          name="trash.fill"
-          size={DELETE_ICON_SIZE}
-          color={themeColors.text.tertiary()}
-          fallback={<TrashIcon size={DELETE_ICON_SIZE} color={themeColors.text.tertiary()} />}
-        />
-      </TouchableOpacity>
+      {ghosted ? null : (
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onDelete();
+          }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={`Delete ${display.label}`}
+        >
+          <SFSymbolIcon
+            name="trash.fill"
+            size={DELETE_ICON_SIZE}
+            color={themeColors.text.tertiary()}
+            fallback={<TrashIcon size={DELETE_ICON_SIZE} color={themeColors.text.tertiary()} />}
+          />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
 /** empty grouped list row when user removed every alert */
-function AlertEmptyRow({ iconColor }: { iconColor: string }) {
+function AlertEmptyRow({
+  iconColor,
+  labelColor,
+  labelOpacity = 1,
+}: {
+  iconColor: string;
+  labelColor: string;
+  labelOpacity?: number;
+}) {
   const typographyPlatform =
     Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
   const themeColors = useThemeColors();
@@ -117,7 +135,7 @@ function AlertEmptyRow({ iconColor }: { iconColor: string }) {
         style={[
           getTypographyStyle('body-large', typographyPlatform),
           styles.label,
-          { color: themeColors.text.tertiary() },
+          { color: labelColor, opacity: labelOpacity },
         ]}
       >
         No alerts
@@ -135,7 +153,14 @@ export function AlertSelectScreen() {
   const { getMarpleBrandColor } = useColorPalette();
   const { draft, setAlerts } = useCreateTaskDraft();
 
+  // alerts only work when the task has both a due day and a start time
+  const canConfigureAlerts = canTaskHaveAlertReminders(draft.dueDate, draft.time);
   const alertIconColor = getMarpleBrandColor(500);
+  const ghostIconColor = themeColors.text.tertiary();
+  const ghostLabelColor = themeColors.text.tertiary();
+  const rowIconColor = canConfigureAlerts ? alertIconColor : ghostIconColor;
+  const rowLabelColor = canConfigureAlerts ? themeColors.text.secondary() : ghostLabelColor;
+  const rowLabelOpacity = canConfigureAlerts ? 1 : GHOST_LABEL_OPACITY;
 
   const savedAlerts = useMemo(
     () => sortAlertIdsForDisplay(withoutEndAlertUnlessDuration(draft.alerts ?? [], draft.duration)),
@@ -152,10 +177,12 @@ export function AlertSelectScreen() {
   }, [router]);
 
   const handleDeleteAlert = (alertId: string) => {
+    if (!canConfigureAlerts) return;
     setAlerts((draft.alerts ?? []).filter((id) => id !== alertId));
   };
 
   const handleAddAlertPress = () => {
+    if (!canConfigureAlerts) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push('/alert-offset-select');
   };
@@ -203,13 +230,20 @@ export function AlertSelectScreen() {
             iconColumnWidth={30}
           >
             {savedAlerts.length === 0 ? (
-              <AlertEmptyRow iconColor={alertIconColor} />
+              <AlertEmptyRow
+                iconColor={rowIconColor}
+                labelColor={rowLabelColor}
+                labelOpacity={rowLabelOpacity}
+              />
             ) : (
               savedAlerts.map((alertId) => (
                 <AlertSavedRow
                   key={alertId}
                   alertId={alertId}
-                  iconColor={alertIconColor}
+                  iconColor={rowIconColor}
+                  labelColor={rowLabelColor}
+                  labelOpacity={rowLabelOpacity}
+                  ghosted={!canConfigureAlerts}
                   onDelete={() => handleDeleteAlert(alertId)}
                 />
               ))
@@ -226,32 +260,59 @@ export function AlertSelectScreen() {
                 right: Paddings.touchTarget,
               }}
               onPress={handleAddAlertPress}
+              disabled={!canConfigureAlerts}
               accessibilityRole="button"
               accessibilityLabel="Add Alert"
+              accessibilityState={{ disabled: !canConfigureAlerts }}
             >
               <View
                 style={[
                   styles.formDataPill,
                   { backgroundColor: themeColors.background.primarySecondaryBlend() },
+                  !canConfigureAlerts ? styles.formDataPillGhosted : null,
                 ]}
               >
                 <SFSymbolIcon
                   name="bell.fill"
                   size={18}
-                  color={alertIconColor}
+                  color={rowIconColor}
                   fallback={
                     <View style={styles.formDataPillIcon}>
-                      <BellIcon size={18} color={alertIconColor} isSolid />
+                      <BellIcon size={18} color={rowIconColor} isSolid />
                     </View>
                   }
                   style={styles.formDataPillIcon}
                 />
-                <Text style={[styles.formDataPillText, { color: themeColors.text.primary() }]}>
+                <Text
+                  style={[
+                    styles.formDataPillText,
+                    {
+                      color: canConfigureAlerts ? themeColors.text.primary() : ghostLabelColor,
+                      opacity: rowLabelOpacity,
+                    },
+                  ]}
+                >
                   Add Alert
                 </Text>
               </View>
             </Pressable>
           </View>
+
+          {!canConfigureAlerts ? (
+            <Text
+              style={[
+                getTypographyStyle('body-medium', typographyPlatform),
+                styles.alertsHelperText,
+                { color: themeColors.text.primary() },
+              ]}
+            >
+              Please add a{' '}
+              <Text style={{ color: alertIconColor }}>day</Text>
+              {' '}and a{' '}
+              <Text style={{ color: alertIconColor }}>time</Text>
+              {' '}to the task.
+            </Text>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -302,6 +363,13 @@ const styles = StyleSheet.create({
   },
   formDataPillText: {
     ...getTextStyle('body-large'),
+  },
+  formDataPillGhosted: {
+    opacity: GHOST_LABEL_OPACITY,
+  },
+  alertsHelperText: {
+    marginTop: Paddings.formDataPillRowGap,
+    lineHeight: 22,
   },
   optionRow: {
     width: '100%',
