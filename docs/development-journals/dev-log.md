@@ -2027,3 +2027,114 @@ TODO:
 - Recurring reminders resync on task fetch and after `updateTask` (including per-occurrence completion); overnight rollover relies on next app open / fetch until background hook is added.
 
 ---
+## [24/05/2026] - [Sunday]
+
+### Today's Goals
+- [x] I **persisted onboarding questionnaire answers** (habit/task branch) to Django profile preferences on finish, not just AsyncStorage, so setup data survives sign-in and device changes.
+- [x] I added a **post-onboarding notifications step** that requests native OS permission, syncs notification preferences to Django, and routes users to **Today** after setup completes.
+- [x] I wired the **EAS file secret** into app config so iOS builds can resolve `GoogleService-Info.plist` when the plist is not checked into git.
+
+### Plans For Future
+- Manual QA on device for the notifications onboarding step (grant/deny paths, profile sync, landing tab after finish).
+- Keep hardening EAS/build secrets workflow for other env-specific assets.
+
+### Notes
+- Questionnaire data now has a real backend home — good base before I lean harder into habit vs task branching defaults.
+
+---
+## [25/05/2026] - [Monday]
+
+### Today's Goals
+- [x] I shipped **Phase 1 local task reminders** — schedule OS notifications from saved alert ids, wire CRUD/logout resync, persist alerts from quick-add/create, and default new timed tasks to **15-min before**.
+- [x] I unified the **task picker stack sheets** with onboarding controls, grouped-list chrome, shared sheet spacing, custom alert offsets, and notification scheduling updates (building on the 23/05 picker pass).
+- [x] I updated **`.gitignore`** and merged latest **main** so the notification branch stayed aligned with upstream.
+
+### Plans For Future
+- Manual QA on a **dev client** (not Expo Go) — confirm default 15-min fire, custom offsets, cancel/reschedule on edit, and logout cleanup.
+- Same longer-term backlog as spring notes (MVP realignment, nature UI palette pass, AI provider choice, gamification).
+
+### Notes
+- Default new-task alert behaviour assumes a schedulable task — I revisited this later when inbox/dateless flows showed the wrong pill state.
+
+---
+## [26/05/2026] - [Tuesday]
+
+### Today's Goals
+- [x] I **updated the dev logbook** to catch up through 23/05/2026 (notification deep-link + recurring scheduling entries).
+
+### Plans For Future
+- Continue notification branch QA and merge follow-ups from PR #23.
+- Display settings and navbar customization were next in the pipeline.
+
+### Notes
+- Light documentation day — commits were mostly journal catch-up rather than feature code.
+
+---
+## [27/05/2026] - [Wednesday]
+
+### Today's Goals
+- [x] I merged **push notifications** (PR #23) and landed **wind-down reminders** — default 5-minute before sleep with per-day scheduling and custom notification copy on the planner anchor.
+- [x] I changed settings **wake/sleep spinners** from 15-minute to **5-minute** intervals with aligned snap logic.
+- [x] I added **notification tap deep-linking** and **recurring next-occurrence reminder scheduling** (`resolveTaskReminderSchedulingTarget`), and updated **`notification-implementation.md`** for shipped Phase 1.1–1.3 + wind-down + recurring.
+- [x] I shipped the **Today and Planner Display settings** modal — layout/sort grouped lists, navigation from the dashboard toolbar, shared grouped-list styling tokens, nested stack with draft state, Sort/Filter sections, picker sub-screens, marple apply toolbar on iOS, and hid the Date filter on Today (already today-scoped).
+- [x] I added a **planner-only All-day tasks toggle** to Display settings Layout (default on, tracked in shared display draft).
+- [x] I fixed **Manage Lists** iOS header placement and removed the unused **Tags** browse screen.
+
+### Plans For Future
+- Wire display prefs through to list/timeline rendering on Today and Planner (next commits).
+- Day-rollover background resync for recurring reminders (optional AppState listener).
+- Phase 3 push tokens when ready.
+
+### Notes
+- Big merge day — notifications + display settings foundation landed together; docs updated so I don’t lose track of what’s actually shipped vs planned.
+
+---
+## [28/05/2026] - [Thursday]
+
+### Today's Goals
+- [x] I added the **List view / Timeline view layout picker** to Display settings with draft state, placeholder previews, and spacing between the selector and toggles grouped list.
+- [x] I wired **per-account display preferences** for Today and Planner — layout-aware modal sections, sort/completed/all-day list wiring, and animated section show/hide.
+- [x] I wired **Today list/timeline layout switching** with a shared day timeline panel and preserved the big Today scroll header plus **topSection mini title** on timeline view.
+
+### Plans For Future
+- Polish planner list layout when the all-day footer is hidden (spacing/timeline inset).
+- Keep iterating cold-start tab behaviour so display prefs and navbar order feel stable on first open.
+
+### Notes
+- Display prefs are now authoritative in Redux + profile — UI finally reflects what users save in settings.
+
+---
+## [29/05/2026] - [Friday]
+
+### Today's Goals
+- [x] I added **navbar customization** — Navigation settings screen, **Inbox tab** support, and **account-persisted tab order** stored per user.
+- [x] I built the **browse settings stack** with navigation tab bar editing, native iOS toolbar transitions, and **auto-save on leave**.
+- [x] I fixed **primary-tab cold start** so the app opens on the user’s **first navbar tab** without a Today flash, while keeping tab switching and screen content stable after cold start.
+- [x] I added **planner list layout** and timeline spacing when the **all-day footer is hidden**.
+
+### Plans For Future
+- Harden cold start after onboarding/auth (next day’s commits).
+- Manual pass on navigation settings UX (add/remove tabs, ghosted options, Tab Bar sub-screen).
+
+### Notes
+- Per-user tab order was the key fix for multi-account devices — global AsyncStorage alone was leaking order between accounts.
+
+---
+## [30/05/2026] - [Saturday]
+
+### Today's Goals
+- [x] I unified **marple chrome** across the tab bar, FAB, quick-add, and onboarding, and polished **planner calendar header** styling (split date labels, softer unselected tab tints).
+- [x] I fixed **primary-tab cold start after onboarding and auth** — isolated per-user navbar order, blocked tab navigation until the onboarding funnel completes, and resolved the first tab switch bouncing back to the primary navbar tab after onboarding.
+- [x] I scoped **browse search history per account** (recent searches + recently viewed) so history no longer leaks across signed-in users on one device.
+- [x] I gated **task alerts** behind a due **day + start time** — no save/schedule for dateless tasks, ghosted alert-select UI with helper copy, corrected inbox quick-add showing “1 Alert” when alerts shouldn’t apply yet, and default 15-min only seeds after both day and time are set.
+
+### Plans For Future
+- Manual QA: switch accounts and confirm browse search history stays separate; inbox quick-add alert pill stays neutral until date + time exist.
+- Consider one-time migration from legacy global browse search keys (optional).
+- Same longer-term backlog (MVP realignment, nature UI palette pass, AI provider choice, gamification).
+
+### Notes
+- `useAppSelector` had to come from `@/store`, not `@/store/hooks` — caught that when opening browse search after the account-scoping change.
+- Alert helper subtext on the select screen uses primary body copy with **day** and **time** highlighted in marple brand color.
+
+---
