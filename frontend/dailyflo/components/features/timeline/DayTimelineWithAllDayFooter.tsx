@@ -118,7 +118,6 @@ export function DayTimelineWithAllDayFooter({
             onTaskEdit={onTaskEdit}
             onTaskDelete={onTaskDelete}
             {...LIST_CARD_TASK_ROW_PRESET_TODAY}
-            showListRecurrenceRow
             initialCollapsedGroupTitles={ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES}
             emptyMessage={emptyAllDayMessage}
             loading={false}
