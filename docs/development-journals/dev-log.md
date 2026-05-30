@@ -2138,3 +2138,24 @@ TODO:
 - Alert helper subtext on the select screen uses primary body copy with **day** and **time** highlighted in marple brand color.
 
 ---
+## [30/05/2026] - [Saturday] (continued)
+
+### Today's Goals
+- [x] I fixed **recurring task planner expansion** (anchor due dates for legacy recurring tasks) and kept **inbox quick-add date/time in sync** with a per-open `sessionKey` so picker remounts do not wipe draft state — alert-select only enables after both day and time exist.
+- [x] I aligned **inbox task rows** with planner all-day styling by enabling list + recurrence meta tags on the shared ListCard preset.
+- [x] I shipped **Inbox tab Today-parity toolbars** — iOS display modal + selection route, per-tab inbox display prefs (backend + Redux), `ListCard`-owned scroll/top-section on tab-root, session cache for select push, and hid the list/timeline view picker in inbox Display settings (list-only UI for now).
+- [x] I cleared **activity logs from Redux on logout** so completed/activity screens do not briefly show the previous account’s entries.
+- [x] I restyled **browse home** — replaced the Inbox row with the signed-in user’s **first + last name** + profile icon (still opens browse inbox tasks), removed the **Completed** row, and removed the **bell** from the browse top toolbar (settings only on the right; search stays **icon-only** on the left).
+
+### Plans For Future
+- **Browse gamification dashboard** — plan a dashboard surface in Browse (progress, streaks, and rewards; scope TBD before build).
+- **Browse lists view redesign** — rethink the My Lists section on the browse home screen (layout, hierarchy, and interaction vs current pills).
+- Manual QA: inbox selection mode header alignment on device; inbox display modal saves without 400; switch accounts and confirm activity log + completed data stay isolated.
+- Wire inbox timeline layout pref when a timeline UI exists (preference saves today but list always renders).
+- Same longer-term backlog (MVP realignment, nature UI palette pass, AI provider choice).
+
+### Notes
+- Inbox display modal needed `(modals)/display` route group + backend `inbox` key in display_preferences PATCH — flat `display/` routes opened as push, not modal.
+- Browse search toolbar: tried icon + “Search” label on home — reverted to icon-only; full search field still appears on the pushed search screen.
+
+---
