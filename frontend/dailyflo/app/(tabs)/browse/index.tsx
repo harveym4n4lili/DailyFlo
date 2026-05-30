@@ -9,14 +9,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { useLists } from '@/store/hooks';
+import { useLists, useAuth } from '@/store/hooks';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
 import { IosBrowseHomeStackToolbar } from '@/components/navigation/IosBrowseHomeStackToolbar';
 import { ScreenHeaderActions } from '@/components/ui';
 import { FloatingActionButton } from '@/components/ui/Button';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
-import { SFSymbolIcon, TickIcon, BrowseIcon, LeafIcon, PencilIcon } from '@/components/ui/Icon';
+import { SFSymbolIcon, BrowseIcon, LeafIcon, PencilIcon } from '@/components/ui/Icon';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CREATE_OPENED_FROM_BROWSE } from './navigationParams';
 
@@ -30,6 +30,7 @@ function BrowseListsColumn({
   sortedLists,
   isMyListsExpanded,
   setIsMyListsExpanded,
+  profileListLabel,
 }: {
   styles: ReturnType<typeof createStyles>;
   themeColors: ReturnType<typeof useThemeColors>;
@@ -37,6 +38,7 @@ function BrowseListsColumn({
   sortedLists: { id: string; name: string; metadata?: { taskCount?: number }; sortOrder: number }[];
   isMyListsExpanded: boolean;
   setIsMyListsExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+  profileListLabel: string;
 }) {
   // marple for leading icons — same brand accent as tab FAB / quick-add primary action (not body text.primary)
   const { getMarpleBrandColor } = useColorPalette();
@@ -57,19 +59,18 @@ function BrowseListsColumn({
           iconColumnWidth={30}
         >
           <FormDetailButton
-            key="inbox"
-            iconComponent={<SFSymbolIcon name="tray.full" size={18} color={groupedListIconColor} fallback={<BrowseIcon size={18} color={groupedListIconColor} />} />}
-            label="Inbox"
+            key="profile-inbox"
+            iconComponent={
+              <SFSymbolIcon
+                name="person.circle"
+                size={18}
+                color={groupedListIconColor}
+                fallback={<BrowseIcon size={18} color={groupedListIconColor} />}
+              />
+            }
+            label={profileListLabel}
             value=""
             onPress={() => router.push('/(tabs)/browse/inbox')}
-            showChevron={false}
-          />
-          <FormDetailButton
-            key="completed"
-            iconComponent={<SFSymbolIcon name="checkmark.circle.fill" size={18} color={groupedListIconColor} fallback={<TickIcon size={18} color={groupedListIconColor} />} />}
-            label="Completed"
-            value=""
-            onPress={() => router.push('/(tabs)/browse/completed')}
             showChevron={false}
           />
         </GroupedList>
@@ -123,8 +124,19 @@ export default function BrowseScreen() {
   const insets = useSafeAreaInsets();
   const styles = createStyles(themeColors, typography, insets);
   const { lists, fetchLists } = useLists();
+  const { user } = useAuth();
   const [isMyListsExpanded, setIsMyListsExpanded] = useState(true);
   const { setTabFabRegistration } = useTabFabOverlay();
+
+  // signed-in user's name on the browse profile row — still opens browse inbox tasks
+  const profileListLabel = useMemo(() => {
+    const first = user?.firstName?.trim() ?? '';
+    const last = user?.lastName?.trim() ?? '';
+    const fullName = `${first} ${last}`.trim();
+    if (fullName) return fullName;
+    const emailPrefix = user?.email?.split('@')[0]?.trim();
+    return emailPrefix || 'Profile';
+  }, [user?.firstName, user?.lastName, user?.email]);
 
   useFocusEffect(
     useCallback(() => {
@@ -191,6 +203,7 @@ export default function BrowseScreen() {
             sortedLists={sortedLists}
             isMyListsExpanded={isMyListsExpanded}
             setIsMyListsExpanded={setIsMyListsExpanded}
+            profileListLabel={profileListLabel}
           />
         </ScrollView>
 
@@ -264,7 +277,7 @@ const createStyles = (
       paddingBottom: 120,
     },
     contentWrapper: {
-      // keep browse home list start aligned to the same top-chrome geometry used by inbox/completed.
+      // keep browse home list start aligned to the same top-chrome geometry as other browse push screens.
       paddingTop: insets.top + TOP_SECTION_ANCHOR_HEIGHT + 12,
       paddingHorizontal: Paddings.screen,
       overflow: 'visible',
