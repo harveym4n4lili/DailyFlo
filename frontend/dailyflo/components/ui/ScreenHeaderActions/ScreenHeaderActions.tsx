@@ -2,7 +2,7 @@
  * ScreenHeaderActions – glass row for Today, Planner, and Browse screens.
  * variant determines which icons are shown:
  * - dashboard: dashboard icon only (ios overflow lives in Stack.Toolbar via IosDashboardOverflowToolbar)
- * - browse: bell icon + settings icon
+ * - browse: settings icon only
  */
 
 import React from 'react';
@@ -21,15 +21,12 @@ export interface ScreenHeaderActionsProps {
   onDashboardPress?: () => void;
   /** for browse variant: called when settings (cog) icon is tapped */
   onSettingsPress?: () => void;
-  /** for browse variant: called when alerts (bell) icon is tapped */
-  onAlertsPress?: () => void;
   /** optional container style */
   style?: ViewStyle;
   /** tint for icons: "primary" or "elevated" */
   tint?: 'primary' | 'elevated';
 }
 
-const ICON_GAP = 20;
 const GLASS_PADDING_H = 12;
 const GLASS_PADDING_V = 8;
 const GLASS_BORDER_RADIUS = 24;
@@ -38,7 +35,6 @@ export function ScreenHeaderActions({
   variant,
   onDashboardPress,
   onSettingsPress,
-  onAlertsPress,
   style,
   tint = 'primary',
 }: ScreenHeaderActionsProps) {
@@ -47,23 +43,13 @@ export function ScreenHeaderActions({
 
   const rowContent =
     variant === 'browse' ? (
-      <>
-        <HeaderIconButton
-          icon="notifications-outline"
-          onPress={onAlertsPress ?? (() => console.log('alerts tapped'))}
-          accessibilityLabel="Alerts"
-          tint={tint}
-          noWrapper
-        />
-        <View style={{ width: ICON_GAP }} />
-        <HeaderIconButton
-          iconComponent={<GearIcon size={24} color={themeColors.text.primary()} />}
-          onPress={onSettingsPress ?? (() => console.log('settings tapped'))}
-          accessibilityLabel="Settings"
-          tint={tint}
-          noWrapper
-        />
-      </>
+      <HeaderIconButton
+        iconComponent={<GearIcon size={24} color={themeColors.text.primary()} />}
+        onPress={onSettingsPress ?? (() => console.log('settings tapped'))}
+        accessibilityLabel="Settings"
+        tint={tint}
+        noWrapper
+      />
     ) : (
       <HeaderIconButton
         iconComponent={<DashboardIcon size={24} color={themeColors.text.primary()} />}
