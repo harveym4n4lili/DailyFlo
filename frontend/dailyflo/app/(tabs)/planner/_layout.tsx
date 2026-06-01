@@ -34,6 +34,13 @@ export default function PlannerLayout() {
                   />
                 ),
                 headerTitle: '',
+                headerTitleAlign: 'left',
+                headerTitleContainerStyle: {
+                  flex: 1,
+                  alignSelf: 'stretch',
+                  justifyContent: 'flex-end',
+                  alignItems: 'flex-start',
+                },
                 headerShadowVisible: false,
                 headerBackVisible: false,
                 contentStyle: { backgroundColor: themeColors.background.primary() },
