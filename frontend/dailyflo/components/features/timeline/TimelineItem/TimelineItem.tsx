@@ -890,7 +890,7 @@ const createStyles = (
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: taskColor,
-    borderRadius: 24,
+    borderRadius: Paddings.continueButtonRadius,
     marginRight: 12,
   },
 
@@ -900,7 +900,7 @@ const createStyles = (
     flexDirection: 'column', // stack combinedContainer and expandedArea vertically
     position: 'relative',
     overflow: 'visible',
-    borderRadius: 24, // outer border radius for the entire card
+    borderRadius: Paddings.continueButtonRadius, // outer border radius for the entire card
   },
   contentHug: {
     flex: 0,
@@ -919,7 +919,7 @@ const createStyles = (
     alignItems: 'stretch',
     position: 'relative',
     backgroundColor: themeColors.background.primarySecondaryBlend(),
-    borderRadius: 24,
+    borderRadius: Paddings.continueButtonRadius,
   },
   combinedContainerFullWidth: {
     width: '100%',

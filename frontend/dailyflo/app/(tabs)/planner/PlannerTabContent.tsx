@@ -7,7 +7,8 @@ import { useFocusEffect, useNavigation } from 'expo-router';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { getTextStyle } from '@/constants/Typography';
+import { resolvePlannerWeekSelectorChrome } from '@/constants/plannerWeekSelectorChrome';
+import type { TextStyle } from 'react-native';
 import { ScreenContainer } from '@/components/index';
 import { FloatingActionButton, SelectAllButton } from '@/components/ui/Button';
 import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
@@ -19,7 +20,7 @@ import { IosTaskSelectionCloseStackToolbar } from '@/components/navigation/IosTa
 import { WeekView } from '@/components/features/calendar/sections';
 import { DayTimelineWithAllDayFooter, PlannerWeekChromeTopFade } from '@/components/features/timeline';
 import { ListCard } from '@/components/ui/Card';
-import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
+import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
@@ -59,46 +60,67 @@ type PlannerIosNavMonthTitleProps = {
   dayMonthLabel: string;
   yearLabel: string;
   onPress: () => void;
-  textColor: string;
-  yearColor: string;
-  arrowColor: string;
+  dayMonthStyle: TextStyle;
+  yearStyle: TextStyle;
+  chevronColor: string;
+  chevronSize: number;
+  chevronGapFromYear: number;
 };
 
 function PlannerIosNavMonthTitle({
   dayMonthLabel,
   yearLabel,
   onPress,
-  textColor,
-  yearColor,
-  arrowColor,
+  dayMonthStyle,
+  yearStyle,
+  chevronColor,
+  chevronSize,
+  chevronGapFromYear,
 }: PlannerIosNavMonthTitleProps) {
   const fullLabel = `${dayMonthLabel}${yearLabel}`;
+  const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
+  // native header title slot sits below the status bar — fill that band and pin the row to its bottom
+  const titleSlotHeight = Math.max(headerHeight - insets.top, 44);
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.7}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'center', maxWidth: 280 }}
-      accessibilityRole="button"
-      accessibilityLabel={`${fullLabel}. Opens monthly calendar`}
-    >
-      <Text
-        style={[getTextStyle('heading-2'), { color: textColor, flexShrink: 1 }]}
-        numberOfLines={1}
+    <View style={[plannerNavMonthTitleStyles.root, { height: titleSlotHeight, minHeight: titleSlotHeight }]}>
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.7}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={plannerNavMonthTitleStyles.button}
+        accessibilityRole="button"
+        accessibilityLabel={`${fullLabel}. Opens monthly calendar`}
       >
-        {dayMonthLabel}
-        <Text style={{ color: yearColor, fontSize: 28 }}>{yearLabel}</Text>
-      </Text>
-      <Ionicons
-        name="chevron-forward"
-        size={26}
-        color={arrowColor}
-        style={{ marginLeft: -2, marginRight: 0 }}
-      />
-    </TouchableOpacity>
+        <Text style={[dayMonthStyle, { flexShrink: 1 }]} numberOfLines={1}>
+          {dayMonthLabel}
+          <Text style={yearStyle}>{yearLabel}</Text>
+        </Text>
+        <Ionicons
+          name="chevron-forward"
+          size={chevronSize}
+          color={chevronColor}
+          style={{ marginLeft: chevronGapFromYear }}
+        />
+      </TouchableOpacity>
+    </View>
   );
 }
+
+const plannerNavMonthTitleStyles = StyleSheet.create({
+  root: {
+    alignSelf: 'stretch',
+    width: '100%',
+    justifyContent: 'flex-end',
+    alignItems: 'flex-start',
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: 280,
+  },
+});
 
 export type PlannerTabContentProps = {
   /** index = main planner tab; select = ios pushed route for native toolbar transitions */
@@ -141,11 +163,16 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
   const navigation = useNavigation();
 
   const themeColors = useThemeColors();
-  const { getMarpleBrandColor } = useColorPalette();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
   const nativeStackHeaderHeight = useHeaderHeight();
   const weekViewPaddingTop = Platform.OS === 'ios' ? nativeStackHeaderHeight : insets.top;
+
+  // ios nav month title + android week header share typography/colors from plannerWeekSelectorChrome.ts
+  const plannerWeekChrome = useMemo(
+    () => resolvePlannerWeekSelectorChrome(themeColors, typography),
+    [themeColors, typography]
+  );
 
   const dispatch = useAppDispatch();
   const { tasks } = useTasks();
@@ -241,23 +268,29 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
 
   useLayoutEffect(() => {
     if (mode !== 'index' || Platform.OS !== 'ios') return;
-    const primary = themeColors.text.primary();
-    const yearAccent = getMarpleBrandColor(500);
-    const arrowAccent = getMarpleBrandColor(500);
 
     navigation.setOptions({
+      headerTitleAlign: 'left',
+      headerTitleContainerStyle: {
+        flex: 1,
+        alignSelf: 'stretch',
+        justifyContent: 'flex-end',
+        alignItems: 'flex-start',
+      },
       headerTitle: () => (
         <PlannerIosNavMonthTitle
           dayMonthLabel={plannerNavDateParts.dayMonthLabel}
           yearLabel={plannerNavDateParts.yearLabel}
           onPress={handleOpenMonthSelect}
-          textColor={primary}
-          yearColor={yearAccent}
-          arrowColor={arrowAccent}
+          dayMonthStyle={plannerWeekChrome.monthHeader.dayMonth}
+          yearStyle={plannerWeekChrome.monthHeader.year}
+          chevronColor={plannerWeekChrome.monthHeaderChevronColor}
+          chevronSize={plannerWeekChrome.monthHeaderChevronSize}
+          chevronGapFromYear={plannerWeekChrome.monthHeaderChevronGapFromYear}
         />
       ),
     });
-  }, [mode, navigation, plannerNavDateParts, handleOpenMonthSelect, themeColors, getMarpleBrandColor]);
+  }, [mode, navigation, plannerNavDateParts, handleOpenMonthSelect, plannerWeekChrome]);
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);

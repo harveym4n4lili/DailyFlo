@@ -217,7 +217,7 @@ const createStyles = (
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: taskColor,
-    borderRadius: 24,
+    borderRadius: Paddings.continueButtonRadius,
     marginRight: 12,
   },
   
@@ -228,7 +228,7 @@ const createStyles = (
     flexDirection: 'column',
     position: 'relative',
     overflow: 'hidden',
-    borderRadius: 24, // outer border radius for the entire card
+    borderRadius: Paddings.continueButtonRadius, // outer border radius for the entire card
   },
   
   // combined container for task content - fixed height
