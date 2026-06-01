@@ -106,6 +106,8 @@ interface TimelineViewProps {
   };
   /** YYYY-MM-DD for the day being shown — when it matches today, a live clock label is rendered on the gutter */
   calendarDayKey?: string;
+  /** when true, root container bg is transparent (planner liquid glass panel) */
+  transparentBackground?: boolean;
 }
 
 /**
@@ -136,6 +138,7 @@ export default function TimelineView({
   scrollEnabled = true,
   plannerScheduleAnchors,
   calendarDayKey,
+  transparentBackground = false,
 }: TimelineViewProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -1821,7 +1824,7 @@ export default function TimelineView({
   }, [tasks]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, transparentBackground && styles.containerTransparent]}>
       {/* scrollable timeline content - AnimatedScrollView for layout animations on footer/timeline */}
       <AnimatedScrollView
         style={styles.scrollView}
@@ -2238,6 +2241,10 @@ const createStyles = (
   container: {
     flex: 1,
     backgroundColor: themeColors.background.primary(),
+  },
+
+  containerTransparent: {
+    backgroundColor: 'secondary',
   },
 
   // scrollable view container

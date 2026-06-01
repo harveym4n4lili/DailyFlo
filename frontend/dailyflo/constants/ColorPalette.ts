@@ -26,6 +26,8 @@
  */
 export const PrimaryColors = {
   light: {
+     // white: cards, modals, elevated sheets; FAB tint; hairline borders; label text on dark buttons/bars
+     5: '#FFFFFF',
     // white: cards, modals, elevated sheets; FAB tint; hairline borders; label text on dark buttons/bars
     25: '#FFFFFF',
     // barely tinted screen wash between stacked sections
@@ -51,7 +53,7 @@ export const PrimaryColors = {
   },
   dark: {
     // root dark canvas; FAB icon color; inverted dark header/toolbar bands in light mode
-    5: '#101010',
+    5: '#0F0F0F',
     // root dark canvas; FAB icon color; inverted dark header/toolbar bands in light mode
     25: '#131313',
     // subtle blend between two dark regions
@@ -337,6 +339,7 @@ export const ThemeColors = {
     },
     // background colors - surfaces and containers
     background: {
+      root: PrimaryColors.light[5],           // neutral step 5 — outermost screen canvas
       primary: PrimaryColors.light[100],      // white - main backgrounds
       secondary: PrimaryColors.light[100],   // light gray - secondary surfaces
       primarySecondaryBlend: PrimaryColors.light[50], // blend between primary and secondary
@@ -410,6 +413,7 @@ export const ThemeColors = {
     },
     // background colors - surfaces and containers
     background: {
+      root: PrimaryColors.dark[5],           // neutral step 5 — outermost screen canvas
       primary: PrimaryColors.dark[25],       // dark - main backgrounds
       secondary: PrimaryColors.dark[100],    // darker gray - secondary surfaces
       primarySecondaryBlend: PrimaryColors.dark[50], // blend between primary and secondary
