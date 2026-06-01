@@ -64,6 +64,12 @@ export function minutesToTime(minutes: number): string {
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 }
 
+/** device-local clock time as HH:MM — used for the live “now” label on today’s timeline */
+export function getCurrentLocalTimeHHMM(): string {
+  const now = new Date();
+  return minutesToTime(now.getHours() * 60 + now.getMinutes());
+}
+
 /**
  * Calculates the Y position (in pixels) for a task on the timeline
  *

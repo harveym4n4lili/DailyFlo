@@ -27,12 +27,16 @@ import {
   generateTimeSlots,
   timeToMinutes,
   minutesToTime,
+  calculateTaskPosition,
   calculateTaskRenderProperties,
+  getCurrentLocalTimeHHMM,
   useTimelineDrag,
   getTaskCardHeight,
 } from './timelineUtils';
 import { getTimelineTaskGapPx } from './timelineSpacing';
 import { FREE_TIME_BREAK_MESSAGES, formatMinutesToDuration } from './timelineFreeTime';
+import { toLocalCalendarDayString } from '@/utils/recurrenceUtils';
+import { isValidWakeSleepHHMM } from '@/utils/preferenceScheduleTimes';
 import {
   buildPlannerWakeSleepAnchorTasks,
   isPlannerScheduleAnchorTaskId,
@@ -100,6 +104,8 @@ interface TimelineViewProps {
     sleepHHMM: string;
     dueDateIso: string | null;
   };
+  /** YYYY-MM-DD for the day being shown — when it matches today, a live clock label is rendered on the gutter */
+  calendarDayKey?: string;
 }
 
 /**
@@ -129,6 +135,7 @@ export default function TimelineView({
   onToggleTaskSelection,
   scrollEnabled = true,
   plannerScheduleAnchors,
+  calendarDayKey,
 }: TimelineViewProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -711,6 +718,50 @@ export default function TimelineView({
     
     return 0;
   }, [sortedTasks, equalSpacingPositions, segmentPixelsPerMinute]);
+
+  // only show the live clock when the visible planner/today column is the device’s calendar day
+  const isViewingToday = useMemo(() => {
+    if (!calendarDayKey) return false;
+    return calendarDayKey === toLocalCalendarDayString(new Date());
+  }, [calendarDayKey]);
+
+  // tick once per minute so the “now” label stays aligned with the real clock
+  const [currentTimeHHMM, setCurrentTimeHHMM] = useState(getCurrentLocalTimeHHMM);
+  useEffect(() => {
+    if (!isViewingToday) return;
+    setCurrentTimeHHMM(getCurrentLocalTimeHHMM());
+    const intervalId = setInterval(() => {
+      setCurrentTimeHHMM(getCurrentLocalTimeHHMM());
+    }, 60_000);
+    return () => clearInterval(intervalId);
+  }, [isViewingToday]);
+
+  // map the live clock onto the same Y math as task labels (dynamic spacing when tasks exist)
+  const currentTimeLabel = useMemo(() => {
+    if (!isViewingToday) return null;
+
+    // after wind-down the day band ends — hide the live clock so it does not sit past the sleep anchor
+    const windDownHHMM = plannerScheduleAnchors?.sleepHHMM?.trim();
+    if (windDownHHMM && isValidWakeSleepHHMM(windDownHHMM)) {
+      if (timeToMinutes(currentTimeHHMM) >= timeToMinutes(windDownHHMM)) {
+        return null;
+      }
+    }
+
+    const position =
+      sortedTasks.length === 0
+        ? calculateTaskPosition(currentTimeHHMM, dynamicStartHour, 0.3)
+        : calculatePositionWithOffsets(currentTimeHHMM);
+
+    return { time: currentTimeHHMM, position };
+  }, [
+    isViewingToday,
+    currentTimeHHMM,
+    plannerScheduleAnchors?.sleepHHMM,
+    sortedTasks.length,
+    dynamicStartHour,
+    calculatePositionWithOffsets,
+  ]);
 
   // calculate total height of timeline using equal spacing
   // height is based on number of tasks and spacing between them
@@ -1868,6 +1919,16 @@ export default function TimelineView({
               position={dragState.yPosition}
               animatedPosition={dragOverlayY}
               isDragLabel={true}
+            />
+          )}
+
+          {/* live clock gutter label — only on today’s column; uses device local time */}
+          {currentTimeLabel && (
+            <TimeLabel
+              key="current-time-label"
+              time={currentTimeLabel.time}
+              position={currentTimeLabel.position}
+              isCurrentTime={true}
             />
           )}
         </View>
