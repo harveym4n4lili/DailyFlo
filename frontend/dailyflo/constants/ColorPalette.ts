@@ -51,6 +51,8 @@ export const PrimaryColors = {
   },
   dark: {
     // root dark canvas; FAB icon color; inverted dark header/toolbar bands in light mode
+    5: '#101010',
+    // root dark canvas; FAB icon color; inverted dark header/toolbar bands in light mode
     25: '#131313',
     // subtle blend between two dark regions
     50: '#262626',

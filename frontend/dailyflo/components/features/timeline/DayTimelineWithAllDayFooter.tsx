@@ -177,6 +177,7 @@ export function DayTimelineWithAllDayFooter({
         headerComponent={todayHeader}
         timelineRowPaddingTop={timelineRowPaddingTop}
         footerComponent={allDayFooter}
+        calendarDayKey={dayKey}
       />
     </>
   );
