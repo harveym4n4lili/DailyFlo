@@ -1,6 +1,7 @@
 
 import React, { useCallback, useMemo, useState, useEffect, useLayoutEffect, useTransition, useRef } from 'react';
 import { StyleSheet, View, Platform, Text, TouchableOpacity } from 'react-native';
+import GlassView from 'expo-glass-effect/build/GlassView';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from 'expo-router';
@@ -18,7 +19,7 @@ import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboar
 import { IosPlannerBulkSelectionToolbar } from '@/components/navigation/IosPlannerBulkSelectionToolbar';
 import { IosTaskSelectionCloseStackToolbar } from '@/components/navigation/IosTaskSelectionCloseStackToolbar';
 import { WeekView } from '@/components/features/calendar/sections';
-import { DayTimelineWithAllDayFooter, PlannerWeekChromeTopFade } from '@/components/features/timeline';
+import { DayTimelineWithAllDayFooter } from '@/components/features/timeline';
 import { ListCard } from '@/components/ui/Card';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -119,6 +120,95 @@ const plannerNavMonthTitleStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     maxWidth: 280,
+  },
+});
+
+/** liquid glass panel below week selector — bordered outer shell + ios GlassView / android primary fallback */
+function PlannerContentGlassShell({ children }: { children: React.ReactNode }) {
+  const themeColors = useThemeColors();
+  const topRadius = Paddings.plannerContentPanelTopRadius;
+  const cornerStyle = {
+    borderTopLeftRadius: topRadius,
+    borderTopRightRadius: topRadius,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    ...(Platform.OS === 'ios' ? { borderCurve: 'continuous' as const } : null),
+  };
+  // inner glass radius sits just inside the 0.5px border so top curves stay concentric
+  const innerCornerStyle = {
+    borderTopLeftRadius: Math.max(topRadius - 0.5, 0),
+    borderTopRightRadius: Math.max(topRadius - 0.5, 0),
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    ...(Platform.OS === 'ios' ? { borderCurve: 'continuous' as const } : null),
+  };
+  // lighter tint + veil so the regular glass material (and its edge) stays visible
+  const glassVeil = themeColors.withOpacity(themeColors.background.primary(), 0.35);
+  const glassTint = themeColors.withOpacity(themeColors.background.primary(), 0.72);
+
+  const inner = (
+    <View style={[plannerContentGlassStyles.innerClip, innerCornerStyle]}>
+      <View style={[plannerContentGlassStyles.veil, { backgroundColor: glassVeil }]} pointerEvents="none" />
+      {children}
+    </View>
+  );
+
+  return (
+    <View
+      style={[
+        plannerContentGlassShellLayout,
+        cornerStyle,
+        plannerContentGlassStyles.outerBorder,
+        { borderColor: themeColors.border.secondary() },
+      ]}
+    >
+      {Platform.OS === 'ios' ? (
+        <GlassView
+          style={[plannerContentGlassStyles.glass, innerCornerStyle]}
+          glassEffectStyle="regular"
+          tintColor={glassTint as any}
+          isInteractive={false}
+        >
+          {inner}
+        </GlassView>
+      ) : (
+        <View
+          style={[
+            plannerContentGlassStyles.glass,
+            innerCornerStyle,
+            { backgroundColor: themeColors.background.primary() },
+          ]}
+        >
+          {inner}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const plannerContentGlassShellLayout = {
+  flex: 1,
+  marginTop: 8,
+};
+
+const plannerContentGlassStyles = StyleSheet.create({
+  // border drawn here — overflow visible so top corner strokes are not clipped
+  outerBorder: {
+    borderWidth: 0.7,
+    overflow: 'visible',
+  },
+  // glass fill — match tab bar: visible overflow so ios glass edge can render
+  glass: {
+    flex: 1,
+    overflow: 'visible',
+  },
+  innerClip: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  veil: {
+    ...StyleSheet.absoluteFillObject,
   },
 });
 
@@ -574,7 +664,9 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
           safeAreaTop={false}
           safeAreaBottom={false}
           paddingVertical={0}
+          backgroundColor={themeColors.background.root()}
         >
+          <View style={styles.plannerMainColumn}>
           <View style={styles.weekViewContainer}>
             <WeekView
               selectedDate={selectedDate}
@@ -584,13 +676,13 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
             />
           </View>
 
-          <View
-            style={[
-              styles.contentContainer,
-              layoutView === 'list' && styles.contentContainerList,
-            ]}
-          >
-            <PlannerWeekChromeTopFade />
+          <PlannerContentGlassShell>
+            <View
+              style={[
+                styles.contentContainer,
+                layoutView === 'list' && styles.contentContainerList,
+              ]}
+            >
             {layoutView === 'list' ? (
               <ListCard
                 key={`planner-list-${plannerDisplayedDayKey || 'unknown'}`}
@@ -645,8 +737,11 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                   mode === 'select' && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
                 }
                 allDayFooterKeyPrefix="planner-allday"
+                transparentTimelineBackground
               />
             )}
+            </View>
+          </PlannerContentGlassShell>
           </View>
 
           {mode === 'index' && !USE_CUSTOM_LIQUID_TAB_BAR ? (
@@ -715,20 +810,22 @@ const createStyles = (
 
     weekViewContainer: {
       paddingTop: weekViewPaddingTop,
-      backgroundColor: themeColors.background.primary(),
+      backgroundColor: themeColors.background.root(),
     },
 
+    plannerMainColumn: {
+      flex: 1,
+    },
+
+    // scrollable timeline/list body — transparent so liquid glass shell shows through
     contentContainer: {
       flex: 1,
       flexDirection: 'column',
       position: 'relative',
-      backgroundColor: themeColors.background.primarySecondaryBlend(),
-      margin: 0,
+      backgroundColor: 'transparent',
       paddingHorizontal: Paddings.none,
       paddingTop: Paddings.none,
-      overflow: 'hidden',
     },
-    // list layout: no blend panel — primary ScreenContainer shows through (matches Today list)
     contentContainerList: {
       backgroundColor: 'transparent',
     },

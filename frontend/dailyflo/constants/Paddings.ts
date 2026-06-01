@@ -126,6 +126,8 @@ export const Paddings = {
   timelineFooterToRowGap: 32,
   /** spacer above timed rows when all-day footer is hidden — between header and timeline (not full collapsed footer height) */
   timelineTopWhenAllDayHidden: 56,
+  /** planner timeline/list panel — top corner radius on `contentContainer` (bottom corners stay square) */
+  plannerContentPanelTopRadius: 40,
   timelineEmptyHorizontal: 40,
   timelineEmptyTop: 100,
 

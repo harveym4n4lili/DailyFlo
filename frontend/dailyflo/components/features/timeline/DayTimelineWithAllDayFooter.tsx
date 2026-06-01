@@ -5,14 +5,12 @@
 
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import type { SharedValue } from 'react-native-reanimated';
 
 import TimelineView from '@/components/features/timeline/TimelineView';
 import { ListCard } from '@/components/ui/Card';
 import { TodayBigScrollHeader } from '@/components/features/today/TodayBigScrollHeader';
 import type { TimelineAllDayListDisplayProps } from '@/components/features/display/displayPreferenceMappers';
-import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
 import { ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES } from '@/utils/taskGrouping';
@@ -49,11 +47,11 @@ export type DayTimelineWithAllDayFooterProps = {
   scrollYSharedValue?: SharedValue<number>;
   showTodayBigHeader?: boolean;
   todayHeaderLabel?: string;
-  /** planner uses a short gradient under week chrome */
-  showTopFade?: boolean;
   emptyAllDayMessage?: string;
   /** prefix for footer ListCard remount key */
   allDayFooterKeyPrefix?: string;
+  /** planner glass panel — timeline scroll surface stays transparent so glass shows through */
+  transparentTimelineBackground?: boolean;
 };
 
 export function DayTimelineWithAllDayFooter({
@@ -78,9 +76,9 @@ export function DayTimelineWithAllDayFooter({
   scrollYSharedValue,
   showTodayBigHeader = false,
   todayHeaderLabel = 'Today',
-  showTopFade = false,
   emptyAllDayMessage = 'No all-day tasks for this date.',
   allDayFooterKeyPrefix = 'day-allday',
+  transparentTimelineBackground = false,
 }: DayTimelineWithAllDayFooterProps) {
   const allDayTasks = useMemo(
     () => tasks.filter((task) => !task.time || task.time === ''),
@@ -155,7 +153,6 @@ export function DayTimelineWithAllDayFooter({
 
   return (
     <>
-      {showTopFade ? <PlannerWeekChromeTopFade /> : null}
       <TimelineView
         key={dayKey || 'day-timeline'}
         tasks={tasks}
@@ -178,40 +175,11 @@ export function DayTimelineWithAllDayFooter({
         timelineRowPaddingTop={timelineRowPaddingTop}
         footerComponent={allDayFooter}
         calendarDayKey={dayKey}
+        transparentBackground={transparentTimelineBackground}
       />
     </>
   );
 }
-
-/** short primary→transparent gradient under planner WeekView — softens scroll edge below week chrome */
-export function PlannerWeekChromeTopFade() {
-  const themeColors = useThemeColors();
-
-  return (
-    <View style={plannerWeekChromeTopFadeStyles.overlay} pointerEvents="none">
-      <LinearGradient
-        colors={[
-          themeColors.background.primary(),
-          themeColors.withOpacity(themeColors.background.primary(), 0),
-        ]}
-        locations={[0.0, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-    </View>
-  );
-}
-
-const plannerWeekChromeTopFadeStyles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 32,
-    zIndex: 5,
-    overflow: 'hidden',
-  },
-});
 
 const styles = StyleSheet.create({
   allDayFooter: {},

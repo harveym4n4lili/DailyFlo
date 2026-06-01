@@ -13,7 +13,7 @@ export default function PlannerLayout() {
       screenOptions={{
         animation: 'default', // native iOS slide-from-right for push screens
         gestureEnabled: true,
-        contentStyle: { backgroundColor: themeColors.background.primary() },
+        contentStyle: { backgroundColor: themeColors.background.root() },
       }}
     >
       <Stack.Screen
@@ -43,12 +43,12 @@ export default function PlannerLayout() {
                 },
                 headerShadowVisible: false,
                 headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                contentStyle: { backgroundColor: themeColors.background.root() },
               }
             : {
                 title: 'Planner',
                 headerShown: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                contentStyle: { backgroundColor: themeColors.background.root() },
               }
         }
       />
@@ -71,11 +71,11 @@ export default function PlannerLayout() {
                 headerTitle: 'Select tasks',
                 headerShadowVisible: false,
                 headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                contentStyle: { backgroundColor: themeColors.background.root() },
               }
             : {
                 headerShown: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                contentStyle: { backgroundColor: themeColors.background.root() },
               }
         }
       />
@@ -99,7 +99,7 @@ export default function PlannerLayout() {
           headerShown: false,
           presentation: 'modal',
           gestureEnabled: false,
-          contentStyle: { backgroundColor: themeColors.background.primary() },
+          contentStyle: { backgroundColor: themeColors.background.root() },
         }}
       />
     </Stack>
