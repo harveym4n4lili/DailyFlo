@@ -21,7 +21,7 @@ import TimelineItem from './TimelineItem/TimelineItem';
 import TimeLabel from './TimeLabel';
 import { OverlappingTaskCard } from './OverlappingTaskCard';
 import DragOverlay from './DragOverlay';
-import { DashedVerticalLine } from '@/components/ui/borders';
+import { TIMELINE_LINE_LEFT, TIMELINE_LINE_WIDTH, TIMELINE_CONTENT_LEFT } from './timelineChrome';
 import { SparklesIcon, SunshineFillIcon, MoonFillIcon } from '@/components/ui/Icon';
 import {
   generateTimeSlots,
@@ -1938,13 +1938,15 @@ export default function TimelineView({
 
         {/* tasks column on the right */}
         <View style={styles.tasksContainer}>
-          {/* vertical dashed line connecting all time slots - extends only between first and last task */}
-          <DashedVerticalLine
-            height={timelineLineBounds.height}
-            color={themeColors.border.secondary()}
+          {/* solid vertical line — checkbox/icon rails sit on this axis */}
+          <View
             style={[
               styles.timelineLine,
-              { top: timelineLineBounds.top },
+              {
+                top: timelineLineBounds.top,
+                height: timelineLineBounds.height,
+                backgroundColor: themeColors.border.secondary(),
+              },
             ]}
           />
 
@@ -2300,22 +2302,23 @@ const createStyles = (
     paddingRight: Paddings.timelineTasksRight,
   },
 
-  // vertical dashed line connecting all time slots - aligns with icon container line (left: 21)
+  // solid vertical spine — aligned with timeline item rail (see timelineChrome.ts)
   timelineLine: {
     position: 'absolute',
-    left: 21,
+    left: TIMELINE_LINE_LEFT,
+    width: TIMELINE_LINE_WIDTH,
+    zIndex: 0,
   },
 
   // free time block - fills the gap between non-overlapping tasks
-  // positioned absolutely at gap top/height, text vertically centered
-  // 32px left padding and left-aligned for all segment messages
+  // left inset matches timeline task text column (see timelineChrome.ts)
   freeTimeBlock: {
     position: 'absolute',
     left: 0,
     right: 0,
     justifyContent: 'center',
     alignItems: 'flex-start',
-    paddingLeft: Paddings.timelineFreeTimeLeft,
+    paddingLeft: TIMELINE_CONTENT_LEFT,
   },
 
   // row containing sparkles icon (14px) + message text

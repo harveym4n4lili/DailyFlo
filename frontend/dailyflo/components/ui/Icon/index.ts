@@ -48,6 +48,18 @@ export type { TrashIconProps } from './icons/TrashIcon';
 export { TickIcon } from './icons/TickIcon';
 export type { TickIconProps } from './icons/TickIcon';
 
+export { CompletedTasksIcon } from './icons/CompletedTasksIcon';
+export type { CompletedTasksIconProps } from './icons/CompletedTasksIcon';
+
+export { CompletedTasksSFSymbolIcon, COMPLETED_TASKS_SF_SYMBOL } from './CompletedTasksSFSymbolIcon';
+export type { CompletedTasksSFSymbolIconProps } from './CompletedTasksSFSymbolIcon';
+
+export { UpDownArrowIcon } from './icons/UpDownArrowIcon';
+export type { UpDownArrowIconProps } from './icons/UpDownArrowIcon';
+
+export { UpDownArrowSFSymbolIcon, UP_DOWN_ARROW_SF_SYMBOL } from './UpDownArrowSFSymbolIcon';
+export type { UpDownArrowSFSymbolIconProps } from './UpDownArrowSFSymbolIcon';
+
 export { SparklesIcon } from './icons/SparklesIcon';
 export type { SparklesIconProps } from './icons/SparklesIcon';
 

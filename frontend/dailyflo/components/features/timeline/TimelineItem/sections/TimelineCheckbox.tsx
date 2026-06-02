@@ -105,6 +105,7 @@ export default function TimelineCheckbox({
       <Checkbox
         checked={checked}
         onPress={handlePress}
+        size={CHECKBOX_SIZE_DEFAULT}
         expandTapArea
         selectionMode={selectionMode}
       />
