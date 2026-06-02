@@ -32,6 +32,11 @@ import TaskIcon from '@/components/ui/Card/TaskCard/TaskIcon';
 import { RepeatIcon } from '@/components/ui/Icon';
 import { Checkbox, CHECKBOX_SIZE_DEFAULT, CHECKBOX_SIZE_SMALL, CHECKBOX_SIZE_TASK_VIEW } from '@/components/ui/Button';
 import { getTaskCardHeight, formatTimeRange } from '../timelineUtils';
+import {
+  TIMELINE_RAIL_WIDTH,
+  TIMELINE_RAIL_MARGIN_LEFT,
+  TIMELINE_CONTENT_GAP,
+} from '../timelineChrome';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
 import { TimelineCheckbox } from './sections';
 import { taskDisplayEquals } from '@/utils/taskDisplayEquals';
@@ -273,8 +278,8 @@ const TimelineItem = React.memo(function TimelineItem({
   // calculate minimum card height based on duration
   const minCardHeight = useMemo(() => getTaskCardHeight(duration), [duration]);
 
-  // time range for display - shown above title when in overlapping tasks
-  const timeRangeText = task.time && overlapPosition ? formatTimeRange(task.time, duration) : '';
+  // time range above title — same as DragOverlay (always when task has a scheduled time)
+  const timeRangeText = task.time ? formatTimeRange(task.time, duration) : '';
   
   // displayCompleted from TimelineCheckbox for title styling (optimistic ui)
   const [displayCompleted, setDisplayCompleted] = useState(task.isCompleted);
@@ -737,24 +742,12 @@ const TimelineItem = React.memo(function TimelineItem({
         },
       ]}
     >
-      {/* icon container - separate background for the icon */}
-      {/* positioned on the left side in the row layout */}
-      {/* height is fixed at base height */}
-      {/* background color is task color, icon color is primary */}
-      {task.icon && (
-        <AnimatedReanimated.View style={[styles.iconContainer, styles.iconContainerPadding, { height: minCardHeight }, overlapBorderRadius, animatedDragIndicatorStyle]}>
-          <TaskIcon icon={task.icon} color={themeColors.background.invertedPrimary()} size={20} />
-        </AnimatedReanimated.View>
-      )}
-
-      {/* content column - contains task content */}
+      {/* content column — rail (icon/checkbox on line) + card surface for text only */}
       <AnimatedReanimated.View
         style={[
           styles.content,
           useHugRow ? styles.contentHug : null,
-          overlapBorderRadius,
           animatedContentStyle,
-          animatedDragIndicatorStyle,
         ]}
         onLayout={children != null ? undefined : handleContentLayout}
       >
@@ -767,85 +760,117 @@ const TimelineItem = React.memo(function TimelineItem({
             style={[
               styles.combinedContainer,
               useHugRow ? null : styles.combinedContainerFullWidth,
-              styles.combinedContainerPadding,
               { height: minCardHeight },
-              overlapBorderRadius,
             ]}
           >
-            <TouchableOpacity
-              style={[styles.touchableContent, useHugRow ? styles.touchableContentHug : null]}
-              onPress={handleTaskPress}
-              activeOpacity={0.7}
+            {/* rail on spine — primary backdrop hides the line under checkbox/icon */}
+            <View
+              style={[
+                styles.timelineRail,
+                leadingAccessory != null ? styles.timelineRailLeadingSlot : null,
+              ]}
             >
-              <View style={[styles.checkboxWrapper, leadingAccessory != null ? styles.checkboxWrapperLeadingSlot : null]}>
-                {leadingAccessory != null ? (
-                  leadingAccessory
-                ) : (
-                  <TimelineCheckbox
-                    task={task}
-                    onTaskComplete={onTaskComplete}
-                    onTaskCompleteImmediate={onTaskCompleteImmediate}
-                    onDisplayChange={setDisplayCompleted}
-                    selectionMode={selectionMode}
-                    isSelected={isSelected}
-                    onSelect={selectionMode ? onPress : undefined}
-                  />
-                )}
-              </View>
-              <View style={[styles.taskContent, useHugRow ? styles.taskContentHug : null]}>
-                {/* time display above title - only when in overlapping tasks */}
-                {timeRangeText ? (
-                  <View style={styles.timeRangeRow}>
-                    <Text style={styles.timeRange}>{timeRangeText}</Text>
-                  </View>
-                ) : null}
-                <View style={[styles.titleRow, useHugRow ? styles.titleRowHug : null]}>
-                  <AnimatedText
-                    style={[styles.title, titleAnimatedStyle, useHugRow ? styles.titleHug : null]}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                    onTextLayout={handleTitleLayout}
-                  >
-                    {task.title}
-                  </AnimatedText>
-                  <View style={styles.indicatorsRow}>
-                    {subtasksCount > 0 && (
-                      <View style={styles.subtaskCountRow}>
-                        <Checkbox
-                          size={CHECKBOX_SIZE_SMALL}
-                          checked={allSubtasksComplete}
-                          disabled
-                        />
-                        <Text style={styles.subtaskCount}>
-                          {completedSubtasksCount}/{subtasksCount}
-                        </Text>
+              {task.icon ? (
+                <TaskIcon icon={task.icon} color={taskColor} size={20} />
+              ) : leadingAccessory != null ? (
+                leadingAccessory
+              ) : (
+                <TimelineCheckbox
+                  task={task}
+                  onTaskComplete={onTaskComplete}
+                  onTaskCompleteImmediate={onTaskCompleteImmediate}
+                  onDisplayChange={setDisplayCompleted}
+                  selectionMode={selectionMode}
+                  isSelected={isSelected}
+                  onSelect={selectionMode ? onPress : undefined}
+                />
+              )}
+            </View>
+
+            {/* task text column — primary backdrop hides the spine behind copy */}
+            <AnimatedReanimated.View
+              style={[
+                styles.contentSurface,
+                styles.contentSurfacePadding,
+                useHugRow ? styles.contentSurfaceHug : null,
+                overlapBorderRadius,
+                animatedDragIndicatorStyle,
+              ]}
+            >
+              <TouchableOpacity
+                style={[styles.touchableContent, useHugRow ? styles.touchableContentHug : null]}
+                onPress={handleTaskPress}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.taskContent, useHugRow ? styles.taskContentHug : null]}>
+                  <View style={[styles.textContainer, useHugRow ? styles.textContainerHug : null]}>
+                    {timeRangeText ? (
+                      <View style={styles.timeRangeRow}>
+                        <Text style={styles.timeRange}>{timeRangeText}</Text>
                       </View>
-                    )}
-                    {recurrenceLabel && (
-                      <View style={styles.recurrenceRow}>
-                        <RepeatIcon
-                          size={CHECKBOX_SIZE_SMALL}
-                          color={themeColors.text.tertiary()}
-                        />
-                        <Text style={styles.recurrenceText}>{recurrenceLabel}</Text>
+                    ) : null}
+                    <View style={[styles.titleRow, useHugRow ? styles.titleRowHug : null]}>
+                      <AnimatedText
+                        style={[styles.title, titleAnimatedStyle, useHugRow ? styles.titleHug : null]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                        onTextLayout={handleTitleLayout}
+                      >
+                        {task.title}
+                      </AnimatedText>
+                      <View style={styles.indicatorsRow}>
+                        {subtasksCount > 0 && (
+                          <View style={styles.subtaskCountRow}>
+                            <Checkbox
+                              size={CHECKBOX_SIZE_SMALL}
+                              checked={allSubtasksComplete}
+                              disabled
+                            />
+                            <Text style={styles.subtaskCount}>
+                              {completedSubtasksCount}/{subtasksCount}
+                            </Text>
+                          </View>
+                        )}
+                        {recurrenceLabel && (
+                          <View style={styles.recurrenceRow}>
+                            <RepeatIcon
+                              size={CHECKBOX_SIZE_SMALL}
+                              color={themeColors.text.tertiary()}
+                            />
+                            <Text style={styles.recurrenceText}>{recurrenceLabel}</Text>
+                          </View>
+                        )}
                       </View>
-                    )}
-                  </View>
-                  {/* strikethrough overlay - absolute so it doesn't affect layout of title + metadata */}
-                  <View pointerEvents="none" style={styles.strikeOverlay}>
-                    {titleLines.map((line, index) => (
-                      <StrikethroughLine
-                        key={index}
-                        line={line}
-                        strikeProgress={strikeProgress}
-                        lineStyle={styles.strikethroughLine}
-                        yOffset={timeRangeText ? 1 : 9}
-                      />
-                    ))}
+                      <View pointerEvents="none" style={styles.strikeOverlay}>
+                        {titleLines.map((line, index) => (
+                          <StrikethroughLine
+                            key={index}
+                            line={line}
+                            strikeProgress={strikeProgress}
+                            lineStyle={styles.strikethroughLine}
+                            yOffset={timeRangeText ? 1 : 0}
+                          />
+                        ))}
+                      </View>
+                    </View>
                   </View>
                 </View>
-              </View>
-            </TouchableOpacity>
+                {/* icon tasks: completion checkbox stays inside the content card on the right */}
+                {task.icon ? (
+                  <View style={styles.checkboxWrapper}>
+                    <TimelineCheckbox
+                      task={task}
+                      onTaskComplete={onTaskComplete}
+                      onTaskCompleteImmediate={onTaskCompleteImmediate}
+                      onDisplayChange={setDisplayCompleted}
+                      selectionMode={selectionMode}
+                      isSelected={isSelected}
+                      onSelect={selectionMode ? onPress : undefined}
+                    />
+                  </View>
+                ) : null}
+              </TouchableOpacity>
+            </AnimatedReanimated.View>
           </Animated.View>
         )}
       </AnimatedReanimated.View>
@@ -882,25 +907,12 @@ const createStyles = (
     maxWidth: '100%',
   },
 
-  // icon container - separate background for the icon
-  // positioned on the left in the row layout
-  // background color is task color, icon color is primary
-  iconContainer: {
-    width: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: taskColor,
-    borderRadius: Paddings.continueButtonRadius,
-    marginRight: 12,
-  },
-
-  // content column - contains task content
+  // content column — full-width shell; visual card is contentSurface only
   content: {
-    flex: 1, // take up remaining available width within container
-    flexDirection: 'column', // stack combinedContainer and expandedArea vertically
+    flex: 1,
+    flexDirection: 'column',
     position: 'relative',
     overflow: 'visible',
-    borderRadius: Paddings.continueButtonRadius, // outer border radius for the entire card
   },
   contentHug: {
     flex: 0,
@@ -912,44 +924,67 @@ const createStyles = (
     width: '100%',
   },
   
-  // combined container for task content - fixed height, stays at top
-  // borderRadius here so corners render
+  // structural row: transparent shell — rail + content card
   combinedContainer: {
     flexDirection: 'row',
+    width: '100%',
     alignItems: 'stretch',
     position: 'relative',
-    backgroundColor: themeColors.background.primarySecondaryBlend(),
-    borderRadius: Paddings.continueButtonRadius,
   },
   combinedContainerFullWidth: {
     width: '100%',
   },
-  
-  // touchable content area - row: checkbox on left, task content on right (matches TaskCard layout)
+
+  // checkbox/icon on the vertical timeline line — primary bg covers the spine
+  timelineRail: {
+    width: TIMELINE_RAIL_WIDTH,
+    marginLeft: TIMELINE_RAIL_MARGIN_LEFT,
+    marginRight: TIMELINE_CONTENT_GAP,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    backgroundColor: themeColors.background.primary(),
+    zIndex: 1,
+  },
+  timelineRailLeadingSlot: {
+    width: CHECKBOX_SIZE_TASK_VIEW,
+    marginLeft: TIMELINE_RAIL_MARGIN_LEFT - (CHECKBOX_SIZE_TASK_VIEW - TIMELINE_RAIL_WIDTH) / 2,
+  },
+
+  // text column (+ in-card checkbox when task has icon) — primary bg covers the spine
+  contentSurface: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    alignSelf: 'stretch',
+    backgroundColor: themeColors.background.primary(),
+    zIndex: 1,
+  },
+  contentSurfaceHug: {
+    flex: 0,
+  },
+
   touchableContent: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12, // checkbox-to-title spacing - matches TaskCard checkboxWrapper marginRight: 12
+    gap: 12,
+    minWidth: 0,
   },
   touchableContentHug: {
     flex: 0,
   },
 
-  // checkbox wrapper - left of task content
   checkboxWrapper: {
     width: CHECKBOX_SIZE_DEFAULT,
     height: CHECKBOX_SIZE_DEFAULT,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  /** onboarding sun/moon (and any custom leading slot) can use the larger task-view checkbox step so svg isn’t clipped */
-  checkboxWrapperLeadingSlot: {
-    width: CHECKBOX_SIZE_TASK_VIEW,
-    height: CHECKBOX_SIZE_TASK_VIEW,
-  },
 
-  // task content container - title and indicators, right of checkbox
+  // task content — wraps textContainer (matches DragOverlay taskContent)
   taskContent: {
     flex: 1,
     position: 'relative',
@@ -959,7 +994,17 @@ const createStyles = (
     flex: 0,
   },
 
-  // time range row - above title when in overlapping tasks (matches DragOverlay)
+  // time + title stack — matches DragOverlay textContainer
+  textContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+  },
+  textContainerHug: {
+    flex: 0,
+  },
+
+  // time range row above title (matches DragOverlay)
   timeRangeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1025,11 +1070,9 @@ const createStyles = (
     paddingLeft: Paddings.none,
     paddingRight: Paddings.card,
   },
-  iconContainerPadding: {
-    paddingHorizontal: Paddings.cardCompact,
-  },
-  combinedContainerPadding: {
-    paddingHorizontal: Paddings.card,
+  contentSurfacePadding: {
+    paddingLeft: Paddings.none,
+    paddingRight: Paddings.none,
     paddingVertical: Paddings.listItemVertical,
   },
 

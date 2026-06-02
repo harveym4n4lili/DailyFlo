@@ -11,9 +11,9 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Task } from '@/types';
 import { getTaskCardHeight } from '../timelineUtils';
+import { TIMELINE_CONTENT_LEFT } from '../timelineChrome';
 import TimelineItem from '../TimelineItem/TimelineItem';
-import DashedSeparator from '@/components/ui/borders/DashedSeparator';
-import { Paddings } from '@/constants/Paddings';
+import { SolidSeparator } from '@/components/ui/borders';
 
 interface OverlappingTaskCardProps {
   // array of tasks sorted by start time (earliest first)
@@ -81,9 +81,6 @@ export default function OverlappingTaskCard({
   // track individual task heights within the overlapping card
   // this allows us to calculate total height and update positions when subtasks expand
   const [individualTaskHeights, setIndividualTaskHeights] = useState<Map<string, number>>(new Map());
-
-  // container width for DashedSeparator - prevents separator from extending past task bounds
-  const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
 
   // handle height measurement from individual TimelineItems
   // this tracks each task's height (including expanded subtasks) so we can calculate total height
@@ -164,13 +161,7 @@ export default function OverlappingTaskCard({
   // TimelineItems inside position themselves absolutely and inherit the same padding
   // this ensures overlapping tasks have the same horizontal padding as standalone tasks
   return (
-    <View
-      style={{ position: 'absolute', left: 0, right: 0 }}
-      onLayout={(e) => {
-        const w = e.nativeEvent.layout.width;
-        if (w > 0) setContainerWidth(w);
-      }}
-    >
+    <View style={{ position: 'absolute', left: 0, right: 0 }}>
       {taskPositions.map(({ task, position: taskPosition, height: taskHeight }, index) => {
         const taskDuration = task.duration || 0;
         const isDragged = draggedTaskId === task.id;
@@ -227,10 +218,7 @@ export default function OverlappingTaskCard({
               ]}
               pointerEvents="none"
             >
-              <DashedSeparator
-                paddingHorizontal={Paddings.card}
-                maxWidth={containerWidth}
-              />
+              <SolidSeparator paddingLeft={0} paddingRight={0} />
             </View>
           )}
         </React.Fragment>
@@ -241,11 +229,10 @@ export default function OverlappingTaskCard({
 }
 
 const styles = StyleSheet.create({
-  // separator positioned at boundary between tasks - aligns with TimelineItem content padding
-  // overflow hidden clips separator to task card bounds (prevents extending past right edge)
+  // separator spans text column only (inset past timeline rail)
   separatorWrapper: {
     position: 'absolute',
-    left: 0,
+    left: TIMELINE_CONTENT_LEFT,
     right: 0,
     zIndex: 1,
     overflow: 'hidden',

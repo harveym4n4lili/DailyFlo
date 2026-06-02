@@ -24,7 +24,7 @@ import {
   IosBrowseModalTrailingStackToolbar,
 } from '@/components/navigation/IosBrowseModalStackToolbars';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
-import { SFSymbolIcon, TickIcon } from '@/components/ui/Icon';
+import { SFSymbolIcon, CompletedTasksSFSymbolIcon, UpDownArrowSFSymbolIcon } from '@/components/ui/Icon';
 import { DisplayLayoutViewSelector } from '@/components/features/display/DisplayLayoutViewSelector';
 import { DisplaySettingsAnimatedSection } from '@/components/features/display/DisplaySettingsAnimatedSection';
 import { DISPLAY_SETTINGS_ROW_TO_ROUTE, type DisplaySettingsContext } from '@/components/features/display/displayStackChrome';
@@ -197,14 +197,12 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
         <GroupedList {...listGroupProps}>
           <FormDetailButton
             key="sort-by-sort"
-            iconComponent={renderGroupedListIcon(
-              'arrow.up.arrow.down',
-              <Ionicons
-                name="swap-vertical"
+            iconComponent={
+              <UpDownArrowSFSymbolIcon
                 size={DISPLAY_GROUPED_LIST_ICON_SIZE}
                 color={groupedListIconColor}
               />
-            )}
+            }
             label="Sorting"
             value={sortOption}
             onPress={() => handleOpenPicker('sorting')}
@@ -305,10 +303,10 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
               <GroupedList {...listGroupProps}>
                 <View style={styles.completedTasksRow}>
                   <View style={styles.groupedListIconWrap}>
-                    {renderGroupedListIcon(
-                      'checkmark.circle.fill',
-                      <TickIcon size={DISPLAY_GROUPED_LIST_ICON_SIZE} color={groupedListIconColor} />
-                    )}
+                    <CompletedTasksSFSymbolIcon
+                      size={DISPLAY_GROUPED_LIST_ICON_SIZE}
+                      color={groupedListIconColor}
+                    />
                   </View>
                   <Text
                     style={[styles.completedTasksLabel, { color: themeColors.text.primary() }]}

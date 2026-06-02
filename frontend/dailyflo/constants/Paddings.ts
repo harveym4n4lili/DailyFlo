@@ -119,7 +119,7 @@ export const Paddings = {
   timelineLabelsRight: 20,
   timelineTasksLeft: 20,
   timelineTasksRight: 20,
-  timelineFreeTimeLeft: 36,
+  // free-time gap copy uses TIMELINE_CONTENT_LEFT from timelineChrome.ts (kept in sync with task text)
   timelineScrollTop: 56,
   timelineScrollBottom: 200,
   /** gap between all-day footer and timed timeline row (TimelineView timelineRowWithFooterAbove) */

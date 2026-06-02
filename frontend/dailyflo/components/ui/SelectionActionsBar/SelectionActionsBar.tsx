@@ -8,6 +8,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import GlassView from 'expo-glass-effect/build/GlassView';
 import { Ionicons } from '@expo/vector-icons';
+import { CompletedTasksIcon } from '@/components/ui/Icon';
 import { usePathname } from 'expo-router';
 
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
@@ -83,8 +84,7 @@ export function SelectionActionsBar(props: SelectionActionsBarProps) {
           accessibilityLabel="Complete selected tasks"
           accessibilityRole="button"
         >
-          <Ionicons
-            name="checkmark-done-outline"
+          <CompletedTasksIcon
             size={24}
             color={hasSelection ? iconColorActive : iconColorDisabled}
           />
