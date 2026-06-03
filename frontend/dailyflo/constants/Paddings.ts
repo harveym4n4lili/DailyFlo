@@ -126,6 +126,14 @@ export const Paddings = {
   timelineFooterToRowGap: 32,
   /** spacer above timed rows when all-day footer is hidden — between header and timeline (not full collapsed footer height) */
   timelineTopWhenAllDayHidden: 56,
+  /** gap under planner segment pill row */
+  timelineAllDayPillPaddingBottom: 8,
+  /** extra scroll inset so timeline / all-day content clears the anchored pill strip */
+  timelinePlannerContentBelowPillsGap: 16,
+  /** gap between pill and first task row on planner all-day segment (timeline keeps timelinePlannerContentBelowPillsGap) */
+  timelineAllDayPillToListGap: 8,
+  /** extra trim on planner all-day scroll spacer so first list row lines up with first timeline task card */
+  timelinePlannerAllDayTopSpacerReduction: 20,
   /** planner timeline/list panel — top corner radius on `contentContainer` (bottom corners stay square) */
   plannerContentPanelTopRadius: 40,
   timelineEmptyHorizontal: 40,

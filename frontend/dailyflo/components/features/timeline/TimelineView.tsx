@@ -108,6 +108,11 @@ interface TimelineViewProps {
   calendarDayKey?: string;
   /** when true, root container bg is transparent (planner liquid glass panel) */
   transparentBackground?: boolean;
+  /**
+   * fixed-height spacer as first scroll child (planner pill chrome) — more reliable than paddingTop alone.
+   * when set, `scrollContentPaddingTop` only adds safe-area (Today); spacer holds the pill inset.
+   */
+  scrollTopSpacerHeight?: number;
 }
 
 /**
@@ -139,6 +144,7 @@ export default function TimelineView({
   plannerScheduleAnchors,
   calendarDayKey,
   transparentBackground = false,
+  scrollTopSpacerHeight,
 }: TimelineViewProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -152,8 +158,12 @@ export default function TimelineView({
     },
   });
 
-  const resolvedScrollPaddingTop =
-    (scrollContentPaddingTop ?? 0) + (scrollPastTopInset ? insets.top : 0);
+  const usesTopSpacer = scrollTopSpacerHeight != null && scrollTopSpacerHeight > 0;
+  const resolvedScrollPaddingTop = usesTopSpacer
+    ? scrollPastTopInset
+      ? insets.top
+      : 0
+    : (scrollContentPaddingTop ?? 0) + (scrollPastTopInset ? insets.top : 0);
   const { getMossBrandColor, getSageBrandColor } = useColorPalette();
   const plannerWakeIconColor = getMossBrandColor(600);
   const plannerSleepIconColor = getSageBrandColor(600);
@@ -415,7 +425,23 @@ export default function TimelineView({
     const positions = new Map<string, { equalSpacingPosition: number; cardHeight: number }>();
     if (sortedTasks.length === 0) return positions;
 
-    let currentPosition = 0; // start at top
+    const resolveCardHeight = (task: Task, combinedTask?: CombinedOverlappingTask) => {
+      if (combinedTask) {
+        let combinedHeight = 0;
+        combinedTask.tasks.forEach((taskItem, index) => {
+          const taskDuration = taskItem.duration || 0;
+          combinedHeight += getTaskCardHeight(taskDuration);
+          if (index < combinedTask.tasks.length - 1) {
+            combinedHeight += 4;
+          }
+        });
+        return taskCardHeights.get(task.id) ?? combinedHeight;
+      }
+      const duration = task.duration || 0;
+      return taskCardHeights.get(task.id) ?? getTaskCardHeight(duration);
+    };
+
+    let currentPosition = 0;
 
     sortedTasks.forEach((task, index) => {
       if (!task.time) return;
@@ -425,30 +451,11 @@ export default function TimelineView({
       
       let cardHeight: number;
       
-      if (combinedTask) {
-        // calculate combined height for overlapping tasks: sum of all task heights + spacing
-        let combinedHeight = 0;
-        combinedTask.tasks.forEach((taskItem, index) => {
-          const taskDuration = taskItem.duration || 0;
-          const taskHeight = getTaskCardHeight(taskDuration);
-          combinedHeight += taskHeight;
-          // add 4px spacing between cards (not after the last one)
-          if (index < combinedTask.tasks.length - 1) {
-            combinedHeight += 4;
-          }
-        });
-        
-        // prefer the live measured/animated height so spacing animates with the card
-        // fall back to the calculated combined height if we don't have it yet
-        const measuredHeight = taskCardHeights.get(task.id);
-        cardHeight = measuredHeight ?? combinedHeight;
-      } else {
-        // regular task - use standard height calculation
-        const duration = task.duration || 0;
-        // prefer the live measured/animated height so spacing animates with the card
-        const measuredHeight = taskCardHeights.get(task.id);
-        const fallbackHeight = getTaskCardHeight(duration);
-        cardHeight = measuredHeight ?? fallbackHeight;
+      cardHeight = resolveCardHeight(task, combinedTask);
+
+      // planner pill chrome: first row center sits half a card below y=0 so the card top lines up with all-day list
+      if (index === 0 && currentPosition === 0 && usesTopSpacer) {
+        currentPosition = cardHeight / 2;
       }
       
       // store center position for this task
@@ -518,7 +525,7 @@ export default function TimelineView({
     });
     
     return positions;
-  }, [sortedTasks, taskCardHeights, combinedOverlappingTasks]); // recalc when tasks or heights change so spacing matches animated card heights
+  }, [sortedTasks, taskCardHeights, combinedOverlappingTasks, usesTopSpacer]);
 
   // free time segments - gaps between non-overlapping tasks where we show contextual messages
   // derived from equalSpacingPositions: gap = space between bottom of current task and top of next
@@ -1829,11 +1836,18 @@ export default function TimelineView({
       <AnimatedScrollView
         style={styles.scrollView}
         contentContainerStyle={[
-          styles.scrollContent, 
+          styles.scrollContent,
+          // parent scrollContentPaddingTop replaces default timelineScrollTop (planner pill chrome passes measured inset)
+          {
+            paddingTop: usesTopSpacer
+              ? resolvedScrollPaddingTop
+              : resolvedScrollPaddingTop > 0
+                ? resolvedScrollPaddingTop
+                : Paddings.timelineScrollTop,
+          },
           // when footer: content = list + timeline only (no minHeight) so timeline moves up when list collapses
           // when no footer: minHeight ensures timeline is scrollable
           ...(footerComponent ? [] : [{ minHeight: timelineHeight + 220 }]),
-          ...(resolvedScrollPaddingTop > 0 ? [{ paddingTop: resolvedScrollPaddingTop }] : []),
           ...(scrollContentPaddingBottom !== undefined
             ? [{ paddingBottom: Paddings.timelineScrollBottom + scrollContentPaddingBottom }]
             : []),
@@ -1842,9 +1856,15 @@ export default function TimelineView({
         scrollEnabled={scrollEnabled}
         onScroll={scrollYSharedValue ? timelineScrollHandler : undefined}
         scrollEventThrottle={16}
+        contentInsetAdjustmentBehavior={
+          usesTopSpacer && Platform.OS === 'ios' ? 'never' : undefined
+        }
       >
         {headerComponent ? (
           <View style={styles.scrollHeader}>{headerComponent}</View>
+        ) : null}
+        {usesTopSpacer ? (
+          <View style={{ height: scrollTopSpacerHeight }} pointerEvents="none" />
         ) : null}
         {/* ListCard + timeline as one stack - layout enabled after mount so they appear in final position */}
         <AnimatedReanimated.View
@@ -2257,7 +2277,6 @@ const createStyles = (
   // scroll content container - column so timeline row + footer stack vertically
   scrollContent: {
     flexDirection: 'column',
-    paddingTop: Paddings.timelineScrollTop,
     paddingBottom: Paddings.timelineScrollBottom,
   },
 

@@ -681,6 +681,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
               style={[
                 styles.contentContainer,
                 layoutView === 'list' && styles.contentContainerList,
+                layoutView === 'timeline' && styles.contentContainerTimelineGlassBleed,
               ]}
             >
             {layoutView === 'list' ? (
@@ -738,6 +739,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                 }
                 allDayFooterKeyPrefix="planner-allday"
                 transparentTimelineBackground
+                useAllDayPillBar
               />
             )}
             </View>
@@ -828,5 +830,11 @@ const createStyles = (
     },
     contentContainerList: {
       backgroundColor: 'transparent',
+    },
+    // room inside clipped glass panel so segment pills can expand without being cut off (net layout unchanged)
+    contentContainerTimelineGlassBleed: {
+      marginTop: -Paddings.liquidGlassBleed,
+      paddingTop: Paddings.liquidGlassBleed,
+      overflow: 'visible',
     },
   });
