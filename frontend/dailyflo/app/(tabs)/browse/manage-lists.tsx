@@ -234,7 +234,7 @@ export default function ManageListsScreen() {
   }, [router]);
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background.root() }]}>
       {Platform.OS === 'ios' ? (
         <Stack.Screen
           options={{
@@ -295,8 +295,8 @@ export default function ManageListsScreen() {
           />
           <LinearGradient
             colors={[
-              themeColors.background.primary(),
-              themeColors.withOpacity(themeColors.background.primary(), 0),
+              themeColors.background.root(),
+              themeColors.withOpacity(themeColors.background.root(), 0),
             ]}
             locations={[0.4, 0.8]}
             style={StyleSheet.absoluteFill}

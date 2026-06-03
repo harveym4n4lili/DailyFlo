@@ -9,7 +9,7 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
 import GlassView from 'expo-glass-effect/build/GlassView';
 import { HeaderIconButton } from './HeaderIconButton';
-import { GearIcon, DashboardIcon } from '@/components/ui/Icon';
+import { GearIcon, DashboardIcon, SFSymbolIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
 export type ScreenHeaderActionsVariant = 'dashboard' | 'browse';
@@ -19,6 +19,8 @@ export interface ScreenHeaderActionsProps {
   variant: ScreenHeaderActionsVariant;
   /** for dashboard variant: opens display settings (list vs timeline) */
   onDashboardPress?: () => void;
+  /** for browse variant: opens achievements screen */
+  onAchievementsPress?: () => void;
   /** for browse variant: called when settings (cog) icon is tapped */
   onSettingsPress?: () => void;
   /** optional container style */
@@ -34,6 +36,7 @@ const GLASS_BORDER_RADIUS = 24;
 export function ScreenHeaderActions({
   variant,
   onDashboardPress,
+  onAchievementsPress,
   onSettingsPress,
   style,
   tint = 'primary',
@@ -43,13 +46,24 @@ export function ScreenHeaderActions({
 
   const rowContent =
     variant === 'browse' ? (
-      <HeaderIconButton
-        iconComponent={<GearIcon size={24} color={themeColors.text.primary()} />}
-        onPress={onSettingsPress ?? (() => console.log('settings tapped'))}
-        accessibilityLabel="Settings"
-        tint={tint}
-        noWrapper
-      />
+      <View style={styles.browseActionsRow}>
+        <HeaderIconButton
+          iconComponent={
+            <SFSymbolIcon name="trophy.fill" size={22} color={themeColors.text.primary()} />
+          }
+          onPress={onAchievementsPress ?? (() => console.log('achievements tapped'))}
+          accessibilityLabel="Achievements"
+          tint={tint}
+          noWrapper
+        />
+        <HeaderIconButton
+          iconComponent={<GearIcon size={24} color={themeColors.text.primary()} />}
+          onPress={onSettingsPress ?? (() => console.log('settings tapped'))}
+          accessibilityLabel="Settings"
+          tint={tint}
+          noWrapper
+        />
+      </View>
     ) : (
       <HeaderIconButton
         iconComponent={<DashboardIcon size={24} color={themeColors.text.primary()} />}
@@ -93,5 +107,10 @@ const styles = StyleSheet.create({
   glassContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  browseActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
 });

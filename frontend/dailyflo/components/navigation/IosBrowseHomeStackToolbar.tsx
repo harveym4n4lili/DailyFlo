@@ -12,9 +12,13 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 
 export type IosBrowseHomeStackToolbarProps = {
   onSearchPress?: () => void;
+  onAchievementsPress?: () => void;
 };
 
-export function IosBrowseHomeStackToolbar({ onSearchPress }: IosBrowseHomeStackToolbarProps) {
+export function IosBrowseHomeStackToolbar({
+  onSearchPress,
+  onAchievementsPress,
+}: IosBrowseHomeStackToolbarProps) {
   const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const tint = themeColors.text.primary();
@@ -34,6 +38,12 @@ export function IosBrowseHomeStackToolbar({ onSearchPress }: IosBrowseHomeStackT
         />
       </Stack.Toolbar>
       <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon="trophy.fill"
+          onPress={onAchievementsPress ?? (() => router.push('/(tabs)/browse/achievements' as any))}
+          accessibilityLabel="Achievements"
+          tintColor={tint}
+        />
         <Stack.Toolbar.Button
           icon="gearshape"
           onPress={() => router.push('/(tabs)/browse/settings' as any)}

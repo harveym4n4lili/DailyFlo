@@ -186,7 +186,7 @@ export default function BrowseSettingsScreen() {
   }, [loggedInPrefs, openScheduleTimeSelect, router]);
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background.root() }]}>
       {/* ios: native title next to Stack.Toolbar xmark — style matches list-create (heading-4) */}
       {Platform.OS === 'ios' ? (
         <Stack.Screen
@@ -544,8 +544,8 @@ export default function BrowseSettingsScreen() {
           />
           <LinearGradient
             colors={[
-              themeColors.background.primary(),
-              themeColors.withOpacity(themeColors.background.primary(), 0),
+              themeColors.background.root(),
+              themeColors.withOpacity(themeColors.background.root(), 0),
             ]}
             locations={[0.4, 1]}
             style={StyleSheet.absoluteFill}

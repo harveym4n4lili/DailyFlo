@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from rest_framework import viewsets, status, permissions, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -6,6 +8,20 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.db.models import Q
 from .models import Task, ActivityLog
+
+
+def _parse_occurrence_date(request):
+    """
+    optional YYYY-MM-DD for recurring completions — body or query param.
+    used when PATCH marks a task complete so activity logs align with the occurrence day.
+    """
+    raw = request.data.get('occurrence_date') or request.query_params.get('occurrence_date')
+    if not raw:
+        return None
+    try:
+        return datetime.strptime(str(raw)[:10], '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return None
 from .serializers import (
     TaskListSerializer, TaskDetailSerializer, TaskCreateSerializer,
     TaskUpdateSerializer, TaskCompleteSerializer,
@@ -77,9 +93,12 @@ class TaskViewSet(viewsets.ModelViewSet):
                 task=updated,
                 action_type='completed',
                 task_title=updated.title,
+                occurrence_date=_parse_occurrence_date(self.request),
             )
-        else:
-            # any other field changed -> log 'updated'
+        elif old_is_completed != updated.is_completed or (
+            set(serializer.validated_data.keys()) - {'is_completed'}
+        ):
+            # log 'updated' when toggling incomplete or when non-completion fields changed
             ActivityLog.objects.create(
                 user=self.request.user,
                 task=updated,
@@ -126,7 +145,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                     task_title=task.title,
                     # occurrence_date can be passed as a query param for recurring tasks
                     # e.g. PATCH /tasks/{id}/complete/?occurrence_date=2026-03-08
-                    occurrence_date=request.query_params.get('occurrence_date'),
+                    occurrence_date=_parse_occurrence_date(request),
                 )
 
             return Response(serializer.data)

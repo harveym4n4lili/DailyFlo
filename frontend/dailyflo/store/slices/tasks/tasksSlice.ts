@@ -821,7 +821,7 @@ export const createTask = createAsyncThunk(
 // This makes an API call to Django backend to update the task in the database
 export const updateTask = createAsyncThunk(
   'tasks/updateTask',
-  async ({ id, updates }: { id: string; updates: UpdateTaskInput }, { rejectWithValue, getState }) => {
+  async ({ id, updates }: { id: string; updates: UpdateTaskInput }, { rejectWithValue, getState, dispatch }) => {
     try {
       console.log('🔄 updateTask thunk started - calling API');
       
@@ -876,6 +876,12 @@ export const updateTask = createAsyncThunk(
       console.log('✅ updateTask completed:', transformedTask.id, 'task updated via API');
 
       await scheduleRemindersAfterTaskChange(transformedTask, getState);
+
+      // refresh browse streak/stats when completion changed — keeps gamification in sync without waiting for browse focus
+      if (updates.isCompleted !== undefined) {
+        const { fetchGamificationSummary } = await import('../gamification/gamificationSlice');
+        void dispatch(fetchGamificationSummary());
+      }
       
       // Return the transformed task so Redux can update it in state
       return transformedTask;

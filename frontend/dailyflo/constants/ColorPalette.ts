@@ -306,6 +306,15 @@ export const TaskCategoryColors = {
 } as const;
 
 /**
+ * Gamification / browse progress board — fixed accent hex values (not theme-mapped).
+ * Edit here to change medal gold, etc., without touching task category ramps.
+ */
+export const GamificationColors = {
+  /** new-best streak medal icon fill + ios glow shadowColor */
+  newBestStreakMedalGold: '#F59E0B',
+} as const;
+
+/**
  * Primary button palette — solid fills and icon color for main CTAs (FAB, primary actions).
  * `fill` uses brand scale `500`; icons stay on-theme neutrals for contrast.
  * `fill` / `icon` are mapped into ThemeColors.primaryButton.

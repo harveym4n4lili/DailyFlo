@@ -135,8 +135,8 @@ export default function CompletedScreen() {
         />
         <LinearGradient
           colors={[
-            themeColors.background.primary(),
-            themeColors.withOpacity(themeColors.background.primary(), 0),
+            themeColors.background.root(),
+            themeColors.withOpacity(themeColors.background.root(), 0),
           ]}
           locations={[0.4, 1]}
           style={StyleSheet.absoluteFill}

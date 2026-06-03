@@ -353,12 +353,12 @@ export function InboxTaskListContent({
     emptyMessage: 'Inbox is empty.',
   };
 
+  const screenWash = isBrowseStack
+    ? themeColors.background.root()
+    : themeColors.background.primary();
   const topBlurGradientColors = themeColors.isDark
-    ? [
-        themeColors.withOpacity(themeColors.background.primary(), 0.55),
-        themeColors.withOpacity(themeColors.background.primary(), 0),
-      ]
-    : [themeColors.background.primary(), themeColors.withOpacity(themeColors.background.primary(), 0)];
+    ? [themeColors.withOpacity(screenWash, 0.55), themeColors.withOpacity(screenWash, 0)]
+    : [screenWash, themeColors.withOpacity(screenWash, 0)];
 
   const renderTopSectionChrome = (styles: ReturnType<typeof createTabRootStyles>) => (
     <View style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}>

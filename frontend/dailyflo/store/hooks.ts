@@ -18,6 +18,15 @@ import {
   updateList,
   persistListOrder,
 } from './slices/lists/listsSlice';
+import {
+  fetchGamificationSummary,
+  fetchAchievements,
+  fetchGoals,
+  createGoal,
+  deleteGoal,
+  clearGamification,
+} from './slices/gamification/gamificationSlice';
+import type { CreateUserGoalInput } from '@/types/api/gamification';
 
 /**
  * Custom hook for accessing tasks state
@@ -214,6 +223,27 @@ export const useActivityLogs = () => {
 
     // dismiss any error message without re-fetching
     clearError: useCallback(() => dispatch(clearError()), [dispatch]),
+  };
+};
+
+/**
+ * gamification hook — summary, achievements, goals from /gamification/ API
+ */
+export const useGamification = () => {
+  const dispatch = useAppDispatch();
+  const gamificationState = useAppSelector((state: RootState) => state.gamification);
+
+  return {
+    ...gamificationState,
+    fetchSummary: useCallback(() => dispatch(fetchGamificationSummary()), [dispatch]),
+    fetchAchievements: useCallback(() => dispatch(fetchAchievements()), [dispatch]),
+    fetchGoals: useCallback(() => dispatch(fetchGoals()), [dispatch]),
+    createGoal: useCallback(
+      (input: CreateUserGoalInput) => dispatch(createGoal(input)).unwrap(),
+      [dispatch]
+    ),
+    deleteGoal: useCallback((goalId: string) => dispatch(deleteGoal(goalId)), [dispatch]),
+    clearGamification: useCallback(() => dispatch(clearGamification()), [dispatch]),
   };
 };
 
