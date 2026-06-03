@@ -11,6 +11,55 @@ import { getTextStyle } from '@/constants/Typography';
 /** matches TaskQuickAddForm `QUICK_ADD_PILL_BORDER_WIDTH` so onboarding chips line up visually with quick add */
 export const QUICK_ADD_PILL_BORDER_WIDTH = 1.25;
 
+export type QuickAddPillChromeProps = {
+  children: React.ReactNode;
+  /**
+   * `outlined` — quick-add hairline ring (default).
+   * `primarySecondaryBlend` — solid elevated fill, no border.
+   */
+  variant?: 'outlined' | 'primarySecondaryBlend';
+  blendSurfaceColor?: string;
+  style?: import('react-native').ViewStyle;
+};
+
+/** non-pressable pill surface — same chrome as `QuickAddLabelOnlyPill` for custom inner content */
+export function QuickAddPillChrome({
+  children,
+  variant = 'outlined',
+  blendSurfaceColor,
+  style,
+}: QuickAddPillChromeProps) {
+  const themeColors = useThemeColors();
+  const isBlend = variant === 'primarySecondaryBlend';
+  const surfaceColor = isBlend
+    ? (blendSurfaceColor ?? themeColors.background.primarySecondaryBlend())
+    : undefined;
+  const borderColor = themeColors.border.secondary();
+
+  return (
+    <View style={[pillStyles.shell, style]}>
+      {isBlend ? (
+        <View
+          pointerEvents="none"
+          style={[pillStyles.ring, { backgroundColor: surfaceColor }]}
+        />
+      ) : (
+        <View
+          pointerEvents="none"
+          style={[
+            pillStyles.ring,
+            {
+              borderWidth: QUICK_ADD_PILL_BORDER_WIDTH,
+              borderColor,
+            },
+          ]}
+        />
+      )}
+      <View style={[pillStyles.inner, !isBlend && { backgroundColor: 'transparent' }]}>{children}</View>
+    </View>
+  );
+}
+
 export type QuickAddLabelOnlyPillProps = {
   label: string;
   onPress: () => void;
@@ -41,39 +90,21 @@ export function QuickAddLabelOnlyPill({
   useLiquidGlassOnIos = false,
 }: QuickAddLabelOnlyPillProps) {
   const themeColors = useThemeColors();
-  const defaultBlendFill = themeColors.background.primarySecondaryBlend();
   const isBlend = variant === 'primarySecondaryBlend';
-  const surfaceColor = isBlend ? (blendSurfaceColor ?? defaultBlendFill) : undefined;
   const textColor = isBlend ? (blendLabelColor ?? themeColors.text.primary()) : themeColors.interactive.active();
-  const borderColor = themeColors.border.secondary();
   const useGlass = useLiquidGlassOnIos && Platform.OS === 'ios';
   const glassTint = themeColors.background.primary();
 
   const pillBody = (
-    <>
-      {isBlend ? (
-        <View
-          pointerEvents="none"
-          style={[pillStyles.ring, useGlass ? pillStyles.glassBlendWash : null, { backgroundColor: surfaceColor }]}
-        />
-      ) : (
-        <View
-          pointerEvents="none"
-          style={[
-            pillStyles.ring,
-            {
-              borderWidth: QUICK_ADD_PILL_BORDER_WIDTH,
-              borderColor,
-            },
-          ]}
-        />
-      )}
-      <View style={[pillStyles.inner, !isBlend && { backgroundColor: 'transparent' }]}>
-        <Text style={[pillStyles.label, getTextStyle('body-large'), { color: textColor }]} numberOfLines={1}>
-          {label}
-        </Text>
-      </View>
-    </>
+    <QuickAddPillChrome
+      variant={variant}
+      blendSurfaceColor={blendSurfaceColor}
+      style={useGlass ? pillStyles.glassChromeHost : undefined}
+    >
+      <Text style={[pillStyles.label, getTextStyle('body-large'), { color: textColor }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </QuickAddPillChrome>
   );
 
   return (
@@ -97,7 +128,7 @@ export function QuickAddLabelOnlyPill({
           </GlassView>
         </View>
       ) : (
-        <View style={[pillStyles.shell, isBlend ? { backgroundColor: surfaceColor } : null]}>{pillBody}</View>
+        pillBody
       )}
     </Pressable>
   );
@@ -135,6 +166,9 @@ const pillStyles = StyleSheet.create({
   },
   glassBlendWash: {
     borderWidth: 0,
+  },
+  glassChromeHost: {
+    backgroundColor: 'transparent',
   },
   ring: {
     ...StyleSheet.absoluteFillObject,

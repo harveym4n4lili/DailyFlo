@@ -1,0 +1,122 @@
+[
+  {
+    "model": "gamification.achievementdefinition",
+    "pk": "a1000000-0000-4000-8000-000000000001",
+    "fields": {
+      "code": "first_completion",
+      "title": "First step",
+      "description": "Complete your first task.",
+      "icon_key": "checkmark.circle",
+      "sort_order": 1,
+      "criteria": {"type": "completion_count", "period": "all_time", "min": 1}
+    }
+  },
+  {
+    "model": "gamification.achievementdefinition",
+    "pk": "a1000000-0000-4000-8000-000000000002",
+    "fields": {
+      "code": "streak_3",
+      "title": "On a roll",
+      "description": "Maintain a 3-day completion streak.",
+      "icon_key": "flame",
+      "sort_order": 2,
+      "criteria": {"type": "streak", "min_days": 3}
+    }
+  },
+  {
+    "model": "gamification.achievementdefinition",
+    "pk": "a1000000-0000-4000-8000-000000000003",
+    "fields": {
+      "code": "streak_7",
+      "title": "Week warrior",
+      "description": "Maintain a 7-day completion streak.",
+      "icon_key": "flame.fill",
+      "sort_order": 3,
+      "criteria": {"type": "streak", "min_days": 7}
+    }
+  },
+  {
+    "model": "gamification.achievementdefinition",
+    "pk": "a1000000-0000-4000-8000-000000000004",
+    "fields": {
+      "code": "streak_30",
+      "title": "Unstoppable",
+      "description": "Maintain a 30-day completion streak.",
+      "icon_key": "star.fill",
+      "sort_order": 4,
+      "criteria": {"type": "streak", "min_days": 30}
+    }
+  },
+  {
+    "model": "gamification.achievementdefinition",
+    "pk": "a1000000-0000-4000-8000-000000000005",
+    "fields": {
+      "code": "completions_10",
+      "title": "Getting started",
+      "description": "Complete 10 tasks total.",
+      "icon_key": "10.circle",
+      "sort_order": 5,
+      "criteria": {"type": "completion_count", "period": "all_time", "min": 10}
+    }
+  },
+  {
+    "model": "gamification.achievementdefinition",
+    "pk": "a1000000-0000-4000-8000-000000000006",
+    "fields": {
+      "code": "completions_50",
+      "title": "Productive",
+      "description": "Complete 50 tasks total.",
+      "icon_key": "50.circle",
+      "sort_order": 6,
+      "criteria": {"type": "completion_count", "period": "all_time", "min": 50}
+    }
+  },
+  {
+    "model": "gamification.achievementdefinition",
+    "pk": "a1000000-0000-4000-8000-000000000007",
+    "fields": {
+      "code": "completions_100",
+      "title": "Century club",
+      "description": "Complete 100 tasks total.",
+      "icon_key": "100.circle",
+      "sort_order": 7,
+      "criteria": {"type": "completion_count", "period": "all_time", "min": 100}
+    }
+  },
+  {
+    "model": "gamification.achievementdefinition",
+    "pk": "a1000000-0000-4000-8000-000000000008",
+    "fields": {
+      "code": "weekly_burst",
+      "title": "Weekly burst",
+      "description": "Complete 5 tasks in one week.",
+      "icon_key": "calendar",
+      "sort_order": 8,
+      "criteria": {"type": "completion_count", "period": "week", "min": 5}
+    }
+  },
+  {
+    "model": "gamification.achievementdefinition",
+    "pk": "a1000000-0000-4000-8000-000000000009",
+    "fields": {
+      "code": "perfect_week",
+      "title": "Perfect week",
+      "description": "Complete at least one task every day for 7 days.",
+      "icon_key": "sparkles",
+      "sort_order": 9,
+      "criteria": {"type": "perfect_week"}
+    }
+  },
+  {
+    "model": "gamification.achievementdefinition",
+    "pk": "a1000000-0000-4000-8000-000000000010",
+    "fields": {
+      "code": "first_goal_met",
+      "title": "Goal getter",
+      "description": "Meet one of your personal goals.",
+      "icon_key": "target",
+      "sort_order": 10,
+      "criteria": {"type": "first_goal_met"}
+    }
+  }
+]

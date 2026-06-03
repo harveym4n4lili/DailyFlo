@@ -16,7 +16,7 @@ export default function BrowseSettingsLayout() {
         screenOptions={{
           animation: 'default',
           gestureEnabled: true,
-          contentStyle: { backgroundColor: themeColors.background.primary() },
+          contentStyle: { backgroundColor: themeColors.background.root() },
         }}
       >
         <Stack.Screen
@@ -29,7 +29,7 @@ export default function BrowseSettingsLayout() {
                   headerTitle: '',
                   headerShadowVisible: false,
                   headerBackVisible: false,
-                  contentStyle: { backgroundColor: themeColors.background.primary() },
+                  contentStyle: { backgroundColor: themeColors.background.root() },
                 }
               : {
                   title: 'Settings',

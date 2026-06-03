@@ -27,7 +27,7 @@ export default function BrowseLayout() {
       screenOptions={{
         animation: 'default', // native iOS slide-from-right (push)
         gestureEnabled: true,
-        contentStyle: { backgroundColor: themeColors.background.primary() },
+        contentStyle: { backgroundColor: themeColors.background.root() },
       }}
     >
       <Stack.Screen
@@ -40,7 +40,7 @@ export default function BrowseLayout() {
                 headerTitle: '',
                 headerShadowVisible: false,
                 headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                contentStyle: { backgroundColor: themeColors.background.root() },
               }
             : {
                 title: 'Browse',
@@ -58,11 +58,11 @@ export default function BrowseLayout() {
                 headerTitle: '',
                 headerShadowVisible: false,
                 headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                contentStyle: { backgroundColor: themeColors.background.root() },
               }
             : {
                 headerShown: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                contentStyle: { backgroundColor: themeColors.background.root() },
               }
         }
       />
@@ -74,7 +74,7 @@ export default function BrowseLayout() {
           presentation: 'modal',
           gestureEnabled: false,
           contentStyle: {
-            backgroundColor: themeColors.background.primary(),
+            backgroundColor: themeColors.background.root(),
           },
         }}
       />
@@ -89,7 +89,7 @@ export default function BrowseLayout() {
                 headerTitle: '',
                 headerShadowVisible: false,
                 headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                contentStyle: { backgroundColor: themeColors.background.root() },
               }
             : {
                 title: 'Inbox',
@@ -108,11 +108,92 @@ export default function BrowseLayout() {
                 headerTitle: '',
                 headerShadowVisible: false,
                 headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                contentStyle: { backgroundColor: themeColors.background.root() },
               }
             : {
                 title: 'Select tasks',
                 headerShown: false,
+              }
+        }
+      />
+      <Stack.Screen
+        name="achievements"
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.root() },
+              }
+            : {
+                title: 'Achievements',
+                headerShown: false,
+              }
+        }
+      />
+      <Stack.Screen
+        name="productivity"
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.root() },
+              }
+            : {
+                title: 'Productivity',
+                headerShown: false,
+              }
+        }
+      />
+      <Stack.Screen
+        name="goals"
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.root() },
+              }
+            : {
+                title: 'Goals',
+                headerShown: false,
+              }
+        }
+      />
+      <Stack.Screen
+        name="goal-create"
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: {
+                  backgroundColor: themeColors.background.root(),
+                },
+              }
+            : {
+                title: 'New Goal',
+                headerShown: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: {
+                  backgroundColor: themeColors.background.root(),
+                },
               }
         }
       />
@@ -126,7 +207,7 @@ export default function BrowseLayout() {
                 headerTitle: '',
                 headerShadowVisible: false,
                 headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                contentStyle: { backgroundColor: themeColors.background.root() },
               }
             : {
                 title: 'Completed',
@@ -145,7 +226,7 @@ export default function BrowseLayout() {
                 headerTitle: '',
                 headerShadowVisible: false,
                 headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                contentStyle: { backgroundColor: themeColors.background.root() },
               }
             : { headerShown: false }
         }
@@ -164,7 +245,7 @@ export default function BrowseLayout() {
                 presentation: 'modal',
                 gestureEnabled: false,
                 contentStyle: {
-                  backgroundColor: themeColors.background.primary(),
+                  backgroundColor: themeColors.background.root(),
                 },
               }
             : {
@@ -173,7 +254,7 @@ export default function BrowseLayout() {
                 presentation: 'modal',
                 gestureEnabled: false,
                 contentStyle: {
-                  backgroundColor: themeColors.background.primary(),
+                  backgroundColor: themeColors.background.root(),
                 },
               }
         }
@@ -192,7 +273,7 @@ export default function BrowseLayout() {
                 presentation: 'modal',
                 gestureEnabled: false,
                 contentStyle: {
-                  backgroundColor: themeColors.background.primary(),
+                  backgroundColor: themeColors.background.root(),
                 },
               }
             : {
@@ -201,7 +282,7 @@ export default function BrowseLayout() {
                 presentation: 'modal',
                 gestureEnabled: false,
                 contentStyle: {
-                  backgroundColor: themeColors.background.primary(),
+                  backgroundColor: themeColors.background.root(),
                 },
               }
         }

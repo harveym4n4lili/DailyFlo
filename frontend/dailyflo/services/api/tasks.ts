@@ -293,6 +293,10 @@ class TasksApiService {
       if (taskData.isCompleted !== undefined) {
         apiData.is_completed = taskData.isCompleted;
       }
+      // recurring complete: django stores occurrence_date on the activity log row
+      if (taskData.occurrenceDate !== undefined && taskData.occurrenceDate !== null) {
+        apiData.occurrence_date = taskData.occurrenceDate;
+      }
       
       // DEBUG: Log the data being sent to Django
       console.log('📤 Sending task update data to API:', JSON.stringify(apiData, null, 2));
