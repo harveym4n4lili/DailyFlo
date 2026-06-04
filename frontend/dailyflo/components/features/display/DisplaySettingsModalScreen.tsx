@@ -55,10 +55,6 @@ const DISPLAY_GROUPED_LIST_ICON_SIZE =
   Paddings.groupedListIconSize + Paddings.displayGroupedListIconSizeExtra;
 const DISPLAY_GROUPED_LIST_ICON_COLUMN_WIDTH =
   DISPLAY_GROUPED_LIST_ICON_SIZE + Paddings.groupedListIconTextSpacing;
-// base GroupedList row v-padding + display-screen extra (see Paddings.groupedListContentVerticalExtra)
-const DISPLAY_GROUPED_LIST_CONTENT_PADDING_VERTICAL =
-  Paddings.groupedListContentVertical + Paddings.groupedListContentVerticalExtra;
-
 export type { DisplaySettingsContext } from '@/components/features/display/displayStackChrome';
 
 export type DisplaySettingsModalScreenProps = {
@@ -117,7 +113,7 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
       minimalStyle: false,
       separatorConsiderIconColumn: true,
       iconColumnWidth: DISPLAY_GROUPED_LIST_ICON_COLUMN_WIDTH,
-      contentPaddingVertical: DISPLAY_GROUPED_LIST_CONTENT_PADDING_VERTICAL,
+      itemPadding: 'root' as const,
       containerStyle: styles.listContainer,
     }),
     [styles.listContainer, themeColors]

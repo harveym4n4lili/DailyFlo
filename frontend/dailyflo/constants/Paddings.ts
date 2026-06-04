@@ -93,9 +93,13 @@ export const Paddings = {
   // GroupedList padding - content padding inside each list item wrapper
   // used by: GroupedList, TaskForm, CustomTextInput, IconColorModal, TaskScreenContent
   groupedListContentHorizontal: 16,
-  // used by: GroupedList
+  /** child grouped list — tighter rows inside task sheets / nested forms (default GroupedList) */
+  groupedListChildContentVertical: 16,
+  /** root grouped list — roomier rows on settings, display modal, browse dashboard */
+  groupedListRootContentVertical: 18,
+  /** @deprecated use groupedListChildContentVertical */
   groupedListContentVertical: 16,
-  // extra per-row vertical padding on display settings grouped lists (dashboard layout modal)
+  /** @deprecated folded into groupedListRootContentVertical */
   groupedListContentVerticalExtra: 2,
   // icon-to-text spacing in GroupedList rows (FormDetailButton, etc.)
   // used by: FormDetailButton, CustomFormDetailButton

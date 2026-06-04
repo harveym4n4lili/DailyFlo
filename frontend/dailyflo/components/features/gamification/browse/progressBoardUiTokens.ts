@@ -39,10 +39,9 @@ export const PROGRESS_BOARD_TRACK_RADIUS = PROGRESS_BOARD_TRACK_HEIGHT / 2;
 /** extra space between today's tasks count row and the progress bar (adds to contentRow gap) */
 export const PROGRESS_BOARD_TRACK_MARGIN_TOP = Paddings.listItemVertical;
 
-/** per-item inset — same tokens as `GroupedList` defaults / browse settings */
+/** per-item horizontal inset — browse dashboard GroupedList uses itemPadding="root" for vertical */
 export const PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_HORIZONTAL =
   Paddings.groupedListContentHorizontal;
-export const PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_VERTICAL = Paddings.groupedListContentVertical;
 
 /** vertical gap between rows inside each grouped-list item (count row, track, hint) */
 export const PROGRESS_BOARD_CONTENT_ROW_GAP = Paddings.touchTargetSmall;

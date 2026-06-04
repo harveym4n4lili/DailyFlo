@@ -50,7 +50,7 @@ export function AchievementsScreenContent() {
   const backButtonTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
 
   return (
-    <View style={[styles.screen, { backgroundColor: themeColors.background.root() }]}>
+    <View style={[styles.screen, { backgroundColor: themeColors.background.primary() }]}>
       <View
         style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}
       >
@@ -61,8 +61,8 @@ export function AchievementsScreenContent() {
         />
         <LinearGradient
           colors={[
-            themeColors.background.root(),
-            themeColors.withOpacity(themeColors.background.root(), 0),
+            themeColors.background.primary(),
+            themeColors.withOpacity(themeColors.background.primary(), 0),
           ]}
           locations={[0.4, 1]}
           style={StyleSheet.absoluteFill}

@@ -1,5 +1,5 @@
 /**
- * Productivity route — hub for goals, achievements, and completed activity.
+ * Productivity route — thin wrapper; UI lives in features/gamification.
  */
 
 import React from 'react';
