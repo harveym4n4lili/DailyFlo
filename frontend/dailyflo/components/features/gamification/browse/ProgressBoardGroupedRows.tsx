@@ -3,9 +3,9 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { SFSymbolIcon } from '@/components/ui/Icon';
+import { View, Text, StyleSheet, type TextStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ProgressBoardNewBestMedalIcon } from './ProgressBoardNewBestMedalIcon';
 import {
   PROGRESS_BOARD_NEW_BEST_STREAK_ACCESSIBILITY_LABEL,
   PROGRESS_BOARD_STREAK_EMPTY_HINT,
@@ -16,10 +16,14 @@ import {
   PROGRESS_BOARD_CONTENT_ROW_GAP,
   PROGRESS_BOARD_SECTION_LABEL_MARGIN_BOTTOM,
   PROGRESS_BOARD_GOAL_COUNT_GAP,
-  PROGRESS_BOARD_NEW_BEST_STAR_SIZE,
+  PROGRESS_BOARD_LONGEST_STREAK_ICON_SIZE,
   PROGRESS_BOARD_SECONDARY_ROW_GAP,
   PROGRESS_BOARD_TRACK_HEIGHT,
   PROGRESS_BOARD_TRACK_RADIUS,
+  PROGRESS_BOARD_FILL_GRADIENT_START_POINT,
+  PROGRESS_BOARD_FILL_GRADIENT_END_POINT,
+  PROGRESS_BOARD_FILL_GRADIENT_LOCATIONS,
+  PROGRESS_BOARD_TRACK_MARGIN_TOP,
 } from './progressBoardUiTokens';
 
 type RowColorProps = {
@@ -28,9 +32,8 @@ type RowColorProps = {
 };
 
 type ProgressBoardStreakGroupedRowProps = RowColorProps & {
-  /** golden fill for new-best streak star */
-  newBestStarColor: string;
-  newBestStarGlowStyle: ViewStyle;
+  /** radial gold fill for new-best streak medal */
+  newBestMedalGradientColors: readonly [string, string];
   /** streak count + unit — same color as quick-add pill label (`interactive.active`) */
   streakCountTextColor: string;
   streakLabelStyle: TextStyle;
@@ -58,8 +61,7 @@ export function ProgressBoardStreakGroupedRow({
   showNewBestStreakStar,
   showEmptyHint,
   streakCountTextColor,
-  newBestStarColor,
-  newBestStarGlowStyle,
+  newBestMedalGradientColors,
   primaryColor,
   tertiaryColor,
 }: ProgressBoardStreakGroupedRowProps) {
@@ -79,19 +81,11 @@ export function ProgressBoardStreakGroupedRow({
               accessible
               accessibilityRole="image"
               accessibilityLabel={PROGRESS_BOARD_NEW_BEST_STREAK_ACCESSIBILITY_LABEL}
-              style={[styles.newBestMedalWrap, newBestStarGlowStyle]}
+              style={styles.newBestMedalWrap}
             >
-              <SFSymbolIcon
-                name="medal.fill"
-                size={PROGRESS_BOARD_NEW_BEST_STAR_SIZE}
-                color={newBestStarColor}
-                fallback={
-                  <Ionicons
-                    name="medal"
-                    size={PROGRESS_BOARD_NEW_BEST_STAR_SIZE}
-                    color={newBestStarColor}
-                  />
-                }
+              <ProgressBoardNewBestMedalIcon
+                size={PROGRESS_BOARD_LONGEST_STREAK_ICON_SIZE}
+                gradientColors={newBestMedalGradientColors}
               />
             </View>
           ) : null}
@@ -120,8 +114,8 @@ type ProgressBoardMetricBarGroupedRowProps = RowColorProps & {
   percentLabel: string;
   fillWidthPercent: number;
   trackBg: string;
-  fillColor: string;
-  fillGlowStyle: ViewStyle;
+  /** marple 500 → 600 */
+  fillGradientColors: readonly [string, string];
 };
 
 /** section label + count/goal row + marple progress bar (today's tasks) */
@@ -138,8 +132,7 @@ export function ProgressBoardMetricBarGroupedRow({
   tertiaryColor,
   fillWidthPercent,
   trackBg,
-  fillColor,
-  fillGlowStyle,
+  fillGradientColors,
 }: ProgressBoardMetricBarGroupedRowProps) {
   return (
     <View style={styles.contentRow}>
@@ -156,16 +149,15 @@ export function ProgressBoardMetricBarGroupedRow({
         </Text>
       </View>
       <View style={[styles.track, { backgroundColor: trackBg }]}>
-        <View
-          style={[
-            styles.fill,
-            {
-              width: `${fillWidthPercent}%`,
-              backgroundColor: fillColor,
-              ...fillGlowStyle,
-            },
-          ]}
-        />
+        {fillWidthPercent > 0 ? (
+          <LinearGradient
+            colors={[fillGradientColors[0], fillGradientColors[1]]}
+            locations={[...PROGRESS_BOARD_FILL_GRADIENT_LOCATIONS]}
+            start={PROGRESS_BOARD_FILL_GRADIENT_START_POINT}
+            end={PROGRESS_BOARD_FILL_GRADIENT_END_POINT}
+            style={[styles.fill, { width: `${fillWidthPercent}%` }]}
+          />
+        ) : null}
       </View>
     </View>
   );
@@ -198,7 +190,7 @@ export function ProgressBoardTasksGroupedRow({
 }
 
 const styles = StyleSheet.create({
-  /** shared vertical rhythm: label → split row → extra line or track */
+  /** shared vertical rhythm: label → split row → hint; track also uses PROGRESS_BOARD_TRACK_MARGIN_TOP */
   contentRow: {
     flex: 1,
     width: '100%',
@@ -222,7 +214,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     gap: PROGRESS_BOARD_SECONDARY_ROW_GAP,
   },
+  // fixed 18×18 slot — matches browse settings / productivity grouped-list icons
   newBestMedalWrap: {
+    width: PROGRESS_BOARD_LONGEST_STREAK_ICON_SIZE,
+    height: PROGRESS_BOARD_LONGEST_STREAK_ICON_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -238,6 +233,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   track: {
+    marginTop: PROGRESS_BOARD_TRACK_MARGIN_TOP,
     height: PROGRESS_BOARD_TRACK_HEIGHT,
     borderRadius: PROGRESS_BOARD_TRACK_RADIUS,
     overflow: 'hidden',

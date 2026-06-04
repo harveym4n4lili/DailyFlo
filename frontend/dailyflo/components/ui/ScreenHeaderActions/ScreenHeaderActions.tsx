@@ -49,7 +49,7 @@ export function ScreenHeaderActions({
       <View style={styles.browseActionsRow}>
         <HeaderIconButton
           iconComponent={
-            <SFSymbolIcon name="trophy.fill" size={22} color={themeColors.text.primary()} />
+            <SFSymbolIcon name="trophy" size={22} color={themeColors.text.primary()} />
           }
           onPress={onAchievementsPress ?? (() => console.log('achievements tapped'))}
           accessibilityLabel="Achievements"
