@@ -39,7 +39,7 @@ export function IosBrowseHomeStackToolbar({
       </Stack.Toolbar>
       <Stack.Toolbar placement="right">
         <Stack.Toolbar.Button
-          icon="trophy.fill"
+          icon="trophy"
           onPress={onAchievementsPress ?? (() => router.push('/(tabs)/browse/achievements' as any))}
           accessibilityLabel="Achievements"
           tintColor={tint}

@@ -146,11 +146,11 @@ export const MarpleBrandColors = {
   // secondary brand icons on dark
   400: '#3A5180',
   // main brand accent on dark (same hue anchor as light 500)
-  500: '#8B9EBF',
+  500: '#D15D54',
   // hover / lift on dark (slightly lighter coral)
-  600: '#D1DFF3',
+  600: '#F3AFAA',
 
-  700: '#FFF4DB',
+  700: '#F0C7C4',
 
   800: '#FFF4DB',
 } as const;
@@ -310,7 +310,7 @@ export const TaskCategoryColors = {
  * Edit here to change medal gold, etc., without touching task category ramps.
  */
 export const GamificationColors = {
-  /** new-best streak medal icon fill + ios glow shadowColor */
+  /** new-best streak medal gradient right/base color (left is lerped lighter in progressBoardUiTokens) */
   newBestStreakMedalGold: '#F59E0B',
 } as const;
 

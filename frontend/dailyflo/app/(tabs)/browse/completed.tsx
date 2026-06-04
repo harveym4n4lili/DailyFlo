@@ -25,6 +25,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { getFontFamilyWithWeight } from '@/constants/Typography';
 import { MainBackButton } from '@/components/ui/Button';
 import { ScreenHeaderActions } from '@/components/ui';
+import { LiquidGlassSegmentedPill } from '@/components/ui/LiquidGlassSegmentedPill';
 import { IosBrowseBackStackToolbar } from '@/components/navigation/IosBrowseBackStackToolbar';
 import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { Paddings } from '@/constants/Paddings';
@@ -37,6 +38,14 @@ const TOP_SECTION_ROW_HEIGHT = 48;
 const TOP_SECTION_ANCHOR_HEIGHT = 64;
 const SCROLL_THRESHOLD = 16;
 
+/** activity log filter — completed-only vs every action type from the API */
+type CompletedActivityFilter = 'completed' | 'all';
+
+const COMPLETED_FILTER_OPTIONS = [
+  { value: 'completed' as const, label: 'Completed tasks' },
+  { value: 'all' as const, label: 'All tasks' },
+] as const;
+
 export default function CompletedScreen() {
   const router = useGuardedRouter();
   const themeColors = useThemeColors();
@@ -47,16 +56,26 @@ export default function CompletedScreen() {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activityFilter, setActivityFilter] = useState<CompletedActivityFilter>('completed');
 
-  const loadCompletedLogs = useCallback(async () => {
+  // refetch when screen focuses or when the glass pill segment changes
+  const loadActivityLogs = useCallback(async (filter: CompletedActivityFilter) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await activityLogsApiService.fetchActivityLogs({ action_type: 'completed' });
+      const data = await activityLogsApiService.fetchActivityLogs(
+        filter === 'completed' ? { action_type: 'completed' } : undefined
+      );
       setLogs(data);
     } catch (e) {
       setLogs([]);
-      setError(e instanceof Error ? e.message : 'Failed to load completed activity');
+      setError(
+        e instanceof Error
+          ? e.message
+          : filter === 'completed'
+            ? 'Failed to load completed activity'
+            : 'Failed to load activity'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -64,8 +83,8 @@ export default function CompletedScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void loadCompletedLogs();
-    }, [loadCompletedLogs])
+      void loadActivityLogs(activityFilter);
+    }, [loadActivityLogs, activityFilter])
   );
 
   const sections = useMemo(() => groupLogsByDate(logs), [logs]);
@@ -185,6 +204,14 @@ export default function CompletedScreen() {
             </Text>
           </Animated.View>
 
+          <View style={styles.filterPill}>
+            <LiquidGlassSegmentedPill
+              options={COMPLETED_FILTER_OPTIONS}
+              value={activityFilter}
+              onValueChange={setActivityFilter}
+            />
+          </View>
+
           {isLoading && logs.length === 0 ? (
             <View style={styles.loadingWrap}>
               <ActivityIndicator color={themeColors.text.tertiary()} />
@@ -193,7 +220,7 @@ export default function CompletedScreen() {
             <View style={styles.messageBlock}>
               <Text style={[secondaryTextStyle, styles.centerText]}>{error}</Text>
               <Pressable
-                onPress={() => void loadCompletedLogs()}
+                onPress={() => void loadActivityLogs(activityFilter)}
                 style={({ pressed }) => [styles.retryButton, pressed && { opacity: 0.85 }]}
               >
                 <Text style={[typography.getTextStyle('body-large'), { color: themeColors.text.primary() }]}>
@@ -203,7 +230,9 @@ export default function CompletedScreen() {
             </View>
           ) : sections.length === 0 ? (
             <Text style={[secondaryTextStyle, styles.centerText, styles.emptyCopy]}>
-              No completed tasks yet.{'\n'}When you check off a task, it will show up here.
+              {activityFilter === 'completed'
+                ? "No completed tasks yet.\nWhen you check off a task, it will show up here."
+                : 'No activity yet.\nTask updates and completions will show up here.'}
             </Text>
           ) : (
             sections.map(({ dateKey, entries }) => (
@@ -290,6 +319,9 @@ const createStyles = (
     bigHeader: {
       ...typography.getTextStyle('heading-1'),
       marginBottom: 8,
+    },
+    filterPill: {
+      marginBottom: 16,
     },
     loadingWrap: {
       paddingVertical: 32,

@@ -67,7 +67,7 @@ function getProgressBoardSectionLabelTextStyle(): TextStyle {
 }
 
 /** count row left primary: streak number | completed count */
-export const PROGRESS_BOARD_COUNT_PRIMARY_TEXT_STYLE_NAME: TextStyleName = 'body-medium';
+export const PROGRESS_BOARD_COUNT_PRIMARY_TEXT_STYLE_NAME: TextStyleName = 'body-large';
 export const PROGRESS_BOARD_COUNT_PRIMARY_STYLE_OVERRIDES: Partial<TextStyle> = {
   fontWeight: FontWeight.bold,
 };
@@ -80,7 +80,7 @@ function getProgressBoardCountPrimaryTextStyle(): TextStyle {
 }
 
 /** count row left secondary: day/days unit | /goal suffix */
-export const PROGRESS_BOARD_COUNT_SECONDARY_TEXT_STYLE_NAME: TextStyleName = 'body-medium';
+export const PROGRESS_BOARD_COUNT_SECONDARY_TEXT_STYLE_NAME: TextStyleName = 'body-large';
 export const PROGRESS_BOARD_COUNT_SECONDARY_STYLE_OVERRIDES: Partial<TextStyle> = {
   fontWeight: FontWeight.regular,
 };

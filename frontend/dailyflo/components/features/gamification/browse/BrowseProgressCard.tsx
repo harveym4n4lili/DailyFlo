@@ -20,6 +20,7 @@ import { emptySummary } from '@/store/slices/gamification/gamificationSlice';
 
 import type { GamificationSummary } from '@/types/api/gamification';
 
+import { lerpIntroHexColor } from '@/components/features/onboarding/auth/scrollTransition/introThemeResolvers';
 import { ProgressBoardGlassShell } from './ProgressBoardGlassShell';
 
 import {
@@ -80,9 +81,9 @@ import {
 
   PROGRESS_BOARD_LOADER_PADDING_VERTICAL,
 
-  PROGRESS_BOARD_PROGRESS_FILL_SHADE,
-
-  PROGRESS_BOARD_BRAND_TRACK_SHADE,
+  PROGRESS_BOARD_PROGRESS_GRADIENT_START_SHADE,
+  PROGRESS_BOARD_PROGRESS_GRADIENT_END_SHADE,
+  PROGRESS_BOARD_FILL_GRADIENT_END_BLEND,
 
   PROGRESS_BOARD_PRODUCTIVITY_ICON_SIZE,
 
@@ -92,13 +93,7 @@ import {
 
   PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_VERTICAL,
 
-  PROGRESS_BOARD_TRACK_MARPLE_OPACITY_DARK,
-
-  PROGRESS_BOARD_TRACK_MARPLE_OPACITY_LIGHT,
-
-  getProgressBoardFillGlow,
-  getProgressBoardNewBestStarGlow,
-  PROGRESS_BOARD_NEW_BEST_STAR_COLOR,
+  getProgressBoardNewBestMedalGradientColors,
 
 } from './progressBoardUiTokens';
 
@@ -134,7 +129,7 @@ export function BrowseProgressCard({
 
   const themeColors = useThemeColors();
 
-  const { getMarpleBrandColor, withOpacity } = useBrandColors();
+  const { getMarpleBrandColor } = useBrandColors();
 
 
 
@@ -158,13 +153,13 @@ export function BrowseProgressCard({
 
 
 
-  const marpleFill = getMarpleBrandColor(PROGRESS_BOARD_PROGRESS_FILL_SHADE);
-
-  const fillGlowStyle = getProgressBoardFillGlow(marpleFill);
-
-  const marpleTrack = getMarpleBrandColor(PROGRESS_BOARD_BRAND_TRACK_SHADE);
-
-
+  const marple500 = getMarpleBrandColor(PROGRESS_BOARD_PROGRESS_GRADIENT_START_SHADE);
+  const marple600 = getMarpleBrandColor(PROGRESS_BOARD_PROGRESS_GRADIENT_END_SHADE);
+  // subtle end stop + late location — mostly 500, broad soft shift toward 600 at the top
+  const fillGradientColors = [
+    marple500,
+    lerpIntroHexColor(marple500, marple600, PROGRESS_BOARD_FILL_GRADIENT_END_BLEND),
+  ] as const;
 
   const data = summary ?? emptySummary;
 
@@ -196,8 +191,7 @@ export function BrowseProgressCard({
 
   const showStreakEmptyHint = streakDays === 0 && data.lastCompletionDate == null;
 
-  const newBestStarColor = PROGRESS_BOARD_NEW_BEST_STAR_COLOR;
-  const newBestStarGlowStyle = getProgressBoardNewBestStarGlow(newBestStarColor);
+  const newBestMedalGradientColors = getProgressBoardNewBestMedalGradientColors();
   const productivityIconColor = getMarpleBrandColor(PROGRESS_BOARD_PRODUCTIVITY_ICON_SHADE);
 
 
@@ -212,13 +206,8 @@ export function BrowseProgressCard({
 
 
 
-  const trackBg = withOpacity(
-
-    marpleTrack,
-
-    themeColors.isDark ? PROGRESS_BOARD_TRACK_MARPLE_OPACITY_DARK : PROGRESS_BOARD_TRACK_MARPLE_OPACITY_LIGHT
-
-  );
+  // track uses theme primary/secondary blend — same surface as grouped lists and settings rows
+  const trackBg = themeColors.background.primarySecondaryBlend();
 
 
 
@@ -295,8 +284,7 @@ export function BrowseProgressCard({
 
             tertiaryColor={tertiaryColor}
 
-            newBestStarColor={newBestStarColor}
-            newBestStarGlowStyle={newBestStarGlowStyle}
+            newBestMedalGradientColors={newBestMedalGradientColors}
 
           />
 
@@ -326,9 +314,7 @@ export function BrowseProgressCard({
 
             trackBg={trackBg}
 
-            fillColor={marpleFill}
-
-            fillGlowStyle={fillGlowStyle}
+            fillGradientColors={fillGradientColors}
 
           />
 
