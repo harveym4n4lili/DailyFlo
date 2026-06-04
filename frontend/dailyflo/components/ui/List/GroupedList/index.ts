@@ -23,8 +23,10 @@ export { FormDetailButton } from '@/components/ui/Button/TaskButton';
 export { GroupedListItem } from './GroupedListItem';
 
 // type exports
+export { resolveGroupedListContentPaddingVertical } from './groupedListItemPadding';
 export type {
   GroupedListProps,
+  GroupedListItemPadding,
   FormDetailButtonProps,
   // deprecated types (kept for backward compatibility)
   GroupedListItemConfig,

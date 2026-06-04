@@ -74,7 +74,7 @@ export default function BrowseLayout() {
           presentation: 'modal',
           gestureEnabled: false,
           contentStyle: {
-            backgroundColor: themeColors.background.root(),
+            backgroundColor: themeColors.background.primary(),
           },
         }}
       />
@@ -118,21 +118,21 @@ export default function BrowseLayout() {
       />
       <Stack.Screen
         name="achievements"
-        options={
-          Platform.OS === 'ios'
+        options={{
+          ...(Platform.OS === 'ios'
             ? {
                 headerShown: true,
                 headerTransparent: true,
                 headerTitle: '',
                 headerShadowVisible: false,
                 headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.root() },
               }
             : {
                 title: 'Achievements',
                 headerShown: false,
-              }
-        }
+              }),
+          contentStyle: { backgroundColor: themeColors.background.primary() },
+        }}
       />
       <Stack.Screen
         name="productivity"
@@ -262,30 +262,23 @@ export default function BrowseLayout() {
       {/* list-create: modal — ios Stack.Toolbar close + checkmark; android glass in-screen */}
       <Stack.Screen
         name="list-create"
-        options={
-          Platform.OS === 'ios'
+        options={{
+          ...(Platform.OS === 'ios'
             ? {
                 headerShown: true,
                 headerTransparent: true,
                 headerTitle: '',
                 headerShadowVisible: false,
                 headerBackVisible: false,
-                presentation: 'modal',
-                gestureEnabled: false,
-                contentStyle: {
-                  backgroundColor: themeColors.background.root(),
-                },
               }
             : {
                 title: 'New List',
                 headerShown: false,
-                presentation: 'modal',
-                gestureEnabled: false,
-                contentStyle: {
-                  backgroundColor: themeColors.background.root(),
-                },
-              }
-        }
+              }),
+          presentation: 'modal',
+          gestureEnabled: false,
+          contentStyle: { backgroundColor: themeColors.background.primary() },
+        }}
       />
       <Stack.Screen name="wake-time-select" options={timeSheetOptions} />
       <Stack.Screen name="sleep-time-select" options={timeSheetOptions} />

@@ -91,8 +91,6 @@ import {
 
   PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_HORIZONTAL,
 
-  PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_VERTICAL,
-
   getProgressBoardNewBestMedalGradientColors,
 
 } from './progressBoardUiTokens';
@@ -246,7 +244,7 @@ export function BrowseProgressCard({
 
           contentPaddingHorizontal={PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_HORIZONTAL}
 
-          contentPaddingVertical={PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_VERTICAL}
+          itemPadding="root"
 
           separatorInsetRight={PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_HORIZONTAL}
 

@@ -17,18 +17,32 @@ export function LiquidGlassSegmentedPicker<T extends string>({
   options,
   value,
   onValueChange,
+  accentColor,
+  layout = 'fullWidth',
 }: LiquidGlassSegmentedPickerProps<T>) {
   const themeColors = useThemeColors();
+  const isCompact = layout === 'compact';
 
   return (
-    <View style={[styles.shell, { backgroundColor: themeColors.background.primary() }]}>
+    <View
+      style={[
+        styles.shell,
+        isCompact ? styles.shellCompact : styles.shellFull,
+        { backgroundColor: themeColors.background.primary() },
+      ]}
+    >
       <View style={styles.track}>
         {options.map((option) => {
           const selected = option.value === value;
+          // when accentColor is set, selected segment uses marple fill (matches ios native tint)
+          const selectedUsesAccent = selected && accentColor != null;
           return (
             <Pressable
               key={option.value}
-              style={styles.segmentTap}
+              style={[
+                styles.segmentTap,
+                selectedUsesAccent ? { backgroundColor: accentColor, borderRadius: Paddings.formDataPillRadius - 4 } : null,
+              ]}
               onPress={() => onValueChange(option.value)}
               accessibilityRole="button"
               accessibilityState={{ selected }}
@@ -37,7 +51,13 @@ export function LiquidGlassSegmentedPicker<T extends string>({
               <Text
                 style={[
                   getTextStyle('body-large'),
-                  { color: selected ? themeColors.text.primary() : themeColors.text.secondary() },
+                  {
+                    color: selectedUsesAccent
+                      ? '#FFFFFF'
+                      : selected
+                        ? themeColors.text.primary()
+                        : themeColors.text.secondary(),
+                  },
                 ]}
                 numberOfLines={1}
               >
@@ -55,7 +75,14 @@ const styles = StyleSheet.create({
   shell: {
     borderRadius: Paddings.formDataPillRadius,
     overflow: 'hidden',
+  },
+  shellFull: {
     alignSelf: 'stretch',
+  },
+  shellCompact: {
+    alignSelf: 'flex-end',
+    flexShrink: 0,
+    minWidth: 88,
   },
   track: {
     flexDirection: 'row',

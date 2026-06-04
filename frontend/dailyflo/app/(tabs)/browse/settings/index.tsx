@@ -85,10 +85,18 @@ export default function BrowseSettingsScreen() {
   const scrollPaddingTop =
     Platform.OS === 'ios' ? headerHeight + 24 : HEADER_TOP + HEADER_ROW_HEIGHT + 24;
 
-  const listStyle = {
+  // root grouped list — roomier row v-padding (display modal / dashboard spacing)
+  const listGroupProps = {
+    containerStyle: styles.listContainer,
     backgroundColor: themeColors.background.primarySecondaryBlend(),
     separatorColor: themeColors.border.primary(),
-    containerStyle: styles.listContainer,
+    separatorInsetRight: Paddings.groupedListContentHorizontal,
+    separatorVariant: 'solid' as const,
+    borderRadius: 24,
+    minimalStyle: false,
+    separatorConsiderIconColumn: true,
+    iconColumnWidth: 30,
+    itemPadding: 'root' as const,
   };
 
   // full sign-out path lives in redux: `logoutUser` clears securestore tokens, auth slice, tasks, and onboarding flag
@@ -186,7 +194,7 @@ export default function BrowseSettingsScreen() {
   }, [loggedInPrefs, openScheduleTimeSelect, router]);
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background.root() }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
       {/* ios: native title next to Stack.Toolbar xmark — style matches list-create (heading-4) */}
       {Platform.OS === 'ios' ? (
         <Stack.Screen
@@ -213,17 +221,7 @@ export default function BrowseSettingsScreen() {
         >
           <View style={styles.contentWrapper}>
           <View style={styles.groupedListSection}>
-            <GroupedList
-              containerStyle={listStyle.containerStyle}
-              backgroundColor={listStyle.backgroundColor}
-              separatorColor={listStyle.separatorColor}
-              separatorInsetRight={Paddings.groupedListContentHorizontal}
-              separatorVariant="solid"
-              borderRadius={24}
-              minimalStyle={false}
-              separatorConsiderIconColumn={true}
-              iconColumnWidth={30}
-            >
+            <GroupedList {...listGroupProps}>
               <FormDetailButton
                 key="account"
                 iconComponent={
@@ -291,17 +289,7 @@ export default function BrowseSettingsScreen() {
 
           <GroupedListHeader title="Productivity" style={styles.sectionHeader} />
           <View style={styles.groupedListSection}>
-            <GroupedList
-              containerStyle={listStyle.containerStyle}
-              backgroundColor={listStyle.backgroundColor}
-              separatorColor={listStyle.separatorColor}
-              separatorInsetRight={Paddings.groupedListContentHorizontal}
-              separatorVariant="solid"
-              borderRadius={24}
-              minimalStyle={false}
-              separatorConsiderIconColumn={true}
-              iconColumnWidth={30}
-            >
+            <GroupedList {...listGroupProps}>
               <FormDetailButton
                 key="goals"
                 iconComponent={
@@ -352,17 +340,7 @@ export default function BrowseSettingsScreen() {
 
           <GroupedListHeader title="Personalization" style={styles.sectionHeader} />
           <View style={styles.groupedListSection}>
-            <GroupedList
-              containerStyle={listStyle.containerStyle}
-              backgroundColor={listStyle.backgroundColor}
-              separatorColor={listStyle.separatorColor}
-              separatorInsetRight={Paddings.groupedListContentHorizontal}
-              separatorVariant="solid"
-              borderRadius={24}
-              minimalStyle={false}
-              separatorConsiderIconColumn={true}
-              iconColumnWidth={30}
-            >
+            <GroupedList {...listGroupProps}>
               <FormDetailButton
                 key="theme"
                 iconComponent={
@@ -413,17 +391,7 @@ export default function BrowseSettingsScreen() {
 
           <GroupedListHeader title="Support" style={styles.sectionHeader} />
           <View style={styles.groupedListSection}>
-            <GroupedList
-              containerStyle={listStyle.containerStyle}
-              backgroundColor={listStyle.backgroundColor}
-              separatorColor={listStyle.separatorColor}
-              separatorInsetRight={Paddings.groupedListContentHorizontal}
-              separatorVariant="solid"
-              borderRadius={24}
-              minimalStyle={false}
-              separatorConsiderIconColumn={true}
-              iconColumnWidth={30}
-            >
+            <GroupedList {...listGroupProps}>
               <FormDetailButton
                 key="about"
                 iconComponent={
@@ -489,17 +457,7 @@ export default function BrowseSettingsScreen() {
 
           {/* logout: its own card so it matches other settings blocks (same radius, separator chrome — one row, no chevron) */}
           <View style={[styles.groupedListSection, styles.logoutGroupedListSection]}>
-            <GroupedList
-              containerStyle={listStyle.containerStyle}
-              backgroundColor={listStyle.backgroundColor}
-              separatorColor={listStyle.separatorColor}
-              separatorInsetRight={Paddings.groupedListContentHorizontal}
-              separatorVariant="solid"
-              borderRadius={24}
-              minimalStyle={false}
-              separatorConsiderIconColumn={true}
-              iconColumnWidth={30}
-            >
+            <GroupedList {...listGroupProps}>
               <FormDetailButton
                 key="logout"
                 iconComponent={
@@ -544,8 +502,8 @@ export default function BrowseSettingsScreen() {
           />
           <LinearGradient
             colors={[
-              themeColors.background.root(),
-              themeColors.withOpacity(themeColors.background.root(), 0),
+              themeColors.background.primary(),
+              themeColors.withOpacity(themeColors.background.primary(), 0),
             ]}
             locations={[0.4, 1]}
             style={StyleSheet.absoluteFill}
