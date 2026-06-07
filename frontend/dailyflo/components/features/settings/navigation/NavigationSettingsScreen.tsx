@@ -121,7 +121,7 @@ export function NavigationSettingsScreen() {
       separatorVariant: 'solid' as const,
       backgroundColor: themeColors.background.primarySecondaryBlend(),
       contentPaddingHorizontal: Paddings.groupedListContentHorizontal,
-      contentPaddingVertical: Paddings.groupedListContentVertical,
+      itemPadding: 'root' as const,
       contentMinHeight: 44,
     }),
     [themeColors]

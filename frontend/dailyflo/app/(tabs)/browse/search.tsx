@@ -255,8 +255,8 @@ export default function BrowseSearchScreen() {
         />
         <LinearGradient
           colors={[
-            themeColors.background.primary(),
-            themeColors.withOpacity(themeColors.background.primary(), 0),
+            themeColors.background.root(),
+            themeColors.withOpacity(themeColors.background.root(), 0),
           ]}
           locations={[0.4, 1]}
           style={StyleSheet.absoluteFill}
@@ -280,7 +280,7 @@ export default function BrowseSearchScreen() {
       ) : (
         <View style={styles.androidTopRow}>
           <MainCloseButton layout="inline" onPress={() => router.back()} />
-          <GlassView style={styles.androidSearchGlass} glassEffectStyle="clear" tintColor={themeColors.background.primary() as any} isInteractive>
+          <GlassView style={styles.androidSearchGlass} glassEffectStyle="clear" tintColor={themeColors.background.root() as any} isInteractive>
             {searchInput}
           </GlassView>
         </View>
@@ -325,7 +325,7 @@ const createStyles = (
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: themeColors.background.primary(),
+      backgroundColor: themeColors.background.root(),
     },
     topSectionAnchor: {
       position: 'absolute',

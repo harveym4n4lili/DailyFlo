@@ -26,6 +26,8 @@
  */
 export const PrimaryColors = {
   light: {
+     // white: cards, modals, elevated sheets; FAB tint; hairline borders; label text on dark buttons/bars
+     5: '#FFFFFF',
     // white: cards, modals, elevated sheets; FAB tint; hairline borders; label text on dark buttons/bars
     25: '#FFFFFF',
     // barely tinted screen wash between stacked sections
@@ -50,6 +52,8 @@ export const PrimaryColors = {
     900: '#111827',
   },
   dark: {
+    // root dark canvas; FAB icon color; inverted dark header/toolbar bands in light mode
+    5: '#0F0F0F',
     // root dark canvas; FAB icon color; inverted dark header/toolbar bands in light mode
     25: '#131313',
     // subtle blend between two dark regions
@@ -142,11 +146,11 @@ export const MarpleBrandColors = {
   // secondary brand icons on dark
   400: '#3A5180',
   // main brand accent on dark (same hue anchor as light 500)
-  500: '#8B9EBF',
+  500: '#D15D54',
   // hover / lift on dark (slightly lighter coral)
-  600: '#D1DFF3',
+  600: '#F3AFAA',
 
-  700: '#FFF4DB',
+  700: '#F0C7C4',
 
   800: '#FFF4DB',
 } as const;
@@ -302,6 +306,15 @@ export const TaskCategoryColors = {
 } as const;
 
 /**
+ * Gamification / browse progress board — fixed accent hex values (not theme-mapped).
+ * Edit here to change medal gold, etc., without touching task category ramps.
+ */
+export const GamificationColors = {
+  /** new-best streak medal gradient right/base color (left is lerped lighter in progressBoardUiTokens) */
+  newBestStreakMedalGold: '#F59E0B',
+} as const;
+
+/**
  * Primary button palette — solid fills and icon color for main CTAs (FAB, primary actions).
  * `fill` uses brand scale `500`; icons stay on-theme neutrals for contrast.
  * `fill` / `icon` are mapped into ThemeColors.primaryButton.
@@ -335,6 +348,7 @@ export const ThemeColors = {
     },
     // background colors - surfaces and containers
     background: {
+      root: PrimaryColors.light[5],           // neutral step 5 — outermost screen canvas
       primary: PrimaryColors.light[100],      // white - main backgrounds
       secondary: PrimaryColors.light[100],   // light gray - secondary surfaces
       primarySecondaryBlend: PrimaryColors.light[50], // blend between primary and secondary
@@ -408,6 +422,7 @@ export const ThemeColors = {
     },
     // background colors - surfaces and containers
     background: {
+      root: PrimaryColors.dark[5],           // neutral step 5 — outermost screen canvas
       primary: PrimaryColors.dark[25],       // dark - main backgrounds
       secondary: PrimaryColors.dark[100],    // darker gray - secondary surfaces
       primarySecondaryBlend: PrimaryColors.dark[50], // blend between primary and secondary

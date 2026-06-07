@@ -8,6 +8,9 @@
 import { ViewStyle, TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+/** root = roomier rows (settings / dashboard); child = tighter rows (task sheets) */
+export type GroupedListItemPadding = 'root' | 'child';
+
 /**
  * Props for the main GroupedList component
  * 
@@ -48,8 +51,15 @@ export interface GroupedListProps {
 
   // content padding and min height applied by each item wrapper (defaults match iOS Settings row)
   contentPaddingHorizontal?: number;
+  /** explicit override — when omitted, `itemPadding` picks root vs child vertical inset */
   contentPaddingVertical?: number;
   contentMinHeight?: number;
+
+  /**
+   * Row vertical padding preset — root (settings / dashboard) vs child (task view).
+   * Ignored when `contentPaddingVertical` is set.
+   */
+  itemPadding?: GroupedListItemPadding;
 
   /**
    * Visual style for the list.

@@ -21,5 +21,8 @@ export { default as tasksApiService } from './tasks';
 // Activity Logs API - read-only log of task actions
 export { default as activityLogsApiService } from './activityLogs';
 
+// Gamification API - streaks, achievements, user goals
+export { default as gamificationApiService } from './gamification';
+
 // LLM API - authenticated proxy to backend (no vendor keys in the app)
 export { default as llmApiService, mapLlmErrorToUserMessage } from './llm';

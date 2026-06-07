@@ -2159,3 +2159,63 @@ TODO:
 - Browse search toolbar: tried icon + “Search” label on home — reverted to icon-only; full search field still appears on the pushed search screen.
 
 ---
+## [01/06/2026] - [Monday]
+
+### Today's Goals
+- [x] I removed the **browse alerts bell** from iOS and Android top chrome so only search (iOS left) and settings remain.
+- [x] I added centralized **planner week selector chrome**, polished the iOS month header and week swipe UX, matched timeline card radius to onboarding buttons, and updated tab bar tints.
+- [x] I added a live **“now” time label** on today’s timeline, retuned gutter label colors, and hid the clock after wind-down.
+- [x] I restyled the **planner timeline/list panel** as a top-rounded liquid glass sheet on the new root canvas, with a hairline border and transparent timeline surface.
+
+### Plans For Future
+- Keep iterating planner timeline layout (rail/content split was next).
+- Browse gamification dashboard was still on the roadmap from late May.
+
+### Notes
+- no notes
+
+---
+## [02/06/2026] - [Tuesday]
+
+### Today's Goals
+- [x] I refactored the **planner timeline** into a shared rail-and-content layout with solid line masking, drag-only column fades, and consistent completed/sort icons across selection, display settings, and activity log.
+
+### Plans For Future
+- Replace the all-day chevron footer with a cleaner timeline ↔ all-day switch.
+- Start building browse gamification surfaces.
+
+### Notes
+- no notes
+
+---
+## [03/06/2026] - [Wednesday]
+
+### Today's Goals
+- [x] I replaced the **planner all-day chevron footer** with a quick-add-style liquid glass pill bar that switches between full-screen timeline and all-day task views, with matched scroll insets and alignment fixes on iOS.
+- [x] I shipped **browse gamification** — progress board on the browse home dashboard, goals create/list flows, achievements screen, productivity hub, Redux + API wiring, and supporting routes on the browse stack.
+- [x] I added a **gamification manual QA checklist** for implemented UI and persistence verification.
+
+### Plans For Future
+- Polish gamification UX (progress bar, achievements filter, icons, productivity chrome).
+- Align settings/gamification grouped-list spacing with display modal rows.
+
+### Notes
+- Gamification scope from the May strategic review is now partially real in the app — good base before habits work.
+
+---
+## [04/06/2026] - [Thursday]
+
+### Today's Goals
+- [x] I polished **browse gamification UX** — native liquid-glass achievements filter (`LiquidGlassSegmentedPicker`), marple **500→600** progress bar gradient, horizontal gold gradient new-best medal, `body-large` count typography, marple achievement icons, and outline **trophy** toolbar icon.
+- [x] I aligned **browse gamification and settings surfaces** with `background.primary()`, fixed **productivity** top chrome/scroll insets to match achievements, introduced **root vs child** `GroupedList` row padding (settings + dashboard use root), and copied the **display settings marple Switch** pattern for the new-list **Favorited** toggle.
+
+### Plans For Future
+- plan to implement habits screen and feature.
+- Manual QA pass on gamification checklist (device + persistence).
+- Wire productivity hub `GroupedList` to root padding if rows still feel tight vs settings.
+
+### Notes
+- Favorited on new list is a native `Switch`, not a segmented control — matches display completed-tasks / all-day toggles.
+- Productivity screen still uses child grouped-list padding; only the browse progress card uses root today.
+
+---

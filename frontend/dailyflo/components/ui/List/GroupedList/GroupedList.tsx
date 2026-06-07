@@ -28,6 +28,7 @@ import { View, ViewStyle } from 'react-native';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 import { GroupedListItemWrapper } from './GroupedListItemWrapper';
+import { resolveGroupedListContentPaddingVertical } from './groupedListItemPadding';
 import type { GroupedListProps } from './GroupedList.types';
 
 export const GroupedList: React.FC<GroupedListProps> = ({
@@ -41,7 +42,8 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   borderWidth,
   borderColor,
   contentPaddingHorizontal = Paddings.groupedListContentHorizontal,
-  contentPaddingVertical = Paddings.groupedListContentVertical,
+  contentPaddingVertical,
+  itemPadding = 'child',
   contentMinHeight = 44,
   listStyle = 'roundedStyle',
   minimalStyle = false,
@@ -55,8 +57,12 @@ export const GroupedList: React.FC<GroupedListProps> = ({
   const themeColors = useThemeColors();
 
   // when minimalStyle is true, remove h/v padding, background, border radius, and min height from item wrappers
+  const resolvedContentPaddingVertical = resolveGroupedListContentPaddingVertical(
+    itemPadding,
+    contentPaddingVertical
+  );
   const finalContentPaddingHorizontal = minimalStyle ? 0 : contentPaddingHorizontal;
-  const finalContentPaddingVertical = minimalStyle ? 0 : contentPaddingVertical;
+  const finalContentPaddingVertical = minimalStyle ? 0 : resolvedContentPaddingVertical;
   const finalBackgroundColor = minimalStyle ? 'transparent' : backgroundColor;
   const finalBorderRadius = minimalStyle ? 0 : borderRadius;
   const finalContentMinHeight = minimalStyle ? undefined : contentMinHeight;

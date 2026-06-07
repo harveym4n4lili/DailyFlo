@@ -109,7 +109,7 @@ export function getActionSFSymbol(type: ActionType): string {
     case 'created':
       return 'plus.circle.fill';
     case 'completed':
-      return 'checkmark.circle.fill';
+      return 'checkmark.circle';
     case 'updated':
       return 'square.and.pencil';
     case 'deleted':

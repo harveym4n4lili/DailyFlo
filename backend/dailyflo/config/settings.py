@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'apps.accounts',
     'apps.tasks',
     'apps.lists',
+    'apps.gamification',
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',

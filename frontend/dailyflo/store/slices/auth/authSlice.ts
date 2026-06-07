@@ -1130,6 +1130,9 @@ export const logoutUser = createAsyncThunk(
       const { clearActivityLogs } = await import('../activityLogs/activityLogsSlice');
       dispatch(clearActivityLogs());
 
+      const { clearGamification } = await import('../gamification/gamificationSlice');
+      dispatch(clearGamification());
+
       try {
         await cancelAllTaskReminders();
       } catch (reminderErr) {
@@ -1169,6 +1172,13 @@ export const logoutUser = createAsyncThunk(
         dispatch(clearActivityLogs());
       } catch (activityLogClearError) {
         console.error('Error clearing activity logs during logout:', activityLogClearError);
+      }
+
+      try {
+        const { clearGamification } = await import('../gamification/gamificationSlice');
+        dispatch(clearGamification());
+      } catch (gamificationClearError) {
+        console.error('Error clearing gamification during logout:', gamificationClearError);
       }
 
       try {

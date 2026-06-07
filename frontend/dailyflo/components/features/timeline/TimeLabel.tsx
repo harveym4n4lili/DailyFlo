@@ -25,6 +25,8 @@ interface TimeLabelProps {
   isEndTime?: boolean;
   // whether this is a drag label (shown during drag)
   isDragLabel?: boolean;
+  // live clock label for today’s timeline (primary color, drawn above task labels)
+  isCurrentTime?: boolean;
   // height for containerized labels (spans task card height)
   height?: number;
   // optional opacity (e.g. hide static labels briefly after day change without changing layout)
@@ -36,7 +38,7 @@ interface TimeLabelProps {
  * 
  * Renders a time label at the specified position on the timeline.
  */
-export default function TimeLabel({ time, position, animatedPosition, isEndTime = false, isDragLabel = false, height, opacity }: TimeLabelProps) {
+export default function TimeLabel({ time, position, animatedPosition, isEndTime = false, isDragLabel = false, isCurrentTime = false, height, opacity }: TimeLabelProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
 
@@ -82,13 +84,14 @@ export default function TimeLabel({ time, position, animatedPosition, isEndTime 
         ? [styles.container, styles.containerized, { top: position + verticalOffset, height }, opacity !== undefined && { opacity }]
         : isEndTime
         ? [styles.container, styles.endTimeContainer, { top: position + verticalOffset }, opacity !== undefined && { opacity }]
-        : [styles.container, styles.topAlignedContainer, { top: position }, opacity !== undefined && { opacity }]);
+        : [styles.container, styles.topAlignedContainer, { top: position }, isCurrentTime && styles.currentTimeContainer, opacity !== undefined && { opacity }]);
   const containerStyleFiltered = Array.isArray(containerStyle) ? containerStyle.filter(Boolean) : containerStyle;
 
   const textStyle = [
     styles.timeText,
     isEndTime && styles.endTimeText,
     isDragLabel && styles.dragTimeText,
+    isCurrentTime && styles.currentTimeText,
   ];
 
   // use Animated.View if we have animated position, otherwise use regular View
@@ -139,22 +142,32 @@ const createStyles = (
     height: 14,
   },
 
-  // time text styling - uses body-small from typography system
+  // start + drag labels — secondary text on the timeline gutter
   timeText: {
+    ...typography.getTextStyle('body-small'),
+    color: themeColors.text.secondary(),
+  },
+
+  // end-of-duration label at the bottom of a timed task block — tertiary for softer hierarchy
+  endTimeText: {
     ...typography.getTextStyle('body-small'),
     color: themeColors.text.tertiary(),
   },
 
-  // end time text styling (lighter for end times)
-  endTimeText: {
-    ...typography.getTextStyle('body-small'),
-    opacity: 0.7,
-  },
-
-  // drag time text styling (highlighted during drag)
+  // drag preview time matches start labels (secondary)
   dragTimeText: {
     ...typography.getTextStyle('body-small'),
-    color: themeColors.interactive.primary(),
+    color: themeColors.text.secondary(),
+  },
+
+  // live “now” label — primary color and higher z-index so it stays readable over task times
+  currentTimeContainer: {
+    zIndex: 2,
+  },
+
+  currentTimeText: {
+    color: themeColors.text.primary(),
+    fontWeight: '600',
   },
 });
 

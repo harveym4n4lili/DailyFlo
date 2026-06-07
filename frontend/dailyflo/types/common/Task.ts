@@ -118,6 +118,8 @@ export interface UpdateTaskInput {
   listId?: string | null;           // Optional: New list ID
   sortOrder?: number;               // Optional: New sort order
   metadata?: Partial<Task['metadata']>; // Optional: Updated metadata
+  /** YYYY-MM-DD — sent on PATCH when completing a recurring occurrence so activity logs use the right day */
+  occurrenceDate?: string;
 }
 
 // Type for task filtering and querying

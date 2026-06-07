@@ -93,9 +93,13 @@ export const Paddings = {
   // GroupedList padding - content padding inside each list item wrapper
   // used by: GroupedList, TaskForm, CustomTextInput, IconColorModal, TaskScreenContent
   groupedListContentHorizontal: 16,
-  // used by: GroupedList
+  /** child grouped list — tighter rows inside task sheets / nested forms (default GroupedList) */
+  groupedListChildContentVertical: 16,
+  /** root grouped list — roomier rows on settings, display modal, browse dashboard */
+  groupedListRootContentVertical: 18,
+  /** @deprecated use groupedListChildContentVertical */
   groupedListContentVertical: 16,
-  // extra per-row vertical padding on display settings grouped lists (dashboard layout modal)
+  /** @deprecated folded into groupedListRootContentVertical */
   groupedListContentVerticalExtra: 2,
   // icon-to-text spacing in GroupedList rows (FormDetailButton, etc.)
   // used by: FormDetailButton, CustomFormDetailButton
@@ -119,13 +123,23 @@ export const Paddings = {
   timelineLabelsRight: 20,
   timelineTasksLeft: 20,
   timelineTasksRight: 20,
-  timelineFreeTimeLeft: 36,
+  // free-time gap copy uses TIMELINE_CONTENT_LEFT from timelineChrome.ts (kept in sync with task text)
   timelineScrollTop: 56,
   timelineScrollBottom: 200,
   /** gap between all-day footer and timed timeline row (TimelineView timelineRowWithFooterAbove) */
   timelineFooterToRowGap: 32,
   /** spacer above timed rows when all-day footer is hidden — between header and timeline (not full collapsed footer height) */
   timelineTopWhenAllDayHidden: 56,
+  /** gap under planner segment pill row */
+  timelineAllDayPillPaddingBottom: 8,
+  /** extra scroll inset so timeline / all-day content clears the anchored pill strip */
+  timelinePlannerContentBelowPillsGap: 16,
+  /** gap between pill and first task row on planner all-day segment (timeline keeps timelinePlannerContentBelowPillsGap) */
+  timelineAllDayPillToListGap: 8,
+  /** extra trim on planner all-day scroll spacer so first list row lines up with first timeline task card */
+  timelinePlannerAllDayTopSpacerReduction: 20,
+  /** planner timeline/list panel — top corner radius on `contentContainer` (bottom corners stay square) */
+  plannerContentPanelTopRadius: 40,
   timelineEmptyHorizontal: 40,
   timelineEmptyTop: 100,
 

@@ -20,12 +20,17 @@ import { View, Text, Pressable, TouchableOpacity, StyleSheet, FlatList, useWindo
 
 // expo vector icons for chevron symbol
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 
-// typography system for consistent text styling across the calendar
-import { getTextStyle } from '@/constants/Typography';
+// week selector typography + colors — edit PLANNER_WEEK_SELECTOR_CHROME in constants/plannerWeekSelectorChrome.ts
+import {
+  resolvePlannerWeekSelectorChrome,
+  resolveStableWeekSelectorTextStyle,
+  type ResolvedWeekSelectorChrome,
+} from '@/constants/plannerWeekSelectorChrome';
 
 // hooks for theme-aware colors that adapt to light/dark mode
-import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
+import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 import { useTypography } from '@/hooks/useTypography';
 
@@ -62,48 +67,37 @@ export interface WeekViewProps {
 }
 
 /**
- * DayCell Component
- * Individual day cell with animated background highlight
+ * Single day column — letter + date number stacked; selected state uses a vertical pill behind both.
  */
-interface DayCellProps {
+interface WeekDayColumnProps {
   date: Date;
+  dayLetter: string;
   dayNumber: number;
   isSelected: boolean;
-  isTodayDate: boolean;
-  // when user taps the circle, this lets weekview update the selected date
   onSelectDate: (date: Date) => void;
-  themeColors: ReturnType<typeof useThemeColors>;
+  chrome: ResolvedWeekSelectorChrome;
   styles: ReturnType<typeof createStyles>;
-  /** marple accent — matches FAB / month grid / tab bar */
-  selectedFill: string;
-  /** number color on selected cell — primary canvas */
-  selectedLabelColor: string;
 }
 
-const DayCell: React.FC<DayCellProps> = ({
+const WeekDayColumn: React.FC<WeekDayColumnProps> = ({
   date,
+  dayLetter,
   dayNumber,
   isSelected,
-  isTodayDate,
   onSelectDate,
-  themeColors,
+  chrome,
   styles,
-  selectedFill,
-  selectedLabelColor,
 }) => {
-  // quick fade for the selected day fill so the highlight feels softer on tap
   const selectionOpacity = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
   const selectionAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
-    // cancel any in‑flight animation before starting a new one
     if (selectionAnimationRef.current) {
       selectionAnimationRef.current.stop();
       selectionAnimationRef.current = null;
     }
 
     if (isSelected) {
-      // simple, cancellable fade-in when this day becomes selected
       const animation = Animated.timing(selectionOpacity, {
         toValue: 1,
         duration: 140,
@@ -116,56 +110,50 @@ const DayCell: React.FC<DayCellProps> = ({
         }
       });
     } else {
-      // when unselected, hide the fill immediately (no fade-out)
       selectionOpacity.setValue(0);
     }
   }, [isSelected, selectionOpacity]);
 
+  // same line box for default + selected — only color changes so the row never jumps on swipe
+  const letterTextStyle = resolveStableWeekSelectorTextStyle(
+    chrome.dayLetter.default,
+    chrome.dayLetter.selected,
+    isSelected
+  );
+  const numberTextStyle = resolveStableWeekSelectorTextStyle(
+    chrome.dayNumber.default,
+    chrome.dayNumber.selected,
+    isSelected
+  );
+
   return (
-    <View style={styles.dateCellContainer}>
-      {/* background highlight for selected day with quick fade-in */}
-      {isSelected && (
+    <Pressable
+      onPress={() => onSelectDate(date)}
+      style={styles.dayColumnPressable}
+      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+      accessibilityRole="button"
+      accessibilityLabel={`${dayLetter}, ${dayNumber}, ${date.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      })}`}
+      accessibilityState={{ selected: isSelected }}
+    >
+      {isSelected ? (
         <Animated.View
+          pointerEvents="none"
           style={[
-            styles.dateCellBackground,
+            styles.dayColumnPill,
             {
-              // marple fill — same as month picker + FAB / onboarding accent
-              backgroundColor: selectedFill,
+              backgroundColor: chrome.selectedBackgroundColor,
               opacity: selectionOpacity,
-            }
-          ]}
-        />
-      )}
-      
-      {/* date number - pressable circle so tapping the number selects the day */}
-      <Pressable
-        onPress={() => onSelectDate(date)}
-        style={styles.dateCellPressable}
-        // larger invisible hit area so light / off-center taps still register
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityRole="button"
-        accessibilityLabel={`${dayNumber}, ${date.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        })}`}
-        accessibilityState={{ selected: isSelected }}
-      >
-        <Text
-          style={[
-            getTextStyle('heading-4'),
-            styles.dateText,
-            {
-              color: isSelected
-                ? selectedLabelColor
-                : themeColors.text.primary(),
             },
           ]}
-        >
-          {dayNumber}
-        </Text>
-      </Pressable>
-    </View>
+        />
+      ) : null}
+      <Text style={[styles.dayLetterText, letterTextStyle]}>{dayLetter}</Text>
+      <Text style={[styles.dayNumberText, numberTextStyle]}>{dayNumber}</Text>
+    </Pressable>
   );
 };
 
@@ -187,26 +175,38 @@ export const WeekView: React.FC<WeekViewProps> = ({
 }) => {
   // get theme-aware colors for styling (adapts to light/dark mode)
   const themeColors = useThemeColors();
-  const { getMarpleBrandColor } = useColorPalette();
-  const selectedDayFill = getMarpleBrandColor(500);
-  const yearAccent = getMarpleBrandColor(500);
-  const arrowAccent = getMarpleBrandColor(500);
-  const selectedDayLabel = themeColors.background.primary();
   
   // get typography system for consistent text styling
   const typography = useTypography();
+
+  // resolves day letter/number typography + selected pill from plannerWeekSelectorChrome.ts
+  const selectorChrome = useMemo(
+    () => resolvePlannerWeekSelectorChrome(themeColors, typography),
+    [themeColors, typography]
+  );
   
-  // create dynamic styles
-  const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
+  // layout-only styles — all text typography comes from selectorChrome (Typography.ts tokens)
+  const styles = useMemo(
+    () => createStyles(selectorChrome.layout),
+    [selectorChrome.layout]
+  );
   
   // flat list ref for horizontal pagination
   const flatListRef = useRef<FlatList>(null);
-  
+
+  // keep latest callback without re-running layout effects when parent re-renders
+  const onSelectDateRef = useRef(onSelectDate);
+  onSelectDateRef.current = onSelectDate;
+
   // track if user is currently swiping (to prevent selectedDate effect from interfering)
   const isUserSwipingRef = useRef<boolean>(false);
-  
+
   // skip scroll on initial mount (we use initialScrollIndex={1} for that)
   const isInitialMountRef = useRef<boolean>(true);
+
+  // only recenter when the anchor week actually changes (avoids redundant scrollToOffset calls)
+  const lastRecenteredWeekMsRef = useRef<number>(0);
+  const needsScrollBackupRef = useRef<boolean>(false);
   
   // get screen width for pagination calculations
   const { width: screenWidth } = useWindowDimensions();
@@ -281,32 +281,36 @@ export const WeekView: React.FC<WeekViewProps> = ({
   const handleMomentumScrollEnd = useCallback((event: any) => {
     const { contentOffset } = event.nativeEvent;
     const currentIndex = Math.round(contentOffset.x / pageWidth);
-    
+
+    if (currentIndex === 1) {
+      return;
+    }
+
     // get the week start for the current page index
     const newWeekStart = weeksData[currentIndex];
-    if (newWeekStart && newWeekStart.getTime() !== currentWeekStart.getTime()) {
-      // mark that user is swiping to prevent selectedDate effect from interfering
-      isUserSwipingRef.current = true;
-      setCurrentWeekStart(newWeekStart);
-      
-      // if we have a selected date, find the same day of the week in the new week
-      if (selectedDate) {
-        const currentSelected = new Date(selectedDate);
-        const currentDayOfWeek = currentSelected.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        // adjust for Monday-based week: 0 = Sunday becomes 6, 1 = Monday becomes 0, etc.
-        const mondayBasedDay = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
-        
-        // create new date in the new week with the same day of the week
-        const newSelectedDate = new Date(newWeekStart);
-        newSelectedDate.setDate(newWeekStart.getDate() + mondayBasedDay);
-        
-        // update the selected date to the same day in the new week
-        onSelectDate(newSelectedDate.toISOString());
-      }
-      
-      // scroll to center happens in useLayoutEffect - runs before paint so no flash
+    if (!newWeekStart || newWeekStart.getTime() === currentWeekStart.getTime()) {
+      return;
     }
-  }, [weeksData, currentWeekStart, screenWidth, selectedDate, onSelectDate]);
+
+    isUserSwipingRef.current = true;
+    needsScrollBackupRef.current = true;
+
+    let newSelectedDateIso: string | null = null;
+    if (selectedDate) {
+      const currentSelected = new Date(selectedDate);
+      const currentDayOfWeek = currentSelected.getDay();
+      const mondayBasedDay = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
+      const newSelectedDate = new Date(newWeekStart);
+      newSelectedDate.setDate(newWeekStart.getDate() + mondayBasedDay);
+      newSelectedDateIso = newSelectedDate.toISOString();
+    }
+
+    setCurrentWeekStart(newWeekStart);
+
+    if (newSelectedDateIso) {
+      onSelectDateRef.current(newSelectedDateIso);
+    }
+  }, [weeksData, currentWeekStart, pageWidth, selectedDate]);
   
   /**
    * Get item layout for FlatList performance optimization
@@ -331,22 +335,37 @@ export const WeekView: React.FC<WeekViewProps> = ({
   useLayoutEffect(() => {
     if (isInitialMountRef.current) {
       isInitialMountRef.current = false;
+      lastRecenteredWeekMsRef.current = currentWeekStart.getTime();
       return;
     }
-    flatListRef.current?.scrollToIndex({ index: 1, animated: false });
-    isUserSwipingRef.current = false;
-  }, [currentWeekStart]);
+
+    const weekMs = currentWeekStart.getTime();
+    if (lastRecenteredWeekMsRef.current === weekMs) {
+      return;
+    }
+    lastRecenteredWeekMsRef.current = weekMs;
+
+    flatListRef.current?.scrollToOffset({ offset: pageWidth, animated: false });
+
+    if (needsScrollBackupRef.current) {
+      needsScrollBackupRef.current = false;
+      requestAnimationFrame(() => {
+        flatListRef.current?.scrollToOffset({ offset: pageWidth, animated: false });
+      });
+    }
+  }, [currentWeekStart, pageWidth]);
   
   /**
    * Reset FlatList to center page (current week) when week changes externally
    * Only runs when selectedDate changes from outside (not during user swipes)
    */
   useEffect(() => {
-    // don't interfere if user is currently swiping
+    // swipe commit already moved the anchor week — skip syncing from selectedDate on that same tick
     if (isUserSwipingRef.current) {
+      isUserSwipingRef.current = false;
       return;
     }
-    
+
     if (selectedDate) {
       const selected = new Date(selectedDate);
       const selectedWeekMonday = getMondayOfWeek(selected);
@@ -406,25 +425,28 @@ export const WeekView: React.FC<WeekViewProps> = ({
   };
   
   /**
-   * Check if a date is today
-   */
-  const isToday = (date: Date): boolean => {
-    const today = new Date();
-    return date.getDate() === today.getDate() &&
-           date.getMonth() === today.getMonth() &&
-           date.getFullYear() === today.getFullYear();
-  };
-  
-  /**
    * Handle date selection
    * Converts date to ISO string and calls onSelectDate callback
    */
   const handleDateSelect = (date: Date) => {
+    // light tap feedback when the planner week picker moves to a different day
+    if (selectedDate) {
+      const previous = new Date(selectedDate);
+      const isSameCalendarDay =
+        previous.getFullYear() === date.getFullYear() &&
+        previous.getMonth() === date.getMonth() &&
+        previous.getDate() === date.getDate();
+      if (!isSameCalendarDay) {
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    } else {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     onSelectDate(date.toISOString());
   };
   
-  // day abbreviations for headers (Mon-Sun)
-  const dayHeaders = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  // single-letter labels (Mon–Sun) — matches compact week picker reference
+  const dayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   
   return (
     <View>
@@ -444,15 +466,15 @@ export const WeekView: React.FC<WeekViewProps> = ({
             accessibilityLabel={`${formattedDateText}. Opens monthly calendar`}
             accessibilityHint="Double tap to open the monthly date picker"
           >
-            <Text key={selectedDate} style={[styles.headerTitle, { flexShrink: 1 }]}>
-              <Text style={{ color: themeColors.text.primary() }}>{headerDateParts.dayMonthLabel}</Text>
-              <Text style={{ color: yearAccent, fontSize: 28 }}>{headerDateParts.yearLabel}</Text>
+            <Text key={selectedDate} style={{ flexShrink: 1 }}>
+              <Text style={selectorChrome.monthHeader.dayMonth}>{headerDateParts.dayMonthLabel}</Text>
+              <Text style={selectorChrome.monthHeader.year}>{headerDateParts.yearLabel}</Text>
             </Text>
             <Ionicons
               name="chevron-forward"
-              size={28}
-              color={arrowAccent}
-              style={styles.chevronIcon}
+              size={selectorChrome.monthHeaderChevronSize}
+              color={selectorChrome.monthHeaderChevronColor}
+              style={{ marginLeft: selectorChrome.monthHeaderChevronGapFromYear }}
             />
           </TouchableOpacity>
         </>
@@ -464,12 +486,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
         Layout: Swipeable pages - one week per page
         listWrapper uses negative margin to break out of container padding so full pages are visible during swipe
       */}
-      <View
-        style={[
-          styles.weekSectionContainer,
-          hideMonthHeader ? { paddingTop: Paddings.card } : null,
-        ]}
-      >
+      <View style={styles.weekSectionContainer}>
       <View style={styles.listWrapper}>
       <FlatList
         ref={flatListRef}
@@ -484,49 +501,17 @@ export const WeekView: React.FC<WeekViewProps> = ({
               {weekData.map((date, index) => {
                 const dayNumber = date.getDate();
                 const isSelected = isSelectedDate(date);
-                const isTodayDate = isToday(date);
-                
+
                 return (
                   <View key={index} style={styles.dayColumn}>
-                    {/* day title pressable - tapping the title also selects the day */}
-                    <Pressable
-                      onPress={() => handleDateSelect(date)}
-                      style={styles.dayHeaderPressable}
-                      // extra hitSlop so fast/light taps on the label still select the day
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Select ${dayHeaders[index]}, ${date.toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}`}
-                    >
-                      <Text
-                        numberOfLines={1}
-                        style={[
-                          getTextStyle('body-medium'),
-                          styles.dayHeaderText,
-                          {
-                            color:
-                              themeColors.text.tertiary?.() ||
-                              themeColors.text.secondary(),
-                          },
-                        ]}
-                      >
-                        {dayHeaders[index]}
-                      </Text>
-                    </Pressable>
-
-                    <DayCell
+                    <WeekDayColumn
                       date={date}
+                      dayLetter={dayLetters[index]}
                       dayNumber={dayNumber}
                       isSelected={isSelected}
-                      isTodayDate={isTodayDate}
                       onSelectDate={handleDateSelect}
-                      themeColors={themeColors}
+                      chrome={selectorChrome}
                       styles={styles}
-                      selectedFill={selectedDayFill}
-                      selectedLabelColor={selectedDayLabel}
                     />
                   </View>
                 );
@@ -544,6 +529,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
         initialScrollIndex={1} // start at center page (current week)
         decelerationRate="fast"
         scrollEventThrottle={16}
+        removeClippedSubviews={false}
       />
       </View>
       </View>
@@ -560,10 +546,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
  * 3. Touch-friendly tap targets (minimum 44px)
  * 4. Visual hierarchy with typography and colors
  */
-const createStyles = (
-  themeColors: ReturnType<typeof useThemeColors>,
-  typography: ReturnType<typeof useTypography>
-) => StyleSheet.create({
+const createStyles = (layout: ResolvedWeekSelectorChrome['layout']) => StyleSheet.create({
   // --- LAYOUT STYLES ---
   // header container - separate from week grid, left spacing from Paddings.screen
   headerContainer: {
@@ -577,16 +560,11 @@ const createStyles = (
     marginTop: 16,
   },
 
-  chevronIcon: {
-    marginLeft: -2,
-    marginRight: 0,
-  },
-
-  // week grid section - padding for the swipeable list (listWrapper breaks out with negative margin)
+  // week grid section — top/bottom padding from plannerWeekSelectorChrome layout tokens
   weekSectionContainer: {
     paddingHorizontal: 16,
-    paddingVertical: Paddings.card,
-    paddingBottom: Paddings.card - 12,
+    paddingTop: layout.sectionPaddingTop,
+    paddingBottom: layout.sectionPaddingBottom,
   },
   
   // breaks out of container padding so FlatList scrolls full-width (no cut-off during swipe)
@@ -601,64 +579,43 @@ const createStyles = (
     justifyContent: 'center',
   },
   
-  // week grid container - holds all the day columns for a single week
+  // week grid container — columns center their pill; minHeight keeps the row stable when selection moves
   weekGrid: {
     flexDirection: 'row',
-    gap: 4,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    minHeight: layout.columnMinHeight,
   },
-  
-  // individual day column - contains day header and date cell
+
+  // individual day column - letter + number stack with optional pill highlight
   dayColumn: {
     flex: 1,
     alignItems: 'center',
   },
 
-  // day header pressable - clickable area for day header
-  dayHeaderPressable: {
-    marginBottom: 8,
-    paddingVertical: Paddings.none,
-    paddingHorizontal: Paddings.touchTarget,
-  },
-  
-  // day header text styling
-  dayHeaderText: {
-    textAlign: 'center',
-  },
-  
-  // date cell container - holds background and pressable
-  dateCellContainer: {
-    width: 36,
-    height: 36,
+  dayColumnPressable: {
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: layout.columnMinWidth,
+    minHeight: layout.columnMinHeight,
+    paddingVertical: layout.columnPaddingVertical,
+    paddingHorizontal: layout.columnPaddingHorizontal,
     position: 'relative',
   },
-  
-  // animated background highlight
-  dateCellBackground: {
-    position: 'absolute',
-    width: 36,
-    height: 36,
-    borderRadius: 19,
-  },
-  
-  // date cell pressable - clickable area
-  dateCellPressable: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-  
-  // date number text styling
-  dateText: {},
 
-  // --- TYPOGRAPHY STYLES ---
-  headerTitle: {
-    ...typography.getTextStyle('heading-2'),
-    color: themeColors.text.primary(),
-    marginLeft: 0,
+  // vertical capsule hugging letter + number (not full column width)
+  dayColumnPill: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: layout.pillBorderRadius,
+  },
+
+  dayLetterText: {
+    textAlign: 'center',
+    marginBottom: layout.letterNumberGap,
+  },
+
+  dayNumberText: {
+    textAlign: 'center',
   },
 });
 
