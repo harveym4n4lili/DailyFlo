@@ -13,7 +13,7 @@ _DISPLAY_SORT_OPTIONS = frozenset({'None', 'Due Date', 'Added Date', 'Priority'}
 _DISPLAY_ORDERING_OPTIONS = frozenset({'Ascending', 'Descending'})
 _DISPLAY_LAYOUT_VIEWS = frozenset({'list', 'timeline'})
 _DISPLAY_TAB_KEYS = frozenset({'today', 'planner', 'inbox'})
-_NAVIGATION_TAB_KEYS = frozenset({'today', 'planner', 'ai', 'browse', 'inbox'})
+_NAVIGATION_TAB_KEYS = frozenset({'today', 'planner', 'ai', 'browse', 'inbox', 'habits'})
 
 
 def _validate_hh_mm_string(value):

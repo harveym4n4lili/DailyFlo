@@ -26,8 +26,8 @@ export interface UserDisplayPreferences {
   inbox?: TabDisplayPreferences;
 }
 
-/** navbar tab keys — must match app/(tabs)/ route folders */
-export type NavigationTabKey = 'today' | 'planner' | 'ai' | 'browse' | 'inbox';
+/** navbar tab keys — must match app/(tabs)/ route folders (inbox on android uses browse/inbox href) */
+export type NavigationTabKey = 'today' | 'planner' | 'ai' | 'browse' | 'inbox' | 'habits';
 
 /** saved under preferences.navigation_preferences on django */
 export interface UserNavigationPreferences {
