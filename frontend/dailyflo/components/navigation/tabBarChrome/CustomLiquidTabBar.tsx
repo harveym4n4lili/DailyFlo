@@ -123,7 +123,8 @@ export function CustomLiquidTabBar() {
           }
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
           setOptimisticCustomTabKey(item.key);
-          router.push(item.href as any);
+          // navigate (not push) switches tab roots without stacking duplicate entries on the root stack
+          router.navigate(item.href as any);
         }}
         style={({ pressed }) => [styles.customTabItem, pressed && styles.customTabItemPressed]}
         accessibilityRole="button"

@@ -1,9 +1,10 @@
+import { Platform } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 
 import { getTodayTabIcon } from '@/utils/todayIcon';
 
 /** keys that can appear in the navbar — synced with app/(tabs)/ folders + NativeTabs.Trigger names */
-export type NavTabKey = 'today' | 'planner' | 'ai' | 'browse' | 'inbox';
+export type NavTabKey = 'today' | 'planner' | 'ai' | 'browse' | 'inbox' | 'habits';
 
 /** browse is always present in the navbar and cannot be removed from settings */
 export const PINNED_NAV_TAB: NavTabKey = 'browse';
@@ -15,6 +16,8 @@ const PLANNER_TAB_ICON = require('@/assets/icons/Timeline.png');
 const AI_TAB_ICON = require('@/assets/icons/Sparkles.png');
 const BROWSE_TAB_ICON = require('@/assets/icons/Browse.png');
 const INBOX_TAB_ICON = require('@/assets/icons/Browse.png');
+// todo: replace with final habits icon — temporary stand-in copied from Sparkles.png
+const HABITS_TAB_ICON = require('@/assets/icons/Habits.png');
 
 export type NavTabMeta = {
   key: NavTabKey;
@@ -62,7 +65,22 @@ export const NAV_TAB_REGISTRY: Record<NavTabKey, NavTabMeta> = {
     getIconSource: () => INBOX_TAB_ICON,
     href: '/(tabs)/inbox',
   },
+  habits: {
+    key: 'habits',
+    label: 'Habits',
+    sfSymbol: 'arrow.triangle.2.circlepath',
+    getIconSource: () => HABITS_TAB_ICON,
+    href: '/(tabs)/habits',
+  },
 };
+
+/** expo-router href for a navbar tab — inbox falls back to browse stack on android (6th native trigger slot) */
+export function resolveNavTabHref(key: NavTabKey): string {
+  if (key === 'inbox' && Platform.OS === 'android') {
+    return '/(tabs)/browse/inbox';
+  }
+  return NAV_TAB_REGISTRY[key].href;
+}
 
 /** every tab the user may show in the navbar — order for Tab Bar options grouped list */
 export const ALL_NAV_TAB_OPTION_KEYS: NavTabKey[] = [
@@ -70,8 +88,9 @@ export const ALL_NAV_TAB_OPTION_KEYS: NavTabKey[] = [
   'planner',
   'ai',
   'inbox',
+  'habits',
   'browse',
 ];
 
 /** tabs the user can pick from the Add row (excludes browse — always present) */
-export const ADDABLE_NAV_TAB_KEYS: NavTabKey[] = ['today', 'planner', 'ai', 'inbox'];
+export const ADDABLE_NAV_TAB_KEYS: NavTabKey[] = ['today', 'planner', 'ai', 'inbox', 'habits'];

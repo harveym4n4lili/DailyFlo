@@ -1,6 +1,7 @@
 import {
   DEFAULT_NAV_TAB_ORDER,
   NAV_TAB_REGISTRY,
+  resolveNavTabHref,
   type NavTabKey,
 } from '@/components/features/settings/navigation/navigationTabRegistry';
 import { normalizeNavTabOrder } from '@/components/features/settings/navigation/navigationPreferenceUtils';
@@ -18,7 +19,7 @@ export function buildCustomTabNavItems(tabOrder?: NavTabKey[]): CustomTabNavItem
     const meta = NAV_TAB_REGISTRY[key];
     return {
       key,
-      href: meta.href,
+      href: resolveNavTabHref(key),
       source: meta.getIconSource(),
       label: meta.label,
     };

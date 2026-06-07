@@ -4,6 +4,7 @@ import {
   DEFAULT_NAV_TAB_ORDER,
   NAV_TAB_REGISTRY,
   PINNED_NAV_TAB,
+  resolveNavTabHref,
   type NavTabKey,
 } from './navigationTabRegistry';
 
@@ -72,6 +73,6 @@ export function resolvePrimaryNavTabKey(
 export function resolvePrimaryNavTabHref(
   prefs?: UserNavigationPreferences | null
 ): string {
-  return NAV_TAB_REGISTRY[resolvePrimaryNavTabKey(prefs)].href;
+  return resolveNavTabHref(resolvePrimaryNavTabKey(prefs));
 }
 

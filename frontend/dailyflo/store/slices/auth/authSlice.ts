@@ -285,7 +285,7 @@ function transformApiDisplayPreferences(apiPrefs: Record<string, unknown>): User
   };
 }
 
-const NAVIGATION_TAB_KEYS = new Set<NavigationTabKey>(['today', 'planner', 'ai', 'browse', 'inbox']);
+const NAVIGATION_TAB_KEYS = new Set<NavigationTabKey>(['today', 'planner', 'ai', 'browse', 'inbox', 'habits']);
 
 function transformApiNavigationPreferences(apiPrefs: Record<string, unknown>): UserNavigationPreferences | undefined {
   const raw = apiPrefs.navigation_preferences ?? apiPrefs.navigationPreferences;

@@ -154,14 +154,15 @@ export default function TabLayout() {
             <NativeTabs.Trigger.Icon src={require('@/assets/icons/Browse.png')} renderingMode="template" />
           </NativeTabs.Trigger>
 
+          {/* habits before inbox — android native tabs allow max 5 triggers; habits must stay in the first five */}
+          <NativeTabs.Trigger name="habits" hidden={false}>
+            <NativeTabs.Trigger.Label>Habits</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon src={require('@/assets/icons/Habits.png')} renderingMode="template" />
+          </NativeTabs.Trigger>
+
           <NativeTabs.Trigger name="inbox" hidden={false}>
             <NativeTabs.Trigger.Label>Inbox</NativeTabs.Trigger.Label>
             <NativeTabs.Trigger.Icon src={require('@/assets/icons/Browse.png')} renderingMode="template" />
-          </NativeTabs.Trigger>
-
-          <NativeTabs.Trigger name="test" hidden={false}>
-            <NativeTabs.Trigger.Label>Test</NativeTabs.Trigger.Label>
-            <NativeTabs.Trigger.Icon src={require('@/assets/icons/Today.png')} renderingMode="template" />
           </NativeTabs.Trigger>
         </NativeTabs>
         {isSelectionMode && <SelectionActionsBar screen={selectionScreen} />}
