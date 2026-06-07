@@ -14,6 +14,7 @@ import { ONBOARDING_SLIDES_PLANNER_FREE_TIME_BODY_TEXT_STYLE } from '../constant
 import TimeLabel from '@/components/features/timeline/TimeLabel';
 import TimelineItem from '@/components/features/timeline/TimelineItem';
 import { getTimelineTaskGapPx } from '@/components/features/timeline/timelineSpacing';
+import { TIMELINE_CONTENT_LEFT } from '@/components/features/timeline/timelineChrome';
 import { FREE_TIME_BREAK_MESSAGES, formatMinutesToDuration } from '@/components/features/timeline/timelineFreeTime';
 import {
   TIMELINE_DEFAULT_PIXELS_PER_MINUTE,
@@ -53,8 +54,8 @@ function OnboardingPlannerFreeTimeGap({
           right: 0,
           justifyContent: 'center',
           alignItems: 'flex-start',
-          // match `TimelineView` `styles.freeTimeBlock` — same left inset for sparkles + copy
-          paddingLeft: Paddings.timelineFreeTimeLeft,
+          // match `TimelineView` free-time blocks — same left inset as task text column
+          paddingLeft: TIMELINE_CONTENT_LEFT,
           zIndex: 0,
         },
         row: { flexDirection: 'row', alignItems: 'center', gap: 8 },

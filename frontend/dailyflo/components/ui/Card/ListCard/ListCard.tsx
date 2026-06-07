@@ -179,6 +179,9 @@ export interface ListCardProps {
   // used when ListCard is inside a scroll container (e.g. planner footer) to avoid Reanimated animating first layout
   disableInitialLayoutTransition?: boolean;
 
+  /** when true, list body does not flex-grow inside a parent ScrollView (planner all-day segment) */
+  embeddedInParentScroll?: boolean;
+
   // selection mode - when true, task cards show selection checkboxes and tap toggles selection
   // parent (e.g. Today/Planner screen) gets these from Redux via useUI(); ListCard receives them as props
   // and passes selectionMode, isSelected, onSelect down to each TaskCard
@@ -249,6 +252,7 @@ export default function ListCard({
   hideCompletedTasks = false,
   delayHeightChangeOnTaskComplete = true,
   disableInitialLayoutTransition = false,
+  embeddedInParentScroll = false,
   selectionMode = false,
   selectedTaskIds = [],
   onToggleTaskSelection,
@@ -347,8 +351,29 @@ export default function ListCard({
 
   // create dynamic styles using the color palette system and typography system
   const styles = useMemo(
-    () => createStyles(themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal, paddingBottom, scrollPastTopInset),
-    [themeColors, semanticColors, typography, insets, paddingTop, paddingHorizontal, paddingBottom, scrollPastTopInset]
+    () =>
+      createStyles(
+        themeColors,
+        semanticColors,
+        typography,
+        insets,
+        paddingTop,
+        paddingHorizontal,
+        paddingBottom,
+        scrollPastTopInset,
+        embeddedInParentScroll
+      ),
+    [
+      themeColors,
+      semanticColors,
+      typography,
+      insets,
+      paddingTop,
+      paddingHorizontal,
+      paddingBottom,
+      scrollPastTopInset,
+      embeddedInParentScroll,
+    ]
   );
 
   // use custom hooks for animation management
@@ -1034,15 +1059,21 @@ const createStyles = (
   paddingTop?: number,
   paddingHorizontal?: number,
   paddingBottom?: number,
-  scrollPastTopInset?: boolean
+  scrollPastTopInset?: boolean,
+  embeddedInParentScroll?: boolean
 ) =>
   StyleSheet.create({
     // --- LAYOUT STYLES ---
-    container: {
-      flex: 1, // take up available space
-      // ensure container extends all the way to bottom of screen
-      // this allows scroll view to stretch fully and show all tasks above navbar
-    },
+    container: embeddedInParentScroll
+      ? {
+          alignSelf: 'stretch',
+          flexGrow: 0,
+        }
+      : {
+          flex: 1, // take up available space
+          // ensure container extends all the way to bottom of screen
+          // this allows scroll view to stretch fully and show all tasks above navbar
+        },
 
     // group container for grouped lists
     group: {
@@ -1072,7 +1103,7 @@ const createStyles = (
       paddingTop: (paddingTop ?? 0) + (scrollPastTopInset ? insets.top : 0),
       paddingBottom: paddingBottom ?? 58 + 80 + 16 + insets.bottom + Paddings.scrollBottomExtra,
       paddingHorizontal: paddingHorizontal ?? Paddings.screenSmall,
-      flexGrow: 1,
+      flexGrow: embeddedInParentScroll ? 0 : 1,
     },
     headerContainer: {
       flexDirection: 'row',

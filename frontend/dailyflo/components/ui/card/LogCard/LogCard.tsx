@@ -14,7 +14,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { DashedSeparator } from '@/components/ui/borders';
-import { SFSymbolIcon } from '@/components/ui/Icon';
+import { SFSymbolIcon, CompletedTasksSFSymbolIcon } from '@/components/ui/Icon';
 import { useTypography } from '@/hooks/useTypography';
 import { getFontFamilyWithWeight } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
@@ -101,18 +101,22 @@ export function LogCard({ log, onPress, showSeparator = false }: LogCardProps) {
       >
         {/* action icon on the left – SF Symbol on iOS, Ionicons fallback on Android/Web */}
         <View style={styles.iconWrap}>
-          <SFSymbolIcon
-            name={getActionSFSymbol(log.actionType)}
-            size={ACTION_ICON_SIZE}
-            color={iconColor}
-            fallback={
-              <Ionicons
-                name={getActionFallbackIcon(log.actionType) as any}
-                size={ACTION_ICON_SIZE}
-                color={iconColor}
-              />
-            }
-          />
+          {log.actionType === 'completed' ? (
+            <CompletedTasksSFSymbolIcon size={ACTION_ICON_SIZE} color={iconColor} />
+          ) : (
+            <SFSymbolIcon
+              name={getActionSFSymbol(log.actionType)}
+              size={ACTION_ICON_SIZE}
+              color={iconColor}
+              fallback={
+                <Ionicons
+                  name={getActionFallbackIcon(log.actionType) as any}
+                  size={ACTION_ICON_SIZE}
+                  color={iconColor}
+                />
+              }
+            />
+          )}
         </View>
 
         {/* column: action message above, task title + time on same line below */}

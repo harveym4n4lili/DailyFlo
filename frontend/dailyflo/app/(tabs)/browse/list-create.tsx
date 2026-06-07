@@ -12,7 +12,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
+import { useThemeColors, useColorPalette } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { MainCloseButton, MainSubmitButton } from '@/components/ui/Button';
 import {
@@ -40,8 +40,10 @@ const DEFAULT_LIST_COLOR: ListColor = 'blue';
 export default function ListCreateScreen() {
   const router = useGuardedRouter();
   const themeColors = useThemeColors();
-  const semantic = useSemanticColors();
+  const { getMarpleBrandColor } = useColorPalette();
   const typography = useTypography();
+  // same marple accent as display settings toggles (on track when switch is on)
+  const groupedListIconColor = getMarpleBrandColor(500);
   const styles = createStyles();
 
   const { openedFrom } = useLocalSearchParams<{ openedFrom?: string }>();
@@ -188,7 +190,7 @@ export default function ListCreateScreen() {
 
           <View style={styles.groupedListSection}>
             <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
-              {/* single row: star + label + react-native Switch */}
+              {/* single row: star + label + Switch — same pattern as display settings toggles */}
               <View style={styles.favoritedRow}>
                 <View style={styles.favoritedIconWrap}>
                   <SFSymbolIcon
@@ -210,7 +212,8 @@ export default function ListCreateScreen() {
                   accessibilityLabel="Favorite this list"
                   trackColor={{
                     false: themeColors.interactive.tertiary(),
-                    true: semantic.success(500),
+                    // on track uses marple brand — same as display settings completed-tasks toggle
+                    true: groupedListIconColor,
                   }}
                   thumbColor={themeColors.background.elevated()}
                   ios_backgroundColor={themeColors.interactive.tertiary()}

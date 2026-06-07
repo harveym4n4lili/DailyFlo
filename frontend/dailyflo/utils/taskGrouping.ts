@@ -37,7 +37,7 @@ export const ROUTINE_GROUP_RECURRING = 'Recurring';
 /** single planner bucket for tasks without a time — must match collapse/expand logic in ListCard */
 export const ALL_DAY_TASKS_GROUP_TITLE = 'All day tasks';
 
-/** group header key starts collapsed on planner until user expands — avoids duplicating string literals */
+/** Today timeline footer: group starts collapsed until user expands the chevron header. Planner uses TimelineAllDayPill instead. */
 export const ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES: readonly string[] = [ALL_DAY_TASKS_GROUP_TITLE];
 
 export function getTaskGroupKey(

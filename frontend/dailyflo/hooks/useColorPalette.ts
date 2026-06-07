@@ -247,6 +247,7 @@ export function useThemeColors() {
     
     // direct access to common theme colors
     background: {
+      root: () => getThemeColor('background', 'root'),
       primary: () => getThemeColor('background', 'primary'),
       secondary: () => getThemeColor('background', 'secondary'),
       primarySecondaryBlend: () => getThemeColor('background', 'primarySecondaryBlend'),

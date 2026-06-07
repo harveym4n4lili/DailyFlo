@@ -5,12 +5,13 @@
  */
 
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, Pressable } from 'react-native';
 import { Stack } from 'expo-router';
 
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTaskBulkSelectionActions } from '@/hooks/useTaskBulkSelectionActions';
 import { useUI } from '@/store/hooks';
+import { CompletedTasksIcon } from '@/components/ui/Icon';
 
 export function IosTaskSelectionBottomToolbar() {
   const themeColors = useThemeColors();
@@ -36,12 +37,17 @@ export function IosTaskSelectionBottomToolbar() {
   return (
     <Stack.Toolbar>
       <Stack.Toolbar.Spacer />
-      <Stack.Toolbar.Button
-        icon="checkmark.circle"
-        tintColor={actionIconTint}
-        onPress={complete}
-        accessibilityLabel="Complete selected tasks"
-      />
+      <Stack.Toolbar.View>
+        <Pressable
+          onPress={complete}
+          accessibilityLabel="Complete selected tasks"
+          accessibilityRole="button"
+          hitSlop={8}
+          style={{ padding: 4, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <CompletedTasksIcon size={22} color={actionIconTint} />
+        </Pressable>
+      </Stack.Toolbar.View>
       <Stack.Toolbar.Button
         icon="calendar"
         tintColor={actionIconTint}

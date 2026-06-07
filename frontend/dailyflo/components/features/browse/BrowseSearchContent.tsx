@@ -135,7 +135,7 @@ function BrowseSearchFilterChip({
 
   if (Platform.OS === 'ios') {
     return (
-      <GlassView style={styles.searchFilterChipGlass} glassEffectStyle="clear" tintColor={themeColors.background.primary() as any} isInteractive>
+      <GlassView style={styles.searchFilterChipGlass} glassEffectStyle="clear" tintColor={themeColors.background.root() as any} isInteractive>
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 20 }, tintWashStyle]} />
         <Pressable onPress={() => onToggle(chip.id)} style={styles.searchFilterChipInner}>
           <Animated.Text style={[styles.searchFilterChipLabel, labelAnimStyle]}>{chip.label}</Animated.Text>
@@ -410,8 +410,8 @@ export function BrowseSearchContent(props: BrowseSearchContentProps) {
             />
             <LinearGradient
               colors={[
-                themeColors.background.primary(),
-                themeColors.withOpacity(themeColors.background.primary(), 0),
+                themeColors.background.root(),
+                themeColors.withOpacity(themeColors.background.root(), 0),
               ]}
               locations={[0.35, 1]}
               style={StyleSheet.absoluteFill}
@@ -522,7 +522,7 @@ const createStyles = (
       minHeight: 44,
       paddingVertical: 10,
       paddingHorizontal: Paddings.touchTargetSmall,
-      backgroundColor: themeColors.background.primary(),
+      backgroundColor: themeColors.background.primarySecondaryBlend(),
     },
     recentSearchRowSpacing: { marginBottom: 4 },
     recentSearchRowText: {
