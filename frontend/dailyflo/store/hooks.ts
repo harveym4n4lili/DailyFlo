@@ -27,6 +27,13 @@ import {
   clearGamification,
 } from './slices/gamification/gamificationSlice';
 import type { CreateUserGoalInput } from '@/types/api/gamification';
+import {
+  fetchHabitsToday,
+  createHabit,
+  logHabitProgress,
+  clearHabits,
+} from './slices/habits/habitsSlice';
+import type { CreateHabitInput } from '@/types/api/habits';
 
 /**
  * Custom hook for accessing tasks state
@@ -244,6 +251,29 @@ export const useGamification = () => {
     ),
     deleteGoal: useCallback((goalId: string) => dispatch(deleteGoal(goalId)), [dispatch]),
     clearGamification: useCallback(() => dispatch(clearGamification()), [dispatch]),
+  };
+};
+
+/**
+ * habits hook — today's due habits from GET /habits/today/
+ */
+export const useHabits = () => {
+  const dispatch = useAppDispatch();
+  const habitsState = useAppSelector((state: RootState) => state.habits);
+
+  return {
+    ...habitsState,
+    fetchToday: useCallback(() => dispatch(fetchHabitsToday()), [dispatch]),
+    createHabit: useCallback(
+      (input: CreateHabitInput) => dispatch(createHabit(input)).unwrap(),
+      [dispatch],
+    ),
+    logHabit: useCallback(
+      (id: string, options?: { date?: string; delta?: number }) =>
+        dispatch(logHabitProgress({ id, ...options })),
+      [dispatch],
+    ),
+    clearHabits: useCallback(() => dispatch(clearHabits()), [dispatch]),
   };
 };
 

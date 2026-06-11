@@ -39,7 +39,8 @@ import {
   mapTimelineAllDayListDisplayProps,
 } from '@/components/features/display/displayPreferenceMappers';
 
-import { useTasks, useUI } from '@/store/hooks';
+import { useTasks, useUI, useHabits } from '@/store/hooks';
+import { TodayHabitsSection } from '@/components/features/today/TodayHabitsSection';
 import { useAppDispatch, useAppSelector, store } from '@/store';
 import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
 import { fetchLists } from '@/store/slices/lists/listsSlice';
@@ -130,12 +131,19 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
   );
 
   const dispatch = useAppDispatch();
+  const { fetchToday: fetchHabitsToday } = useHabits();
   const {
     tasks,
     isLoading,
     error,
     lastFetched,
   } = useTasks();
+
+  useFocusEffect(
+    useCallback(() => {
+      void fetchHabitsToday();
+    }, [fetchHabitsToday]),
+  );
 
   useEffect(() => {
     if (!isLoading) scrollY.value = 0;
@@ -407,7 +415,11 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
   );
 
   const handleRefresh = async () => {
-    await Promise.all([dispatch(fetchTasks()), dispatch(fetchLists())]);
+    await Promise.all([
+      dispatch(fetchTasks()),
+      dispatch(fetchLists()),
+      fetchHabitsToday(),
+    ]);
   };
 
   const miniHeaderLabel =
@@ -468,6 +480,7 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
           {layoutView === 'list' ? (
             <ListCard
               key={isSelectRoute ? 'today-select-listcard' : 'today-screen-listcard'}
+              prependListContent={<TodayHabitsSection />}
               tasks={todaysTasks}
               selectionMode={listSelectionMode}
               selectedTaskIds={selection.selectedItems}
@@ -500,6 +513,9 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
             />
           ) : (
             <View style={styles.todayTimelineContainer}>
+              <View style={{ paddingHorizontal: Paddings.screen }}>
+                <TodayHabitsSection />
+              </View>
               <DayTimelineWithAllDayFooter
               dayKey={todayDateStr}
               tasks={todayCalendarTasks}

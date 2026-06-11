@@ -1,4 +1,7 @@
 # Database Planning Document
+
+**See also:** [Habits implementation plan](../habits/plan/habits-implementation.md) — `HABITS` / `HABIT_COMPLETIONS` schemas (§3); separate from `ROUTINES` and `TASKS`.
+
 ## Core Database Design Principles
 1. **User Data Isolation:** All task data is strictly separated by user
 2. **Soft Deletes:** Mark records as deleted rather than permanent deletion
@@ -107,6 +110,57 @@ ROUTINES
 * `last_generated`: Tracks when routine last generated a task instance
 * `metadata`: JSON field for subtasks, notes, and reminders
 ---
+### Habits Table (Consistency Tracking)
+
+> **Phase 1 shipped** — Django app `habits`. Distinct from `TASKS` / `ROUTINES`: habits are dedicated build-habit trackers with per-habit streaks and analytics. Full scheduling rules in [habits-implementation.md §3](../habits/plan/habits-implementation.md).
+
+```
+HABITS
+- id (primary key, UUID)
+- user_id (foreign key to users)
+- title (required, short text)
+- icon_key (optional string — SF Symbol / icon identifier)
+- color (enum: 'red', 'blue', 'green', 'yellow', 'purple', 'teal', 'orange')
+- tracking_type (enum: 'binary', 'numeric')
+- target_value (optional float — daily target when numeric)
+- unit_label (optional string — e.g. 'glasses', 'minutes')
+- frequency_type (enum: 'daily', 'weekly', 'weekdays', 'weekends', 'custom', 'times_per_week')
+- frequency_config (JSON) — shape per frequency_type (see implementation plan)
+- reminder_time (optional HH:MM string, user-local)
+- sort_order (integer)
+- is_active (boolean, default true)
+- timestamps (created, updated)
+- soft_delete flag
+```
+
+#### Extra notes on fields
+
+* `tracking_type`: `binary` = single check-off per day; `numeric` = +1 increment toward `target_value`
+* `frequency_config`: e.g. weekly → `{ "day_of_week": 0-6 }`; custom → `{ "days": [0-6] }`; times_per_week → `{ "target_count": N }`
+* `reminder_time`: Used by Phase 4 local habit reminder scheduler (frontend `expo-notifications`)
+* Quit / sobriety habit type deferred v2 (`habit_type: quit`)
+
+---
+### Habit Completions Table
+
+```
+HABIT_COMPLETIONS
+- id (primary key, UUID)
+- habit_id (foreign key to habits)
+- completion_date (date — calendar day in user timezone)
+- logged_value (float, default 0 — accumulated for numeric habits)
+- is_complete (boolean)
+- timestamps (created, updated)
+- unique (habit_id, completion_date)
+```
+
+#### Extra notes on fields
+
+* `is_complete`: `true` when binary toggled done, or when `logged_value >= habit.target_value` for numeric
+* On first complete per day: sync `ActivityLog` with `action_type='habit_completed'` for global gamification streaks
+* Per-habit streaks computed from distinct `completion_date` rows where `is_complete=true`
+
+---
 ### Subtasks Table
 ```
 SUBTASKS
@@ -163,6 +217,17 @@ REMINDERS
 * Each user can create multiple routine templates
 * Routines are deleted when user is deleted (CASCADE)
 * All routine queries filtered by user_id for data isolation
+
+### User → Habits (One-to-Many)
+* Each user can create multiple habits (no v1 cap)
+* Habits are deleted when user is deleted (CASCADE)
+* All habit queries filtered by user_id for data isolation
+* See [habits-implementation.md](../habits/plan/habits-implementation.md) — separate from routines/tasks
+
+### Habit → Habit Completions (One-to-Many)
+* Each habit has at most one completion row per calendar day (`UNIQUE habit_id, completion_date`)
+* Completions cascade-delete with habit
+* Completed days may sync to `ActivityLog` for global gamification
 
 ### List → Tasks (One-to-Many)
 * Each list can contain multiple tasks

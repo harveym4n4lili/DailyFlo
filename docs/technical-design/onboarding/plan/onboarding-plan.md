@@ -6,7 +6,10 @@
 
 **Status:** Living doc — update when routes or storage keys ship.
 
-**See also:** [Onboarding UI architecture](../onboarding-architecture.md) — transparent native header; page indicator + Skip; intro body = horizontal `pagingEnabled` `ScrollView` with per-slide full-bleed bg + top-padded content (**§4**); no `Stack.Toolbar`.
+**See also:**
+
+- [Onboarding UI architecture](../onboarding-architecture.md) — transparent native header; page indicator + Skip; intro body = horizontal `pagingEnabled` `ScrollView` with per-slide full-bleed bg + top-padded content (**§4**); no `Stack.Toolbar`.
+- [Habits implementation plan](../../habits/plan/habits-implementation.md) — onboarding habit branch migrates from `createTask` to `POST /habits/` (§7).
 
 ---
 

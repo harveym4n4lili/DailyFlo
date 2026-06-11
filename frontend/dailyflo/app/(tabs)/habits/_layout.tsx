@@ -30,6 +30,29 @@ export default function HabitsLayout() {
               }
         }
       />
+      <Stack.Screen
+        name="create"
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: { backgroundColor: themeColors.background.root() },
+              }
+            : {
+                title: 'New Habit',
+                headerShown: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: { backgroundColor: themeColors.background.root() },
+              }
+        }
+      />
     </Stack>
   );
 }

@@ -2210,7 +2210,7 @@ TODO:
 - [x] I aligned **browse gamification and settings surfaces** with `background.primary()`, fixed **productivity** top chrome/scroll insets to match achievements, introduced **root vs child** `GroupedList` row padding (settings + dashboard use root), and copied the **display settings marple Switch** pattern for the new-list **Favorited** toggle.
 
 ### Plans For Future
-- plan to implement habits screen and feature.
+- Implement habits feature per [`habits-implementation.md`](../technical-design/habits/plan/habits-implementation.md) (tab shell shipped; tracking + graphs + gamification in phases).
 - Manual QA pass on gamification checklist (device + persistence).
 - Wire productivity hub `GroupedList` to root padding if rows still feel tight vs settings.
 

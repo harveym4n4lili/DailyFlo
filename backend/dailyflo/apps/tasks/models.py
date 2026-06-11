@@ -14,6 +14,7 @@ class ActivityLog(models.Model):
     ACTION_CHOICES = [
         ('created', 'Created'),
         ('completed', 'Completed'),
+        ('habit_completed', 'Habit Completed'),
         ('updated', 'Updated'),
         ('deleted', 'Deleted'),
     ]

@@ -23,4 +23,5 @@ urlpatterns = [
     path('tasks/', include('apps.tasks.urls')),
     path('lists/', include('apps.lists.urls')),
     path('gamification/', include('apps.gamification.urls')),
+    path('habits/', include('apps.habits.urls')),
 ]

@@ -87,7 +87,7 @@ def compute_gamification_summary(user):
 
     logs = ActivityLog.objects.filter(
         user=user,
-        action_type='completed',
+        action_type__in=['completed', 'habit_completed'],
     ).only('occurrence_date', 'created_at', 'task_id')
 
     completion_dates: set[date] = set()

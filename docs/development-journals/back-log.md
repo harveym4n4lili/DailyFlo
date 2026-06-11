@@ -418,6 +418,13 @@ Other auth backlog (tokens, logout, etc.) stays in Completed archive unchanged.
 - **Files**: `components/features/onboarding/onboarding/hooks/useIsReturningOnboardingUser.ts`, slides header chrome
 - **Completed**: 05/2026
 
+#### Habits feature (tracking, graphs, gamification)
+- **Status**: 📋 Planned
+- **Description**: Dedicated `Habit` + `HabitCompletion` backend; Habits tab today list + create/edit; Today section; per-habit streaks, heatmap + trend detail; `first_habit_completion` achievement; onboarding habit branch → `POST /habits/` (deprecate habit→task); Phase 4 local reminders.
+- **Docs**: [`docs/technical-design/habits/plan/habits-implementation.md`](../technical-design/habits/plan/habits-implementation.md), [`habits-manual-qa-checklist.md`](../technical-design/habits/plan/habits-manual-qa-checklist.md)
+- **Files**: `backend/dailyflo/apps/habits/`, `frontend/dailyflo/components/features/habits/`, `app/(tabs)/habits/`, `TodayHabitsSection.tsx`
+- **Depends on**: Habits tab navbar shell (shipped on `feat/habits`)
+
 ---
 
 ## 🔄 In Progress
