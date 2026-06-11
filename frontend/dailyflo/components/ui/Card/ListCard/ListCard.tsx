@@ -116,6 +116,8 @@ export interface ListCardProps {
   // header support
   headerTitle?: string; // title to display in header
   headerSubtitle?: string; // subtitle to display in header
+  /** optional block above task groups (e.g. TodayHabitsSection) */
+  prependListContent?: React.ReactNode;
   
   // padding support
   paddingTop?: number; // top padding for the list container
@@ -232,6 +234,7 @@ export default function ListCard({
   scrollEventThrottle = 16,
   headerTitle,
   headerSubtitle,
+  prependListContent,
   paddingTop,
   paddingHorizontal = Paddings.screenSmall,
   paddingBottom,
@@ -806,7 +809,7 @@ export default function ListCard({
   // render header component with optional big today header and dropdown button
   const renderHeader = () => {
     const hasStandardHeader = headerTitle || headerSubtitle || dropdownItems;
-    if (!bigTodayHeader && !hasStandardHeader) return null;
+    if (!bigTodayHeader && !hasStandardHeader && !prependListContent) return null;
 
     return (
       <View style={styles.listHeaderWrapper}>
@@ -818,6 +821,7 @@ export default function ListCard({
             }
           />
         ) : null}
+        {prependListContent ?? null}
         {/* standard header: title, subtitle, dropdown button */}
         {hasStandardHeader && (
           <View style={styles.headerContainer}>

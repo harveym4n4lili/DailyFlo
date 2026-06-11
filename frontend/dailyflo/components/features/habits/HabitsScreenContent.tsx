@@ -1,33 +1,36 @@
 /**
- * habits tab body — placeholder content for now; full habit tracking will plug in here later.
- * uses the same dashboard chrome shell as the AI tab (top row + ScreenContainer).
+ * habits tab body — today's due habits list with summary header.
  */
 
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, StyleSheet, Platform, ScrollView, RefreshControl } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenContainer } from '@/components/index';
 import { ScreenHeaderActions } from '@/components/ui';
+import { HabitsTodayList } from './HabitsTodayList';
+import { useHabits } from '@/store/hooks';
 import { useThemeColors } from '@/hooks/useColorPalette';
-import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 
-// matches planner / AI topSectionRow height — content starts below this + safe top inset
 const TOP_SECTION_ROW_HEIGHT = 48;
 
 export function HabitsScreenContent() {
   const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
-  const typography = useTypography();
-  const styles = useMemo(
-    () => createStyles(themeColors, typography, insets),
-    [themeColors, typography, insets],
+  const { todayHabits, todaySummary, isTodayLoading, todayError, fetchToday } = useHabits();
+
+  useFocusEffect(
+    useCallback(() => {
+      void fetchToday();
+    }, [fetchToday]),
   );
+
+  const styles = useMemo(() => createStyles(insets), [insets]);
 
   return (
     <>
-      {/* android: glass dashboard chip; ios: overflow icons live in Stack.Toolbar via the route wrapper */}
       <View
         style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ROW_HEIGHT }]}
         pointerEvents="box-none"
@@ -40,7 +43,6 @@ export function HabitsScreenContent() {
         </View>
       </View>
 
-      {/* full-bleed container — we apply safe-area padding inside the scroll body */}
       <ScreenContainer
         scrollable={false}
         paddingHorizontal={0}
@@ -51,22 +53,27 @@ export function HabitsScreenContent() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isTodayLoading}
+              onRefresh={() => void fetchToday()}
+              tintColor={themeColors.text.secondary()}
+            />
+          }
         >
-          <Text style={styles.title}>Habits</Text>
-          <Text style={styles.hint}>
-            Track daily habits here. Full habit tracking coming soon.
-          </Text>
+          <HabitsTodayList
+            habits={todayHabits}
+            summary={todaySummary}
+            isLoading={isTodayLoading}
+            error={todayError}
+          />
         </ScrollView>
       </ScreenContainer>
     </>
   );
 }
 
-const createStyles = (
-  themeColors: ReturnType<typeof useThemeColors>,
-  typography: ReturnType<typeof useTypography>,
-  insets: ReturnType<typeof useSafeAreaInsets>,
-) =>
+const createStyles = (insets: ReturnType<typeof useSafeAreaInsets>) =>
   StyleSheet.create({
     topSectionAnchor: {
       position: 'absolute',
@@ -102,14 +109,5 @@ const createStyles = (
       paddingTop: insets.top + TOP_SECTION_ROW_HEIGHT + 8,
       paddingHorizontal: Paddings.screen,
       paddingBottom: Paddings.scrollBottomExtra + Paddings.contentVertical,
-    },
-    title: {
-      ...typography.getTextStyle('heading-2'),
-      color: themeColors.text.primary(),
-    },
-    hint: {
-      ...typography.getTextStyle('body-medium'),
-      color: themeColors.text.secondary(),
-      marginTop: 8,
     },
   });

@@ -20,6 +20,7 @@ import themeReducer from './slices/ui/themeSlice';
 // activityLogs slice manages the flat array of log entries fetched from /tasks/activity-logs/
 import activityLogsReducer from './slices/activityLogs/activityLogsSlice';
 import gamificationReducer from './slices/gamification/gamificationSlice';
+import habitsReducer from './slices/habits/habitsSlice';
 
 /**
  * Configure the Redux store
@@ -38,6 +39,7 @@ export const store = configureStore({
     theme: themeReducer,            // Handles theme and preferences
     activityLogs: activityLogsReducer, // Handles activity log entries
     gamification: gamificationReducer, // streaks, stats, achievements, goals
+    habits: habitsReducer, // habit tracking — today list + log toggles
   },
   
   // Middleware provides a way to extend Redux with custom functionality

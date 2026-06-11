@@ -30,7 +30,7 @@ class GamificationAchievementsView(APIView):
     def get(self, request):
         user = request.user
         user_tz = get_user_timezone(user)
-        logs = ActivityLog.objects.filter(user=user, action_type='completed')
+        logs = ActivityLog.objects.filter(user=user, action_type__in=['completed', 'habit_completed'])
         completion_dates = set()
         for log in logs.only('occurrence_date', 'created_at'):
             completion_dates.add(effective_completion_date(log, user_tz))
