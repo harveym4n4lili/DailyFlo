@@ -1,4 +1,4 @@
 /**
- * Habit create route — re-exports screen from features/habits.
+ * Habit create route — re-exports screen from features/habits/forms.
  */
-export { default } from '@/components/features/habits/HabitCreateScreen';
+export { default } from '@/components/features/habits/forms/HabitCreateScreen';

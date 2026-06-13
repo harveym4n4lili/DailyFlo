@@ -11,6 +11,7 @@ import type {
   Habit,
   HabitLogResponse,
   HabitsTodayResponse,
+  HabitStatsResponse,
   UpdateHabitInput,
 } from '@/types/api/habits';
 
@@ -30,6 +31,18 @@ class HabitsApiService {
   /** POST /habits/ — create a new habit */
   async createHabit(input: CreateHabitInput): Promise<Habit> {
     const { data } = await apiClient.post<Habit>('/habits/', input);
+    return data;
+  }
+
+  /** GET /habits/:id/ — single habit for detail / edit */
+  async fetchHabit(id: string): Promise<Habit> {
+    const { data } = await apiClient.get<Habit>(`/habits/${id}/`);
+    return data;
+  }
+
+  /** GET /habits/:id/stats/ — heatmap + 30-day trend + streaks */
+  async fetchHabitStats(id: string): Promise<HabitStatsResponse> {
+    const { data } = await apiClient.get<HabitStatsResponse>(`/habits/${id}/stats/`);
     return data;
   }
 

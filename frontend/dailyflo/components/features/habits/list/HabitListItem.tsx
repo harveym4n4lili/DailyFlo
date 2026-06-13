@@ -22,9 +22,11 @@ import type { HabitTodayItem } from '@/types/api/habits';
 type HabitListItemProps = {
   habit: HabitTodayItem;
   compact?: boolean;
+  /** tap title/body to open habit detail — checkbox/+1 stay separate */
+  onOpenDetail?: (habitId: string) => void;
 };
 
-export function HabitListItem({ habit, compact = false }: HabitListItemProps) {
+export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitListItemProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const dispatch = useAppDispatch();
@@ -81,7 +83,11 @@ export function HabitListItem({ habit, compact = false }: HabitListItemProps) {
           <Text style={styles.incrementText}>+1</Text>
         </Pressable>
       )}
-      <View style={styles.body}>
+      <Pressable
+        style={styles.body}
+        onPress={onOpenDetail ? () => onOpenDetail(habit.id) : undefined}
+        disabled={!onOpenDetail}
+      >
         <Text
           style={[styles.title, habit.isCompleteToday && styles.titleDone]}
           numberOfLines={1}
@@ -91,7 +97,7 @@ export function HabitListItem({ habit, compact = false }: HabitListItemProps) {
         {numericLabel ? (
           <Text style={styles.subtitle}>{numericLabel}</Text>
         ) : null}
-      </View>
+      </Pressable>
       {habit.currentStreak > 0 ? (
         <View style={styles.streakPill}>
           <Text style={styles.streakText}>{habit.currentStreak}d</Text>

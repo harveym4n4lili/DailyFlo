@@ -5,7 +5,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
-import { HabitListItem } from './HabitListItem';
+import { HabitListItem } from '../list/HabitListItem';
 import { HabitTabSummaryHeader } from './HabitTabSummaryHeader';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -17,9 +17,10 @@ type HabitsTodayListProps = {
   summary: HabitsTodaySummary | null;
   isLoading: boolean;
   error: string | null;
+  onOpenDetail?: (habitId: string) => void;
 };
 
-export function HabitsTodayList({ habits, summary, isLoading, error }: HabitsTodayListProps) {
+export function HabitsTodayList({ habits, summary, isLoading, error, onOpenDetail }: HabitsTodayListProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
@@ -53,7 +54,7 @@ export function HabitsTodayList({ habits, summary, isLoading, error }: HabitsTod
     <View>
       <HabitTabSummaryHeader summary={summary} />
       {habits.map((habit) => (
-        <HabitListItem key={habit.id} habit={habit} />
+        <HabitListItem key={habit.id} habit={habit} onOpenDetail={onOpenDetail} />
       ))}
     </View>
   );

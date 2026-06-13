@@ -30,10 +30,15 @@ import type { CreateUserGoalInput } from '@/types/api/gamification';
 import {
   fetchHabitsToday,
   createHabit,
+  updateHabit,
+  deleteHabit,
   logHabitProgress,
+  fetchHabit,
+  fetchHabitStats,
   clearHabits,
+  clearHabitDetail,
 } from './slices/habits/habitsSlice';
-import type { CreateHabitInput } from '@/types/api/habits';
+import type { CreateHabitInput, UpdateHabitInput } from '@/types/api/habits';
 
 /**
  * Custom hook for accessing tasks state
@@ -268,6 +273,18 @@ export const useHabits = () => {
       (input: CreateHabitInput) => dispatch(createHabit(input)).unwrap(),
       [dispatch],
     ),
+    updateHabit: useCallback(
+      (id: string, input: UpdateHabitInput) =>
+        dispatch(updateHabit({ id, input })).unwrap(),
+      [dispatch],
+    ),
+    deleteHabit: useCallback(
+      (id: string) => dispatch(deleteHabit(id)).unwrap(),
+      [dispatch],
+    ),
+    fetchHabit: useCallback((id: string) => dispatch(fetchHabit(id)), [dispatch]),
+    fetchHabitStats: useCallback((id: string) => dispatch(fetchHabitStats(id)), [dispatch]),
+    clearHabitDetail: useCallback(() => dispatch(clearHabitDetail()), [dispatch]),
     logHabit: useCallback(
       (id: string, options?: { date?: string; delta?: number }) =>
         dispatch(logHabitProgress({ id, ...options })),
