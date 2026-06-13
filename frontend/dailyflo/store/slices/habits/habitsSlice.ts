@@ -8,7 +8,9 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import habitsApiService from '@/services/api/habits';
 import type {
   CreateHabitInput,
+  Habit,
   HabitLogResponse,
+  HabitStatsResponse,
   HabitTodayItem,
   HabitsTodayResponse,
   HabitsTodaySummary,
@@ -23,6 +25,11 @@ interface HabitsState {
   isSaving: boolean;
   todayError: string | null;
   saveError: string | null;
+  /** detail screen — single habit + analytics from GET /habits/:id/stats/ */
+  detailHabit: Habit | null;
+  detailStats: HabitStatsResponse | null;
+  isDetailLoading: boolean;
+  detailError: string | null;
 }
 
 const initialState: HabitsState = {
@@ -33,6 +40,10 @@ const initialState: HabitsState = {
   isSaving: false,
   todayError: null,
   saveError: null,
+  detailHabit: null,
+  detailStats: null,
+  isDetailLoading: false,
+  detailError: null,
 };
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -73,6 +84,7 @@ export const updateHabit = createAsyncThunk(
     try {
       const habit = await habitsApiService.updateHabit(id, input);
       void dispatch(fetchHabitsToday());
+      void dispatch(fetchHabitStats(id));
       return habit;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Failed to update habit'));
@@ -93,6 +105,30 @@ export const deleteHabit = createAsyncThunk(
   },
 );
 
+/** GET /habits/:id/ — load habit record for detail / edit screens */
+export const fetchHabit = createAsyncThunk(
+  'habits/fetchOne',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      return await habitsApiService.fetchHabit(id);
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error, 'Failed to load habit'));
+    }
+  },
+);
+
+/** GET /habits/:id/stats/ — heatmap + trend; used on detail focus */
+export const fetchHabitStats = createAsyncThunk(
+  'habits/fetchStats',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      return await habitsApiService.fetchHabitStats(id);
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error, 'Failed to load habit stats'));
+    }
+  },
+);
+
 /** tap row / +1 — toggles binary or increments numeric; refreshes gamification streak on complete */
 export const logHabitProgress = createAsyncThunk(
   'habits/logProgress',
@@ -108,6 +144,10 @@ export const logHabitProgress = createAsyncThunk(
       if (response.isCompleteToday && !wasComplete) {
         const { fetchGamificationSummary } = await import('../gamification/gamificationSlice');
         void dispatch(fetchGamificationSummary());
+      }
+      const stateAfter = getState() as { habits: HabitsState };
+      if (stateAfter.habits.detailHabit?.id === id) {
+        void dispatch(fetchHabitStats(id));
       }
       return { habitId: id, response };
     } catch (error) {
@@ -152,6 +192,12 @@ const habitsSlice = createSlice({
   reducers: {
     clearHabits(state) {
       Object.assign(state, initialState);
+    },
+    clearHabitDetail(state) {
+      state.detailHabit = null;
+      state.detailStats = null;
+      state.isDetailLoading = false;
+      state.detailError = null;
     },
     /** optimistic row update before API returns — reverted on rejected log thunk */
     optimisticLogHabit(state, action: PayloadAction<{ id: string; delta?: number }>) {
@@ -207,9 +253,40 @@ const habitsSlice = createSlice({
       })
       .addCase(logHabitProgress.fulfilled, (state, action) => {
         applyLogToHabit(state, action.payload.habitId, action.payload.response);
+        if (state.detailStats && action.payload.habitId === state.detailHabit?.id) {
+          state.detailStats.currentStreak = action.payload.response.currentStreak;
+          state.detailStats.longestStreak = action.payload.response.longestStreak;
+        }
+      })
+      .addCase(fetchHabit.pending, (state) => {
+        state.isDetailLoading = true;
+        state.detailError = null;
+      })
+      .addCase(fetchHabit.fulfilled, (state, action: PayloadAction<Habit>) => {
+        state.isDetailLoading = false;
+        state.detailHabit = action.payload;
+      })
+      .addCase(fetchHabit.rejected, (state, action) => {
+        state.isDetailLoading = false;
+        state.detailError = (action.payload as string) || 'Failed to load habit';
+      })
+      .addCase(fetchHabitStats.fulfilled, (state, action: PayloadAction<HabitStatsResponse>) => {
+        state.detailStats = action.payload;
+      })
+      .addCase(fetchHabitStats.rejected, (state, action) => {
+        state.detailError = (action.payload as string) || 'Failed to load habit stats';
+      })
+      .addCase(updateHabit.fulfilled, (state, action: PayloadAction<Habit>) => {
+        state.detailHabit = action.payload;
+      })
+      .addCase(deleteHabit.fulfilled, (state, action: PayloadAction<string>) => {
+        if (state.detailHabit?.id === action.payload) {
+          state.detailHabit = null;
+          state.detailStats = null;
+        }
       });
   },
 });
 
-export const { clearHabits, optimisticLogHabit, revertOptimisticLog } = habitsSlice.actions;
+export const { clearHabits, clearHabitDetail, optimisticLogHabit, revertOptimisticLog } = habitsSlice.actions;
 export default habitsSlice.reducer;

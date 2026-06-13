@@ -53,6 +53,47 @@ export default function HabitsLayout() {
               }
         }
       />
+      <Stack.Screen
+        name="[habitId]/index"
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                contentStyle: { backgroundColor: themeColors.background.primary() },
+              }
+            : {
+                title: 'Habit',
+                headerShown: false,
+              }
+        }
+      />
+      <Stack.Screen
+        name="[habitId]/edit"
+        options={
+          Platform.OS === 'ios'
+            ? {
+                headerShown: true,
+                headerTransparent: true,
+                headerTitle: '',
+                headerShadowVisible: false,
+                headerBackVisible: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: { backgroundColor: themeColors.background.root() },
+              }
+            : {
+                title: 'Edit Habit',
+                headerShown: false,
+                presentation: 'modal',
+                gestureEnabled: false,
+                contentStyle: { backgroundColor: themeColors.background.root() },
+              }
+        }
+      />
     </Stack>
   );
 }

@@ -11,8 +11,8 @@
 | Area | Location |
 | --- | --- |
 | Habits tab routes | `frontend/dailyflo/app/(tabs)/habits/` |
-| Habits UI | `frontend/dailyflo/components/features/habits/` |
-| Today section | `frontend/dailyflo/components/features/today/TodayHabitsSection.tsx` |
+| Habits UI | `frontend/dailyflo/components/features/habits/` (`tab/`, `list/`, `detail/`, `forms/`, `today/`) |
+| Today section | `frontend/dailyflo/components/features/habits/today/TodayHabitsSection.tsx` |
 | Redux + API | `frontend/dailyflo/store/slices/habits/`, `frontend/dailyflo/services/api/habits.ts` |
 | Backend | `backend/dailyflo/apps/habits/` |
 | Global gamification | `backend/dailyflo/apps/gamification/`, `ActivityLog` habit_completed rows |

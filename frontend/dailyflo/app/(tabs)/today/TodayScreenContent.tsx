@@ -40,7 +40,7 @@ import {
 } from '@/components/features/display/displayPreferenceMappers';
 
 import { useTasks, useUI, useHabits } from '@/store/hooks';
-import { TodayHabitsSection } from '@/components/features/today/TodayHabitsSection';
+import { TodayHabitsSection } from '@/components/features/habits/today';
 import { useAppDispatch, useAppSelector, store } from '@/store';
 import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
 import { fetchLists } from '@/store/slices/lists/listsSlice';

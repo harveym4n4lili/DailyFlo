@@ -10,6 +10,7 @@ export * from './calendar';
 export * from './onboarding';
 export * from './activity-log';
 export * from './gamification';
+export * from './habits';
 
 
 

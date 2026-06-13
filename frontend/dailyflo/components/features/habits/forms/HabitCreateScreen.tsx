@@ -27,27 +27,8 @@ import {
 import { GroupedList, FormDetailButton } from '@/components/ui/List/GroupedList';
 import { Paddings } from '@/constants/Paddings';
 import { useHabits } from '@/store/hooks';
+import { HABIT_COLORS, HABIT_FREQUENCIES, HABIT_WEEKDAYS } from './habitFormConstants';
 import type { CreateHabitInput, HabitColor, HabitFrequencyType, HabitTrackingType } from '@/types/api/habits';
-
-const FREQUENCIES: { id: HabitFrequencyType; label: string }[] = [
-  { id: 'daily', label: 'Every day' },
-  { id: 'weekdays', label: 'Weekdays' },
-  { id: 'weekends', label: 'Weekends' },
-  { id: 'weekly', label: 'Once a week' },
-  { id: 'times_per_week', label: 'X times per week' },
-];
-
-const WEEKDAYS = [
-  { value: 0, label: 'Monday' },
-  { value: 1, label: 'Tuesday' },
-  { value: 2, label: 'Wednesday' },
-  { value: 3, label: 'Thursday' },
-  { value: 4, label: 'Friday' },
-  { value: 5, label: 'Saturday' },
-  { value: 6, label: 'Sunday' },
-];
-
-const COLORS: HabitColor[] = ['green', 'blue', 'teal', 'purple', 'orange', 'yellow', 'red'];
 
 export default function HabitCreateScreen() {
   const router = useGuardedRouter();
@@ -205,7 +186,7 @@ export default function HabitCreateScreen() {
             backgroundColor={themeColors.background.primarySecondaryBlend()}
             borderRadius={24}
           >
-            {FREQUENCIES.map((f) => (
+            {HABIT_FREQUENCIES.map((f) => (
               <FormDetailButton
                 key={f.id}
                 label={f.label}
@@ -220,7 +201,7 @@ export default function HabitCreateScreen() {
               backgroundColor={themeColors.background.primarySecondaryBlend()}
               borderRadius={24}
             >
-              {WEEKDAYS.map((d) => (
+              {HABIT_WEEKDAYS.map((d) => (
                 <FormDetailButton
                   key={d.value}
                   label={d.label}
@@ -251,7 +232,7 @@ export default function HabitCreateScreen() {
             backgroundColor={themeColors.background.primarySecondaryBlend()}
             borderRadius={24}
           >
-            {COLORS.map((c) => (
+            {HABIT_COLORS.map((c) => (
               <FormDetailButton
                 key={c}
                 label={c.charAt(0).toUpperCase() + c.slice(1)}

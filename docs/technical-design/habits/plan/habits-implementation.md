@@ -319,24 +319,33 @@ frontend/dailyflo/
   types/api/habits.ts
   services/api/habits.ts
   store/slices/habits/habitsSlice.ts
-  store/hooks.ts           # add useHabits() if following useGamification pattern
+  store/hooks.ts           # useHabits()
   components/features/habits/
-    HabitsScreenContent.tsx       # replace placeholder
-    HabitTabSummaryHeader.tsx
-    HabitsTodayList.tsx
-    HabitListItem.tsx             # binary toggle + numeric +1 + streak pill
-    HabitCreateForm.tsx           # shared by create + edit
-    HabitDetailScreenContent.tsx
-    HabitHeatmap.tsx
-    HabitTrendChart.tsx
-  components/features/today/
-    TodayHabitsSection.tsx
+    index.ts               # feature barrel
+    tab/                   # habits navbar tab
+      HabitsScreenContent.tsx
+      HabitsTodayList.tsx
+      HabitTabSummaryHeader.tsx
+    list/                  # shared row
+      HabitListItem.tsx
+    detail/                # per-habit analytics
+      HabitDetailScreenContent.tsx
+      HabitHeatmap.tsx
+      HabitTrendChart.tsx
+    forms/                 # create + edit modals
+      HabitCreateScreen.tsx
+      HabitEditScreen.tsx
+      habitFormConstants.ts
+    today/                 # today tab section
+      TodayHabitsSection.tsx
 
 app/(tabs)/habits/
-  _layout.tsx                     # register index, [habitId], create
-  index.tsx                       # exists
-  [habitId].tsx                   # detail (Phase 2)
-  create.tsx                      # modal create (mirror goal-create)
+  _layout.tsx
+  index.tsx
+  create.tsx               # thin re-export → forms/HabitCreateScreen
+  [habitId]/
+    index.tsx              # detail route shell
+    edit.tsx               # thin re-export → forms/HabitEditScreen
 ```
 
 ### 6.1 Redux integration

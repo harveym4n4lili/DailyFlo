@@ -12,7 +12,7 @@ from apps.habits.serializers import (
     HabitSerializer,
 )
 from apps.habits.services.habit_schedule import habit_is_due
-from apps.habits.services.habit_stats import habit_streaks, user_today_from_prefs
+from apps.habits.services.habit_stats import habit_full_stats, habit_streaks, user_today_from_prefs
 from apps.tasks.models import ActivityLog
 
 
@@ -195,7 +195,7 @@ class HabitViewSet(viewsets.ModelViewSet):
 
 
 class HabitStatsView(APIView):
-    """GET /habits/{id}/stats/ — Phase 2 stub."""
+    """GET /habits/{id}/stats/ — streaks, heatmap, and 30-day trend."""
 
     permission_classes = [permissions.IsAuthenticated]
 
@@ -210,10 +210,4 @@ class HabitStatsView(APIView):
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         today = user_today_from_prefs(request.user)
-        streaks = habit_streaks(habit, today)
-        return Response({
-            'currentStreak': streaks['currentStreak'],
-            'longestStreak': streaks['longestStreak'],
-            'heatmap': {'startDate': today.isoformat(), 'days': 365, 'completedDates': []},
-            'trend': {'windowDays': 30, 'points': []},
-        })
+        return Response(habit_full_stats(habit, today))

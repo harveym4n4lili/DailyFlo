@@ -101,3 +101,26 @@ export interface HabitLogResponse {
   longestStreak: number;
   targetValue: number | null;
 }
+
+export interface HabitHeatmapData {
+  startDate: string;
+  days: number;
+  completedDates: string[];
+}
+
+export interface HabitTrendPoint {
+  date: string;
+  rolling7DayRate: number;
+}
+
+export interface HabitTrendData {
+  windowDays: number;
+  points: HabitTrendPoint[];
+}
+
+export interface HabitStatsResponse {
+  currentStreak: number;
+  longestStreak: number;
+  heatmap: HabitHeatmapData;
+  trend: HabitTrendData;
+}

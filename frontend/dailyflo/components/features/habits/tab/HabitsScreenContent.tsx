@@ -2,11 +2,12 @@
  * habits tab body — today's due habits list with summary header.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, StyleSheet, Platform, ScrollView, RefreshControl } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { ScreenContainer } from '@/components/index';
 import { ScreenHeaderActions } from '@/components/ui';
 import { HabitsTodayList } from './HabitsTodayList';
@@ -18,8 +19,16 @@ const TOP_SECTION_ROW_HEIGHT = 48;
 
 export function HabitsScreenContent() {
   const insets = useSafeAreaInsets();
+  const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const { todayHabits, todaySummary, isTodayLoading, todayError, fetchToday } = useHabits();
+
+  const openHabitDetail = useCallback(
+    (habitId: string) => {
+      router.push(`/(tabs)/habits/${habitId}` as any);
+    },
+    [router],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -66,6 +75,7 @@ export function HabitsScreenContent() {
             summary={todaySummary}
             isLoading={isTodayLoading}
             error={todayError}
+            onOpenDetail={openHabitDetail}
           />
         </ScrollView>
       </ScreenContainer>
