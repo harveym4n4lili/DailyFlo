@@ -8,7 +8,8 @@
 
 **See also:**
 
-- [`habits-manual-qa-checklist.md`](habits-manual-qa-checklist.md) — device QA checklist (companion to §13)
+- [`habits-manual-qa-checklist.md`](habits-manual-qa-checklist.md) — short checkbox sign-off
+- [`../../../testing/habits-manual-testing.md`](../../../testing/habits-manual-testing.md) — full manual test scenarios (Phase 1–2)
 - [`../../database/models.md`](../../database/models.md) — `HABITS` / `HABIT_COMPLETIONS` table schemas
 - [`../../notifications/plan/notification-implementation.md`](../../notifications/plan/notification-implementation.md) — local reminder patterns (Phase 4)
 - [`../../onboarding/plan/onboarding-plan.md`](../../onboarding/plan/onboarding-plan.md) — habit vs task questionnaire branch
