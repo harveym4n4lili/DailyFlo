@@ -1,6 +1,6 @@
 # Habits — manual QA checklist
 
-**Purpose:** Step-by-step device checklist for the habits feature — Habits tab, Today section, detail graphs, gamification hooks, onboarding import, and (Phase 4) local reminders.
+**Purpose:** Short checkbox sign-off for habits QA. For full step-by-step scenarios, expected results, and troubleshooting, use **[`docs/testing/habits-manual-testing.md`](../../../testing/habits-manual-testing.md)**.
 
 **Audience:** Anyone manually testing on iOS or Android (physical device or simulator).
 
@@ -388,3 +388,4 @@ Create one habit per type; verify **only due today** appear on list (adjust devi
 | Date | Change |
 | --- | --- |
 | 2026-06-07 | Initial draft aligned with habits-implementation.md |
+| 2026-06-07 | Link to full manual testing guide at docs/testing/habits-manual-testing.md |
