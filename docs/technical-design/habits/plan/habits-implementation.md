@@ -4,7 +4,7 @@
 
 **Audience:** Engineers working in `frontend/dailyflo` (Expo Router, Redux Toolkit) and `backend/dailyflo` (Django REST).
 
-**Status:** Draft — product decisions locked via planning Q&A (2026-06-07); **no habits backend or feature UI shipped yet** (Habits tab is placeholder shell only).
+**Status:** Phase 1–3 shipped on `feat/habits`; Phase 4 (local reminders) not started.
 
 **See also:**
 
@@ -473,9 +473,9 @@ Reuse [`notification-implementation.md`](../../notifications/plan/notification-i
 
 ### Phase 3 — Gamification polish
 
-- [ ] `HabitTabSummaryHeader` on Habits tab
-- [ ] `first_habit_completion` fixture + evaluator
-- [ ] Unlock feedback (reuse achievements screen patterns / light haptic)
+- [x] `HabitTabSummaryHeader` on Habits tab
+- [x] `first_habit_completion` fixture + evaluator
+- [x] Unlock feedback (reuse achievements screen patterns / light haptic)
 
 **Exit criteria:** First habit check-off unlocks achievement; tab summary reflects today’s progress.
 
@@ -560,3 +560,4 @@ Update [`back-log.md`](../../../development-journals/back-log.md) when Phase 1 s
 | Date | Change |
 | --- | --- |
 | 2026-06-07 | Initial draft from product Q&A feature mapping |
+| 2026-06-15 | Phase 3 gamification polish — `first_habit_completion` achievement + unlock banner |

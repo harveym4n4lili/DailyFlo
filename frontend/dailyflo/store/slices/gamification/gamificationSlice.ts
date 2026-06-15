@@ -18,6 +18,8 @@ interface GamificationState {
   summary: GamificationSummary | null;
   achievements: AchievementItem[];
   goals: UserGoalItem[];
+  /** set when a habit log unlocks a new achievement — drives AchievementUnlockBanner */
+  pendingAchievementUnlock: AchievementItem | null;
   isSummaryLoading: boolean;
   isAchievementsLoading: boolean;
   isGoalsLoading: boolean;
@@ -44,6 +46,7 @@ const initialState: GamificationState = {
   summary: null,
   achievements: [],
   goals: [],
+  pendingAchievementUnlock: null,
   isSummaryLoading: false,
   isAchievementsLoading: false,
   isGoalsLoading: false,
@@ -127,6 +130,7 @@ const gamificationSlice = createSlice({
       state.summary = null;
       state.achievements = [];
       state.goals = [];
+      state.pendingAchievementUnlock = null;
       state.summaryError = null;
       state.achievementsError = null;
       state.goalsError = null;
@@ -137,6 +141,13 @@ const gamificationSlice = createSlice({
       state.achievementsError = null;
       state.goalsError = null;
       state.goalSaveError = null;
+    },
+    /** show unlock toast after habit completion — cleared when banner dismisses */
+    setPendingAchievementUnlock: (state, action: PayloadAction<AchievementItem>) => {
+      state.pendingAchievementUnlock = action.payload;
+    },
+    clearPendingAchievementUnlock: (state) => {
+      state.pendingAchievementUnlock = null;
     },
   },
   extraReducers: (builder) => {
@@ -195,6 +206,6 @@ const gamificationSlice = createSlice({
   },
 });
 
-export const { clearGamification, clearGamificationErrors } = gamificationSlice.actions;
+export const { clearGamification, clearGamificationErrors, setPendingAchievementUnlock, clearPendingAchievementUnlock } = gamificationSlice.actions;
 export { emptySummary };
 export default gamificationSlice.reducer;

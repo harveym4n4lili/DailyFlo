@@ -41,7 +41,7 @@ This guide is the step-by-step manual test plan for the **Habits** feature in Da
 | Delete habit | **Shipped** | From detail with confirm alert |
 | Onboarding → Habit | **Shipped** | No recurring onboarding task |
 | Global streak (ActivityLog) | **Shipped** | `habit_completed` rows feed gamification |
-| `first_habit_completion` achievement | **Not shipped** | Phase 3 — skip |
+| `first_habit_completion` achievement | **Shipped** | Unlocks on first habit complete; toast banner |
 | Local habit reminders | **Not shipped** | Phase 4 — skip |
 
 **Out of scope for v1 (do not expect):** quit/sobriety habits, Planner integration, `linked_habit` goals, push notifications.
@@ -515,17 +515,51 @@ curl -H "Authorization: Bearer TOKEN" http://localhost:8000/api/habits/HABIT_ID/
 
 ---
 
-## Phase 3 & 4 — skip until shipped
+## Phase 3 — gamification polish
+
+### Test 12 — `first_habit_completion` achievement
+
+**Precondition:** Fresh account (or account that has never completed a habit).
+
+1. Complete any habit for the first time (Habits tab or Today section).
+2. Observe unlock banner at top of screen (achievement title + success haptic).
+3. Open **Browse → Productivity → Achievements**.
+
+**Expected**
+
+- [ ] **First habit** achievement shows unlocked with checkmark seal.
+- [ ] Persists after app restart.
+- [ ] Completing a habit does **not** unlock **First step** (task-only) unless a task was also completed.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+### Test 13 — Tab summary header
+
+1. Open **Habits** tab with at least one habit due today.
+2. Complete one habit; pull to refresh if needed.
+
+**Expected**
+
+- [ ] Header shows `completedCount/scheduledCount` for today.
+- [ ] Best active streak among today’s habits displayed when any streak &gt; 0.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+---
+
+## Phase 4 — skip until shipped
 
 | Test | Phase | Status |
 | --- | --- | --- |
-| `first_habit_completion` achievement unlocks on first complete | 3 | Not implemented |
-| Habits tab achievement / unlock feedback UI | 3 | Not implemented |
 | Local notification at `reminder_time` when habit due | 4 | Not implemented |
 | Delete habit cancels scheduled notification | 4 | Not implemented |
 | Logout cancels all habit reminder notifications | 4 | Not implemented |
 
-Re-run these sections when Phase 3/4 land; see [`habits-implementation.md`](../technical-design/habits/plan/habits-implementation.md) §12–13.
+Re-run Phase 4 when reminders land; see [`habits-implementation.md`](../technical-design/habits/plan/habits-implementation.md) §10–13.
 
 ---
 
