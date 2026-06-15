@@ -133,18 +133,48 @@ export const fetchHabitStats = createAsyncThunk(
 export const logHabitProgress = createAsyncThunk(
   'habits/logProgress',
   async (
-    { id, date, delta }: { id: string; date?: string; delta?: number },
+    {
+      id,
+      date,
+      delta,
+      wasCompleteBefore,
+    }: { id: string; date?: string; delta?: number; wasCompleteBefore?: boolean },
     { rejectWithValue, dispatch, getState },
   ) => {
     try {
+      const stateBefore = getState() as {
+        gamification: { achievements: { code: string; unlockedAt: string | null }[] };
+      };
+      const priorUnlockedCodes = new Set(
+        stateBefore.gamification.achievements
+          .filter((a) => a.unlockedAt != null)
+          .map((a) => a.code),
+      );
+
       const response = await habitsApiService.logHabitProgress(id, { date, delta });
-      const state = getState() as { habits: HabitsState };
-      const previous = state.habits.todayHabits.find((h) => h.id === id);
-      const wasComplete = previous?.isCompleteToday ?? false;
+      const wasComplete = wasCompleteBefore ?? false;
+
       if (response.isCompleteToday && !wasComplete) {
-        const { fetchGamificationSummary } = await import('../gamification/gamificationSlice');
-        void dispatch(fetchGamificationSummary());
+        const {
+          fetchGamificationSummary,
+          fetchAchievements,
+          setPendingAchievementUnlock,
+        } = await import('../gamification/gamificationSlice');
+
+        // summary re-runs achievement evaluator on django; achievements list returns unlock state
+        await dispatch(fetchGamificationSummary());
+        const achievementsResult = await dispatch(fetchAchievements());
+
+        if (fetchAchievements.fulfilled.match(achievementsResult)) {
+          const newlyUnlocked = achievementsResult.payload
+            .filter((a) => a.unlockedAt != null && !priorUnlockedCodes.has(a.code))
+            .sort((a, b) => a.sortOrder - b.sortOrder);
+          if (newlyUnlocked.length > 0) {
+            dispatch(setPendingAchievementUnlock(newlyUnlocked[0]));
+          }
+        }
       }
+
       const stateAfter = getState() as { habits: HabitsState };
       if (stateAfter.habits.detailHabit?.id === id) {
         void dispatch(fetchHabitStats(id));
