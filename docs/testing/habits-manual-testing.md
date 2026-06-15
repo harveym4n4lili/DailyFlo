@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide is the step-by-step manual test plan for the **Habits** feature in DailyFlo. Use it to confirm Phase 1 (CRUD, logging, streaks, Today section, onboarding) and Phase 2 (detail screen, heatmap, trend chart, edit/delete) are working end-to-end on a real device or simulator.
+Step-by-step manual test plan for the **Habits** feature. Use on a physical device or simulator to confirm **Phases 1, 1.5, 2, 3, and 4**.
 
 **Companion docs:**
 
@@ -10,6 +10,7 @@ This guide is the step-by-step manual test plan for the **Habits** feature in Da
 | --- | --- |
 | [`habits-implementation.md`](../technical-design/habits/plan/habits-implementation.md) | Full product + engineering plan |
 | [`habits-manual-qa-checklist.md`](../technical-design/habits/plan/habits-manual-qa-checklist.md) | Short checkbox sign-off sheet |
+| [`habits-verification-log.md`](habits-verification-log.md) | Static/code verification + device QA log |
 
 **Code reference:**
 
@@ -19,56 +20,32 @@ This guide is the step-by-step manual test plan for the **Habits** feature in Da
 | UI | `frontend/dailyflo/components/features/habits/` (`tab/`, `list/`, `detail/`, `forms/`, `today/`) |
 | Redux + API | `frontend/dailyflo/store/slices/habits/`, `frontend/dailyflo/services/api/habits.ts` |
 | Backend | `backend/dailyflo/apps/habits/` |
-| Onboarding import | `frontend/dailyflo/components/features/onboarding/auth/hooks/useCompleteOnboardingAndExit.ts` |
+| Onboarding | `frontend/dailyflo/components/features/onboarding/auth/hooks/useCompleteOnboardingAndExit.ts` |
+| Reminders (Phase 4) | `frontend/dailyflo/services/notifications/habitReminderScheduler.ts` |
 
 ---
 
-## What is implemented (test now)
+## Phase coverage
 
-| Area | Status | Notes |
-| --- | --- | --- |
-| Habits navbar tab | **Shipped** | Add via Browse → Settings → Navigation |
-| Create habit (FAB) | **Shipped** | Binary + numeric tracking |
-| Frequencies in UI | **Shipped** | daily, weekdays, weekends, weekly, times per week |
-| Custom day picker | **Not in UI** | Backend supports `custom`; skip UI test until form ships |
-| Today tab section | **Shipped** | Due-today habits above tasks |
-| Log / undo (binary) | **Shipped** | Tap checkbox toggles completion |
-| Numeric +1 | **Shipped** | Increments until daily target |
-| Per-habit streaks | **Shipped** | Current + longest on list + detail |
-| Tab summary header | **Shipped** | `completed/scheduled` + best streak |
-| Habit detail + graphs | **Shipped** | Heatmap + 30-day rolling trend |
-| Edit habit | **Shipped** | From detail → edit route |
-| Delete habit | **Shipped** | From detail with confirm alert |
-| Onboarding → Habit | **Shipped** | No recurring onboarding task |
-| Global streak (ActivityLog) | **Shipped** | `habit_completed` rows feed gamification |
-| `first_habit_completion` achievement | **Shipped** | Unlocks on first habit complete; toast banner |
-| Local habit reminders | **Not shipped** | Phase 4 — skip |
+| Phase | Scope | Quick checklist | Detailed tests |
+| --- | --- | --- | --- |
+| **1 — MVP** | CRUD, logging, streaks, Today section, onboarding, global streak | #1–10, #17–19 | Tests 1–10, 17–19 |
+| **1.5 — Custom frequency** | Custom days picker on create/edit | #20 | Test 20 |
+| **2 — Detail + graphs** | Detail route, heatmap, trend, edit, delete | #11–16 | Tests 11–16 |
+| **3 — Gamification** | Tab summary, `first_habit_completion`, unlock banner | #7–8, #21–22 | Tests 9, 21–22 |
+| **4 — Reminders** | Local notification at `reminderTime` when due today | #23–25 | Tests 23–25 |
 
-**Out of scope for v1 (do not expect):** quit/sobriety habits, Planner integration, `linked_habit` goals, push notifications.
+**Out of scope for v1:** quit/sobriety habits, Planner integration, `linked_habit` goals, push notifications.
 
 ---
 
 ## Before you start
 
-### Requirements
-
-1. **Signed-in test account** with Django API reachable from the app.
-2. **Habits tab enabled:** Browse → Settings → Navigation → Add → **Habits** → save.
+1. **Signed-in test account** with Django API reachable.
+2. **Habits tab enabled:** Browse → Settings → Navigation → Add → **Habits**.
 3. **Backend running** with habits migrations applied (`python manage.py migrate`).
-4. **User timezone** set in profile preferences (streaks and “today” use this; default UTC).
-
-### Recommended test data
-
-Create a small set of habits up front:
-
-| Habit | Tracking | Frequency | Purpose |
-| --- | --- | --- | --- |
-| Morning stretch | Binary | Daily | Basic check-off |
-| Drink water | Numeric, target 8, unit `glasses` | Daily | +1 progress |
-| Weekly review | Binary | Once a week (pick today’s weekday) | Schedule filter |
-| Weekday only | Binary | Weekdays | Hidden Sat/Sun |
-| Weekend walk | Binary | Weekends | Hidden Mon–Fri |
-| 3× per week | Binary | 3 times per week | Flexible weekly heuristic |
+4. **User timezone** set in profile preferences.
+5. **Phase 4 only:** OS notification permission granted; `preferences.notifications.enabled` true.
 
 ### Test session record
 
@@ -77,10 +54,8 @@ Create a small set of habits up front:
 | Tester | |
 | Date | |
 | Branch | |
-| Device | |
-| OS version | |
+| Device / OS | |
 | Build | dev client / Expo Go / EAS |
-| Test account | |
 | Backend | local / staging |
 | User timezone | |
 
@@ -88,491 +63,349 @@ Create a small set of habits up front:
 
 ## Quick sign-off checklist
 
-Use this for a fast pass before release. Expand any failure in the detailed scenarios below.
-
-| # | Area | Pass | Fail |
-| --- | --- | --- | --- |
-| 1 | Habits tab loads (no route error) | ☐ | ☐ |
-| 2 | Create binary daily habit | ☐ | ☐ |
-| 3 | Create numeric habit with target | ☐ | ☐ |
-| 4 | Frequency scheduling (due today only) | ☐ | ☐ |
-| 5 | Binary complete + undo same day | ☐ | ☐ |
-| 6 | Numeric +1 to target | ☐ | ☐ |
-| 7 | Streak updates on list row | ☐ | ☐ |
-| 8 | Tab summary `X/Y done` | ☐ | ☐ |
-| 9 | Today section shows due habits | ☐ | ☐ |
-| 10 | Today check-off syncs with Habits tab | ☐ | ☐ |
-| 11 | Tap row → detail screen | ☐ | ☐ |
-| 12 | Detail heatmap renders | ☐ | ☐ |
-| 13 | Detail trend line renders | ☐ | ☐ |
-| 14 | Detail streaks match list | ☐ | ☐ |
-| 15 | Edit habit from detail | ☐ | ☐ |
-| 16 | Delete habit from detail | ☐ | ☐ |
-| 17 | Onboarding creates Habit (not task) | ☐ | ☐ |
-| 18 | Global streak includes habit day | ☐ | ☐ |
-| 19 | Logout clears habits; re-login loads fresh | ☐ | ☐ |
-| 20 | iOS + Android smoke (one platform minimum) | ☐ | ☐ |
+| # | Phase | Area | Pass | Fail |
+| --- | --- | --- | --- | --- |
+| 1 | 1 | Habits tab loads (no route error) | ☐ | ☐ |
+| 2 | 1 | Create binary daily habit | ☐ | ☐ |
+| 3 | 1 | Create numeric habit with target | ☐ | ☐ |
+| 4 | 1 | Frequency scheduling (due today only) | ☐ | ☐ |
+| 5 | 1 | Binary complete + undo same day | ☐ | ☐ |
+| 6 | 1 | Numeric +1 to target | ☐ | ☐ |
+| 7 | 1 | Streak updates on list row | ☐ | ☐ |
+| 8 | 1 | Today section shows due habits | ☐ | ☐ |
+| 9 | 1 | Today check-off syncs with Habits tab | ☐ | ☐ |
+| 10 | 1 | Onboarding creates Habit (not task) | ☐ | ☐ |
+| 11 | 2 | Tap row → detail screen | ☐ | ☐ |
+| 12 | 2 | Detail heatmap renders | ☐ | ☐ |
+| 13 | 2 | Detail trend line renders | ☐ | ☐ |
+| 14 | 2 | Detail streaks match list | ☐ | ☐ |
+| 15 | 2 | Edit habit from detail | ☐ | ☐ |
+| 16 | 2 | Delete habit from detail | ☐ | ☐ |
+| 17 | 1 | Global streak includes habit day | ☐ | ☐ |
+| 18 | 1 | Logout / re-login / restart persistence | ☐ | ☐ |
+| 19 | 1 | Platform smoke (iOS or Android) | ☐ | ☐ |
+| 20 | 1.5 | Custom frequency — Tue + Thu only | ☐ | ☐ |
+| 21 | 3 | Tab summary `X/Y done` + best streak | ☐ | ☐ |
+| 22 | 3 | `first_habit_completion` + unlock banner | ☐ | ☐ |
+| 23 | 4 | Reminder fires when due today | ☐ | ☐ |
+| 24 | 4 | Complete habit cancels today's reminder | ☐ | ☐ |
+| 25 | 4 | Delete / logout cancel pending reminders | ☐ | ☐ |
 
 ---
 
-## Detailed test scenarios
+## Phase 1 — MVP (tracking + Today)
 
 ### Test 1 — Add Habits to navbar
 
-**Goal:** Confirm the Habits tab is reachable from the liquid tab bar.
+1. Browse → Settings → Navigation → Add → **Habits**.
+2. Tap **Habits** on the tab bar.
 
-**Steps:**
-
-1. Open **Browse → Settings → Navigation → Add**.
-2. Tap **Habits** and leave Navigation settings.
-3. Tap the **Habits** tab on the bottom bar.
-
-**Expected:**
-
-- Habits appears on the tab bar.
-- Screen loads without “screen does not exist” or red error screen.
-- Standalone tab transition (not a browse-stack slide).
-
-**How to verify:** Visual check; no Metro bundler error in dev console.
+**Expected:** Tab appears; screen loads; standalone tab transition (not browse-stack slide).
 
 ---
 
 ### Test 2 — Empty state
 
-**Goal:** New account with no habits shows a safe empty UI.
+**Precondition:** No habits on account.
 
-**Precondition:** Account with zero habits (or delete all habits first).
-
-**Steps:**
-
-1. Open Habits tab.
-
-**Expected:**
-
-- Empty state message or list placeholder (no crash).
-- FAB or add button visible to create first habit.
+**Expected:** Empty state copy; FAB visible; no crash.
 
 ---
 
 ### Test 3 — Create binary daily habit
 
-**Goal:** `POST /habits/` creates a habit that appears on today’s list.
+1. FAB → create. Title `Morning stretch`; **Check off when done**; **Every day**; save.
 
-**Steps:**
-
-1. Habits tab → FAB / create.
-2. Title: `Morning stretch`.
-3. Tracking: **simple check-off** (binary).
-4. Frequency: **Every day**.
-5. Pick a colour; save.
-
-**Expected:**
-
-- Modal closes; habit appears on Habits tab list.
-- Row shows title and streak **0** (or empty) before first completion.
-- `GET /habits/today/` includes the habit (check network tab if debugging).
+**Expected:** Habit on today's list; streak 0 before first complete.
 
 ---
 
 ### Test 4 — Create numeric habit
 
-**Goal:** Numeric tracking shows progress and +1 control.
+1. Create `Drink water`; numeric; target **8**; unit `glasses`; daily; save.
 
-**Steps:**
-
-1. Create habit: `Drink water`.
-2. Tracking: **numeric**; target **8**; unit `glasses`.
-3. Frequency: **Every day**; save.
-
-**Expected:**
-
-- Row shows progress like `0/8 glasses`.
-- **+1** button increments value each tap.
-- At 8, row shows complete state (checkbox-style done or filled increment button).
+**Expected:** Row shows `0/8 glasses`; +1 increments; complete at target.
 
 ---
 
 ### Test 5 — Frequency scheduling
 
-**Goal:** Only habits **due today** appear on Habits tab and Today section.
+Create one habit per type; verify only **due today** appear:
 
-**Steps:**
+| Frequency | Due today when |
+| --- | --- |
+| Every day | Always |
+| Weekdays | Mon–Fri |
+| Weekends | Sat–Sun |
+| Once a week | Today matches picked weekday |
+| X times per week | Heuristic surfaces enough days (see plan §3.4) |
 
-For each frequency below, create one habit and note whether it appears **today**:
-
-| Frequency | Setup | Should appear today when |
-| --- | --- | --- |
-| Every day | — | Always |
-| Weekdays | — | Monday–Friday |
-| Weekends | — | Saturday–Sunday |
-| Once a week | Pick a weekday | Today matches that weekday |
-| X times per week | Target 3/week | Heuristic surfaces habit on enough days to hit weekly target |
-
-**Expected:**
-
-- Non-due habits are **hidden** from today list (not deleted).
-- Changing device date (simulator) or waiting until the matching day shows/hides the habit correctly.
-- Habits still exist via create flow after changing date (soft scheduling, not deletion).
-
-**Known gap:** `custom` (pick any Mon–Sun combo) is supported on the API but **not** in the create/edit form yet — skip UI test for custom until the form ships.
+**Expected:** Non-due habits hidden (not deleted). Change simulator date to verify show/hide.
 
 ---
 
 ### Test 6 — Binary complete and undo
 
-**Goal:** `POST /habits/{id}/log/` toggles completion; undo restores state.
+1. Tap checkbox to complete; tap again to undo.
 
-**Steps:**
-
-1. On a binary daily habit, tap the **checkbox** to complete.
-2. Tap the checkbox again to undo (same day).
-
-**Expected:**
-
-- Complete state toggles immediately (optimistic UI).
-- Streak increments after first completion today.
-- Undo on same day restores incomplete state and adjusts streak if that was the only completion driving it.
-- Completing again does not duplicate `ActivityLog` rows for the same habit+day (check global streak sanity in Test 17).
+**Expected:** Optimistic toggle; streak updates; undo restores same-day state.
 
 ---
 
 ### Test 7 — Numeric increment
 
-**Goal:** Partial and full numeric progress behave correctly.
+1. Tap +1 until target on numeric habit.
 
-**Steps:**
-
-1. On numeric habit with target 8, tap **+1** three times.
-2. Continue until target reached.
-
-**Expected:**
-
-- Label shows `3/8`, then `8/8` at completion.
-- Row not complete before target; complete at or above target.
-- Further +1 taps ignored or disabled when already complete today.
+**Expected:** Partial progress visible; complete at target; no further increments when done.
 
 ---
 
 ### Test 8 — Streak across calendar days
 
-**Goal:** Per-habit `currentStreak` and `longestStreak` follow schedule rules.
-
-**Precondition:** Daily binary habit; complete today.
-
-**Steps:**
-
-1. Complete habit today; note `currentStreak` on row.
-2. Advance simulator/device clock to **next calendar day** (or test next day manually).
-3. Complete again on the scheduled day.
-4. Skip a scheduled day without completing; check streak on the day after the miss.
-
-**Expected:**
-
-- Streak increments when completing on consecutive **scheduled** days.
-- Missing a scheduled day resets `currentStreak` to 0 (or 1 after re-complete).
-- `longestStreak` never decreases; reflects historical best.
+1. Complete daily habit today; advance clock to next scheduled day; complete again.
+2. Skip a scheduled day; verify `currentStreak` resets; `longestStreak` preserved.
 
 ---
 
-### Test 9 — Tab summary header
+### Test 9 — Today tab Habits section
 
-**Goal:** `HabitTabSummaryHeader` reflects `GET /habits/today/` summary.
+1. Open **Today** with habits due today.
+2. Complete one from Today section; switch to Habits tab.
 
-**Precondition:** At least two habits due today.
-
-**Steps:**
-
-1. Open Habits tab.
-2. Complete one habit; leave one incomplete.
-
-**Expected:**
-
-- Header shows e.g. `Today` and `1/2 done` (or matching counts).
-- If any habit has active streak > 0, `best streak Nd` appears.
-- Header hidden when `scheduledCount` is 0.
+**Expected:** Section above tasks; `Habits · X/Y` header; syncs with Habits tab. Section hidden when none due.
 
 ---
 
-### Test 10 — Today tab Habits section
+### Test 10 — Onboarding habit import
 
-**Goal:** Due-today habits render above tasks and stay in sync.
+1. New account → onboarding → **Build a habit** → finish sign-in.
 
-**Steps:**
+**Expected:** One `Habit` on Habits tab; no `onboarding-habit` recurring task; questionnaire saved on profile.
 
-1. Ensure at least one habit is due today.
-2. Open **Today** tab.
-3. Complete a habit from the Today section.
-4. Switch to Habits tab (or refocus).
+---
+
+### Test 17 — Global gamification streak
+
+**Precondition:** No task completions today.
+
+1. Complete one habit; open Browse progress card.
+
+**Expected:** Global daily streak ≥ 1; undo same day removes contribution if no other activity.
+
+---
+
+### Test 18 — Session and persistence
+
+1. Log out; log back in; force-close and reopen.
+
+**Expected:** No cross-user flash; data matches server after restart.
+
+---
+
+### Test 19 — Platform smoke
+
+**iOS:** FAB toolbar, create/edit safe area, detail scroll + charts.
+
+**Android:** Header chip, tab `navigate` (no duplicate stacks), usable tap targets.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+---
+
+## Phase 1.5 — Custom frequency UI
+
+### Test 20 — Custom days picker
+
+1. Create habit → frequency **Custom days**.
+2. Select **Tuesday** and **Thursday** only; save.
+3. Open edit form — confirm days persisted.
+4. Verify list on Tue/Thu vs other weekdays (change simulator date if needed).
 
 **Expected:**
 
-- **Habits** grouped section appears above the task list.
-- Header shows `Habits · X/Y` when summary available.
-- Same habits as Habits tab (due today only).
-- Completion on Today updates Habits tab without app restart.
+- [ ] Habit due only on selected weekdays.
+- [ ] Edit form reloads same selected days.
+- [ ] Alert if saving with zero days selected.
 
-**Empty case:** With no habits due today, the Habits section is **not rendered** (no empty header crash).
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
 
 ---
+
+## Phase 2 — Detail + graphs
 
 ### Test 11 — Navigate to habit detail
 
-**Goal:** Row tap opens per-habit analytics screen.
+1. Tap habit **title/body** (not checkbox/+1) on Habits tab and Today section.
 
-**Steps:**
-
-1. On Habits tab, tap the **title/body** of a habit row (not the checkbox/+1).
-2. Repeat from Today section habit row.
-
-**Expected:**
-
-- Navigates to `/(tabs)/habits/[habitId]`.
-- Detail loads title, streak cards, and chart sections.
-- Back returns to previous tab without crash.
+**Expected:** Opens `/(tabs)/habits/[habitId]`; streak cards + charts load.
 
 ---
 
 ### Test 12 — Detail heatmap
 
-**Goal:** `GET /habits/{id}/stats/` heatmap renders from completion history.
+**Precondition:** Habit with some completion history.
 
-**Precondition:** Habit with several completions over past weeks (log on multiple days or use test account with history).
-
-**Steps:**
-
-1. Open habit detail.
-2. Scroll to **Consistency** section.
-
-**Expected:**
-
-- Grid renders for ~365 days.
-- Completed days visually distinct from empty days.
-- New habit with no history: grid renders without crash (mostly empty).
+**Expected:** ~365-day grid; completed days distinct; empty grid OK for new habit.
 
 ---
 
 ### Test 13 — Detail trend line
 
-**Goal:** Rolling 7-day completion rate line displays over 30-day window.
-
-**Steps:**
-
-1. On same detail screen, view trend chart below heatmap.
-
-**Expected:**
-
-- SVG line chart visible (not blank/error).
-- After missing scheduled days, rolling rate drops on subsequent points (sanity check over a few days of testing).
+**Expected:** 30-day rolling 7-day SVG line visible; rate drops after missed days (sanity check).
 
 ---
 
 ### Test 14 — Detail streak consistency
 
-**Goal:** Detail streak cards match list row values.
-
-**Steps:**
-
-1. Note `currentStreak` and `longestStreak` on Habits tab row.
-2. Open detail for same habit.
-
-**Expected:**
-
-- **Current streak** and **Longest streak** cards match list values (±0; refresh if just logged).
+**Expected:** Current + longest on detail match list row.
 
 ---
 
 ### Test 15 — Edit habit
 
-**Goal:** `PATCH /habits/{id}/` updates habit from edit route.
+1. Detail → **Edit**; change title, colour, frequency; save.
 
-**Steps:**
-
-1. Habit detail → **Edit**.
-2. Change title, colour, and frequency (e.g. daily → weekdays).
-3. Save and return to detail.
-
-**Expected:**
-
-- Changes persist after save.
-- List row reflects new title/colour on refocus.
-- If frequency change makes habit not due today, it disappears from today list but remains in system.
-- Stats refetch after edit (heatmap/trend still load).
+**Expected:** Persists; list updates; stats refetch; non-due frequency hides from today list.
 
 ---
 
 ### Test 16 — Delete habit
 
-**Goal:** `DELETE /habits/{id}/` soft-deletes habit.
+1. Detail → **Delete** → confirm.
 
-**Steps:**
+**Expected:** Removed from all lists; cancel in alert keeps habit; no ghost rows.
 
-1. Habit detail → **Delete**.
-2. Confirm in alert.
-3. Return to Habits tab and Today tab.
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+---
+
+## Phase 3 — Gamification polish
+
+### Test 21 — Tab summary header
+
+**Precondition:** ≥2 habits due today.
+
+1. Complete one; open Habits tab.
 
 **Expected:**
 
-- Alert asks for confirmation; cancel leaves habit intact.
-- After delete, habit removed from all lists.
-- Navigating back to old detail URL shows error or empty state (no ghost data).
-- No crash on Habits or Today tab.
+- [ ] `Today` + `completedCount/scheduledCount` (e.g. `1/2 done`).
+- [ ] `best streak Nd` when any habit has active streak > 0.
+- [ ] Header hidden when `scheduledCount` is 0.
 
----
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
 
-### Test 17 — Onboarding habit import
+### Test 22 — `first_habit_completion` achievement
 
-**Goal:** New users choosing **Build a habit** get a `Habit` row, not a recurring task.
+**Precondition:** Account that has never completed a habit.
 
-**Steps:**
-
-1. Fresh install or new test account.
-2. Complete onboarding questionnaire.
-3. Choose **Build a habit** path; enter goal title + frequency; finish sign-in.
-
-**Expected:**
-
-- One habit exists matching questionnaire title/frequency on Habits tab.
-- **No** recurring task tagged `onboarding-habit` on Today.
-- Questionnaire answers still saved on user profile preferences.
-
----
-
-### Test 18 — Global gamification streak
-
-**Goal:** Habit completion writes `ActivityLog` with `action_type='habit_completed'`.
-
-**Precondition:** Account with **no task completions today**.
-
-**Steps:**
-
-1. Complete one habit today.
-2. Open **Browse** progress / streak card (gamification summary).
+1. Complete any habit (Habits tab or Today).
+2. Observe unlock banner (title + haptic).
+3. Browse → Productivity → Achievements.
 
 **Expected:**
 
-- Global daily streak reflects the habit completion day (≥ 1).
-- Undoing habit completion same day removes streak contribution if no other activity that day.
+- [ ] **First habit** unlocked with checkmark seal.
+- [ ] Persists after restart.
+- [ ] Does not unlock task-only **First step** unless a task was also completed.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
 
 ---
 
-### Test 19 — Session and persistence
+## Phase 4 — Local reminders
 
-**Goal:** Habits state respects auth lifecycle and survives restart.
+**Precondition:** Notification permission + `preferences.notifications.enabled` true.
 
-**Steps:**
+### Test 23 — Reminder fires when due
 
-1. With habits loaded, **log out** from Settings.
-2. Log back in as same user.
-3. Force-close app; reopen.
+1. Create **daily** habit due today with **Daily reminder** on; time ~2 minutes ahead.
+2. Background app; wait.
 
 **Expected:**
 
-- Logout clears habits from Redux (no previous user’s habits flash).
-- Re-login loads correct habits for that user.
-- After restart, habits and today completions still match server data.
+- [ ] Notification: `{title} — time for your habit`.
+- [ ] `__DEV__` console shows `[notifications] habit reminder scheduled`.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+### Test 24 — Complete cancels reminder
+
+1. With reminder scheduled for later today, complete the habit.
+
+**Expected:** No notification fires after completion (reminder cancelled on log).
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+### Test 25 — Delete and logout cancel reminders
+
+1. Create habit with reminder; delete habit before fire time.
+2. Create another; log out before fire time.
+
+**Expected:**
+
+- [ ] No notification after delete.
+- [ ] No habit notifications after logout (new login does not inherit old schedules).
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
 
 ---
 
-### Test 20 — Platform smoke
-
-**Goal:** Core flows work on target platforms.
-
-**iOS:**
-
-- [ ] Habits tab dashboard overflow toolbar works.
-- [ ] Create/edit modals respect safe area and header.
-- [ ] Detail scroll + charts render in ScrollView.
-
-**Android:**
-
-- [ ] Habits tab header chip / navigation works.
-- [ ] Switching to Habits tab does not stack duplicate entries.
-- [ ] Checkbox and +1 tap targets are usable.
-
----
-
-## Optional — Backend API smoke (curl / Postman)
-
-Use when UI passes but you need to isolate backend behaviour. Replace `TOKEN` and `HABIT_ID`.
+## Optional — Backend API smoke
 
 ```bash
-# Today's list + summary
 curl -H "Authorization: Bearer TOKEN" http://localhost:8000/api/habits/today/
-
-# Create binary daily habit
 curl -X POST -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" \
   -d '{"title":"API test","trackingType":"binary","frequencyType":"daily","color":"green"}' \
   http://localhost:8000/api/habits/
-
-# Toggle log today
 curl -X POST -H "Authorization: Bearer TOKEN" http://localhost:8000/api/habits/HABIT_ID/log/
-
-# Stats (heatmap + trend)
 curl -H "Authorization: Bearer TOKEN" http://localhost:8000/api/habits/HABIT_ID/stats/
 ```
 
-**Expected:** JSON uses camelCase fields; `stats` includes `heatmap.completedDates` and `trend.points[].rolling7DayRate` between 0 and 1.
-
----
-
-## Phase 3 — gamification polish
-
-### Test 12 — `first_habit_completion` achievement
-
-**Precondition:** Fresh account (or account that has never completed a habit).
-
-1. Complete any habit for the first time (Habits tab or Today section).
-2. Observe unlock banner at top of screen (achievement title + success haptic).
-3. Open **Browse → Productivity → Achievements**.
-
-**Expected**
-
-- [ ] **First habit** achievement shows unlocked with checkmark seal.
-- [ ] Persists after app restart.
-- [ ] Completing a habit does **not** unlock **First step** (task-only) unless a task was also completed.
-
-| Pass | Fail | Notes |
-| --- | --- | --- |
-| ☐ | ☐ | |
-
-### Test 13 — Tab summary header
-
-1. Open **Habits** tab with at least one habit due today.
-2. Complete one habit; pull to refresh if needed.
-
-**Expected**
-
-- [ ] Header shows `completedCount/scheduledCount` for today.
-- [ ] Best active streak among today’s habits displayed when any streak &gt; 0.
-
-| Pass | Fail | Notes |
-| --- | --- | --- |
-| ☐ | ☐ | |
-
----
-
-## Phase 4 — skip until shipped
-
-| Test | Phase | Status |
-| --- | --- | --- |
-| Local notification at `reminder_time` when habit due | 4 | Not implemented |
-| Delete habit cancels scheduled notification | 4 | Not implemented |
-| Logout cancels all habit reminder notifications | 4 | Not implemented |
-
-Re-run Phase 4 when reminders land; see [`habits-implementation.md`](../technical-design/habits/plan/habits-implementation.md) §10–13.
+**Expected:** camelCase JSON; today habits include `reminderTime`; stats include heatmap + trend.
 
 ---
 
 ## Troubleshooting
 
-| Symptom | Things to check |
+| Symptom | Check |
 | --- | --- |
-| Habits tab missing | Navigation prefs — add Habits in Settings → Navigation |
-| Empty today list but habit exists | Frequency may not be due today; check `frequencyType` |
-| Streak wrong | User `preferences.timezone`; completion date is calendar day in that TZ |
-| Detail charts blank | `GET /habits/{id}/stats/` response in network inspector |
-| Today tab crash on load | Metro bundle — ensure `TodayHabitsSection` imports from `habits/today`, not detail charts |
-| 401 on all habit calls | Auth token expired; re-login |
+| Habits tab missing | Settings → Navigation → add Habits |
+| Empty today list | `frequencyType` may not be due today |
+| Streak wrong | User `preferences.timezone` |
+| Detail charts blank | `GET /habits/{id}/stats/` in network tab |
+| Reminder not scheduled | Empty `reminderTime`, not due today, time passed, or permission denied |
+| Reminder after complete | Should not fire — cancelled on `logHabitProgress` |
+
+---
+
+## Code verification (before device QA)
+
+Record in [`habits-verification-log.md`](habits-verification-log.md).
+
+| Phase | Check |
+| --- | --- |
+| 1 | Django habits app; CRUD/today/log endpoints; Redux slice; Today section |
+| 1.5 | `HabitCustomDaysPicker` + `custom` in `HABIT_FREQUENCIES` |
+| 2 | `HabitStatsView`; detail UI; edit/delete routes |
+| 3 | `first_habit_completion` fixture; unlock banner in `(tabs)/_layout` |
+| 4 | `habitReminderScheduler.ts`; `reminderTime` on today API; logout cancel |
 
 ---
 
@@ -580,7 +413,7 @@ Re-run Phase 4 when reminders land; see [`habits-implementation.md`](../technica
 
 | Role | Name | Date | Phases verified |
 | --- | --- | --- | --- |
-| Tester | | | Phase 1 + 2 |
+| Tester | | | 1, 1.5, 2, 3, 4 |
 | Reviewer | | | |
 
 ---
@@ -589,4 +422,5 @@ Re-run Phase 4 when reminders land; see [`habits-implementation.md`](../technica
 
 | Date | Change |
 | --- | --- |
-| 2026-06-07 | Initial manual testing guide for shipped Phase 1–2 habits MVP |
+| 2026-06-07 | Initial guide (Phases 1–2) |
+| 2026-06-07 | Full phase coverage matrix; renumbered tests; Phases 1.5, 3, 4 |

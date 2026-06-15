@@ -52,6 +52,8 @@ export interface HabitTodayItem {
   currentStreak: number;
   longestStreak: number;
   frequencyType: HabitFrequencyType;
+  /** HH:MM local — used by habitReminderScheduler when habit is due today */
+  reminderTime: string;
 }
 
 export interface HabitsTodaySummary {

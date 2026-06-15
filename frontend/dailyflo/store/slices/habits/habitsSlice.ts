@@ -6,6 +6,12 @@
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import habitsApiService from '@/services/api/habits';
+import {
+  cancelHabitReminders,
+  syncAllHabitRemindersFromToday,
+  syncHabitReminder,
+} from '@/services/notifications/habitReminderScheduler';
+import type { User } from '@/types';
 import type {
   CreateHabitInput,
   Habit,
@@ -51,12 +57,58 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return err?.response?.data?.detail || err?.message || fallback;
 }
 
+/** read signed-in user notification prefs — same gate as task reminders */
+function getNotificationPrefsFromAuthState(getState: () => unknown) {
+  return (getState() as { auth: Readonly<{ user: User | null }> }).auth.user?.preferences?.notifications;
+}
+
+async function scheduleRemindersAfterTodayFetch(
+  payload: HabitsTodayResponse,
+  getState: () => unknown,
+): Promise<void> {
+  try {
+    await syncAllHabitRemindersFromToday(payload, getNotificationPrefsFromAuthState(getState));
+  } catch (err) {
+    console.warn('[notifications] habit reminder bulk sync skipped', err);
+  }
+}
+
+async function scheduleReminderForHabitAfterSave(
+  habitId: string,
+  reminderTime: string,
+  getState: () => unknown,
+  dispatch: (action: unknown) => unknown,
+): Promise<void> {
+  if (!reminderTime?.trim()) {
+    await cancelHabitReminders(habitId);
+    return;
+  }
+  const todayResult = await dispatch(fetchHabitsToday());
+  if (!fetchHabitsToday.fulfilled.match(todayResult)) return;
+  const todayItem = todayResult.payload.habits.find((h) => h.id === habitId);
+  if (!todayItem) {
+    await cancelHabitReminders(habitId);
+    return;
+  }
+  try {
+    await syncHabitReminder(
+      { ...todayItem, reminderTime },
+      todayResult.payload.date,
+      getNotificationPrefsFromAuthState(getState),
+    );
+  } catch (err) {
+    console.warn('[notifications] habit reminder sync skipped', habitId, err);
+  }
+}
+
 /** load habits due today — used by habits tab and today section */
 export const fetchHabitsToday = createAsyncThunk(
   'habits/fetchToday',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
-      return await habitsApiService.fetchHabitsToday();
+      const payload = await habitsApiService.fetchHabitsToday();
+      await scheduleRemindersAfterTodayFetch(payload, getState);
+      return payload;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Failed to load habits'));
     }
@@ -66,11 +118,10 @@ export const fetchHabitsToday = createAsyncThunk(
 /** POST /habits/ — create from FAB or onboarding */
 export const createHabit = createAsyncThunk(
   'habits/create',
-  async (input: CreateHabitInput, { rejectWithValue, dispatch }) => {
+  async (input: CreateHabitInput, { rejectWithValue, dispatch, getState }) => {
     try {
       const habit = await habitsApiService.createHabit(input);
-      // refresh today's list so new habit appears if due today
-      void dispatch(fetchHabitsToday());
+      await scheduleReminderForHabitAfterSave(habit.id, habit.reminderTime ?? '', getState, dispatch);
       return habit;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Failed to create habit'));
@@ -80,10 +131,10 @@ export const createHabit = createAsyncThunk(
 
 export const updateHabit = createAsyncThunk(
   'habits/update',
-  async ({ id, input }: { id: string; input: UpdateHabitInput }, { rejectWithValue, dispatch }) => {
+  async ({ id, input }: { id: string; input: UpdateHabitInput }, { rejectWithValue, dispatch, getState }) => {
     try {
       const habit = await habitsApiService.updateHabit(id, input);
-      void dispatch(fetchHabitsToday());
+      await scheduleReminderForHabitAfterSave(habit.id, habit.reminderTime ?? '', getState, dispatch);
       void dispatch(fetchHabitStats(id));
       return habit;
     } catch (error) {
@@ -97,6 +148,7 @@ export const deleteHabit = createAsyncThunk(
   async (id: string, { rejectWithValue, dispatch }) => {
     try {
       await habitsApiService.deleteHabit(id);
+      await cancelHabitReminders(id);
       void dispatch(fetchHabitsToday());
       return id;
     } catch (error) {
@@ -179,6 +231,26 @@ export const logHabitProgress = createAsyncThunk(
       if (stateAfter.habits.detailHabit?.id === id) {
         void dispatch(fetchHabitStats(id));
       }
+
+      // cancel today's reminder once habit is complete; reschedule if user undoes
+      const todayDate = stateAfter.habits.todayDate;
+      const todayHabit = stateAfter.habits.todayHabits.find((h) => h.id === id);
+      if (todayDate && todayHabit) {
+        try {
+          if (response.isCompleteToday) {
+            await cancelHabitReminders(id);
+          } else {
+            await syncHabitReminder(
+              { ...todayHabit, isCompleteToday: false },
+              todayDate,
+              getNotificationPrefsFromAuthState(getState),
+            );
+          }
+        } catch (err) {
+          console.warn('[notifications] habit reminder log sync skipped', id, err);
+        }
+      }
+
       return { habitId: id, response };
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Failed to log habit'));

@@ -4,12 +4,13 @@
 
 **Audience:** Engineers working in `frontend/dailyflo` (Expo Router, Redux Toolkit) and `backend/dailyflo` (Django REST).
 
-**Status:** Phase 1–3 shipped on `feat/habits`; Phase 4 (local reminders) not started.
+**Status:** Phases 1–4 shipped on `feat/habits` (custom frequency UI + local reminders included).
 
 **See also:**
 
 - [`habits-manual-qa-checklist.md`](habits-manual-qa-checklist.md) — short checkbox sign-off
-- [`../../../testing/habits-manual-testing.md`](../../../testing/habits-manual-testing.md) — full manual test scenarios (Phase 1–2)
+- [`../../../testing/habits-manual-testing.md`](../../../testing/habits-manual-testing.md) — full manual test scenarios (Phases 1–4)
+- [`../../../testing/habits-verification-log.md`](../../../testing/habits-verification-log.md) — code + device verification log
 - [`../../database/models.md`](../../database/models.md) — `HABITS` / `HABIT_COMPLETIONS` table schemas
 - [`../../notifications/plan/notification-implementation.md`](../../notifications/plan/notification-implementation.md) — local reminder patterns (Phase 4)
 - [`../../onboarding/plan/onboarding-plan.md`](../../onboarding/plan/onboarding-plan.md) — habit vs task questionnaire branch
@@ -449,25 +450,25 @@ Reuse [`notification-implementation.md`](../../notifications/plan/notification-i
 
 ### Phase 1 — MVP (tracking + Today)
 
-- [ ] Django `habits` app + migrations
-- [ ] `habit_schedule.py`, `habit_stats.py` (streak only)
-- [ ] CRUD + `today` + `log` + `DELETE log` endpoints
-- [ ] `types/api/habits.ts`, `services/api/habits.ts`, `habitsSlice.ts`
-- [ ] Replace `HabitsScreenContent` — summary stub + `HabitsTodayList` + FAB
-- [ ] `habits/create.tsx` modal — binary + numeric + all frequency types
-- [ ] `HabitListItem` — toggle + numeric +1 + streak display
-- [ ] `TodayHabitsSection` on Today tab
-- [ ] Onboarding → `POST /habits/`; deprecate habit → task
-- [ ] `ActivityLog` sync on complete; refresh gamification summary
+- [x] Django `habits` app + migrations
+- [x] `habit_schedule.py`, `habit_stats.py` (streak only)
+- [x] CRUD + `today` + `log` + `DELETE log` endpoints
+- [x] `types/api/habits.ts`, `services/api/habits.ts`, `habitsSlice.ts`
+- [x] Replace `HabitsScreenContent` — summary stub + `HabitsTodayList` + FAB
+- [x] `habits/create.tsx` modal — binary + numeric + all frequency types
+- [x] `HabitListItem` — toggle + numeric +1 + streak display
+- [x] `TodayHabitsSection` on Today tab
+- [x] Onboarding → `POST /habits/`; deprecate habit → task
+- [x] `ActivityLog` sync on complete; refresh gamification summary
 
 **Exit criteria:** User creates habit, checks off on Habits + Today, per-habit streak updates, global streak includes habit days.
 
 ### Phase 2 — Detail + graphs
 
-- [ ] `GET /habits/{id}/stats/`
-- [ ] `app/(tabs)/habits/[habitId].tsx` + `_layout` registration
-- [ ] `HabitDetailScreenContent`, `HabitHeatmap`, `HabitTrendChart`
-- [ ] Edit habit from detail (reuse form)
+- [x] `GET /habits/{id}/stats/`
+- [x] `app/(tabs)/habits/[habitId].tsx` + `_layout` registration
+- [x] `HabitDetailScreenContent`, `HabitHeatmap`, `HabitTrendChart`
+- [x] Edit habit from detail (reuse form)
 
 **Exit criteria:** Heatmap + 30-day trend visible; matches §4.3 analytics spec.
 
@@ -479,12 +480,17 @@ Reuse [`notification-implementation.md`](../../notifications/plan/notification-i
 
 **Exit criteria:** First habit check-off unlocks achievement; tab summary reflects today’s progress.
 
+### Phase 1.5 — Custom frequency UI
+
+- [x] `custom` frequency in create/edit forms with multi-select weekday picker
+- [x] `frequencyConfig.days` POST/PATCH validation (≥1 day)
+
 ### Phase 4 — Reminders
 
-- [ ] `habitReminderScheduler.ts` + storage map
-- [ ] Wire create/update/delete + logout
-- [ ] Reminder time field on create/edit form
-- [ ] Manual QA — notification fires when due
+- [x] `habitReminderScheduler.ts` + storage map
+- [x] Wire create/update/delete/logout + `fetchHabitsToday` resync
+- [x] Reminder time field on create/edit form
+- [ ] Manual QA — notification fires when due (device)
 
 **Exit criteria:** OS local notification at `reminder_time` on due days.
 
@@ -514,19 +520,27 @@ Reuse [`notification-implementation.md`](../../notifications/plan/notification-i
 
 ## 13. Testing plan
 
-Primary checklist: **[habits-manual-qa-checklist.md](habits-manual-qa-checklist.md)**.
+| Doc | Purpose |
+| --- | --- |
+| [`habits-manual-qa-checklist.md`](habits-manual-qa-checklist.md) | Short phased sign-off (§1–9) |
+| [`../../../testing/habits-manual-testing.md`](../../../testing/habits-manual-testing.md) | Full step-by-step scenarios |
+| [`../../../testing/habits-verification-log.md`](../../../testing/habits-verification-log.md) | Code verification + device QA log |
 
 | Area | Phase |
 | --- | --- |
-| CRUD + each frequency type | 1 |
+| CRUD + standard frequency types | 1 |
+| Custom days picker (`frequencyType: custom`) | 1.5 |
 | Binary toggle + numeric +1 to target | 1 |
 | Habits tab + Today section parity | 1 |
 | Streak across midnight (timezone) | 1 |
 | Onboarding habit import | 1 |
 | Global streak after habit complete | 1 |
-| Heatmap + trend | 2 |
-| `first_habit_completion` | 3 |
-| Local reminder | 4 |
+| Detail route + heatmap + trend | 2 |
+| Edit + delete from detail | 2 |
+| Tab summary header | 3 |
+| `first_habit_completion` + unlock banner | 3 |
+| Local reminder at `reminderTime` when due | 4 |
+| Delete / logout cancel habit reminders | 4 |
 
 ---
 
@@ -561,3 +575,4 @@ Update [`back-log.md`](../../../development-journals/back-log.md) when Phase 1 s
 | --- | --- |
 | 2026-06-07 | Initial draft from product Q&A feature mapping |
 | 2026-06-15 | Phase 3 gamification polish — `first_habit_completion` achievement + unlock banner |
+| 2026-06-07 | Phase 1.5 custom frequency picker; Phase 4 habit local reminders scheduler + form field |

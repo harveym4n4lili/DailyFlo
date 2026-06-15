@@ -61,6 +61,7 @@ class HabitTodayItemSerializer(serializers.Serializer):
     currentStreak = serializers.IntegerField()
     longestStreak = serializers.IntegerField()
     frequencyType = serializers.CharField()
+    reminderTime = serializers.CharField()
 
 
 class HabitTodaySummarySerializer(serializers.Serializer):
