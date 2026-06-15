@@ -118,5 +118,17 @@
       "sort_order": 10,
       "criteria": {"type": "first_goal_met"}
     }
+  },
+  {
+    "model": "gamification.achievementdefinition",
+    "pk": "a1000000-0000-4000-8000-000000000011",
+    "fields": {
+      "code": "first_habit_completion",
+      "title": "First habit",
+      "description": "Complete your first habit.",
+      "icon_key": "repeat.circle.fill",
+      "sort_order": 11,
+      "criteria": {"type": "habit_completion_count", "min": 1}
+    }
   }
 ]
