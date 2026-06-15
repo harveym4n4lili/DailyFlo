@@ -13,6 +13,12 @@ export {
   hasNotificationPermissionForReminders,
 } from './taskReminderScheduler';
 export {
+  syncHabitReminder,
+  cancelHabitReminders,
+  cancelAllHabitReminders,
+  syncAllHabitRemindersFromToday,
+} from './habitReminderScheduler';
+export {
   syncPlannerWindDownReminders,
   cancelPlannerWindDownReminders,
 } from './plannerWindDownReminders';

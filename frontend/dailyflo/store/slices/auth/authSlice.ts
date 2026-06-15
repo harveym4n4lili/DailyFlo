@@ -13,6 +13,7 @@ import type { TabDisplayPreferences, UserDisplayPreferences, UserNavigationPrefe
 // this service makes HTTP requests to login, register, and other auth endpoints
 import authApiService from '../../../services/api/auth';
 import { cancelAllTaskReminders } from '../../../services/notifications/taskReminderScheduler';
+import { cancelAllHabitReminders } from '../../../services/notifications/habitReminderScheduler';
 import { syncPlannerWindDownReminders } from '../../../services/notifications/plannerWindDownReminders';
 // token storage functions - secure storage for authentication tokens using Expo SecureStore
 // these functions store and retrieve tokens from encrypted device storage
@@ -1138,6 +1139,7 @@ export const logoutUser = createAsyncThunk(
 
       try {
         await cancelAllTaskReminders();
+        await cancelAllHabitReminders();
       } catch (reminderErr) {
         console.warn('[notifications] cancel all on logout skipped', reminderErr);
       }
@@ -1193,6 +1195,7 @@ export const logoutUser = createAsyncThunk(
 
       try {
         await cancelAllTaskReminders();
+        await cancelAllHabitReminders();
       } catch (reminderErr) {
         console.warn('[notifications] cancel all on logout skipped', reminderErr);
       }

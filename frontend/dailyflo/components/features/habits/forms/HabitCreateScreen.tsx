@@ -28,6 +28,13 @@ import { GroupedList, FormDetailButton } from '@/components/ui/List/GroupedList'
 import { Paddings } from '@/constants/Paddings';
 import { useHabits } from '@/store/hooks';
 import { HABIT_COLORS, HABIT_FREQUENCIES, HABIT_WEEKDAYS } from './habitFormConstants';
+import { HabitCustomDaysPicker } from './HabitCustomDaysPicker';
+import { HabitReminderField } from './HabitReminderField';
+import {
+  buildHabitFrequencyConfig,
+  isValidHabitReminderTime,
+  normalizeHabitReminderTime,
+} from './habitFormUtils';
 import type { CreateHabitInput, HabitColor, HabitFrequencyType, HabitTrackingType } from '@/types/api/habits';
 
 export default function HabitCreateScreen() {
@@ -43,6 +50,9 @@ export default function HabitCreateScreen() {
   const [frequencyType, setFrequencyType] = useState<HabitFrequencyType>('daily');
   const [dayOfWeek, setDayOfWeek] = useState(0);
   const [timesPerWeek, setTimesPerWeek] = useState('3');
+  const [customDays, setCustomDays] = useState<number[]>([0, 2, 4]);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderTime, setReminderTime] = useState('09:00');
   const [color, setColor] = useState<HabitColor>('green');
 
   const canSubmit = title.trim().length > 0 && !isSaving;
@@ -55,7 +65,8 @@ export default function HabitCreateScreen() {
       color,
       trackingType,
       frequencyType,
-      frequencyConfig: {},
+      frequencyConfig: buildHabitFrequencyConfig(frequencyType, dayOfWeek, timesPerWeek, customDays),
+      reminderTime: normalizeHabitReminderTime(reminderEnabled, reminderTime),
     };
 
     if (trackingType === 'numeric') {
@@ -68,15 +79,22 @@ export default function HabitCreateScreen() {
       input.unitLabel = unitLabel.trim();
     }
 
-    if (frequencyType === 'weekly') {
-      input.frequencyConfig = { dayOfWeek };
-    } else if (frequencyType === 'times_per_week') {
+    if (frequencyType === 'times_per_week') {
       const count = parseInt(timesPerWeek, 10);
       if (Number.isNaN(count) || count < 1) {
         Alert.alert('Invalid count', 'Enter how many times per week (at least 1).');
         return;
       }
-      input.frequencyConfig = { targetCount: count };
+    }
+
+    if (frequencyType === 'custom' && customDays.length === 0) {
+      Alert.alert('Pick days', 'Select at least one day for a custom schedule.');
+      return;
+    }
+
+    if (reminderEnabled && !isValidHabitReminderTime(reminderTime)) {
+      Alert.alert('Invalid time', 'Enter reminder time as HH:MM (e.g. 09:00).');
+      return;
     }
 
     void (async () => {
@@ -96,6 +114,9 @@ export default function HabitCreateScreen() {
     frequencyType,
     dayOfWeek,
     timesPerWeek,
+    customDays,
+    reminderEnabled,
+    reminderTime,
     createHabit,
     router,
   ]);
@@ -212,6 +233,9 @@ export default function HabitCreateScreen() {
               ))}
             </GroupedList>
           ) : null}
+          {frequencyType === 'custom' ? (
+            <HabitCustomDaysPicker selectedDays={customDays} onChange={setCustomDays} />
+          ) : null}
           {frequencyType === 'times_per_week' ? (
             <TextInput
               placeholder="Times per week"
@@ -228,6 +252,12 @@ export default function HabitCreateScreen() {
               ]}
             />
           ) : null}
+          <HabitReminderField
+            enabled={reminderEnabled}
+            timeHHMM={reminderTime}
+            onEnabledChange={setReminderEnabled}
+            onTimeChange={setReminderTime}
+          />
           <GroupedList
             backgroundColor={themeColors.background.primarySecondaryBlend()}
             borderRadius={24}

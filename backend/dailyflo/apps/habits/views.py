@@ -33,6 +33,7 @@ def _serialize_today_item(habit, completion, today: date) -> dict:
         'currentStreak': streaks['currentStreak'],
         'longestStreak': streaks['longestStreak'],
         'frequencyType': habit.frequency_type,
+        'reminderTime': habit.reminder_time or '',
     }
 
 

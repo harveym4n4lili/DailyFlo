@@ -9,6 +9,7 @@ export const HABIT_FREQUENCIES: { id: HabitFrequencyType; label: string }[] = [
   { id: 'weekdays', label: 'Weekdays' },
   { id: 'weekends', label: 'Weekends' },
   { id: 'weekly', label: 'Once a week' },
+  { id: 'custom', label: 'Custom days' },
   { id: 'times_per_week', label: 'X times per week' },
 ];
 
