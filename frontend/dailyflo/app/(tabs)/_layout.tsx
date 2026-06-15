@@ -20,6 +20,7 @@ import { getTodayTabIcon } from '@/utils/todayIcon';
 import { CustomLiquidTabBar, USE_CUSTOM_LIQUID_TAB_BAR } from '@/components/navigation/tabBarChrome';
 import { TabFabOverlayLayer } from '@/components/navigation/tabBarChrome/TabFabOverlayLayer';
 import { TabFabOverlayProvider } from '@/contexts/TabFabOverlayContext';
+import { AchievementUnlockBanner } from '@/components/features/gamification/achievements/AchievementUnlockBanner';
 import { usePrimaryTabColdStartNavigation } from '@/hooks/usePrimaryTabColdStartNavigation';
 
 export default function TabLayout() {
@@ -192,6 +193,7 @@ export default function TabLayout() {
             bootOverlayAnimatedStyle,
           ]}
         />
+        <AchievementUnlockBanner />
       </View>
     </TabFabOverlayProvider>
   );

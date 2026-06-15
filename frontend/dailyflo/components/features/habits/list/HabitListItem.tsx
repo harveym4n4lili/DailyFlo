@@ -41,8 +41,9 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
   const handleBinaryPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     snapshotRef.current = { ...habit };
+    const wasCompleteBefore = habit.isCompleteToday;
     dispatch(optimisticLogHabit({ id: habit.id }));
-    void dispatch(logHabitProgress({ id: habit.id }))
+    void dispatch(logHabitProgress({ id: habit.id, wasCompleteBefore }))
       .unwrap()
       .catch(() => {
         if (snapshotRef.current) {
@@ -55,8 +56,9 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
     if (habit.isCompleteToday) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     snapshotRef.current = { ...habit };
+    const wasCompleteBefore = habit.isCompleteToday;
     dispatch(optimisticLogHabit({ id: habit.id, delta: 1 }));
-    void dispatch(logHabitProgress({ id: habit.id, delta: 1 }))
+    void dispatch(logHabitProgress({ id: habit.id, delta: 1, wasCompleteBefore }))
       .unwrap()
       .catch(() => {
         if (snapshotRef.current) {
