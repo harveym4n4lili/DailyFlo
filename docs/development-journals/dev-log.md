@@ -2219,3 +2219,79 @@ TODO:
 - Productivity screen still uses child grouped-list padding; only the browse progress card uses root today.
 
 ---
+## [07/06/2026] - [Sunday]
+
+### Today's Goals
+- [x] I merged **gamification** into main (**PR #24**) after the browse progress board, goals, achievements, and productivity hub shipped earlier in the week.
+- [x] I added a standalone **Habits tab** shell — `app/(tabs)/habits/` route, placeholder `HabitsScreenContent`, and registered **Habits** as an addable navbar option in Navigation settings (`navigationTabRegistry`, NativeTabs trigger, per-user tab order validation).
+
+### Plans For Future
+- Implement habits feature per [`habits-implementation.md`](../technical-design/habits/plan/habits-implementation.md) Phase 1 (backend + today list + onboarding import).
+- Manual QA on gamification checklist after merge.
+
+### Notes
+- Habits tab uses `router.navigate` and Android inbox href fallback via `resolveNavTabHref()` so the fifth tab slot does not break routing.
+
+---
+## [12/06/2026] - [Friday]
+
+### Today's Goals
+- [x] I shipped **Habits Phase 1 MVP** — Django `habits` app (`Habit`, `HabitCompletion`, schedule + streak services), CRUD + `GET /habits/today/` + log endpoints, `ActivityLog` `habit_completed` sync for global streaks.
+- [x] I wired the frontend **`habitsSlice`**, `services/api/habits.ts`, `useHabits()`, **Habits tab today list**, FAB create route, **`HabitListItem`** (binary toggle + numeric +1), and **`TodayHabitsSection`** on the Today tab.
+- [x] I migrated **onboarding habit branch** to `POST /habits/` instead of creating a recurring onboarding task.
+
+### Plans For Future
+- Phase 2 — habit detail screen with heatmap + trend chart.
+- Manual device pass on habits today list, streaks, and Today section parity.
+
+### Notes
+- `clearHabits` on logout keeps habit state isolated per account like tasks and gamification.
+
+---
+## [13/06/2026] - [Saturday]
+
+### Today's Goals
+- [x] I shipped **Habits Phase 2** — real `GET /habits/{id}/stats/` (heatmap + 30-day rolling trend), **`HabitDetailScreenContent`**, **`HabitHeatmap`**, **`HabitTrendChart`**, edit/delete from detail, and **`HabitEditScreen`**.
+- [x] I reorganised habits UI into **FIRE-style folders** (`tab/`, `list/`, `detail/`, `forms/`, `today/`) with thin route re-exports under `app/(tabs)/habits/`.
+- [x] I fixed a **Metro bundling error** on the Today tab by narrowing `TodayHabitsSection` imports so chart code does not load through the habits barrel.
+
+### Plans For Future
+- Phase 3 gamification polish (`first_habit_completion`, tab summary, unlock banner).
+- Update habits manual QA checklist for detail + graphs.
+
+### Notes
+- Detail route imports `HabitDetailScreenContent` directly — avoids eager loading of `HabitTrendChart` on tabs that only need the today list.
+
+---
+## [14/06/2026] - [Sunday]
+
+### Today's Goals
+- [x] I added the **habits manual testing guide** and aligned QA docs with Phase 1–2 coverage (`docs/testing/habits-manual-testing.md`, updates to implementation plan checklist).
+
+### Plans For Future
+- Ship Phase 3 habits gamification hooks.
+- Run manual QA on device for habits Phases 1–2.
+
+### Notes
+- Documentation day ahead of Phase 3 — good checkpoint before achievement + reminder work.
+
+---
+## [15/06/2026] - [Monday]
+
+### Today's Goals
+- [x] I shipped **Habits Phase 3** — `first_habit_completion` achievement fixture + `habit_completion_count` evaluator, **`AchievementUnlockBanner`** on first habit complete, and task-only completion counts for task achievements.
+- [x] I merged **habits Phase 3** via **PR #25** (`cursor/habits-phase-3-gamification-3846`).
+- [x] I completed **Habits Phase 1.5 and Phase 4** — **custom days** picker on create/edit forms, **`habitReminderScheduler`** (local OS notifications when habit is due today), reminder field on forms, `reminderTime` on today's API payload, logout cancel sweep.
+- [x] I reorganised **phased manual testing docs** for all habit phases (1, 1.5, 2, 3, 4) and added **`habits-verification-log.md`**.
+- [x] I added **`git-commit-message-format.md`** and linked it from **`log-templates.md`** so commit messages follow the project template.
+
+### Plans For Future
+- **Device QA** for Phase 4 reminders (Tests 23–25 in habits manual testing guide).
+- v1.1 backlog: onboarding-habit task migration script, stronger daily rollover reminder resync.
+- v2: quit habits, `linked_habit` goals, planner integration, more habit achievements.
+
+### Notes
+- Habits v1 plan (Phases 1–4) is code-complete — only Phase 4 notification fire on device remains unchecked in the implementation plan.
+- Reminder scheduling mirrors task reminders: same permission gates, `cancelAllHabitReminders` on logout, resync on `fetchHabitsToday`.
+
+---
