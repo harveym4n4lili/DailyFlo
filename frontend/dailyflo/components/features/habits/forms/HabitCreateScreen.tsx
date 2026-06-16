@@ -3,33 +3,13 @@
  * mounted from app/(tabs)/habits/create route.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  ScrollView,
-  Platform,
-  Alert,
-} from 'react-native';
-import { useHeaderHeight } from '@react-navigation/elements';
-import { Stack } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Alert } from 'react-native';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
-import { useThemeColors } from '@/hooks/useColorPalette';
-import { useTypography } from '@/hooks/useTypography';
-import { MainCloseButton, MainSubmitButton } from '@/components/ui/Button';
-import {
-  IosBrowseModalCloseStackToolbar,
-  IosBrowseModalTrailingStackToolbar,
-} from '@/components/navigation/IosBrowseModalStackToolbars';
-import { GroupedList, FormDetailButton } from '@/components/ui/List/GroupedList';
-import { Paddings } from '@/constants/Paddings';
 import { useHabits } from '@/store/hooks';
-import { HABIT_COLORS, HABIT_FREQUENCIES, HABIT_WEEKDAYS } from './habitFormConstants';
-import { HabitCustomDaysPicker } from './HabitCustomDaysPicker';
-import { HabitReminderField } from './HabitReminderField';
+import { HabitFormModalShell } from './HabitFormModalShell';
+import { HabitFormFields } from './HabitFormFields';
 import {
   buildHabitFrequencyConfig,
   isValidHabitReminderTime,
@@ -39,8 +19,6 @@ import type { CreateHabitInput, HabitColor, HabitFrequencyType, HabitTrackingTyp
 
 export default function HabitCreateScreen() {
   const router = useGuardedRouter();
-  const themeColors = useThemeColors();
-  const typography = useTypography();
   const { createHabit, isSaving } = useHabits();
 
   const [title, setTitle] = useState('');
@@ -121,180 +99,39 @@ export default function HabitCreateScreen() {
     router,
   ]);
 
-  const headerHeight = useHeaderHeight();
-  const styles = useMemo(() => createStyles(), []);
-
   return (
-    <>
-      <Stack.Screen options={{ title: 'New Habit' }} />
-      <IosBrowseModalCloseStackToolbar />
-      <IosBrowseModalTrailingStackToolbar
-        icon="checkmark"
-        onPress={handleSubmit}
-        disabled={!canSubmit}
-        accessibilityLabel="Create habit"
+    <HabitFormModalShell
+      headerTitle="New Habit"
+      canSubmit={canSubmit}
+      onSubmit={handleSubmit}
+      submitAccessibilityLabel="Create habit"
+    >
+      <HabitFormFields
+        title={title}
+        trackingType={trackingType}
+        targetValue={targetValue}
+        unitLabel={unitLabel}
+        frequencyType={frequencyType}
+        dayOfWeek={dayOfWeek}
+        timesPerWeek={timesPerWeek}
+        customDays={customDays}
+        reminderEnabled={reminderEnabled}
+        reminderTime={reminderTime}
+        color={color}
+        onTitleChange={setTitle}
+        onTrackingTypeChange={setTrackingType}
+        onTargetValueChange={setTargetValue}
+        onUnitLabelChange={setUnitLabel}
+        onFrequencyTypeChange={setFrequencyType}
+        onDayOfWeekChange={setDayOfWeek}
+        onTimesPerWeekChange={setTimesPerWeek}
+        onCustomDaysChange={setCustomDays}
+        onReminderEnabledChange={setReminderEnabled}
+        onReminderTimeChange={setReminderTime}
+        onColorChange={setColor}
+        showCreateHint
+        autoFocusTitle
       />
-      <View style={[styles.screen, { backgroundColor: themeColors.background.root() }]}>
-        {Platform.OS === 'android' ? (
-          <View style={[styles.androidBar, { paddingTop: headerHeight }]}>
-            <MainCloseButton onPress={() => router.back()} />
-            <MainSubmitButton onPress={handleSubmit} disabled={!canSubmit} />
-          </View>
-        ) : null}
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <Text style={[typography.getTextStyle('body-small'), { color: themeColors.text.secondary() }]}>
-            Track consistency with a daily check-off or a numeric target you can +1 from the list.
-          </Text>
-          <TextInput
-            placeholder="Habit title"
-            placeholderTextColor={themeColors.text.tertiary()}
-            value={title}
-            onChangeText={setTitle}
-            style={[
-              styles.input,
-              {
-                color: themeColors.text.primary(),
-                backgroundColor: themeColors.background.primarySecondaryBlend(),
-              },
-            ]}
-          />
-          <GroupedList
-            backgroundColor={themeColors.background.primarySecondaryBlend()}
-            borderRadius={24}
-          >
-            {(['binary', 'numeric'] as HabitTrackingType[]).map((t) => (
-              <FormDetailButton
-                key={t}
-                label={t === 'binary' ? 'Check off when done' : 'Count toward a target'}
-                value={trackingType === t ? 'Selected' : ''}
-                onPress={() => setTrackingType(t)}
-                showChevron={false}
-              />
-            ))}
-          </GroupedList>
-          {trackingType === 'numeric' ? (
-            <>
-              <TextInput
-                placeholder="Daily target (e.g. 8)"
-                placeholderTextColor={themeColors.text.tertiary()}
-                value={targetValue}
-                onChangeText={setTargetValue}
-                keyboardType="number-pad"
-                style={[
-                  styles.input,
-                  {
-                    color: themeColors.text.primary(),
-                    backgroundColor: themeColors.background.primarySecondaryBlend(),
-                  },
-                ]}
-              />
-              <TextInput
-                placeholder="Unit label (optional, e.g. glasses)"
-                placeholderTextColor={themeColors.text.tertiary()}
-                value={unitLabel}
-                onChangeText={setUnitLabel}
-                style={[
-                  styles.input,
-                  {
-                    color: themeColors.text.primary(),
-                    backgroundColor: themeColors.background.primarySecondaryBlend(),
-                  },
-                ]}
-              />
-            </>
-          ) : null}
-          <GroupedList
-            backgroundColor={themeColors.background.primarySecondaryBlend()}
-            borderRadius={24}
-          >
-            {HABIT_FREQUENCIES.map((f) => (
-              <FormDetailButton
-                key={f.id}
-                label={f.label}
-                value={frequencyType === f.id ? 'Selected' : ''}
-                onPress={() => setFrequencyType(f.id)}
-                showChevron={false}
-              />
-            ))}
-          </GroupedList>
-          {frequencyType === 'weekly' ? (
-            <GroupedList
-              backgroundColor={themeColors.background.primarySecondaryBlend()}
-              borderRadius={24}
-            >
-              {HABIT_WEEKDAYS.map((d) => (
-                <FormDetailButton
-                  key={d.value}
-                  label={d.label}
-                  value={dayOfWeek === d.value ? 'Selected' : ''}
-                  onPress={() => setDayOfWeek(d.value)}
-                  showChevron={false}
-                />
-              ))}
-            </GroupedList>
-          ) : null}
-          {frequencyType === 'custom' ? (
-            <HabitCustomDaysPicker selectedDays={customDays} onChange={setCustomDays} />
-          ) : null}
-          {frequencyType === 'times_per_week' ? (
-            <TextInput
-              placeholder="Times per week"
-              placeholderTextColor={themeColors.text.tertiary()}
-              value={timesPerWeek}
-              onChangeText={setTimesPerWeek}
-              keyboardType="number-pad"
-              style={[
-                styles.input,
-                {
-                  color: themeColors.text.primary(),
-                  backgroundColor: themeColors.background.primarySecondaryBlend(),
-                },
-              ]}
-            />
-          ) : null}
-          <HabitReminderField
-            enabled={reminderEnabled}
-            timeHHMM={reminderTime}
-            onEnabledChange={setReminderEnabled}
-            onTimeChange={setReminderTime}
-          />
-          <GroupedList
-            backgroundColor={themeColors.background.primarySecondaryBlend()}
-            borderRadius={24}
-          >
-            {HABIT_COLORS.map((c) => (
-              <FormDetailButton
-                key={c}
-                label={c.charAt(0).toUpperCase() + c.slice(1)}
-                value={color === c ? 'Selected' : ''}
-                onPress={() => setColor(c)}
-                showChevron={false}
-              />
-            ))}
-          </GroupedList>
-        </ScrollView>
-      </View>
-    </>
+    </HabitFormModalShell>
   );
 }
-
-const createStyles = () =>
-  StyleSheet.create({
-    screen: { flex: 1 },
-    androidBar: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingHorizontal: Paddings.screen,
-    },
-    scroll: {
-      padding: Paddings.screen,
-      gap: Paddings.sectionCompact,
-      paddingBottom: Paddings.scrollBottomExtra + Paddings.sectionCompact,
-    },
-    input: {
-      borderRadius: Paddings.formDataPillRadius,
-      paddingHorizontal: Paddings.groupedListContentHorizontal,
-      paddingVertical: Paddings.listItemVertical,
-      fontSize: 16,
-    },
-  });

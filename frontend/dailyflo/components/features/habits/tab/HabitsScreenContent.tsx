@@ -15,7 +15,9 @@ import { useHabits } from '@/store/hooks';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 
+// row = toolbar buttons; anchor = full blur band height — same as browse/productivity tab chrome
 const TOP_SECTION_ROW_HEIGHT = 48;
+const TOP_SECTION_ANCHOR_HEIGHT = 64;
 
 export function HabitsScreenContent() {
   const insets = useSafeAreaInsets();
@@ -41,7 +43,7 @@ export function HabitsScreenContent() {
   return (
     <>
       <View
-        style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ROW_HEIGHT }]}
+        style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}
         pointerEvents="box-none"
       >
         <View style={styles.topSectionRow} pointerEvents="box-none">
@@ -60,8 +62,11 @@ export function HabitsScreenContent() {
         paddingVertical={0}
       >
         <ScrollView
+          style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
+          contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
               refreshing={isTodayLoading}
@@ -70,13 +75,15 @@ export function HabitsScreenContent() {
             />
           }
         >
-          <HabitsTodayList
-            habits={todayHabits}
-            summary={todaySummary}
-            isLoading={isTodayLoading}
-            error={todayError}
-            onOpenDetail={openHabitDetail}
-          />
+          <View style={styles.contentSection}>
+            <HabitsTodayList
+              habits={todayHabits}
+              summary={todaySummary}
+              isLoading={isTodayLoading}
+              error={todayError}
+              onOpenDetail={openHabitDetail}
+            />
+          </View>
         </ScrollView>
       </ScreenContainer>
     </>
@@ -114,10 +121,18 @@ const createStyles = (insets: ReturnType<typeof useSafeAreaInsets>) =>
     topSectionContextButton: {
       backgroundColor: 'primary',
     },
+    scrollView: {
+      flex: 1,
+    },
     scrollContent: {
       flexGrow: 1,
-      paddingTop: insets.top + TOP_SECTION_ROW_HEIGHT + 8,
+      // productivity + browse: list starts below insets.top + 64 blur band
+      paddingTop: insets.top + TOP_SECTION_ANCHOR_HEIGHT,
       paddingHorizontal: Paddings.screen,
       paddingBottom: Paddings.scrollBottomExtra + Paddings.contentVertical,
+    },
+    contentSection: {
+      marginTop: Paddings.sectionCompact,
+      marginBottom: Paddings.sectionCompact,
     },
   });

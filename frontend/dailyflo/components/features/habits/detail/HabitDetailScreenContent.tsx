@@ -1,5 +1,5 @@
 /**
- * habit detail body — streaks, today log row, heatmap, trend, edit/delete actions.
+ * habit detail body — browse list-detail chrome (blur header, heading-1 title) + grouped sections.
  */
 
 import React, { useCallback, useMemo } from 'react';
@@ -7,17 +7,30 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  Pressable,
   ActivityIndicator,
   Alert,
   Platform,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedScrollHandler,
+  useAnimatedReaction,
+  withTiming,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { MainBackButton } from '@/components/ui/Button';
+import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
 import { Paddings } from '@/constants/Paddings';
 import { getTaskColorValue } from '@/utils/taskColors';
 import { useHabits } from '@/store/hooks';
@@ -26,13 +39,19 @@ import { HabitHeatmap } from './HabitHeatmap';
 import { HabitTrendChart } from './HabitTrendChart';
 import type { HabitTodayItem } from '@/types/api/habits';
 
+const TOP_SECTION_ROW_HEIGHT = 48;
+const TOP_SECTION_ANCHOR_HEIGHT = 64;
+const SCROLL_THRESHOLD = 16;
+
 type HabitDetailScreenContentProps = {
   habitId: string;
 };
 
 export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentProps) {
   const router = useGuardedRouter();
+  const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
+  const semanticColors = useSemanticColors();
   const typography = useTypography();
   const {
     detailHabit,
@@ -60,10 +79,51 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
     () => getTaskColorValue(detailHabit?.color ?? 'green'),
     [detailHabit?.color],
   );
-  const styles = useMemo(
-    () => createStyles(themeColors, typography, accent),
-    [themeColors, typography, accent],
+  const title = detailHabit?.title ?? 'Habit';
+  const deleteColor = semanticColors.error();
+
+  const listGroupProps = useMemo(
+    () => ({
+      backgroundColor: themeColors.background.primarySecondaryBlend(),
+      separatorColor: themeColors.border.primary(),
+      separatorInsetRight: Paddings.groupedListContentHorizontal,
+      separatorVariant: 'solid' as const,
+      borderRadius: 24,
+      minimalStyle: false,
+      separatorConsiderIconColumn: true,
+      iconColumnWidth: 30,
+      itemPadding: 'root' as const,
+    }),
+    [themeColors],
   );
+
+  const styles = useMemo(() => createStyles(typography, insets), [typography, insets]);
+
+  const scrollY = useSharedValue(0);
+  const miniHeaderOpacity = useSharedValue(0);
+
+  useAnimatedReaction(
+    () => scrollY.value > SCROLL_THRESHOLD,
+    (shouldShow) => {
+      miniHeaderOpacity.value = withTiming(shouldShow ? 1 : 0, { duration: 200 });
+    },
+  );
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
+
+  const miniHeaderStyle = useAnimatedStyle(() => ({
+    opacity: miniHeaderOpacity.value,
+  }));
+
+  const bigHeaderStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, SCROLL_THRESHOLD], [1, 0], Extrapolation.CLAMP),
+  }));
+
+  const backButtonTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
 
   const todayRow: HabitTodayItem | null = useMemo(() => {
     const fromToday = todayHabits.find((h) => h.id === habitId);
@@ -82,6 +142,7 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
       currentStreak: detailStats?.currentStreak ?? 0,
       longestStreak: detailStats?.longestStreak ?? 0,
       frequencyType: detailHabit.frequencyType,
+      reminderTime: detailHabit.reminderTime ?? '',
     };
   }, [todayHabits, habitId, detailHabit, detailStats]);
 
@@ -120,7 +181,7 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
   if (detailError && !detailHabit) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>{detailError}</Text>
+        <Text style={[styles.errorText, { color: themeColors.text.secondary() }]}>{detailError}</Text>
       </View>
     );
   }
@@ -128,67 +189,152 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
   if (!detailHabit) return null;
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.scroll}
-      showsVerticalScrollIndicator={false}
-      contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
-    >
-      <Text style={styles.title}>{detailHabit.title}</Text>
-      <View style={styles.streakRow}>
-        <View style={styles.streakCard}>
-          <Text style={styles.streakValue}>{detailStats?.currentStreak ?? 0}</Text>
-          <Text style={styles.streakLabel}>Current streak</Text>
-        </View>
-        <View style={styles.streakCard}>
-          <Text style={styles.streakValue}>{detailStats?.longestStreak ?? 0}</Text>
-          <Text style={styles.streakLabel}>Longest streak</Text>
+    <View style={styles.screen}>
+      <View
+        style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}
+      >
+        <BlurView
+          tint={themeColors.isDark ? 'dark' : 'light'}
+          intensity={1}
+          style={StyleSheet.absoluteFill}
+        />
+        <LinearGradient
+          colors={[
+            themeColors.background.root(),
+            themeColors.withOpacity(themeColors.background.root(), 0),
+          ]}
+          locations={[0.4, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <View style={styles.topSectionRow} pointerEvents="box-none">
+          <View style={styles.topSectionPlaceholder} pointerEvents="none" />
+          <Animated.View style={[styles.miniHeader, miniHeaderStyle]} pointerEvents="none">
+            <Text
+              style={[styles.miniHeaderText, { color: themeColors.text.primary() }]}
+              numberOfLines={1}
+            >
+              {title}
+            </Text>
+          </Animated.View>
         </View>
       </View>
 
-      {todayRow ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Today</Text>
-          <HabitListItem habit={todayRow} />
+      {Platform.OS === 'android' ? (
+        <View style={styles.backButtonContainer} pointerEvents="box-none">
+          <MainBackButton onPress={() => router.back()} top={backButtonTop} left={Paddings.screen} />
         </View>
       ) : null}
 
-      {detailStats ? (
-        <>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Consistency</Text>
-            <Text style={styles.sectionHint}>Last {detailStats.heatmap.days} days</Text>
-            <HabitHeatmap heatmap={detailStats.heatmap} color={detailHabit.color} />
-          </View>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>7-day rolling rate</Text>
-            <Text style={styles.sectionHint}>Last {detailStats.trend.windowDays} days</Text>
-            <HabitTrendChart trend={detailStats.trend} color={detailHabit.color} />
-          </View>
-        </>
-      ) : null}
+      <Animated.ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.paddedHorizontal}>
+          <Animated.View style={[bigHeaderStyle, styles.contentSection]}>
+            <Text style={[styles.bigHeader, { color: themeColors.text.primary() }]} numberOfLines={2}>
+              {title}
+            </Text>
+          </Animated.View>
+        </View>
 
-      <View style={styles.actions}>
-        <Pressable style={styles.actionButton} onPress={handleEdit}>
-          <Text style={styles.actionButtonText}>Edit habit</Text>
-        </Pressable>
-        <Pressable style={[styles.actionButton, styles.deleteButton]} onPress={handleDelete}>
-          <Text style={[styles.actionButtonText, styles.deleteText]}>Delete habit</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+        <View style={styles.paddedHorizontal}>
+          <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
+            <FormDetailButton
+              label="Current streak"
+              value={String(detailStats?.currentStreak ?? 0)}
+              onPress={() => {}}
+              disabled
+              showChevron={false}
+              customStyles={{ value: { color: accent, fontWeight: '600' } }}
+            />
+            <FormDetailButton
+              label="Longest streak"
+              value={String(detailStats?.longestStreak ?? 0)}
+              onPress={() => {}}
+              disabled
+              showChevron={false}
+            />
+          </GroupedList>
+        </View>
+
+        {todayRow ? (
+          <View style={styles.paddedHorizontal}>
+            <GroupedListHeader title="Today" />
+            <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
+              <HabitListItem habit={todayRow} compact />
+            </GroupedList>
+          </View>
+        ) : null}
+
+        {detailStats ? (
+          <>
+            <View style={styles.paddedHorizontal}>
+              <GroupedListHeader title="Consistency" />
+              <Text style={[styles.sectionHint, { color: themeColors.text.tertiary() }]}>
+                Last {detailStats.heatmap.days} days
+              </Text>
+              <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
+                <View style={styles.chartWrap}>
+                  <HabitHeatmap heatmap={detailStats.heatmap} color={detailHabit.color} />
+                </View>
+              </GroupedList>
+            </View>
+
+            <View style={styles.paddedHorizontal}>
+              <GroupedListHeader title="7-day rolling rate" />
+              <Text style={[styles.sectionHint, { color: themeColors.text.tertiary() }]}>
+                Last {detailStats.trend.windowDays} days
+              </Text>
+              <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
+                <View style={styles.chartWrap}>
+                  <HabitTrendChart trend={detailStats.trend} color={detailHabit.color} />
+                </View>
+              </GroupedList>
+            </View>
+          </>
+        ) : null}
+
+        <View style={styles.paddedHorizontal}>
+          <GroupedListHeader title="Manage" style={styles.manageHeader} />
+          <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
+            <FormDetailButton
+              icon="create-outline"
+              label="Edit habit"
+              value=""
+              onPress={handleEdit}
+            />
+            <FormDetailButton
+              iconComponent={
+                <Ionicons name="trash-outline" size={18} color={deleteColor} />
+              }
+              label="Delete habit"
+              value=""
+              onPress={handleDelete}
+              showChevron={false}
+              customStyles={{ label: { color: deleteColor } }}
+            />
+          </GroupedList>
+        </View>
+
+        <View style={styles.bottomSpacer} />
+      </Animated.ScrollView>
+    </View>
   );
 }
 
 const createStyles = (
-  themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>,
-  accent: string,
+  insets: ReturnType<typeof useSafeAreaInsets>,
 ) =>
   StyleSheet.create({
-    scroll: {
-      padding: Paddings.screen,
-      paddingBottom: Paddings.scrollBottomExtra + Paddings.section,
-      gap: Paddings.sectionCompact,
+    screen: {
+      flex: 1,
     },
     centered: {
       flex: 1,
@@ -198,61 +344,89 @@ const createStyles = (
     },
     errorText: {
       ...typography.getTextStyle('body-medium'),
-      color: themeColors.text.secondary(),
     },
-    title: {
-      ...typography.getTextStyle('heading-2'),
-      color: themeColors.text.primary(),
+    topSectionAnchor: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+      overflow: 'hidden',
     },
-    streakRow: {
+    topSectionRow: {
+      position: 'absolute',
+      top: insets.top,
+      left: 0,
+      right: 0,
+      height: TOP_SECTION_ROW_HEIGHT,
       flexDirection: 'row',
-      gap: 12,
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: Paddings.screen,
     },
-    streakCard: {
+    topSectionPlaceholder: {
+      width: 44,
+      height: 44,
+    },
+    miniHeader: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 56,
+    },
+    miniHeaderText: {
+      ...typography.getTextStyle('heading-3'),
+    },
+    backButtonContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: insets.top + TOP_SECTION_ROW_HEIGHT,
+      zIndex: 11,
+      overflow: 'visible',
+    },
+    scrollView: {
       flex: 1,
-      backgroundColor: themeColors.background.primarySecondaryBlend(),
-      borderRadius: 16,
-      padding: Paddings.card,
     },
-    streakValue: {
-      ...typography.getTextStyle('heading-2'),
-      color: accent,
+    scrollContent: {
+      // productivity pattern: scroll body starts below insets.top + 64 blur band (not browseScrollPaddingTop overlap)
+      paddingTop: insets.top + TOP_SECTION_ANCHOR_HEIGHT,
+      flexGrow: 1,
+      gap: Paddings.formDataPillRowGap,
+      paddingBottom: Paddings.scrollBottomExtra + Paddings.sectionCompact,
     },
-    streakLabel: {
-      ...typography.getTextStyle('body-small'),
-      color: themeColors.text.secondary(),
-      marginTop: 4,
+    paddedHorizontal: {
+      paddingHorizontal: Paddings.screen,
     },
-    section: {
-      gap: 8,
+    contentSection: {
+      marginTop: Paddings.sectionCompact,
+      marginBottom: Paddings.sectionCompact,
     },
-    sectionTitle: {
-      ...typography.getTextStyle('heading-4'),
-      color: themeColors.text.primary(),
+    bigHeader: {
+      ...typography.getTextStyle('heading-1'),
+      marginBottom: 8,
+    },
+    listContainer: {
+      marginVertical: 0,
     },
     sectionHint: {
       ...typography.getTextStyle('body-small'),
-      color: themeColors.text.tertiary(),
+      marginTop: -4,
+      marginBottom: 8,
+      paddingHorizontal: Paddings.touchTargetSmall,
     },
-    actions: {
-      gap: 10,
-      marginTop: 8,
+    chartWrap: {
+      width: '100%',
     },
-    actionButton: {
-      backgroundColor: themeColors.background.primarySecondaryBlend(),
-      borderRadius: 14,
-      paddingVertical: 14,
-      alignItems: 'center',
+    manageHeader: {
+      marginTop: Paddings.sectionCompact,
     },
-    actionButtonText: {
-      ...typography.getTextStyle('body-medium'),
-      color: themeColors.text.primary(),
-      fontWeight: '600',
-    },
-    deleteButton: {
-      backgroundColor: themeColors.withOpacity(themeColors.text.tertiary(), 0.12),
-    },
-    deleteText: {
-      color: themeColors.text.secondary(),
+    bottomSpacer: {
+      height: 200,
     },
   });

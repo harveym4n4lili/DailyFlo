@@ -42,14 +42,14 @@ export default function HabitsLayout() {
                 headerBackVisible: false,
                 presentation: 'modal',
                 gestureEnabled: false,
-                contentStyle: { backgroundColor: themeColors.background.root() },
+                contentStyle: { backgroundColor: themeColors.background.primary() },
               }
             : {
                 title: 'New Habit',
                 headerShown: false,
                 presentation: 'modal',
                 gestureEnabled: false,
-                contentStyle: { backgroundColor: themeColors.background.root() },
+                contentStyle: { backgroundColor: themeColors.background.primary() },
               }
         }
       />
@@ -83,14 +83,14 @@ export default function HabitsLayout() {
                 headerBackVisible: false,
                 presentation: 'modal',
                 gestureEnabled: false,
-                contentStyle: { backgroundColor: themeColors.background.root() },
+                contentStyle: { backgroundColor: themeColors.background.primary() },
               }
             : {
                 title: 'Edit Habit',
                 headerShown: false,
                 presentation: 'modal',
                 gestureEnabled: false,
-                contentStyle: { backgroundColor: themeColors.background.root() },
+                contentStyle: { backgroundColor: themeColors.background.primary() },
               }
         }
       />
