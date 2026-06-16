@@ -194,37 +194,16 @@ export const logHabitProgress = createAsyncThunk(
     { rejectWithValue, dispatch, getState },
   ) => {
     try {
-      const stateBefore = getState() as {
-        gamification: { achievements: { code: string; unlockedAt: string | null }[] };
-      };
-      const priorUnlockedCodes = new Set(
-        stateBefore.gamification.achievements
-          .filter((a) => a.unlockedAt != null)
-          .map((a) => a.code),
+      const { collectPriorUnlockedCodes, refreshAchievementsAndDetectUnlock } = await import(
+        '../gamification/achievementUnlockDetection'
       );
+      const priorUnlockedCodes = collectPriorUnlockedCodes(getState);
 
       const response = await habitsApiService.logHabitProgress(id, { date, delta });
       const wasComplete = wasCompleteBefore ?? false;
 
       if (response.isCompleteToday && !wasComplete) {
-        const {
-          fetchGamificationSummary,
-          fetchAchievements,
-          setPendingAchievementUnlock,
-        } = await import('../gamification/gamificationSlice');
-
-        // summary re-runs achievement evaluator on django; achievements list returns unlock state
-        await dispatch(fetchGamificationSummary());
-        const achievementsResult = await dispatch(fetchAchievements());
-
-        if (fetchAchievements.fulfilled.match(achievementsResult)) {
-          const newlyUnlocked = achievementsResult.payload
-            .filter((a) => a.unlockedAt != null && !priorUnlockedCodes.has(a.code))
-            .sort((a, b) => a.sortOrder - b.sortOrder);
-          if (newlyUnlocked.length > 0) {
-            dispatch(setPendingAchievementUnlock(newlyUnlocked[0]));
-          }
-        }
+        await refreshAchievementsAndDetectUnlock(dispatch, priorUnlockedCodes);
       }
 
       const stateAfter = getState() as { habits: HabitsState };

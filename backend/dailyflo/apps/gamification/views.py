@@ -2,9 +2,11 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from django.conf import settings
+
 from apps.gamification.models import UserGoal
 from apps.gamification.serializers import GamificationSummarySerializer, UserGoalSerializer
-from apps.gamification.services.achievements import list_achievements_for_user
+from apps.gamification.services.achievements import list_achievements_for_user, reset_user_achievements_for_dev
 from apps.gamification.services.goals import enrich_goal, list_user_goals
 from apps.gamification.services.stats import compute_gamification_summary, effective_completion_date, get_user_timezone
 from apps.tasks.models import ActivityLog
@@ -36,6 +38,31 @@ class GamificationAchievementsView(APIView):
             completion_dates.add(effective_completion_date(log, user_tz))
         items = list_achievements_for_user(user, completion_dates, logs)
         return Response(items)
+
+
+class GamificationAchievementsDevResetView(APIView):
+    """POST /gamification/achievements/dev-reset/ — dev only: wipe unlocks + completion logs for re-testing."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if not settings.DEBUG:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        user = request.user
+        reset_stats = reset_user_achievements_for_dev(user)
+
+        user_tz = get_user_timezone(user)
+        logs = ActivityLog.objects.filter(user=user, action_type__in=['completed', 'habit_completed'])
+        completion_dates = set()
+        for log in logs.only('occurrence_date', 'created_at'):
+            completion_dates.add(effective_completion_date(log, user_tz))
+        items = list_achievements_for_user(user, completion_dates, logs)
+
+        return Response({
+            **reset_stats,
+            'achievements': items,
+        })
 
 
 class UserGoalViewSet(viewsets.ModelViewSet):
