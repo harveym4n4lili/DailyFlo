@@ -18,7 +18,7 @@ interface GamificationState {
   summary: GamificationSummary | null;
   achievements: AchievementItem[];
   goals: UserGoalItem[];
-  /** set when a habit log unlocks a new achievement — drives AchievementUnlockBanner */
+  /** set when a habit log unlocks a new achievement — drives AchievementUnlockToast */
   pendingAchievementUnlock: AchievementItem | null;
   isSummaryLoading: boolean;
   isAchievementsLoading: boolean;
@@ -122,6 +122,25 @@ export const deleteGoal = createAsyncThunk(
   }
 );
 
+/** dev-only — clears unlock rows + completion logs on server, then refreshes local gamification state */
+export const resetAchievementsDev = createAsyncThunk(
+  'gamification/resetAchievementsDev',
+  async (_, { rejectWithValue, dispatch }) => {
+    if (!__DEV__) {
+      return rejectWithValue('Dev reset is only available in development builds.');
+    }
+    try {
+      const result = await gamificationApiService.resetAchievementsDev();
+      void dispatch(fetchGamificationSummary());
+      const { fetchHabitsToday } = await import('../habits/habitsSlice');
+      void dispatch(fetchHabitsToday());
+      return result.achievements;
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error, 'Failed to reset achievements'));
+    }
+  },
+);
+
 const gamificationSlice = createSlice({
   name: 'gamification',
   initialState,
@@ -142,7 +161,7 @@ const gamificationSlice = createSlice({
       state.goalsError = null;
       state.goalSaveError = null;
     },
-    /** show unlock toast after habit completion — cleared when banner dismisses */
+    /** show unlock toast after habit completion — cleared when toast dismisses */
     setPendingAchievementUnlock: (state, action: PayloadAction<AchievementItem>) => {
       state.pendingAchievementUnlock = action.payload;
     },
@@ -202,6 +221,19 @@ const gamificationSlice = createSlice({
       })
       .addCase(deleteGoal.fulfilled, (state, action: PayloadAction<string>) => {
         state.goals = state.goals.filter((g) => g.id !== action.payload);
+      })
+      .addCase(resetAchievementsDev.pending, (state) => {
+        state.isAchievementsLoading = true;
+        state.achievementsError = null;
+      })
+      .addCase(resetAchievementsDev.fulfilled, (state, action: PayloadAction<AchievementItem[]>) => {
+        state.isAchievementsLoading = false;
+        state.achievements = action.payload;
+        state.pendingAchievementUnlock = null;
+      })
+      .addCase(resetAchievementsDev.rejected, (state, action) => {
+        state.isAchievementsLoading = false;
+        state.achievementsError = (action.payload as string) || 'Failed to reset achievements';
       });
   },
 });

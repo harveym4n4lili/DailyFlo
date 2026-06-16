@@ -822,6 +822,17 @@ export const createTask = createAsyncThunk(
 export const updateTask = createAsyncThunk(
   'tasks/updateTask',
   async ({ id, updates }: { id: string; updates: UpdateTaskInput }, { rejectWithValue, getState, dispatch }) => {
+    const {
+      collectPriorUnlockedCodes,
+      isNewTaskCompletion,
+      refreshAchievementsAndDetectUnlock,
+    } = await import('../gamification/achievementUnlockDetection');
+
+    const shouldDetectAchievementUnlock = isNewTaskCompletion(updates);
+    const priorUnlockedCodes = shouldDetectAchievementUnlock
+      ? collectPriorUnlockedCodes(getState)
+      : null;
+
     try {
       console.log('🔄 updateTask thunk started - calling API');
       
@@ -877,8 +888,10 @@ export const updateTask = createAsyncThunk(
 
       await scheduleRemindersAfterTaskChange(transformedTask, getState);
 
-      // refresh browse streak/stats when completion changed — keeps gamification in sync without waiting for browse focus
-      if (updates.isCompleted !== undefined) {
+      // new completion may unlock achievements — diff against pre-update codes and show global toast
+      if (shouldDetectAchievementUnlock && priorUnlockedCodes) {
+        await refreshAchievementsAndDetectUnlock(dispatch, priorUnlockedCodes);
+      } else if (updates.isCompleted !== undefined) {
         const { fetchGamificationSummary } = await import('../gamification/gamificationSlice');
         void dispatch(fetchGamificationSummary());
       }

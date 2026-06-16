@@ -62,6 +62,25 @@ class GamificationApiService {
   async deleteGoal(id: string): Promise<void> {
     await apiClient.delete(`/gamification/goals/${id}/`);
   }
+
+  /**
+   * POST /gamification/achievements/dev-reset/ — dev builds only (__DEV__ on client).
+   * wipes unlock rows + completion activity logs so achievements can be re-earned for UX testing.
+   */
+  async resetAchievementsDev(): Promise<{
+    deletedUnlocks: number;
+    deletedLogs: number;
+    resetHabitCompletionsToday: number;
+    achievements: AchievementItem[];
+  }> {
+    const { data } = await apiClient.post<{
+      deletedUnlocks: number;
+      deletedLogs: number;
+      resetHabitCompletionsToday: number;
+      achievements: AchievementItem[];
+    }>('/gamification/achievements/dev-reset/');
+    return data;
+  }
 }
 
 const gamificationApiService = new GamificationApiService();

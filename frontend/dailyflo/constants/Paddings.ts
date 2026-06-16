@@ -93,6 +93,8 @@ export const Paddings = {
   // GroupedList padding - content padding inside each list item wrapper
   // used by: GroupedList, TaskForm, CustomTextInput, IconColorModal, TaskScreenContent
   groupedListContentHorizontal: 16,
+  /** corner radius on GroupedList cards (settings, browse forms, habit detail, toasts) */
+  groupedListBorderRadius: 24,
   /** child grouped list — tighter rows inside task sheets / nested forms (default GroupedList) */
   groupedListChildContentVertical: 16,
   /** root grouped list — roomier rows on settings, display modal, browse dashboard */

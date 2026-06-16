@@ -8,6 +8,7 @@ from django.utils import timezone as django_tz
 
 from apps.gamification.models import AchievementDefinition, UserAchievement
 from apps.gamification.services.stats import _current_streak, _longest_streak, _week_start, effective_completion_date, get_user_timezone
+from apps.tasks.models import ActivityLog
 
 
 def _count_logs(logs) -> int:
@@ -128,3 +129,30 @@ def _progress_hint(criteria, user, completion_dates, logs, today, user_tz):
 
 def unlocked_achievement_count(user) -> int:
     return UserAchievement.objects.filter(user=user).count()
+
+
+def reset_user_achievements_for_dev(user) -> dict:
+    """
+    dev-only helper — deletes unlock rows and completion activity so achievements can be re-earned.
+    also clears today's habit completion rows so the habits tab shows unchecked state.
+    """
+    from apps.habits.models import HabitCompletion
+    from apps.habits.services.habit_stats import user_today_from_prefs
+
+    deleted_unlocks, _ = UserAchievement.objects.filter(user=user).delete()
+    deleted_logs, _ = ActivityLog.objects.filter(
+        user=user,
+        action_type__in=['completed', 'habit_completed'],
+    ).delete()
+
+    today = user_today_from_prefs(user)
+    reset_completions = HabitCompletion.objects.filter(
+        habit__user=user,
+        completion_date=today,
+    ).update(logged_value=0, is_complete=False)
+
+    return {
+        'deletedUnlocks': deleted_unlocks,
+        'deletedLogs': deleted_logs,
+        'resetHabitCompletionsToday': reset_completions,
+    }

@@ -25,6 +25,7 @@ import {
   createGoal,
   deleteGoal,
   clearGamification,
+  resetAchievementsDev,
 } from './slices/gamification/gamificationSlice';
 import type { CreateUserGoalInput } from '@/types/api/gamification';
 import {
@@ -256,6 +257,10 @@ export const useGamification = () => {
     ),
     deleteGoal: useCallback((goalId: string) => dispatch(deleteGoal(goalId)), [dispatch]),
     clearGamification: useCallback(() => dispatch(clearGamification()), [dispatch]),
+    resetAchievementsDev: useCallback(
+      () => dispatch(resetAchievementsDev()).unwrap(),
+      [dispatch],
+    ),
   };
 };
 

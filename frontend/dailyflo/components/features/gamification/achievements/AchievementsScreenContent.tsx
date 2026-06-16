@@ -3,7 +3,7 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Platform, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Platform, ActivityIndicator, ScrollView, Pressable, Alert } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -13,6 +13,8 @@ import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useGamification } from '@/store/hooks';
+import { useAppDispatch } from '@/store';
+import { setPendingAchievementUnlock } from '@/store/slices/gamification/gamificationSlice';
 import { MainBackButton } from '@/components/ui/Button';
 import { Paddings } from '@/constants/Paddings';
 import type { AchievementItem } from '@/types/api/gamification';
@@ -29,15 +31,69 @@ export function AchievementsScreenContent() {
   const typography = useTypography();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(typography, insets), [typography, insets]);
-  const { achievements, isAchievementsLoading, achievementsError, fetchAchievements } = useGamification();
+  const dispatch = useAppDispatch();
+  const { achievements, isAchievementsLoading, achievementsError, fetchAchievements, resetAchievementsDev } =
+    useGamification();
 
   const [listFilter, setListFilter] = useState<AchievementListFilter>('all');
+  const [isDevResetting, setIsDevResetting] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       void fetchAchievements();
     }, [fetchAchievements])
   );
+
+  const handleDevResetAchievements = useCallback(() => {
+    Alert.alert(
+      'Reset achievements (dev)',
+      'Clears all unlocked achievements, task/habit completion activity logs, and unchecks habits due today so you can re-earn trophies and test the unlock toast.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: () => {
+            setIsDevResetting(true);
+            void resetAchievementsDev()
+              .then(() => {
+                Alert.alert('Achievements reset', 'Complete a habit or task again to re-earn achievements.');
+              })
+              .catch((e: unknown) => {
+                Alert.alert(
+                  'Reset failed',
+                  e instanceof Error ? e.message : 'Could not reset achievements.',
+                );
+              })
+              .finally(() => {
+                setIsDevResetting(false);
+              });
+          },
+        },
+      ],
+    );
+  }, [resetAchievementsDev]);
+
+  const handleDevPreviewToast = useCallback(() => {
+    const sample =
+      achievements.find((a) => a.code === 'first_habit_completion') ??
+      achievements[0] ?? {
+        id: 'dev-preview',
+        code: 'first_habit_completion',
+        title: 'First habit',
+        description: 'Complete your first habit.',
+        iconKey: 'repeat.circle.fill',
+        sortOrder: 11,
+        unlockedAt: new Date().toISOString(),
+        progressLabel: null,
+      };
+    dispatch(
+      setPendingAchievementUnlock({
+        ...sample,
+        unlockedAt: sample.unlockedAt ?? new Date().toISOString(),
+      }),
+    );
+  }, [achievements, dispatch]);
 
   // client-side filter — API returns every achievement; pill picks unlocked vs all
   const visibleAchievements = useMemo((): AchievementItem[] => {
@@ -96,6 +152,50 @@ export function AchievementsScreenContent() {
           <View style={styles.filterPill}>
             <AchievementFilterPicker value={listFilter} onValueChange={setListFilter} />
           </View>
+
+          {__DEV__ ? (
+            <>
+              <Pressable
+                onPress={handleDevPreviewToast}
+                style={({ pressed }) => [
+                  styles.devResetButton,
+                  {
+                    backgroundColor: themeColors.background.primarySecondaryBlend(),
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Preview achievement unlock toast"
+              >
+                <Text style={[styles.devResetTitle, { color: themeColors.text.primary() }]}>
+                  Preview unlock toast (dev)
+                </Text>
+                <Text style={[styles.devResetHint, { color: themeColors.text.secondary() }]}>
+                  Fires the toast immediately without completing a habit.
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleDevResetAchievements}
+                disabled={isDevResetting}
+                style={({ pressed }) => [
+                  styles.devResetButton,
+                  {
+                    backgroundColor: themeColors.background.primarySecondaryBlend(),
+                    opacity: pressed || isDevResetting ? 0.7 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Reset achievements for development testing"
+              >
+                <Text style={[styles.devResetTitle, { color: themeColors.text.primary() }]}>
+                  Reset achievements (dev)
+                </Text>
+                <Text style={[styles.devResetHint, { color: themeColors.text.secondary() }]}>
+                  Clears unlocks + completion logs so you can re-earn and test the toast.
+                </Text>
+              </Pressable>
+            </>
+          ) : null}
 
           {isAchievementsLoading && achievements.length === 0 ? (
             <ActivityIndicator color={themeColors.text.secondary()} />
@@ -195,6 +295,19 @@ const createStyles = (
     filterPill: {
       marginTop: Paddings.sectionCompact,
       marginBottom: Paddings.sectionCompact,
+    },
+    devResetButton: {
+      borderRadius: Paddings.formDataPillRadius,
+      paddingHorizontal: Paddings.groupedListContentHorizontal,
+      paddingVertical: Paddings.listItemVertical,
+      gap: 4,
+    },
+    devResetTitle: {
+      ...typography.getTextStyle('body-large'),
+      fontWeight: '600',
+    },
+    devResetHint: {
+      ...typography.getTextStyle('body-small'),
     },
     emptyCopy: {
       textAlign: 'center',

@@ -12,7 +12,7 @@ import { Stack, type Href, router } from 'expo-router';
 import { runAppColdStartBootstrap } from '@/utils/navigation/appColdStartBootstrap';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
-import { InteractionManager, Platform, TextInput } from 'react-native';
+import { InteractionManager, Platform, StyleSheet, TextInput, View } from 'react-native';
 
 // set default cursor/selection color app-wide; RN 0.83 types omit defaultProps but the merge still works at runtime
 const TI = TextInput as typeof TextInput & { defaultProps?: Record<string, unknown> };
@@ -29,6 +29,7 @@ import { DuplicateTaskProvider } from './task/DuplicateTaskContext';
 import { PlannerMonthSelectProvider } from './PlannerMonthSelectContext';
 import { setupNotifications } from '@/services/notifications/notificationsSetup';
 import { NotificationResponseHandler } from '@/components/navigation/NotificationResponseHandler';
+import { AchievementUnlockToast } from '@/components/ui/Toast';
 
 // typed routes lag behind new files until expo regenerates — cast keeps router.push happy
 const ONBOARDING_AUTH_HREF = '/(onboarding)/auth' as Href;
@@ -121,6 +122,7 @@ function RootLayoutNavigation() {
           <CreateTaskDraftProvider>
           <DuplicateTaskProvider>
           <PlannerMonthSelectProvider>
+          <View style={styles.appShell}>
           <Stack
             initialRouteName="(tabs)"
             screenOptions={{
@@ -282,6 +284,8 @@ function RootLayoutNavigation() {
             />
             <Stack.Screen name="+not-found" />
           </Stack>
+          <AchievementUnlockToast />
+          </View>
           </PlannerMonthSelectProvider>
           </DuplicateTaskProvider>
           </CreateTaskDraftProvider>
@@ -292,3 +296,9 @@ function RootLayoutNavigation() {
     </CustomTabNavMetricsProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  appShell: {
+    flex: 1,
+  },
+});

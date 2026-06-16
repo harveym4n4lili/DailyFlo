@@ -20,7 +20,7 @@ export function getHabitFormListGroupProps(themeColors: ThemeColors) {
     separatorColor: themeColors.border.primary(),
     separatorInsetRight: Paddings.groupedListContentHorizontal,
     separatorVariant: 'solid' as const,
-    borderRadius: 24,
+    borderRadius: Paddings.groupedListBorderRadius,
     minimalStyle: false,
     separatorConsiderIconColumn: true,
     iconColumnWidth: 30,
