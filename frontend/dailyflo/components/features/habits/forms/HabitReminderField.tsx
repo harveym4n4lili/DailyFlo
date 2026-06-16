@@ -3,11 +3,12 @@
  */
 
 import React from 'react';
-import { TextInput, Switch, View, Text, StyleSheet } from 'react-native';
+import { TextInput, Switch, View, Text, StyleSheet, Platform } from 'react-native';
 
 import { GroupedList } from '@/components/ui/List/GroupedList';
-import { useThemeColors, useBrandColors } from '@/hooks/useColorPalette';
-import { useTypography } from '@/hooks/useTypography';
+import type { GroupedListProps } from '@/components/ui/List/GroupedList/GroupedList.types';
+import { useThemeColors } from '@/hooks/useColorPalette';
+import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 import { formatWakeSleepLabel } from '@/utils/preferenceScheduleTimes';
 
@@ -16,6 +17,19 @@ type HabitReminderFieldProps = {
   timeHHMM: string;
   onEnabledChange: (enabled: boolean) => void;
   onTimeChange: (time: string) => void;
+  listGroupProps: Pick<
+    GroupedListProps,
+    | 'backgroundColor'
+    | 'separatorColor'
+    | 'separatorInsetRight'
+    | 'separatorVariant'
+    | 'borderRadius'
+    | 'minimalStyle'
+    | 'separatorConsiderIconColumn'
+    | 'iconColumnWidth'
+    | 'itemPadding'
+  >;
+  switchTrackColor: string;
 };
 
 export function HabitReminderField({
@@ -23,70 +37,83 @@ export function HabitReminderField({
   timeHHMM,
   onEnabledChange,
   onTimeChange,
+  listGroupProps,
+  switchTrackColor,
 }: HabitReminderFieldProps) {
   const themeColors = useThemeColors();
-  const typography = useTypography();
-  const { getMarpleBrandColor } = useBrandColors();
   const timeLabel = formatWakeSleepLabel(timeHHMM, '09:00', '12h');
 
   return (
-    <>
-      <GroupedList
-        backgroundColor={themeColors.background.primarySecondaryBlend()}
-        borderRadius={24}
-      >
-        <View style={styles.row}>
-          <View style={styles.rowText}>
-            <Text style={[typography.getTextStyle('body-medium'), { color: themeColors.text.primary() }]}>
-              Daily reminder
-            </Text>
-            <Text style={[typography.getTextStyle('body-small'), { color: themeColors.text.secondary() }]}>
-              {enabled ? timeLabel : 'Off — local notification when habit is due today'}
-            </Text>
-          </View>
-          <Switch
-            value={enabled}
-            onValueChange={onEnabledChange}
-            trackColor={{ false: themeColors.text.tertiary(), true: getMarpleBrandColor(500) }}
-          />
+    <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
+      <View style={styles.toggleRow}>
+        <View style={styles.rowText}>
+          <Text style={[getTextStyle('body-large'), { color: themeColors.text.primary() }]}>
+            Daily reminder
+          </Text>
+          <Text style={[getTextStyle('body-small'), { color: themeColors.text.secondary() }]}>
+            {enabled ? timeLabel : 'Off — local notification when habit is due today'}
+          </Text>
         </View>
-      </GroupedList>
+        <Switch
+          value={enabled}
+          onValueChange={onEnabledChange}
+          accessibilityLabel="Daily habit reminder"
+          trackColor={{
+            false: themeColors.interactive.tertiary(),
+            true: switchTrackColor,
+          }}
+          thumbColor={themeColors.background.elevated()}
+          ios_backgroundColor={themeColors.interactive.tertiary()}
+        />
+      </View>
       {enabled ? (
-        <TextInput
-          placeholder="HH:MM (24h, e.g. 09:00)"
+        <View style={styles.timeRow}>
+          <TextInput
+            placeholder="HH:MM (24h, e.g. 09:00)"
             placeholderTextColor={themeColors.text.tertiary()}
             value={timeHHMM}
             onChangeText={onTimeChange}
             keyboardType="numbers-and-punctuation"
             style={[
-              styles.input,
+              getTextStyle('body-large'),
               {
                 color: themeColors.text.primary(),
-                backgroundColor: themeColors.background.primarySecondaryBlend(),
+                flex: 1,
+                minWidth: 0,
+                paddingVertical: Paddings.none,
+                paddingHorizontal: Paddings.none,
+                margin: 0,
+                ...(Platform.OS === 'android' && {
+                  includeFontPadding: false,
+                  textAlignVertical: 'center' as const,
+                }),
               },
-          ]}
-        />
+            ]}
+          />
+        </View>
       ) : null}
-    </>
+    </GroupedList>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
+  listContainer: {
+    marginVertical: 0,
+  },
+  toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Paddings.groupedListContentHorizontal,
-    paddingVertical: Paddings.listItemVertical,
+    width: '100%',
   },
   rowText: {
     flex: 1,
-    marginRight: Paddings.sectionCompact,
+    minWidth: 0,
+    marginRight: Paddings.groupedListIconTextSpacing,
   },
-  input: {
-    borderRadius: Paddings.formDataPillRadius,
-    paddingHorizontal: Paddings.groupedListContentHorizontal,
-    paddingVertical: Paddings.listItemVertical,
-    fontSize: 16,
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
   },
 });

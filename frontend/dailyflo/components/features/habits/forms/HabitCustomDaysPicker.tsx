@@ -7,6 +7,7 @@ import React, { useCallback, useMemo } from 'react';
 import { GroupedList, FormDetailButton } from '@/components/ui/List/GroupedList';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { HABIT_WEEKDAYS } from './habitFormConstants';
+import { getHabitFormListGroupProps } from './habitFormChrome';
 
 type HabitCustomDaysPickerProps = {
   selectedDays: number[];
@@ -15,6 +16,7 @@ type HabitCustomDaysPickerProps = {
 
 export function HabitCustomDaysPicker({ selectedDays, onChange }: HabitCustomDaysPickerProps) {
   const themeColors = useThemeColors();
+  const listGroupProps = useMemo(() => getHabitFormListGroupProps(themeColors), [themeColors]);
   const selectedSet = useMemo(() => new Set(selectedDays), [selectedDays]);
 
   const toggleDay = useCallback(
@@ -31,10 +33,7 @@ export function HabitCustomDaysPicker({ selectedDays, onChange }: HabitCustomDay
   );
 
   return (
-    <GroupedList
-      backgroundColor={themeColors.background.primarySecondaryBlend()}
-      borderRadius={24}
-    >
+    <GroupedList {...listGroupProps}>
       {HABIT_WEEKDAYS.map((d) => (
         <FormDetailButton
           key={d.value}
