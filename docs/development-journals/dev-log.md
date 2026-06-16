@@ -2295,3 +2295,25 @@ TODO:
 - Reminder scheduling mirrors task reminders: same permission gates, `cancelAllHabitReminders` on logout, resync on `fetchHabitsToday`.
 
 ---
+## [16/06/2026] - [Tuesday]
+
+### Today's Goals
+- [x] I aligned **habits create/edit/detail UI** with browse stack patterns (shared form shell, grouped sections, productivity-style top spacing).
+- [x] I replaced the legacy **AchievementUnlockBanner** with a global **achievement unlock toast** — task + habit triggers, dev reset tooling, touch-through overlay, and tunable animation constants.
+
+### Plans For Future
+- **Style habit creation** — polish create modal shell, form fields, and grouped sections beyond the browse-stack architecture pass.
+- **Style habit detail screen** — refine detail header, stats/charts sections, and manage actions chrome.
+- **Style habit list screen** — polish Habits tab today list, empty states, and list row presentation.
+- **Device QA** for Phase 4 habit reminders (Tests 23–25 in habits manual testing guide).
+- Manual pass on achievement toast after dev reset (complete a task on Inbox, complete a habit on Habits tab, confirm toast on any tab without blocking taps).
+- v1.1 backlog: onboarding-habit task migration script, stronger daily rollover reminder resync.
+- v2: quit habits, `linked_habit` goals, planner integration, more habit achievements.
+
+### Notes
+- Commits: **`475a820`** — habits UI ( `HabitFormModalShell`, `HabitFormFields`, `habitFormChrome`, detail blur header + `insets.top + 64` scroll padding, habits tab spacing).
+- Commits: **`2bcff7c`** — achievement toast (`components/ui/Toast/*`, `achievementUnlockDetection.ts`, `POST /gamification/achievements/dev-reset/`, removed `AchievementUnlockBanner.tsx`).
+- Toast animation tuning lives in `achievementUnlockToastTypes.ts` (enter spring, opacity/translate ms, auto-dismiss).
+- Toast styling: neutral **`primary[100]`** fill + **`border.secondary()`** outline on `AchievementToastCard`.
+
+---
