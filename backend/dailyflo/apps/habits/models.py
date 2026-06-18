@@ -15,6 +15,8 @@ class Habit(models.Model):
         ('purple', 'Purple'),
         ('teal', 'Teal'),
         ('orange', 'Orange'),
+        ('pink', 'Pink'),
+        ('cyan', 'Cyan'),
     ]
 
     TRACKING_TYPE_CHOICES = [

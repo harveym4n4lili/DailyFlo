@@ -78,6 +78,8 @@ class Task(models.Model):
         ('purple', 'Purple'),
         ('teal', 'Teal'),
         ('orange', 'Orange'),
+        ('pink', 'Pink'),
+        ('cyan', 'Cyan'),
     ]
     
     # routine type choices - how often the task repeats (once = no repeat)

@@ -9,7 +9,7 @@
  * - Brand colors — four botanical ramps (`PlantBrandColors`, `SageBrandColors`, `MarpleBrandColors`, `MossBrandColors`; same step keys as `PrimaryColors`)
  * - Primary colors (neutral grays)
  * - Semantic colors (success, error, warning, info)
- * - Task category colors
+ * - Task & habit color options (user-selectable accents)
  * - Theme-aware color mappings
  * - Utility functions for color usage
  */
@@ -227,83 +227,98 @@ export const SemanticColors = {
   },
 } as const;
 
-/**
- * Task Category Colors
- * 
- * Colors specifically for task categorization and visual organization.
- * These colors provide visual distinction between different task types.
- */
-export const TaskCategoryColors = {
-  // red - overdue tasks, urgent items
-  red: {
-    25: '#FEF2F2',   // lightest red - red task backgrounds
-    50: '#F9E8E8',   // between 25 and 100 - light red
-    100: '#FEE2E2',  // light red - red task hover states
-    500: '#EF4444',  // base red - red task icons, accents
-    600: '#DC2626',  // darker red - red task buttons
-    900: '#7F1D1D',  // darkest red - red task text
-  },
-  
-  // blue - primary tasks, reading category
-  blue: {
-    25: '#EFF6FF',   // lightest blue - blue task backgrounds
-    50: '#E5EEFE',   // between 25 and 100 - light blue
-    100: '#DBEAFE',  // light blue - blue task hover states
-    500: '#3B82F6',  // base blue - blue task icons, accents
-    600: '#2563EB',  // darker blue - blue task buttons
-    900: '#1E3A8A',  // darkest blue - blue task text
-  },
-  
-  // green - completed tasks, lifestyle category
+// =============================================================================
+// TASK & HABIT COLOR OPTIONS
+// =============================================================================
+// User-selectable accent colors for tasks and habits (color picker, icons,
+// timeline bars, heatmaps, charts). Nine ids on the API — see TASK_HABIT_COLOR_OPTIONS.
+//
+// Picker order (`TASK_HABIT_COLOR_OPTIONS`) — color wheel clockwise from brand green (plant),
+// with green always in the first slot.
+//
+// Each color has exactly 4 shades:
+//   100 — lightest tint (subtle backgrounds, soft fills)
+//   300 — soft accent (borders, secondary highlights)
+//   500 — primary accent (picker swatch, list icons) ← default in getTaskColorValue
+//   700 — deep accent (pressed states, labels on light surfaces)
+
+// Picker order — color wheel clockwise from brand anchor (plant / green), slot 1 = default accent.
+export const TASK_HABIT_COLOR_OPTIONS = [
+  'green',   // plant — brand; wheel starts here
+  'yellow',
+  'orange',
+  'red',     // marple family
+  'pink',
+  'purple',
+  'blue',    // sage family
+  'cyan',
+  'teal',    // moss family
+] as const;
+
+export const TASK_HABIT_COLOR_SHADES = [100, 300, 500, 700] as const;
+
+export type TaskHabitColorName = (typeof TASK_HABIT_COLOR_OPTIONS)[number];
+export type TaskHabitColorShade = (typeof TASK_HABIT_COLOR_SHADES)[number];
+
+export const TaskAndHabitColors = {
   green: {
-    25: '#ECFDF5',   // lightest green - green task backgrounds
-    50: '#E2F7EE',   // between 25 and 100 - light green
-    100: '#D1FAE5',  // light green - green task hover states
-    500: '#10B981',  // base green - green task icons, accents
-    600: '#059669',  // darker green - green task buttons
-    900: '#064E3B',  // darkest green - green task text
+    100: '#EAF2E6',
+    300: '#A8C49A',
+    500: '#7DB06A',
+    700: '#456B3A',
   },
-  
-  // yellow - secondary tasks, meal prep
   yellow: {
-    25: '#FFFBEB',   // lightest amber - yellow task backgrounds
-    50: '#FFF5D8',   // between 25 and 100 - light amber
-    100: '#FEF3C7',  // light amber - yellow task hover states
-    500: '#F59E0B',  // base amber - yellow task icons, accents
-    600: '#D97706',  // darker amber - yellow task buttons
-    900: '#78350F',  // darkest amber - yellow task text
+    100: '#FDF5E3',
+    300: '#E8CB7A',
+    500: '#F2C75A',
+    700: '#8A6D22',
   },
-  
-  // purple - lifestyle category, gym tasks
-  purple: {
-    25: '#FAF5FF',   // lightest violet - purple task backgrounds
-    50: '#F3EBFF',   // between 25 and 100 - light violet
-    100: '#F3E8FF',  // light violet - purple task hover states
-    500: '#8B5CF6',  // base violet - purple task icons, accents
-    600: '#7C3AED',  // darker violet - purple task buttons
-    900: '#4C1D95',  // darkest violet - purple task text
-  },
-  
-  // teal - additional task categories
-  teal: {
-    25: '#F0FDFA',   // lightest teal - teal task backgrounds
-    50: '#E5F7F2',   // between 25 and 100 - light teal
-    100: '#CCFBF1',  // light teal - teal task hover states
-    500: '#14B8A6',  // base teal - teal task icons, accents
-    600: '#0D9488',  // darker teal - teal task buttons
-    900: '#134E4A',  // darkest teal - teal task text
-  },
-  
-  // orange - task color picker option
   orange: {
-    25: '#FFF7ED',   // lightest orange - orange task backgrounds
-    50: '#FFEED8',   // between 25 and 100 - light orange
-    100: '#FFEDD5',  // light orange - orange task hover states
-    500: '#F97316',  // base orange - orange task icons, accents
-    600: '#EA580C',  // darker orange - orange task buttons
-    900: '#9A3412',  // darkest orange - orange task text
+    100: '#FDF0E6',
+    300: '#F0B080',
+    500: '#F19457',
+    700: '#A04F1E',
+  },
+  red: {
+    100: '#FDECEC',
+    300: '#F2A8A8',
+    500: '#D95454',
+    700: '#A83232',
+  },
+  pink: {
+    100: '#FDE8F2',
+    300: '#F0A8C8',
+    500: '#E177AB',
+    700: '#9E2D63',
+  },
+  purple: {
+    100: '#F0E8F5',
+    300: '#B89AD4',
+    500: '#9C69D5',
+    700: '#543A73',
+  },
+  blue: {
+    100: '#E8EEF7',
+    300: '#93AED4',
+    500: '#6594CE',
+    700: '#2D5589',
+  },
+  cyan: {
+    100: '#E5F7FC',
+    300: '#7DD3E8',
+    500: '#2BA8C4',
+    700: '#157A8F',
+  },
+  teal: {
+    100: '#E4F3F0',
+    300: '#7EC4B8',
+    500: '#3A9A8A',
+    700: '#236B60',
   },
 } as const;
+
+/** @deprecated use `TaskAndHabitColors` — kept for existing imports */
+export const TaskCategoryColors = TaskAndHabitColors;
 
 /**
  * Gamification / browse progress board — fixed accent hex values (not theme-mapped).
@@ -538,16 +553,23 @@ export function getSemanticColor(
 }
 
 /**
- * Get a task category color value
- * @param color - The task category color name (red, blue, green, etc.)
- * @param shade - The shade key (50, 100, 500, etc.)
- * @returns The color value as a string
+ * Get a task or habit accent color value
+ * @param color - color id (red, blue, green, yellow, purple, teal, orange)
+ * @param shade - one of 100, 300, 500, 700 (default 500 = picker swatch)
  */
-export function getTaskCategoryColor(
-  color: keyof typeof TaskCategoryColors,
-  shade: keyof typeof TaskCategoryColors.red = 500
+export function getTaskHabitColor(
+  color: TaskHabitColorName,
+  shade: TaskHabitColorShade = 500
 ): string {
-  return TaskCategoryColors[color][shade];
+  return TaskAndHabitColors[color][shade];
+}
+
+/** @deprecated use `getTaskHabitColor` — kept for existing imports */
+export function getTaskCategoryColor(
+  color: keyof typeof TaskAndHabitColors,
+  shade: TaskHabitColorShade = 500
+): string {
+  return getTaskHabitColor(color, shade);
 }
 
 /**
@@ -667,10 +689,11 @@ export function withOpacity(color: string, opacity: number): string {
  *    - Warning: getSemanticColor('warning', 500)
  *    - Info: getSemanticColor('info', 500)
  * 
- * 4. Task Category Colors:
- *    - Task icons: getTaskCategoryColor('red', 500)
- *    - Task backgrounds: getTaskCategoryColor('red', 50)
- *    - Task hover states: getTaskCategoryColor('red', 100)
+ * 4. Task & habit color options:
+ *    - Picker swatch: getTaskHabitColor('green', 500)
+ *    - Soft background: getTaskHabitColor('green', 100)
+ *    - Border / secondary: getTaskHabitColor('green', 300)
+ *    - Deep accent: getTaskHabitColor('green', 700)
  * 
  * 4b. Brand Colors (botanical ramps — plant default for CTAs):
  *    - Primary accent: getBrandColor(500)  → plant 500
@@ -698,7 +721,7 @@ export function withOpacity(color: string, opacity: number): string {
  * // Task card component
  * const taskCardStyle = {
  *   backgroundColor: getThemeColor(theme, 'background', 'elevated'),
- *   borderColor: getTaskCategoryColor(task.color, 100),
+ *   borderColor: getTaskHabitColor(task.color, 300),
  *   color: getThemeColor(theme, 'text', 'primary'),
  * };
  * 
@@ -722,7 +745,7 @@ export function withOpacity(color: string, opacity: number): string {
 export type PrimaryColorShade = keyof typeof PrimaryColors.light;
 export type BrandColorShade = keyof typeof PlantBrandColors;
 export type SemanticColorName = keyof typeof SemanticColors;
-export type TaskCategoryColorName = keyof typeof TaskCategoryColors;
+export type TaskCategoryColorName = TaskHabitColorName;
 export type ThemeColorCategory = keyof typeof ThemeColors.light;
 export type ThemeColorVariant = string;
 

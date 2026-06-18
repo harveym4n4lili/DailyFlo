@@ -17,6 +17,8 @@ class List(models.Model):
         ('purple', 'Purple'),
         ('teal', 'Teal'),
         ('orange', 'Orange'),
+        ('pink', 'Pink'),
+        ('cyan', 'Cyan'),
     ]
     
     # primary key

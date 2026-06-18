@@ -5,18 +5,23 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
+import { ColorCirclePicker } from '@/components/ui/ColorCirclePicker';
 import { GroupedList, GroupedListHeader } from '@/components/ui/List/GroupedList';
 import { WeekdayCirclePicker, WEEKDAY_PICKER_TRACK_HEIGHT } from '@/components/ui/WeekdayCirclePicker';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
+import type { HabitColor } from '@/types/api/habits';
 import { getHabitFormListGroupProps } from './habitFormChrome';
+import { HABIT_COLORS } from './habitFormConstants';
 import { HabitNameDescriptionSection } from './HabitNameDescriptionSection';
 import { HabitCompletionsPerDayStepper } from './HabitCompletionsPerDayStepper';
 
 export type HabitFormFieldsState = {
   title: string;
   description: string;
+  /** accent color saved on the habit — same ids as task colors in ColorPalette.ts */
+  color: HabitColor;
   /** how many times this habit should be completed each due day */
   completionsPerDay: number;
   /** which weekdays the habit is due — 0 = Monday … 6 = Sunday */
@@ -26,6 +31,7 @@ export type HabitFormFieldsState = {
 type HabitFormFieldsProps = HabitFormFieldsState & {
   onTitleChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
+  onColorChange: (color: HabitColor) => void;
   onCompletionsPerDayChange: (value: number) => void;
   onScheduleDaysChange: (days: number[]) => void;
   autoFocusTitle?: boolean;
@@ -36,10 +42,12 @@ type HabitFormFieldsProps = HabitFormFieldsState & {
 export function HabitFormFields({
   title,
   description,
+  color,
   completionsPerDay,
   scheduleDays,
   onTitleChange,
   onDescriptionChange,
+  onColorChange,
   onCompletionsPerDayChange,
   onScheduleDaysChange,
   autoFocusTitle = false,
@@ -61,6 +69,9 @@ export function HabitFormFields({
           autoFocusTitle={autoFocusTitle}
           descriptionInputKey={descriptionInputKey}
         />
+        <Text style={[styles.sectionHint, { color: themeColors.text.secondary() }]}>
+          Add a name and optional description for this habit.
+        </Text>
       </View>
 
       <GroupedListHeader title="Completions per day" style={styles.sectionHeader} />
@@ -72,6 +83,9 @@ export function HabitFormFields({
       >
         <HabitCompletionsPerDayStepper value={completionsPerDay} onChange={onCompletionsPerDayChange} />
       </GroupedList>
+      <Text style={[styles.sectionHint, { color: themeColors.text.secondary() }]}>
+        How many times you want to complete this habit on each due day.
+      </Text>
 
       <GroupedListHeader title="Frequency" style={styles.sectionHeader} />
       <GroupedList
@@ -87,9 +101,16 @@ export function HabitFormFields({
           onChange={onScheduleDaysChange}
         />
       </GroupedList>
-      <Text style={[styles.scheduleHint, { color: themeColors.text.secondary() }]}>
+      <Text style={[styles.sectionHint, { color: themeColors.text.secondary() }]}>
         Tap the days this habit is due.
       </Text>
+
+      <GroupedListHeader title="Color" style={styles.sectionHeader} />
+      <ColorCirclePicker<HabitColor>
+        selectedColor={color}
+        onChange={onColorChange}
+        colors={HABIT_COLORS}
+      />
     </>
   );
 }
@@ -105,7 +126,7 @@ const createStyles = () =>
     sectionHeader: {
       marginTop: Paddings.section,
     },
-    scheduleHint: {
+    sectionHint: {
       ...getTextStyle('body-medium'),
       marginTop: Paddings.sectionCompact,
       paddingHorizontal: Paddings.touchTargetSmall,

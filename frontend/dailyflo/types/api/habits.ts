@@ -12,7 +12,7 @@ export type HabitFrequencyType =
   | 'custom'
   | 'times_per_week';
 
-export type HabitColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'teal' | 'orange';
+export type HabitColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'teal' | 'orange' | 'pink' | 'cyan';
 
 export interface HabitFrequencyConfig {
   dayOfWeek?: number;

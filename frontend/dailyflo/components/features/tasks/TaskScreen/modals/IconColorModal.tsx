@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { getTypographyStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
-import { TaskCategoryColors } from '@/constants/ColorPalette';
+import { TaskAndHabitColors, TASK_HABIT_COLOR_OPTIONS } from '@/constants/ColorPalette';
 import type { TaskColor } from '@/types';
 import { ModalHeader, DraggableModal, LockableScrollView } from '@/components/layout/ModalLayout';
 
@@ -27,8 +27,8 @@ export interface IconColorModalProps {
   taskCategoryColor?: TaskColor;
 }
 
-// available task colors that match our color palette system
-const AVAILABLE_COLORS: TaskColor[] = ['red', 'blue', 'green', 'yellow', 'purple', 'teal', 'orange'];
+// same ids + order as habit/task color pickers in ColorPalette.ts
+const AVAILABLE_COLORS: TaskColor[] = [...TASK_HABIT_COLOR_OPTIONS];
 
 // icon grid configuration
 const ICON_PADDING = 4; // padding around each icon - adjust this to control spacing
@@ -167,7 +167,7 @@ export function IconColorModal({
                     
                     // get the color value from our color palette system
                     // using shade 500 for the main color display
-                    const colorValue = TaskCategoryColors[color][500];
+                    const colorValue = TaskAndHabitColors[color][500];
 
                     return (
                       <Pressable
