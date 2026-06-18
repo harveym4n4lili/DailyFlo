@@ -53,8 +53,26 @@ const initialState: HabitsState = {
 };
 
 function getErrorMessage(error: unknown, fallback: string): string {
-  const err = error as { response?: { data?: { detail?: string } }; message?: string };
-  return err?.response?.data?.detail || err?.message || fallback;
+  const err = error as {
+    response?: { data?: Record<string, unknown> | string };
+    message?: string;
+    code?: string;
+  };
+  const data = err?.response?.data;
+  if (typeof data === 'string' && data.trim()) return data;
+  if (data && typeof data === 'object') {
+    if (typeof data.detail === 'string' && data.detail.trim()) return data.detail;
+    const parts = Object.entries(data).flatMap(([key, val]) => {
+      if (Array.isArray(val)) return val.map((m) => `${key}: ${String(m)}`);
+      if (typeof val === 'string') return [`${key}: ${val}`];
+      return [];
+    });
+    if (parts.length > 0) return parts.join('\n');
+  }
+  if (err?.code === 'ECONNABORTED' || err?.message?.includes('Network Error')) {
+    return 'Could not reach the server. Check Wi‑Fi and that this device can reach the API URL.';
+  }
+  return err?.message || fallback;
 }
 
 /** read signed-in user notification prefs — same gate as task reminders */
@@ -122,6 +140,8 @@ export const createHabit = createAsyncThunk(
     try {
       const habit = await habitsApiService.createHabit(input);
       await scheduleReminderForHabitAfterSave(habit.id, habit.reminderTime ?? '', getState, dispatch);
+      // refresh today's list so the new habit appears when the create modal closes
+      await dispatch(fetchHabitsToday());
       return habit;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Failed to create habit'));

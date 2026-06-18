@@ -38,6 +38,7 @@ class Habit(models.Model):
         related_name='habits',
     )
     title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, default='')
     icon_key = models.CharField(max_length=64, blank=True, default='')
     color = models.CharField(max_length=20, choices=COLOR_CHOICES, default='green')
     tracking_type = models.CharField(max_length=20, choices=TRACKING_TYPE_CHOICES, default='binary')

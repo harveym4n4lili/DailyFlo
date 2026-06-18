@@ -25,6 +25,7 @@ export interface HabitFrequencyConfig {
 export interface Habit {
   id: string;
   title: string;
+  description?: string;
   iconKey: string;
   color: HabitColor;
   trackingType: HabitTrackingType;
@@ -70,6 +71,7 @@ export interface HabitsTodayResponse {
 
 export interface CreateHabitInput {
   title: string;
+  description?: string;
   iconKey?: string;
   color?: HabitColor;
   trackingType?: HabitTrackingType;
@@ -82,6 +84,7 @@ export interface CreateHabitInput {
 
 export interface UpdateHabitInput {
   title?: string;
+  description?: string;
   iconKey?: string;
   color?: HabitColor;
   trackingType?: HabitTrackingType;

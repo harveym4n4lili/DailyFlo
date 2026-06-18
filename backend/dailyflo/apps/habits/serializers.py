@@ -21,6 +21,7 @@ class HabitSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'title',
+            'description',
             'iconKey',
             'color',
             'trackingType',
