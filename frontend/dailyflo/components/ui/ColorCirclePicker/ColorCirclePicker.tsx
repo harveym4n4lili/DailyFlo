@@ -1,16 +1,18 @@
 /**
- * horizontal color toggles — circular swatches with the same row layout as WeekdayCirclePicker.
+ * multi-row color grid — flex-wrap packs swatches; selection animates size + border via reanimated.
  */
 
 import * as Haptics from 'expo-haptics';
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, {
+  interpolate,
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
-import {
-  WEEKDAY_PICKER_CIRCLE_SIZE,
-  WEEKDAY_PICKER_INNER_PAD_HORIZONTAL,
-  WEEKDAY_PICKER_TRACK_HEIGHT,
-} from '@/components/ui/WeekdayCirclePicker/weekdayCirclePickerLayout';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTaskColorValue } from '@/utils/taskColors';
 
@@ -18,13 +20,65 @@ import {
   colorCirclePickerLabel,
   DEFAULT_COLOR_CIRCLE_PICKER_COLORS,
 } from './colorCirclePickerConstants';
+import {
+  COLOR_CIRCLE_PICKER_GAP,
+  COLOR_CIRCLE_PICKER_INNER_PAD_HORIZONTAL,
+  COLOR_CIRCLE_PICKER_OUTER_STROKE,
+  COLOR_CIRCLE_PICKER_SELECTED_SIZE,
+  COLOR_CIRCLE_PICKER_SIZE,
+  COLOR_CIRCLE_PICKER_SLOT_SIZE,
+  COLOR_CIRCLE_PICKER_SPRING,
+} from './colorCirclePickerLayout';
 
-/** inset ring width on selected swatch — drawn inside the 44px circle using background.secondary() */
-const SELECTED_INSET_BORDER_WIDTH = 4;
+type ColorSwatchProps<T extends string> = {
+  color: T;
+  isSelected: boolean;
+  label: string;
+  onPress: () => void;
+};
 
-const COLOR_CIRCLE_INNER_SIZE =
-  WEEKDAY_PICKER_CIRCLE_SIZE - SELECTED_INSET_BORDER_WIDTH * 2;
-const COLOR_CIRCLE_INNER_RADIUS = COLOR_CIRCLE_INNER_SIZE / 2;
+function ColorSwatch<T extends string>({ color, isSelected, label, onPress }: ColorSwatchProps<T>) {
+  const themeColors = useThemeColors();
+  const fill = getTaskColorValue(color, 500);
+  const ringColor = getTaskColorValue(color, 300);
+  const selectedBorderColor = themeColors.background.secondary();
+
+  // 0 = compact + color ring, 1 = expanded + secondary stroke
+  const selection = useSharedValue(isSelected ? 1 : 0);
+
+  useEffect(() => {
+    selection.value = withSpring(isSelected ? 1 : 0, COLOR_CIRCLE_PICKER_SPRING);
+  }, [isSelected, selection]);
+
+  const swatchStyle = useAnimatedStyle(() => {
+    const size = interpolate(
+      selection.value,
+      [0, 1],
+      [COLOR_CIRCLE_PICKER_SIZE, COLOR_CIRCLE_PICKER_SELECTED_SIZE],
+    );
+
+    return {
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+      borderWidth: COLOR_CIRCLE_PICKER_OUTER_STROKE,
+      backgroundColor: fill,
+      borderColor: interpolateColor(selection.value, [0, 1], [ringColor, selectedBorderColor]),
+    };
+  });
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: isSelected }}
+      style={({ pressed }) => [styles.colorSlot, pressed && styles.colorCirclePressed]}
+    >
+      <Animated.View style={swatchStyle} />
+    </Pressable>
+  );
+}
 
 export type ColorCirclePickerProps<T extends string = string> = {
   /** which color is currently selected — single-select only */
@@ -45,8 +99,6 @@ export function ColorCirclePicker<T extends string = string>({
   getLabel = colorCirclePickerLabel as (color: T) => string,
   style,
 }: ColorCirclePickerProps<T>) {
-  const themeColors = useThemeColors();
-
   const selectColor = useCallback(
     (color: T) => {
       if (color === selectedColor) return;
@@ -58,52 +110,17 @@ export function ColorCirclePicker<T extends string = string>({
 
   return (
     <View style={[styles.root, style]} accessibilityRole="radiogroup">
-      {/* same horizontal inset as WeekdayCirclePicker / duration slider */}
       <View style={styles.innerPad}>
-        <View style={styles.colorRow}>
-          {colors.map((color) => {
-            const isSelected = color === selectedColor;
-            const label = getLabel(color);
-
-            return (
-              <Pressable
-                key={color}
-                onPress={() => selectColor(color)}
-                accessibilityRole="radio"
-                accessibilityLabel={label}
-                accessibilityState={{ selected: isSelected }}
-                style={({ pressed }) => [
-                  styles.colorCircle,
-                  pressed && styles.colorCirclePressed,
-                ]}
-              >
-                {isSelected ? (
-                  <>
-                    {/* secondary ring sits behind the inset fill so the stroke reads inside the circle */}
-                    <View
-                      style={[
-                        styles.colorCircleRing,
-                        { backgroundColor: themeColors.background.secondary() },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.colorCircleInsetFill,
-                        { backgroundColor: getTaskColorValue(color) },
-                      ]}
-                    />
-                  </>
-                ) : (
-                  <View
-                    style={[
-                      styles.colorCircleFill,
-                      { backgroundColor: getTaskColorValue(color) },
-                    ]}
-                  />
-                )}
-              </Pressable>
-            );
-          })}
+        <View style={styles.colorGrid}>
+          {colors.map((color) => (
+            <ColorSwatch
+              key={color}
+              color={color}
+              isSelected={color === selectedColor}
+              label={getLabel(color)}
+              onPress={() => selectColor(color)}
+            />
+          ))}
         </View>
       </View>
     </View>
@@ -115,37 +132,20 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   innerPad: {
-    paddingHorizontal: WEEKDAY_PICKER_INNER_PAD_HORIZONTAL,
+    paddingHorizontal: COLOR_CIRCLE_PICKER_INNER_PAD_HORIZONTAL,
     width: '100%',
   },
-  colorRow: {
-    height: WEEKDAY_PICKER_TRACK_HEIGHT,
+  colorGrid: {
+    width: '100%',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: COLOR_CIRCLE_PICKER_GAP,
+  },
+  colorSlot: {
+    width: COLOR_CIRCLE_PICKER_SLOT_SIZE,
+    height: COLOR_CIRCLE_PICKER_SLOT_SIZE,
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  colorCircle: {
-    width: WEEKDAY_PICKER_CIRCLE_SIZE,
-    height: WEEKDAY_PICKER_CIRCLE_SIZE,
-    borderRadius: WEEKDAY_PICKER_CIRCLE_SIZE / 2,
-    overflow: 'hidden',
-  },
-  colorCircleFill: {
-    width: '100%',
-    height: '100%',
-    borderRadius: WEEKDAY_PICKER_CIRCLE_SIZE / 2,
-  },
-  colorCircleRing: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: WEEKDAY_PICKER_CIRCLE_SIZE / 2,
-  },
-  colorCircleInsetFill: {
-    position: 'absolute',
-    top: SELECTED_INSET_BORDER_WIDTH,
-    left: SELECTED_INSET_BORDER_WIDTH,
-    width: COLOR_CIRCLE_INNER_SIZE,
-    height: COLOR_CIRCLE_INNER_SIZE,
-    borderRadius: COLOR_CIRCLE_INNER_RADIUS,
+    justifyContent: 'center',
   },
   colorCirclePressed: {
     opacity: 0.88,

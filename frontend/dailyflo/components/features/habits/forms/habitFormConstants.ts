@@ -2,6 +2,7 @@
  * shared pickers for habit create + edit forms.
  */
 
+import { TASK_HABIT_COLOR_OPTIONS } from '@/constants/ColorPalette';
 import type { HabitColor, HabitFrequencyType } from '@/types/api/habits';
 
 export const HABIT_FREQUENCIES: { id: HabitFrequencyType; label: string }[] = [
@@ -23,4 +24,5 @@ export const HABIT_WEEKDAYS = [
   { value: 6, label: 'Sunday' },
 ];
 
-export const HABIT_COLORS: HabitColor[] = ['green', 'blue', 'teal', 'purple', 'orange', 'yellow', 'red'];
+/** same order as TASK_HABIT_COLOR_OPTIONS in ColorPalette.ts */
+export const HABIT_COLORS: HabitColor[] = [...TASK_HABIT_COLOR_OPTIONS];

@@ -6,7 +6,7 @@
  */
 
 import { CreateTaskInput, PriorityLevel, RoutineType } from '@/types';
-import { TaskCategoryColorName } from '@/constants/ColorPalette';
+import { TaskCategoryColorName, TASK_HABIT_COLOR_OPTIONS } from '@/constants/ColorPalette';
 import { normalizeTimeToHHMM } from '@/utils/taskFormatters';
 
 export type ValidationErrors = Partial<Record<keyof CreateTaskInput | 'title', string>>;
@@ -59,7 +59,7 @@ export function validateField<K extends keyof TaskFormValues>(
   }
 
   if (key === 'color') {
-    const allowed: TaskCategoryColorName[] = ['red', 'blue', 'green', 'yellow', 'purple', 'teal', 'orange'];
+    const allowed: TaskCategoryColorName[] = [...TASK_HABIT_COLOR_OPTIONS];
     if (value && !allowed.includes(value as TaskCategoryColorName)) return 'invalid color';
   }
 

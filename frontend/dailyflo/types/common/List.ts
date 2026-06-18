@@ -8,7 +8,7 @@
 
 // Define the possible color choices for lists
 // This matches the COLOR_CHOICES in the backend List model
-export type ListColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'teal' | 'orange';
+export type ListColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'teal' | 'orange' | 'pink' | 'cyan';
 
 // Main List interface that represents a task list/category
 // This interface matches the Django List model structure

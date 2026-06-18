@@ -17,7 +17,7 @@
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TaskColor } from '@/types';
-import { getTaskCategoryColor } from '@/constants/ColorPalette';
+import { getTaskHabitColor, TASK_HABIT_COLOR_OPTIONS, type TaskHabitColorShade } from '@/constants/ColorPalette';
 
 const THEME_COLOR_STORAGE_KEY = '@DailyFlo:themeColor';
 
@@ -38,7 +38,7 @@ export function useThemeColor() {
         if (stored) {
           const color = stored as TaskColor;
           // Validate that it's a valid task color
-          const validColors: TaskColor[] = ['red', 'blue', 'green', 'yellow', 'purple', 'teal', 'orange'];
+          const validColors: TaskColor[] = [...TASK_HABIT_COLOR_OPTIONS];
           if (validColors.includes(color)) {
             setThemeColorState(color);
           }
@@ -63,8 +63,8 @@ export function useThemeColor() {
   };
 
   // Get the actual color value (hex) for the theme color
-  const getThemeColorValue = (shade: keyof ReturnType<typeof getTaskCategoryColor> = 500): string => {
-    return getTaskCategoryColor(themeColor, shade);
+  const getThemeColorValue = (shade: TaskHabitColorShade = 500): string => {
+    return getTaskHabitColor(themeColor, shade);
   };
 
   return {

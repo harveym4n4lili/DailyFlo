@@ -27,7 +27,7 @@ export default function HabitCreateScreen() {
   const [description, setDescription] = useState('');
   const [completionsPerDay, setCompletionsPerDay] = useState(MIN_HABIT_COMPLETIONS_PER_DAY);
   const [scheduleDays, setScheduleDays] = useState<number[]>(getDefaultScheduleDays);
-  const color: HabitColor = 'green';
+  const [color, setColor] = useState<HabitColor>('green');
 
   const canSubmit = title.trim().length > 0 && !isSaving;
 
@@ -82,10 +82,12 @@ export default function HabitCreateScreen() {
       <HabitFormFields
         title={title}
         description={description}
+        color={color}
         completionsPerDay={completionsPerDay}
         scheduleDays={scheduleDays}
         onTitleChange={setTitle}
         onDescriptionChange={setDescription}
+        onColorChange={setColor}
         onCompletionsPerDayChange={setCompletionsPerDay}
         onScheduleDaysChange={setScheduleDays}
         autoFocusTitle

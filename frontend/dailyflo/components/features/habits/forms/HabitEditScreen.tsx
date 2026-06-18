@@ -114,10 +114,12 @@ export default function HabitEditScreen() {
       <HabitFormFields
         title={title}
         description={description}
+        color={color}
         completionsPerDay={completionsPerDay}
         scheduleDays={scheduleDays}
         onTitleChange={setTitle}
         onDescriptionChange={setDescription}
+        onColorChange={setColor}
         onCompletionsPerDayChange={setCompletionsPerDay}
         onScheduleDaysChange={setScheduleDays}
         descriptionInputKey={hydrated ? habitId : undefined}
