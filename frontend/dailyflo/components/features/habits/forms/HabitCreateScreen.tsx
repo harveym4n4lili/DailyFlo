@@ -12,39 +12,43 @@ import { HabitFormModalShell } from './HabitFormModalShell';
 import { HabitFormFields } from './HabitFormFields';
 import {
   buildHabitFrequencyConfig,
-  isValidHabitReminderTime,
-  normalizeHabitReminderTime,
+  deriveFrequencyFromScheduleDays,
+  getDefaultScheduleDays,
 } from './habitFormUtils';
-import type { CreateHabitInput, HabitColor, HabitFrequencyType, HabitTrackingType } from '@/types/api/habits';
+import type { CreateHabitInput, HabitColor, HabitTrackingType } from '@/types/api/habits';
 
 export default function HabitCreateScreen() {
   const router = useGuardedRouter();
   const { createHabit, isSaving } = useHabits();
 
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [trackingType, setTrackingType] = useState<HabitTrackingType>('binary');
   const [targetValue, setTargetValue] = useState('8');
   const [unitLabel, setUnitLabel] = useState('');
-  const [frequencyType, setFrequencyType] = useState<HabitFrequencyType>('daily');
-  const [dayOfWeek, setDayOfWeek] = useState(0);
-  const [timesPerWeek, setTimesPerWeek] = useState('3');
-  const [customDays, setCustomDays] = useState<number[]>([0, 2, 4]);
-  const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderTime, setReminderTime] = useState('09:00');
-  const [color, setColor] = useState<HabitColor>('green');
+  const [scheduleDays, setScheduleDays] = useState<number[]>(getDefaultScheduleDays);
+  const color: HabitColor = 'green';
 
   const canSubmit = title.trim().length > 0 && !isSaving;
 
   const handleSubmit = useCallback(() => {
-    if (!title.trim()) return;
+    if (!title.trim() || isSaving) return;
+
+    if (scheduleDays.length === 0) {
+      Alert.alert('Pick days', 'Select at least one day for this habit.');
+      return;
+    }
+
+    const { frequencyType, dayOfWeek, customDays } = deriveFrequencyFromScheduleDays(scheduleDays);
 
     const input: CreateHabitInput = {
       title: title.trim(),
+      description: description.trim(),
       color,
       trackingType,
       frequencyType,
-      frequencyConfig: buildHabitFrequencyConfig(frequencyType, dayOfWeek, timesPerWeek, customDays),
-      reminderTime: normalizeHabitReminderTime(reminderEnabled, reminderTime),
+      frequencyConfig: buildHabitFrequencyConfig(frequencyType, dayOfWeek, '', customDays),
+      reminderTime: '',
     };
 
     if (trackingType === 'numeric') {
@@ -57,24 +61,6 @@ export default function HabitCreateScreen() {
       input.unitLabel = unitLabel.trim();
     }
 
-    if (frequencyType === 'times_per_week') {
-      const count = parseInt(timesPerWeek, 10);
-      if (Number.isNaN(count) || count < 1) {
-        Alert.alert('Invalid count', 'Enter how many times per week (at least 1).');
-        return;
-      }
-    }
-
-    if (frequencyType === 'custom' && customDays.length === 0) {
-      Alert.alert('Pick days', 'Select at least one day for a custom schedule.');
-      return;
-    }
-
-    if (reminderEnabled && !isValidHabitReminderTime(reminderTime)) {
-      Alert.alert('Invalid time', 'Enter reminder time as HH:MM (e.g. 09:00).');
-      return;
-    }
-
     void (async () => {
       try {
         await createHabit(input);
@@ -85,18 +71,15 @@ export default function HabitCreateScreen() {
     })();
   }, [
     title,
+    description,
     color,
     trackingType,
     targetValue,
     unitLabel,
-    frequencyType,
-    dayOfWeek,
-    timesPerWeek,
-    customDays,
-    reminderEnabled,
-    reminderTime,
+    scheduleDays,
     createHabit,
     router,
+    isSaving,
   ]);
 
   return (
@@ -108,28 +91,17 @@ export default function HabitCreateScreen() {
     >
       <HabitFormFields
         title={title}
+        description={description}
         trackingType={trackingType}
         targetValue={targetValue}
         unitLabel={unitLabel}
-        frequencyType={frequencyType}
-        dayOfWeek={dayOfWeek}
-        timesPerWeek={timesPerWeek}
-        customDays={customDays}
-        reminderEnabled={reminderEnabled}
-        reminderTime={reminderTime}
-        color={color}
+        scheduleDays={scheduleDays}
         onTitleChange={setTitle}
+        onDescriptionChange={setDescription}
         onTrackingTypeChange={setTrackingType}
         onTargetValueChange={setTargetValue}
         onUnitLabelChange={setUnitLabel}
-        onFrequencyTypeChange={setFrequencyType}
-        onDayOfWeekChange={setDayOfWeek}
-        onTimesPerWeekChange={setTimesPerWeek}
-        onCustomDaysChange={setCustomDays}
-        onReminderEnabledChange={setReminderEnabled}
-        onReminderTimeChange={setReminderTime}
-        onColorChange={setColor}
-        showCreateHint
+        onScheduleDaysChange={setScheduleDays}
         autoFocusTitle
       />
     </HabitFormModalShell>

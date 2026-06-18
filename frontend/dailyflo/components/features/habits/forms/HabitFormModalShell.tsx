@@ -12,6 +12,7 @@ import { BlurView } from 'expo-blur';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { useKeyboardHeight } from '@/components/layout/ScreenLayout';
 import { MainCloseButton, MainSubmitButton } from '@/components/ui/Button';
 import {
   IosBrowseModalCloseStackToolbar,
@@ -58,6 +59,10 @@ export function HabitFormModalShell({
   const scrollTopPadding =
     Platform.OS === 'ios' ? headerHeight + 24 : HABIT_FORM_HEADER_TOP + HABIT_FORM_HEADER_ROW_HEIGHT + 24;
 
+  // extra scroll inset when keyboard is open — same idea as TaskScreenContent so name/description stay visible
+  const keyboardHeight = useKeyboardHeight();
+  const scrollBottomPadding = keyboardHeight > 0 ? keyboardHeight + 32 : 200;
+
   return (
     <>
       {Platform.OS === 'ios' ? (
@@ -74,19 +79,22 @@ export function HabitFormModalShell({
         icon="checkmark"
         onPress={onSubmit}
         disabled={!canSubmit}
+        brandActive={canSubmit}
         accessibilityLabel={submitAccessibilityLabel}
       />
       <View style={[styles.container, { backgroundColor: themeColors.background.primary() }]}>
         <View style={styles.contentArea}>
           <ScrollView
             style={styles.scroll}
-            contentContainerStyle={[styles.scrollContent, { paddingTop: scrollTopPadding }]}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingTop: scrollTopPadding, paddingBottom: scrollBottomPadding },
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           >
             {children}
-            <View style={styles.bottomSpacer} />
           </ScrollView>
         </View>
 
@@ -198,8 +206,5 @@ const createStyles = () =>
       height: HABIT_FORM_TOP_SECTION_HEIGHT,
       zIndex: 11,
       overflow: 'visible',
-    },
-    bottomSpacer: {
-      height: 200,
     },
   });

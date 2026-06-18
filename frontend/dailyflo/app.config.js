@@ -69,6 +69,31 @@ function withGoogleSignInPlugin(plugins, iosUrlScheme) {
   });
 }
 
+/** ensure expo-build-properties is present once — fixes Google Sign-In static pod install on EAS */
+const IOS_GOOGLE_SIGN_IN_BUILD_PROPERTIES = [
+  'expo-build-properties',
+  {
+    ios: {
+      // AppCheckCore 11.3.0 → RecaptchaInterop + GoogleUtilities need module maps in static builds
+      extraPods: [
+        { name: 'GoogleUtilities', modular_headers: true },
+        { name: 'RecaptchaInterop', modular_headers: true },
+      ],
+    },
+  },
+];
+
+function withIosBuildPropertiesPlugin(plugins) {
+  if (!Array.isArray(plugins)) return [IOS_GOOGLE_SIGN_IN_BUILD_PROPERTIES];
+  const hasBuildProperties = plugins.some(
+    (entry) =>
+      entry === 'expo-build-properties' ||
+      (Array.isArray(entry) && entry[0] === 'expo-build-properties'),
+  );
+  if (hasBuildProperties) return plugins;
+  return [...plugins, IOS_GOOGLE_SIGN_IN_BUILD_PROPERTIES];
+}
+
 module.exports = ({ config }) => {
   const projectRoot = __dirname;
   const iosUrlScheme = getIosGoogleUrlScheme(projectRoot);
@@ -76,9 +101,13 @@ module.exports = ({ config }) => {
   const urlSchemes = [scheme];
   if (iosUrlScheme) urlSchemes.push(iosUrlScheme);
 
+  const plugins = withIosBuildPropertiesPlugin(
+    withGoogleSignInPlugin(config.plugins, iosUrlScheme),
+  );
+
   return {
     ...config,
-    plugins: withGoogleSignInPlugin(config.plugins, iosUrlScheme),
+    plugins,
     ios: {
       ...config.ios,
       googleServicesFile:

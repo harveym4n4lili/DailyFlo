@@ -6,79 +6,57 @@ import React, { useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, Platform } from 'react-native';
 
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
-import { useThemeColors, useColorPalette } from '@/hooks/useColorPalette';
+import { WeekdayCirclePicker, WEEKDAY_PICKER_TRACK_HEIGHT } from '@/components/ui/WeekdayCirclePicker';
+import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
-import { HABIT_COLORS, HABIT_FREQUENCIES, HABIT_WEEKDAYS } from './habitFormConstants';
 import { getHabitFormListGroupProps, getHabitFormNameGroupProps } from './habitFormChrome';
-import { HabitCustomDaysPicker } from './HabitCustomDaysPicker';
-import { HabitReminderField } from './HabitReminderField';
-import type { HabitColor, HabitFrequencyType, HabitTrackingType } from '@/types/api/habits';
+import { HabitNameDescriptionSection } from './HabitNameDescriptionSection';
+import type { HabitTrackingType } from '@/types/api/habits';
 
 export type HabitFormFieldsState = {
   title: string;
+  description: string;
   trackingType: HabitTrackingType;
   targetValue: string;
   unitLabel: string;
-  frequencyType: HabitFrequencyType;
-  dayOfWeek: number;
-  timesPerWeek: string;
-  customDays: number[];
-  reminderEnabled: boolean;
-  reminderTime: string;
-  color: HabitColor;
+  /** which weekdays the habit is due — 0 = Monday … 6 = Sunday */
+  scheduleDays: number[];
 };
 
 type HabitFormFieldsProps = HabitFormFieldsState & {
   onTitleChange: (value: string) => void;
+  onDescriptionChange: (value: string) => void;
   onTrackingTypeChange: (value: HabitTrackingType) => void;
   onTargetValueChange: (value: string) => void;
   onUnitLabelChange: (value: string) => void;
-  onFrequencyTypeChange: (value: HabitFrequencyType) => void;
-  onDayOfWeekChange: (value: number) => void;
-  onTimesPerWeekChange: (value: string) => void;
-  onCustomDaysChange: (days: number[]) => void;
-  onReminderEnabledChange: (enabled: boolean) => void;
-  onReminderTimeChange: (time: string) => void;
-  onColorChange: (color: HabitColor) => void;
-  /** create screen shows a short hint under the name field */
-  showCreateHint?: boolean;
+  onScheduleDaysChange: (days: number[]) => void;
   autoFocusTitle?: boolean;
+  /** remounts description field after edit screen loads habit from API */
+  descriptionInputKey?: string;
 };
 
 export function HabitFormFields({
   title,
+  description,
   trackingType,
   targetValue,
   unitLabel,
-  frequencyType,
-  dayOfWeek,
-  timesPerWeek,
-  customDays,
-  reminderEnabled,
-  reminderTime,
-  color,
+  scheduleDays,
   onTitleChange,
+  onDescriptionChange,
   onTrackingTypeChange,
   onTargetValueChange,
   onUnitLabelChange,
-  onFrequencyTypeChange,
-  onDayOfWeekChange,
-  onTimesPerWeekChange,
-  onCustomDaysChange,
-  onReminderEnabledChange,
-  onReminderTimeChange,
-  onColorChange,
-  showCreateHint = false,
+  onScheduleDaysChange,
   autoFocusTitle = false,
+  descriptionInputKey,
 }: HabitFormFieldsProps) {
   const themeColors = useThemeColors();
-  const { getMarpleBrandColor } = useColorPalette();
   const styles = useMemo(() => createStyles(), []);
 
   const listGroupProps = useMemo(() => getHabitFormListGroupProps(themeColors), [themeColors]);
   const nameGroupProps = useMemo(() => getHabitFormNameGroupProps(themeColors), [themeColors]);
-  const groupedListIconColor = getMarpleBrandColor(500);
 
   const inputStyle = useMemo(
     () => [
@@ -102,29 +80,14 @@ export function HabitFormFields({
   return (
     <>
       <View style={styles.groupedListSectionFirst}>
-        <GroupedList containerStyle={styles.listContainer} {...nameGroupProps}>
-          <View style={styles.nameRow}>
-            <TextInput
-              value={title}
-              onChangeText={onTitleChange}
-              placeholder="Name"
-              placeholderTextColor={themeColors.text.tertiary()}
-              selectionColor="#FFFFFF"
-              cursorColor="#FFFFFF"
-              selectionHandleColor="#FFFFFF"
-              underlineColorAndroid="transparent"
-              accessibilityLabel="Habit name"
-              style={inputStyle}
-              autoFocus={autoFocusTitle}
-              returnKeyType="done"
-            />
-          </View>
-        </GroupedList>
-        {showCreateHint ? (
-          <Text style={[styles.createHint, { color: themeColors.text.secondary() }]}>
-            Check off when done, or count toward a daily target you can +1 from the list.
-          </Text>
-        ) : null}
+        <HabitNameDescriptionSection
+          title={title}
+          onTitleChange={onTitleChange}
+          description={description}
+          onDescriptionChange={onDescriptionChange}
+          autoFocusTitle={autoFocusTitle}
+          descriptionInputKey={descriptionInputKey}
+        />
       </View>
 
       <GroupedListHeader title="Tracking" style={styles.sectionHeader} />
@@ -166,80 +129,23 @@ export function HabitFormFields({
         </View>
       ) : null}
 
-      <GroupedListHeader title="Schedule" style={styles.sectionHeader} />
-      <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
-        {HABIT_FREQUENCIES.map((f) => (
-          <FormDetailButton
-            key={f.id}
-            label={f.label}
-            value={frequencyType === f.id ? 'Selected' : ''}
-            onPress={() => onFrequencyTypeChange(f.id)}
-            showChevron={false}
-          />
-        ))}
+      <GroupedListHeader title="Frequency" style={styles.sectionHeader} />
+      <GroupedList
+        containerStyle={styles.listContainer}
+        {...listGroupProps}
+        contentPaddingHorizontal={0}
+        contentPaddingVertical={0}
+        contentMinHeight={WEEKDAY_PICKER_TRACK_HEIGHT}
+      >
+        <WeekdayCirclePicker
+          mode="multi"
+          selectedDays={scheduleDays}
+          onChange={onScheduleDaysChange}
+        />
       </GroupedList>
-
-      {frequencyType === 'weekly' ? (
-        <View style={styles.groupedListSection}>
-          <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
-            {HABIT_WEEKDAYS.map((d) => (
-              <FormDetailButton
-                key={d.value}
-                label={d.label}
-                value={dayOfWeek === d.value ? 'Selected' : ''}
-                onPress={() => onDayOfWeekChange(d.value)}
-                showChevron={false}
-              />
-            ))}
-          </GroupedList>
-        </View>
-      ) : null}
-
-      {frequencyType === 'custom' ? (
-        <View style={styles.groupedListSection}>
-          <HabitCustomDaysPicker selectedDays={customDays} onChange={onCustomDaysChange} />
-        </View>
-      ) : null}
-
-      {frequencyType === 'times_per_week' ? (
-        <View style={styles.groupedListSection}>
-          <GroupedList containerStyle={styles.listContainer} {...nameGroupProps}>
-            <View style={styles.nameRow}>
-              <TextInput
-                value={timesPerWeek}
-                onChangeText={onTimesPerWeekChange}
-                placeholder="Times per week"
-                placeholderTextColor={themeColors.text.tertiary()}
-                keyboardType="number-pad"
-                style={inputStyle}
-              />
-            </View>
-          </GroupedList>
-        </View>
-      ) : null}
-
-      <GroupedListHeader title="Reminder" style={styles.sectionHeader} />
-      <HabitReminderField
-        enabled={reminderEnabled}
-        timeHHMM={reminderTime}
-        onEnabledChange={onReminderEnabledChange}
-        onTimeChange={onReminderTimeChange}
-        listGroupProps={listGroupProps}
-        switchTrackColor={groupedListIconColor}
-      />
-
-      <GroupedListHeader title="Color" style={styles.sectionHeader} />
-      <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
-        {HABIT_COLORS.map((c) => (
-          <FormDetailButton
-            key={c}
-            label={c.charAt(0).toUpperCase() + c.slice(1)}
-            value={color === c ? 'Selected' : ''}
-            onPress={() => onColorChange(c)}
-            showChevron={false}
-          />
-        ))}
-      </GroupedList>
+      <Text style={[styles.scheduleHint, { color: themeColors.text.secondary() }]}>
+        Tap the days this habit is due.
+      </Text>
     </>
   );
 }
@@ -263,7 +169,7 @@ const createStyles = () =>
     sectionHeader: {
       marginTop: Paddings.section,
     },
-    createHint: {
+    scheduleHint: {
       ...getTextStyle('body-medium'),
       marginTop: Paddings.sectionCompact,
       paddingHorizontal: Paddings.touchTargetSmall,

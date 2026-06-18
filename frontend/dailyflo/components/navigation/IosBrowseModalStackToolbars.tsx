@@ -6,7 +6,7 @@
  * display apply uses brandActive trailing toolbar — marple glass circle inside Stack.Toolbar.View (native bar touch target).
  */
 
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 
@@ -65,6 +65,13 @@ export function IosBrowseModalTrailingStackToolbar({
   const themeColors = useThemeColors();
   const tint = tintColor ?? themeColors.text.primary();
 
+  // native Stack.Toolbar.Button can keep a stale onPress on ipad — always call the latest handler
+  const onPressRef = useRef(onPress);
+  onPressRef.current = onPress;
+  const handlePress = useCallback(() => {
+    onPressRef.current();
+  }, []);
+
   if (Platform.OS !== 'ios') {
     return null;
   }
@@ -82,7 +89,7 @@ export function IosBrowseModalTrailingStackToolbar({
             layout="inline"
             brandActive
             animateVisibility={false}
-            onPress={onPress}
+            onPress={handlePress}
             accessibilityLabel={accessibilityLabel}
           />
         </Stack.Toolbar.View>
@@ -94,7 +101,7 @@ export function IosBrowseModalTrailingStackToolbar({
     <Stack.Toolbar placement="right">
       <Stack.Toolbar.Button
         icon={icon}
-        onPress={onPress}
+        onPress={handlePress}
         accessibilityLabel={accessibilityLabel}
         tintColor={tint}
       />
