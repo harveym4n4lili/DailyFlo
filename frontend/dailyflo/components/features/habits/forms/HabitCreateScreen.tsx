@@ -14,8 +14,10 @@ import {
   buildHabitFrequencyConfig,
   deriveFrequencyFromScheduleDays,
   getDefaultScheduleDays,
+  habitTrackingFromCompletionsPerDay,
+  MIN_HABIT_COMPLETIONS_PER_DAY,
 } from './habitFormUtils';
-import type { CreateHabitInput, HabitColor, HabitTrackingType } from '@/types/api/habits';
+import type { CreateHabitInput, HabitColor } from '@/types/api/habits';
 
 export default function HabitCreateScreen() {
   const router = useGuardedRouter();
@@ -23,9 +25,7 @@ export default function HabitCreateScreen() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [trackingType, setTrackingType] = useState<HabitTrackingType>('binary');
-  const [targetValue, setTargetValue] = useState('8');
-  const [unitLabel, setUnitLabel] = useState('');
+  const [completionsPerDay, setCompletionsPerDay] = useState(MIN_HABIT_COMPLETIONS_PER_DAY);
   const [scheduleDays, setScheduleDays] = useState<number[]>(getDefaultScheduleDays);
   const color: HabitColor = 'green';
 
@@ -40,26 +40,18 @@ export default function HabitCreateScreen() {
     }
 
     const { frequencyType, dayOfWeek, customDays } = deriveFrequencyFromScheduleDays(scheduleDays);
+    const { trackingType, targetValue } = habitTrackingFromCompletionsPerDay(completionsPerDay);
 
     const input: CreateHabitInput = {
       title: title.trim(),
       description: description.trim(),
       color,
       trackingType,
+      targetValue,
       frequencyType,
       frequencyConfig: buildHabitFrequencyConfig(frequencyType, dayOfWeek, '', customDays),
       reminderTime: '',
     };
-
-    if (trackingType === 'numeric') {
-      const parsed = parseInt(targetValue, 10);
-      if (Number.isNaN(parsed) || parsed < 1) {
-        Alert.alert('Invalid target', 'Enter a daily target of at least 1.');
-        return;
-      }
-      input.targetValue = parsed;
-      input.unitLabel = unitLabel.trim();
-    }
 
     void (async () => {
       try {
@@ -73,9 +65,7 @@ export default function HabitCreateScreen() {
     title,
     description,
     color,
-    trackingType,
-    targetValue,
-    unitLabel,
+    completionsPerDay,
     scheduleDays,
     createHabit,
     router,
@@ -92,15 +82,11 @@ export default function HabitCreateScreen() {
       <HabitFormFields
         title={title}
         description={description}
-        trackingType={trackingType}
-        targetValue={targetValue}
-        unitLabel={unitLabel}
+        completionsPerDay={completionsPerDay}
         scheduleDays={scheduleDays}
         onTitleChange={setTitle}
         onDescriptionChange={setDescription}
-        onTrackingTypeChange={setTrackingType}
-        onTargetValueChange={setTargetValue}
-        onUnitLabelChange={setUnitLabel}
+        onCompletionsPerDayChange={setCompletionsPerDay}
         onScheduleDaysChange={setScheduleDays}
         autoFocusTitle
       />

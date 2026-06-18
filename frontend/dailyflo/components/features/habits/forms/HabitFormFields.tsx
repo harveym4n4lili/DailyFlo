@@ -3,23 +3,22 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, TextInput, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 
-import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
+import { GroupedList, GroupedListHeader } from '@/components/ui/List/GroupedList';
 import { WeekdayCirclePicker, WEEKDAY_PICKER_TRACK_HEIGHT } from '@/components/ui/WeekdayCirclePicker';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
-import { getHabitFormListGroupProps, getHabitFormNameGroupProps } from './habitFormChrome';
+import { getHabitFormListGroupProps } from './habitFormChrome';
 import { HabitNameDescriptionSection } from './HabitNameDescriptionSection';
-import type { HabitTrackingType } from '@/types/api/habits';
+import { HabitCompletionsPerDayStepper } from './HabitCompletionsPerDayStepper';
 
 export type HabitFormFieldsState = {
   title: string;
   description: string;
-  trackingType: HabitTrackingType;
-  targetValue: string;
-  unitLabel: string;
+  /** how many times this habit should be completed each due day */
+  completionsPerDay: number;
   /** which weekdays the habit is due — 0 = Monday … 6 = Sunday */
   scheduleDays: number[];
 };
@@ -27,9 +26,7 @@ export type HabitFormFieldsState = {
 type HabitFormFieldsProps = HabitFormFieldsState & {
   onTitleChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
-  onTrackingTypeChange: (value: HabitTrackingType) => void;
-  onTargetValueChange: (value: string) => void;
-  onUnitLabelChange: (value: string) => void;
+  onCompletionsPerDayChange: (value: number) => void;
   onScheduleDaysChange: (days: number[]) => void;
   autoFocusTitle?: boolean;
   /** remounts description field after edit screen loads habit from API */
@@ -39,15 +36,11 @@ type HabitFormFieldsProps = HabitFormFieldsState & {
 export function HabitFormFields({
   title,
   description,
-  trackingType,
-  targetValue,
-  unitLabel,
+  completionsPerDay,
   scheduleDays,
   onTitleChange,
   onDescriptionChange,
-  onTrackingTypeChange,
-  onTargetValueChange,
-  onUnitLabelChange,
+  onCompletionsPerDayChange,
   onScheduleDaysChange,
   autoFocusTitle = false,
   descriptionInputKey,
@@ -56,26 +49,6 @@ export function HabitFormFields({
   const styles = useMemo(() => createStyles(), []);
 
   const listGroupProps = useMemo(() => getHabitFormListGroupProps(themeColors), [themeColors]);
-  const nameGroupProps = useMemo(() => getHabitFormNameGroupProps(themeColors), [themeColors]);
-
-  const inputStyle = useMemo(
-    () => [
-      getTextStyle('body-large'),
-      {
-        color: themeColors.text.primary(),
-        flex: 1,
-        minWidth: 0,
-        paddingVertical: Paddings.none,
-        paddingHorizontal: Paddings.none,
-        margin: 0,
-        ...(Platform.OS === 'android' && {
-          includeFontPadding: false,
-          textAlignVertical: 'center' as const,
-        }),
-      },
-    ],
-    [themeColors],
-  );
 
   return (
     <>
@@ -90,44 +63,15 @@ export function HabitFormFields({
         />
       </View>
 
-      <GroupedListHeader title="Tracking" style={styles.sectionHeader} />
-      <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
-        {(['binary', 'numeric'] as HabitTrackingType[]).map((t) => (
-          <FormDetailButton
-            key={t}
-            label={t === 'binary' ? 'Check off when done' : 'Count toward a target'}
-            value={trackingType === t ? 'Selected' : ''}
-            onPress={() => onTrackingTypeChange(t)}
-            showChevron={false}
-          />
-        ))}
+      <GroupedListHeader title="Completions per day" style={styles.sectionHeader} />
+      <GroupedList
+        containerStyle={styles.listContainer}
+        {...listGroupProps}
+        separatorConsiderIconColumn={false}
+        contentPaddingHorizontal={0}
+      >
+        <HabitCompletionsPerDayStepper value={completionsPerDay} onChange={onCompletionsPerDayChange} />
       </GroupedList>
-
-      {trackingType === 'numeric' ? (
-        <View style={styles.groupedListSection}>
-          <GroupedList containerStyle={styles.listContainer} {...nameGroupProps}>
-            <View style={styles.nameRow}>
-              <TextInput
-                value={targetValue}
-                onChangeText={onTargetValueChange}
-                placeholder="Daily target (e.g. 8)"
-                placeholderTextColor={themeColors.text.tertiary()}
-                keyboardType="number-pad"
-                style={inputStyle}
-              />
-            </View>
-            <View style={styles.nameRow}>
-              <TextInput
-                value={unitLabel}
-                onChangeText={onUnitLabelChange}
-                placeholder="Unit label (optional, e.g. glasses)"
-                placeholderTextColor={themeColors.text.tertiary()}
-                style={inputStyle}
-              />
-            </View>
-          </GroupedList>
-        </View>
-      ) : null}
 
       <GroupedListHeader title="Frequency" style={styles.sectionHeader} />
       <GroupedList
@@ -155,16 +99,8 @@ const createStyles = () =>
     groupedListSectionFirst: {
       marginTop: 0,
     },
-    groupedListSection: {
-      marginTop: Paddings.section,
-    },
     listContainer: {
       marginVertical: 0,
-    },
-    nameRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      width: '100%',
     },
     sectionHeader: {
       marginTop: Paddings.section,
