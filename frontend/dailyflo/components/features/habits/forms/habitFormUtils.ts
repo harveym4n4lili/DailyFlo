@@ -2,7 +2,37 @@
  * shared habit form helpers — frequency config + reminder time validation for create/edit.
  */
 
-import type { CreateHabitInput, HabitFrequencyType } from '@/types/api/habits';
+import type { CreateHabitInput, HabitFrequencyType, HabitTrackingType } from '@/types/api/habits';
+
+/** min/max for the completions-per-day stepper in create/edit forms */
+export const MIN_HABIT_COMPLETIONS_PER_DAY = 1;
+export const MAX_HABIT_COMPLETIONS_PER_DAY = 99;
+
+/** read stored habit → single completions-per-day number for the form stepper */
+export function completionsPerDayFromHabit(
+  trackingType: HabitTrackingType,
+  targetValue: number | null | undefined,
+): number {
+  if (trackingType === 'numeric' && targetValue != null && targetValue > 1) {
+    return Math.min(MAX_HABIT_COMPLETIONS_PER_DAY, Math.max(MIN_HABIT_COMPLETIONS_PER_DAY, Math.round(targetValue)));
+  }
+  return MIN_HABIT_COMPLETIONS_PER_DAY;
+}
+
+/** map stepper value → django trackingType + targetValue (1 = binary checkbox, 2+ = numeric count) */
+export function habitTrackingFromCompletionsPerDay(count: number): {
+  trackingType: HabitTrackingType;
+  targetValue: number | null;
+} {
+  const safe = Math.min(
+    MAX_HABIT_COMPLETIONS_PER_DAY,
+    Math.max(MIN_HABIT_COMPLETIONS_PER_DAY, Math.round(count)),
+  );
+  if (safe <= 1) {
+    return { trackingType: 'binary', targetValue: null };
+  }
+  return { trackingType: 'numeric', targetValue: safe };
+}
 
 const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 

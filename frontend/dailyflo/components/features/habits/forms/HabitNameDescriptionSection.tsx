@@ -90,7 +90,8 @@ export function HabitNameDescriptionSection({
           isEditing
           taskColor="green"
           useInitialMinHeight
-          minVisibleLines={5}
+          minVisibleLines={2}
+          iconColor={themeColors.background.tertiary()}
         />
       </GroupedList>
     </View>
