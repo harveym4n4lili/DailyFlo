@@ -55,6 +55,8 @@ export interface HabitTodayItem {
   frequencyType: HabitFrequencyType;
   /** HH:MM local — used by habitReminderScheduler when habit is due today */
   reminderTime: string;
+  /** last 365 days — powers habit card heatmap on the habits tab */
+  heatmap: HabitHeatmapData;
 }
 
 export interface HabitsTodaySummary {
@@ -105,6 +107,7 @@ export interface HabitLogResponse {
   currentStreak: number;
   longestStreak: number;
   targetValue: number | null;
+  heatmap: HabitHeatmapData;
 }
 
 export interface HabitHeatmapData {

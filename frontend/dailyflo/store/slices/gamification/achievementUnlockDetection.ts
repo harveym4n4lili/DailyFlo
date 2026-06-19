@@ -16,8 +16,21 @@ import {
 type GamificationSliceState = {
   gamification: {
     achievements: AchievementItem[];
+    achievementsLoaded: boolean;
   };
 };
+
+/** load achievement catalog once per session so unlock diff has a real baseline */
+export async function ensureAchievementsHydrated(
+  dispatch: AppDispatch,
+  getState: () => unknown,
+): Promise<void> {
+  const state = getState() as GamificationSliceState;
+  if (state.gamification.achievementsLoaded) {
+    return;
+  }
+  await dispatch(fetchAchievements());
+}
 
 /** codes already unlocked in redux before the completion api call */
 export function collectPriorUnlockedCodes(getState: () => unknown): Set<string> {
@@ -27,6 +40,22 @@ export function collectPriorUnlockedCodes(getState: () => unknown): Set<string> 
       .filter((a) => a.unlockedAt != null)
       .map((a) => a.code),
   );
+}
+
+/**
+ * hydrate achievements if needed, then snapshot prior unlock codes.
+ * returns null when catalog could not be loaded — caller should skip toast detection.
+ */
+export async function collectPriorUnlockedCodesAfterHydrate(
+  dispatch: AppDispatch,
+  getState: () => unknown,
+): Promise<Set<string> | null> {
+  await ensureAchievementsHydrated(dispatch, getState);
+  const state = getState() as GamificationSliceState;
+  if (!state.gamification.achievementsLoaded) {
+    return null;
+  }
+  return collectPriorUnlockedCodes(getState);
 }
 
 /** true when updateTask payload marks a task (or recurrence occurrence) newly complete */

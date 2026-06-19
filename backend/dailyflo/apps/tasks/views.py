@@ -184,8 +184,9 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def inbox(self, request):
-        """inbox tasks: no list assigned, not completed, not soft-deleted (get_queryset already excludes soft-deleted)"""
-        tasks = self.get_queryset().filter(list__isnull=True, is_completed=False)
+        """inbox tasks: no list assigned, not soft-deleted (get_queryset already excludes soft-deleted).
+        completed rows are included; the client hides them when show-completed is off (same as list tasks)."""
+        tasks = self.get_queryset().filter(list__isnull=True)
         serializer = TaskListSerializer(tasks, many=True)
         return Response(serializer.data)
 

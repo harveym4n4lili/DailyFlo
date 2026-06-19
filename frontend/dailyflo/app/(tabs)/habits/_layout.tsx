@@ -9,7 +9,7 @@ export default function HabitsLayout() {
       screenOptions={{
         animation: 'default',
         gestureEnabled: true,
-        contentStyle: { backgroundColor: themeColors.background.primary() },
+        contentStyle: { backgroundColor: themeColors.background.root() },
       }}
     >
       <Stack.Screen
@@ -22,7 +22,7 @@ export default function HabitsLayout() {
                 headerTitle: '',
                 headerShadowVisible: false,
                 headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                contentStyle: { backgroundColor: themeColors.background.root() },
               }
             : {
                 title: 'Habits',
@@ -63,7 +63,7 @@ export default function HabitsLayout() {
                 headerTitle: '',
                 headerShadowVisible: false,
                 headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.primary() },
+                contentStyle: { backgroundColor: themeColors.background.root() },
               }
             : {
                 title: 'Habit',

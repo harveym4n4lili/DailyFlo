@@ -1,12 +1,13 @@
 /**
  * shared inbox task list — used by browse/inbox push screen and the inbox tab root.
- * fetches GET /tasks/inbox/ on focus; ListCard handles complete/delete via redux thunks.
+ * fetches GET /tasks/inbox/ on focus (all inbox rows, including completed).
+ * ListCard applies hideCompletedTasks from inbox display prefs; complete/delete use redux thunks.
  *
  * tab-root mirrors TodayScreenContent: ListCard owns scroll + top inset (paddingTop 64, scrollPastTopInset).
  * browse-stack keeps outer ScrollView for back-button push chrome.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import AnimatedReanimated, {
   useSharedValue,
@@ -110,6 +111,8 @@ export function InboxTaskListContent({
     () => mapTodayDisplayPrefsToListCard(inboxDisplayPrefs),
     [inboxDisplayPrefs]
   );
+  const showCompletedTasks = inboxDisplayPrefs?.showCompletedTasks ?? true;
+  const prevShowCompletedRef = useRef(showCompletedTasks);
 
   const loadInbox = useCallback(async () => {
     setError(null);
@@ -135,6 +138,15 @@ export function InboxTaskListContent({
       void loadInbox();
     }, [loadInbox])
   );
+
+  // when user turns show-completed on, refetch so rows excluded by the old api filter appear
+  useEffect(() => {
+    if (prevShowCompletedRef.current === showCompletedTasks) return;
+    prevShowCompletedRef.current = showCompletedTasks;
+    if (showCompletedTasks) {
+      void loadInbox();
+    }
+  }, [showCompletedTasks, loadInbox]);
 
   const scrollY = useSharedValue(0);
   const miniHeaderOpacity = useSharedValue(0);

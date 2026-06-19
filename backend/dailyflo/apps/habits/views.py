@@ -12,7 +12,7 @@ from apps.habits.serializers import (
     HabitSerializer,
 )
 from apps.habits.services.habit_schedule import habit_is_due
-from apps.habits.services.habit_stats import habit_full_stats, habit_streaks, user_today_from_prefs
+from apps.habits.services.habit_stats import habit_full_stats, habit_heatmap, habit_streaks, user_today_from_prefs
 from apps.tasks.models import ActivityLog
 
 
@@ -34,6 +34,7 @@ def _serialize_today_item(habit, completion, today: date) -> dict:
         'longestStreak': streaks['longestStreak'],
         'frequencyType': habit.frequency_type,
         'reminderTime': habit.reminder_time or '',
+        'heatmap': habit_heatmap(habit, today),
     }
 
 
@@ -144,6 +145,7 @@ class HabitViewSet(viewsets.ModelViewSet):
                     _remove_activity_log_on_undo(habit, target_date, request.user)
 
             streaks = habit_streaks(habit, user_today_from_prefs(request.user))
+            today = user_today_from_prefs(request.user)
             return Response({
                 'id': completion.id if completion else None,
                 'completionDate': target_date.isoformat(),
@@ -153,6 +155,7 @@ class HabitViewSet(viewsets.ModelViewSet):
                 'currentStreak': streaks['currentStreak'],
                 'longestStreak': streaks['longestStreak'],
                 'targetValue': habit.target_value,
+                'heatmap': habit_heatmap(habit, today),
             })
 
         body = HabitLogRequestSerializer(data=request.data)
@@ -171,9 +174,15 @@ class HabitViewSet(viewsets.ModelViewSet):
             completion.is_complete = not completion.is_complete
             completion.logged_value = 1.0 if completion.is_complete else 0.0
         else:
-            completion.logged_value = (completion.logged_value or 0) + delta
             target = habit.target_value or 1
-            completion.is_complete = completion.logged_value >= target
+            current = completion.logged_value or 0
+            # +1 at full completion resets today's count (start the daily occurrence over)
+            if was_complete and current >= target:
+                completion.logged_value = 0
+                completion.is_complete = False
+            else:
+                completion.logged_value = min(current + delta, target)
+                completion.is_complete = completion.logged_value >= target
 
         completion.save()
 
@@ -183,6 +192,7 @@ class HabitViewSet(viewsets.ModelViewSet):
             _remove_activity_log_on_undo(habit, target_date, request.user)
 
         streaks = habit_streaks(habit, user_today_from_prefs(request.user))
+        today = user_today_from_prefs(request.user)
         return Response({
             'id': completion.id,
             'completionDate': target_date.isoformat(),
@@ -192,6 +202,7 @@ class HabitViewSet(viewsets.ModelViewSet):
             'currentStreak': streaks['currentStreak'],
             'longestStreak': streaks['longestStreak'],
             'targetValue': habit.target_value,
+            'heatmap': habit_heatmap(habit, today),
         })
 
 

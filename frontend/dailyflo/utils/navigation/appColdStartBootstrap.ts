@@ -5,6 +5,7 @@
 
 import { store } from '@/store';
 import { checkAuthStatus, logout } from '@/store/slices/auth/authSlice';
+import { fetchAchievements } from '@/store/slices/gamification/gamificationSlice';
 import { fetchLists } from '@/store/slices/lists/listsSlice';
 import { fetchTasks } from '@/store/slices/tasks/tasksSlice';
 import { resolveNavTabOrderForBootstrap } from '@/components/features/settings/navigation/navigationPreferenceUtils';
@@ -50,6 +51,8 @@ export async function runAppColdStartBootstrap(): Promise<AppColdStartBootstrapR
     if (lists.lastFetched === null) {
       void store.dispatch(fetchLists());
     }
+    // prefetch unlock baseline so first completion after reopen does not replay old toasts
+    void store.dispatch(fetchAchievements());
   }
 
   const navTabOrder = resolveNavTabOrderForBootstrap(
