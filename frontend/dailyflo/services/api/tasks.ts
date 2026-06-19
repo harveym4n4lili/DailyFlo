@@ -639,7 +639,8 @@ class TasksApiService {
   }
 
   /**
-   * Inbox tasks — GET /tasks/inbox/ (list is null, not completed).
+   * Inbox tasks — GET /tasks/inbox/ (list is null; includes completed).
+   * ListCard hides completed rows when inbox display prefs have show-completed off.
    * Returns the same task row shape as list(); map with transformApiTaskToTask in the UI.
    */
   async fetchInboxTasks(): Promise<unknown[]> {

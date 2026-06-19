@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/Button';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
-import { getTaskColorValue } from '@/utils/taskColors';
+import { getTaskColorValue, getTaskHabitTitleColor } from '@/utils/taskColors';
 import { useAppDispatch } from '@/store';
 import {
   logHabitProgress,
@@ -33,6 +33,7 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
   const snapshotRef = useRef<HabitTodayItem | null>(null);
 
   const accent = useMemo(() => getTaskColorValue(habit.color), [habit.color]);
+  const titleColor = useMemo(() => getTaskHabitTitleColor(habit.color), [habit.color]);
   const styles = useMemo(
     () => createStyles(themeColors, typography, accent, compact),
     [themeColors, typography, accent, compact],
@@ -53,7 +54,7 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
   }, [dispatch, habit]);
 
   const handleIncrement = useCallback(() => {
-    if (habit.isCompleteToday) return;
+    if (!habit) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     snapshotRef.current = { ...habit };
     const wasCompleteBefore = habit.isCompleteToday;
@@ -79,8 +80,12 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
       ) : (
         <Pressable
           onPress={handleIncrement}
-          style={[styles.incrementButton, habit.isCompleteToday && styles.incrementDone]}
-          accessibilityLabel={`Add one to ${habit.title}`}
+          style={styles.incrementButton}
+          accessibilityLabel={
+            habit.isCompleteToday
+              ? `Reset today's count for ${habit.title}`
+              : `Add one to ${habit.title}`
+          }
         >
           <Text style={styles.incrementText}>+1</Text>
         </Pressable>
@@ -91,7 +96,11 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
         disabled={!onOpenDetail}
       >
         <Text
-          style={[styles.title, habit.isCompleteToday && styles.titleDone]}
+          style={[
+            styles.title,
+            { color: titleColor },
+            habit.isCompleteToday && styles.titleDone,
+          ]}
           numberOfLines={1}
         >
           {habit.title}
@@ -128,10 +137,9 @@ const createStyles = (
     },
     title: {
       ...typography.getTextStyle('body-large'),
-      color: themeColors.text.primary(),
     },
     titleDone: {
-      color: themeColors.text.tertiary(),
+      opacity: 0.55,
       textDecorationLine: 'line-through',
     },
     subtitle: {
@@ -158,9 +166,6 @@ const createStyles = (
       borderColor: accent,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    incrementDone: {
-      opacity: 0.4,
     },
     incrementText: {
       ...typography.getTextStyle('body-medium'),

@@ -15,6 +15,7 @@ import type { User } from '@/types';
 import type {
   CreateHabitInput,
   Habit,
+  HabitHeatmapData,
   HabitLogResponse,
   HabitStatsResponse,
   HabitTodayItem,
@@ -214,16 +215,20 @@ export const logHabitProgress = createAsyncThunk(
     { rejectWithValue, dispatch, getState },
   ) => {
     try {
-      const { collectPriorUnlockedCodes, refreshAchievementsAndDetectUnlock } = await import(
+      const { collectPriorUnlockedCodesAfterHydrate, refreshAchievementsAndDetectUnlock } = await import(
         '../gamification/achievementUnlockDetection'
       );
-      const priorUnlockedCodes = collectPriorUnlockedCodes(getState);
+      const priorUnlockedCodes = await collectPriorUnlockedCodesAfterHydrate(dispatch, getState);
 
       const response = await habitsApiService.logHabitProgress(id, { date, delta });
       const wasComplete = wasCompleteBefore ?? false;
 
-      if (response.isCompleteToday && !wasComplete) {
-        await refreshAchievementsAndDetectUnlock(dispatch, priorUnlockedCodes);
+      if (response.isCompleteToday && !wasComplete && priorUnlockedCodes) {
+        try {
+          await refreshAchievementsAndDetectUnlock(dispatch, priorUnlockedCodes);
+        } catch (err) {
+          console.warn('[habits] achievement unlock refresh skipped after log', err);
+        }
       }
 
       const stateAfter = getState() as { habits: HabitsState };
@@ -257,22 +262,96 @@ export const logHabitProgress = createAsyncThunk(
   },
 );
 
+/** add or remove one calendar day on the card heatmap when today is marked complete / reset */
+function patchHeatmapCompletedDay(
+  heatmap: HabitHeatmapData,
+  dayIso: string,
+  completed: boolean,
+): HabitHeatmapData {
+  if (!dayIso) return heatmap;
+  const dates = new Set(heatmap.completedDates);
+  if (completed) dates.add(dayIso);
+  else dates.delete(dayIso);
+  return { ...heatmap, completedDates: [...dates].sort() };
+}
+
+function mergeTodayHabitWithLocal(local: HabitTodayItem, incoming: HabitTodayItem): HabitTodayItem {
+  if (local.trackingType === 'numeric') {
+    const target = incoming.targetValue ?? 1;
+    const localLogged = local.loggedValue ?? 0;
+    const incomingLogged = incoming.loggedValue ?? 0;
+    const localIsReset =
+      localLogged === 0 && !local.isCompleteToday && incoming.isCompleteToday;
+    const localIsAhead =
+      localLogged > incomingLogged ||
+      (local.isCompleteToday && !incoming.isCompleteToday);
+
+    if (localIsReset || localIsAhead) {
+      return {
+        ...incoming,
+        loggedValue: localLogged,
+        isCompleteToday: local.isCompleteToday,
+        heatmap: local.heatmap,
+        currentStreak: Math.max(local.currentStreak, incoming.currentStreak),
+        longestStreak: Math.max(local.longestStreak, incoming.longestStreak),
+      };
+    }
+
+    const loggedValue = Math.max(localLogged, incomingLogged);
+    const isCompleteToday =
+      incoming.isCompleteToday || local.isCompleteToday || loggedValue >= target;
+    return {
+      ...incoming,
+      loggedValue: isCompleteToday ? Math.max(loggedValue, target) : loggedValue,
+      isCompleteToday,
+      currentStreak: Math.max(local.currentStreak, incoming.currentStreak),
+      longestStreak: Math.max(local.longestStreak, incoming.longestStreak),
+    };
+  }
+  if (local.isCompleteToday && !incoming.isCompleteToday) {
+    return { ...incoming, isCompleteToday: true, loggedValue: 1 };
+  }
+  return incoming;
+}
+
 function applyTodayPayload(state: HabitsState, payload: HabitsTodayResponse) {
+  const sameDay = state.todayDate === payload.date;
+  const localById =
+    sameDay && state.todayHabits.length > 0
+      ? new Map(state.todayHabits.map((h) => [h.id, h]))
+      : null;
+
   state.todayDate = payload.date;
-  state.todayHabits = payload.habits;
+  state.todayHabits = payload.habits.map((incoming) => {
+    const local = localById?.get(incoming.id);
+    return local ? mergeTodayHabitWithLocal(local, incoming) : incoming;
+  });
   state.todaySummary = payload.summary;
+  if (state.todaySummary) {
+    state.todaySummary.completedCount = state.todayHabits.filter((h) => h.isCompleteToday).length;
+    state.todaySummary.bestActiveStreak = Math.max(
+      ...state.todayHabits.map((h) => h.currentStreak),
+      0,
+    );
+  }
 }
 
 function applyLogToHabit(state: HabitsState, habitId: string, response: HabitLogResponse) {
   const idx = state.todayHabits.findIndex((h) => h.id === habitId);
   if (idx === -1) return;
   const habit = state.todayHabits[idx];
+  const target = habit.targetValue ?? 1;
+  let loggedValue = response.loggedValue;
+  if (habit.trackingType === 'numeric' && response.isCompleteToday) {
+    loggedValue = Math.max(loggedValue, target);
+  }
   state.todayHabits[idx] = {
     ...habit,
-    loggedValue: response.loggedValue,
+    loggedValue,
     isCompleteToday: response.isCompleteToday,
     currentStreak: response.currentStreak,
     longestStreak: response.longestStreak,
+    heatmap: response.heatmap ?? habit.heatmap,
   };
   if (state.todaySummary) {
     const completedCount = state.todayHabits.filter((h) => h.isCompleteToday).length;
@@ -309,9 +388,35 @@ const habitsSlice = createSlice({
         habit.loggedValue = habit.isCompleteToday ? 1 : 0;
       } else {
         const step = action.payload.delta ?? 1;
-        habit.loggedValue = (habit.loggedValue ?? 0) + step;
         const target = habit.targetValue ?? 1;
-        habit.isCompleteToday = habit.loggedValue >= target;
+        const current = habit.loggedValue ?? 0;
+        if (current >= target && habit.isCompleteToday) {
+          // +1 at goal resets today's occurrence
+          habit.loggedValue = 0;
+          habit.isCompleteToday = false;
+        } else {
+          const next = Math.min(current + step, target);
+          habit.loggedValue = next;
+          habit.isCompleteToday = next >= target;
+        }
+      }
+      if (state.todayDate && habit.heatmap) {
+        habit.heatmap = patchHeatmapCompletedDay(
+          habit.heatmap,
+          state.todayDate,
+          habit.isCompleteToday,
+        );
+      }
+      if (
+        state.detailStats &&
+        state.detailHabit?.id === action.payload.id &&
+        state.todayDate
+      ) {
+        state.detailStats.heatmap = patchHeatmapCompletedDay(
+          state.detailStats.heatmap,
+          state.todayDate,
+          habit.isCompleteToday,
+        );
       }
       if (state.todaySummary) {
         state.todaySummary.completedCount = state.todayHabits.filter((h) => h.isCompleteToday).length;
@@ -357,6 +462,9 @@ const habitsSlice = createSlice({
         if (state.detailStats && action.payload.habitId === state.detailHabit?.id) {
           state.detailStats.currentStreak = action.payload.response.currentStreak;
           state.detailStats.longestStreak = action.payload.response.longestStreak;
+          if (action.payload.response.heatmap) {
+            state.detailStats.heatmap = action.payload.response.heatmap;
+          }
         }
       })
       .addCase(fetchHabit.pending, (state) => {

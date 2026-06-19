@@ -39,7 +39,7 @@ const createStyles = (
 ) =>
   StyleSheet.create({
     wrap: {
-      marginBottom: Paddings.sectionCompact,
+      marginBottom: 0,
     },
     title: {
       ...typography.getTextStyle('heading-3'),

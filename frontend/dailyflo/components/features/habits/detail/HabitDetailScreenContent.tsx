@@ -19,8 +19,6 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedReaction,
   withTiming,
-  interpolate,
-  Extrapolation,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,11 +30,9 @@ import { useTypography } from '@/hooks/useTypography';
 import { MainBackButton } from '@/components/ui/Button';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
 import { Paddings } from '@/constants/Paddings';
-import { getTaskColorValue } from '@/utils/taskColors';
+import { getTaskHabitTitleColor } from '@/utils/taskColors';
 import { useHabits } from '@/store/hooks';
-import { HabitListItem } from '../list/HabitListItem';
-import { HabitHeatmap } from './HabitHeatmap';
-import { HabitTrendChart } from './HabitTrendChart';
+import { HabitBoardCard } from '../list/HabitBoardCard';
 import type { HabitTodayItem } from '@/types/api/habits';
 
 const TOP_SECTION_ROW_HEIGHT = 48;
@@ -75,11 +71,11 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
     }, [habitId, fetchToday, fetchHabit, fetchHabitStats, clearHabitDetail]),
   );
 
-  const accent = useMemo(
-    () => getTaskColorValue(detailHabit?.color ?? 'green'),
+  const title = detailHabit?.title ?? 'Habit';
+  const titleColor = useMemo(
+    () => getTaskHabitTitleColor(detailHabit?.color ?? 'green'),
     [detailHabit?.color],
   );
-  const title = detailHabit?.title ?? 'Habit';
   const deleteColor = semanticColors.error();
 
   const listGroupProps = useMemo(
@@ -97,7 +93,7 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
     [themeColors],
   );
 
-  const styles = useMemo(() => createStyles(typography, insets), [typography, insets]);
+  const styles = useMemo(() => createStyles(themeColors, typography, insets), [themeColors, typography, insets]);
 
   const scrollY = useSharedValue(0);
   const miniHeaderOpacity = useSharedValue(0);
@@ -117,10 +113,6 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
 
   const miniHeaderStyle = useAnimatedStyle(() => ({
     opacity: miniHeaderOpacity.value,
-  }));
-
-  const bigHeaderStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [0, SCROLL_THRESHOLD], [1, 0], Extrapolation.CLAMP),
   }));
 
   const backButtonTop = insets.top + (TOP_SECTION_ROW_HEIGHT - 42) / 2;
@@ -143,6 +135,7 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
       longestStreak: detailStats?.longestStreak ?? 0,
       frequencyType: detailHabit.frequencyType,
       reminderTime: detailHabit.reminderTime ?? '',
+      heatmap: detailStats?.heatmap ?? { startDate: '', days: 365, completedDates: [] },
     };
   }, [todayHabits, habitId, detailHabit, detailStats]);
 
@@ -211,7 +204,7 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
           <View style={styles.topSectionPlaceholder} pointerEvents="none" />
           <Animated.View style={[styles.miniHeader, miniHeaderStyle]} pointerEvents="none">
             <Text
-              style={[styles.miniHeaderText, { color: themeColors.text.primary() }]}
+              style={[styles.miniHeaderText, { color: titleColor }]}
               numberOfLines={1}
             >
               {title}
@@ -236,69 +229,20 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.paddedHorizontal}>
-          <Animated.View style={[bigHeaderStyle, styles.contentSection]}>
-            <Text style={[styles.bigHeader, { color: themeColors.text.primary() }]} numberOfLines={2}>
-              {title}
-            </Text>
-          </Animated.View>
-        </View>
-
-        <View style={styles.paddedHorizontal}>
-          <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
-            <FormDetailButton
-              label="Current streak"
-              value={String(detailStats?.currentStreak ?? 0)}
-              onPress={() => {}}
-              disabled
-              showChevron={false}
-              customStyles={{ value: { color: accent, fontWeight: '600' } }}
+          {detailStats ? (
+            <HabitBoardCard
+              title={title}
+              color={detailHabit.color}
+              currentStreak={detailStats.currentStreak}
+              heatmap={detailStats.heatmap}
+              habit={todayRow ?? undefined}
             />
-            <FormDetailButton
-              label="Longest streak"
-              value={String(detailStats?.longestStreak ?? 0)}
-              onPress={() => {}}
-              disabled
-              showChevron={false}
-            />
-          </GroupedList>
+          ) : (
+            <View style={styles.statsLoading}>
+              <ActivityIndicator color={themeColors.text.secondary()} />
+            </View>
+          )}
         </View>
-
-        {todayRow ? (
-          <View style={styles.paddedHorizontal}>
-            <GroupedListHeader title="Today" />
-            <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
-              <HabitListItem habit={todayRow} compact />
-            </GroupedList>
-          </View>
-        ) : null}
-
-        {detailStats ? (
-          <>
-            <View style={styles.paddedHorizontal}>
-              <GroupedListHeader title="Consistency" />
-              <Text style={[styles.sectionHint, { color: themeColors.text.tertiary() }]}>
-                Last {detailStats.heatmap.days} days
-              </Text>
-              <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
-                <View style={styles.chartWrap}>
-                  <HabitHeatmap heatmap={detailStats.heatmap} color={detailHabit.color} />
-                </View>
-              </GroupedList>
-            </View>
-
-            <View style={styles.paddedHorizontal}>
-              <GroupedListHeader title="7-day rolling rate" />
-              <Text style={[styles.sectionHint, { color: themeColors.text.tertiary() }]}>
-                Last {detailStats.trend.windowDays} days
-              </Text>
-              <GroupedList containerStyle={styles.listContainer} {...listGroupProps}>
-                <View style={styles.chartWrap}>
-                  <HabitTrendChart trend={detailStats.trend} color={detailHabit.color} />
-                </View>
-              </GroupedList>
-            </View>
-          </>
-        ) : null}
 
         <View style={styles.paddedHorizontal}>
           <GroupedListHeader title="Manage" style={styles.manageHeader} />
@@ -329,12 +273,14 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
 }
 
 const createStyles = (
+  themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>,
 ) =>
   StyleSheet.create({
     screen: {
       flex: 1,
+      backgroundColor: themeColors.background.root(),
     },
     centered: {
       flex: 1,
@@ -403,25 +349,12 @@ const createStyles = (
     paddedHorizontal: {
       paddingHorizontal: Paddings.screen,
     },
-    contentSection: {
-      marginTop: Paddings.sectionCompact,
-      marginBottom: Paddings.sectionCompact,
-    },
-    bigHeader: {
-      ...typography.getTextStyle('heading-1'),
-      marginBottom: 8,
+    statsLoading: {
+      paddingVertical: Paddings.section,
+      alignItems: 'center',
     },
     listContainer: {
       marginVertical: 0,
-    },
-    sectionHint: {
-      ...typography.getTextStyle('body-small'),
-      marginTop: -4,
-      marginBottom: 8,
-      paddingHorizontal: Paddings.touchTargetSmall,
-    },
-    chartWrap: {
-      width: '100%',
     },
     manageHeader: {
       marginTop: Paddings.sectionCompact,

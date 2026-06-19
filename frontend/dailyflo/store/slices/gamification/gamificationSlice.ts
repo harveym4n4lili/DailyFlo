@@ -17,6 +17,8 @@ import type {
 interface GamificationState {
   summary: GamificationSummary | null;
   achievements: AchievementItem[];
+  /** true after at least one successful GET /gamification/achievements/ this session */
+  achievementsLoaded: boolean;
   goals: UserGoalItem[];
   /** set when a habit log unlocks a new achievement — drives AchievementUnlockToast */
   pendingAchievementUnlock: AchievementItem | null;
@@ -45,6 +47,7 @@ const emptySummary: GamificationSummary = {
 const initialState: GamificationState = {
   summary: null,
   achievements: [],
+  achievementsLoaded: false,
   goals: [],
   pendingAchievementUnlock: null,
   isSummaryLoading: false,
@@ -148,6 +151,7 @@ const gamificationSlice = createSlice({
     clearGamification: (state) => {
       state.summary = null;
       state.achievements = [];
+      state.achievementsLoaded = false;
       state.goals = [];
       state.pendingAchievementUnlock = null;
       state.summaryError = null;
@@ -190,6 +194,7 @@ const gamificationSlice = createSlice({
       .addCase(fetchAchievements.fulfilled, (state, action: PayloadAction<AchievementItem[]>) => {
         state.isAchievementsLoading = false;
         state.achievements = action.payload;
+        state.achievementsLoaded = true;
       })
       .addCase(fetchAchievements.rejected, (state, action) => {
         state.isAchievementsLoading = false;
@@ -229,6 +234,7 @@ const gamificationSlice = createSlice({
       .addCase(resetAchievementsDev.fulfilled, (state, action: PayloadAction<AchievementItem[]>) => {
         state.isAchievementsLoading = false;
         state.achievements = action.payload;
+        state.achievementsLoaded = true;
         state.pendingAchievementUnlock = null;
       })
       .addCase(resetAchievementsDev.rejected, (state, action) => {

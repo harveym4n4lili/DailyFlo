@@ -823,14 +823,14 @@ export const updateTask = createAsyncThunk(
   'tasks/updateTask',
   async ({ id, updates }: { id: string; updates: UpdateTaskInput }, { rejectWithValue, getState, dispatch }) => {
     const {
-      collectPriorUnlockedCodes,
+      collectPriorUnlockedCodesAfterHydrate,
       isNewTaskCompletion,
       refreshAchievementsAndDetectUnlock,
     } = await import('../gamification/achievementUnlockDetection');
 
     const shouldDetectAchievementUnlock = isNewTaskCompletion(updates);
     const priorUnlockedCodes = shouldDetectAchievementUnlock
-      ? collectPriorUnlockedCodes(getState)
+      ? await collectPriorUnlockedCodesAfterHydrate(dispatch, getState)
       : null;
 
     try {

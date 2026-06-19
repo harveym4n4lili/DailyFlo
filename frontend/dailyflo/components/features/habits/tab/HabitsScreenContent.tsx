@@ -1,21 +1,23 @@
 /**
  * habits tab body — today's due habits list with summary header.
+ * canvas matches browse: background.root() + blur/gradient top band.
  */
 
 import React, { useMemo, useCallback } from 'react';
 import { View, StyleSheet, Platform, ScrollView, RefreshControl } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
-import { ScreenContainer } from '@/components/index';
 import { ScreenHeaderActions } from '@/components/ui';
 import { HabitsTodayList } from './HabitsTodayList';
 import { useHabits } from '@/store/hooks';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 
-// row = toolbar buttons; anchor = full blur band height — same as browse/productivity tab chrome
+// row = toolbar buttons; anchor = full blur band height — same as browse tab chrome
 const TOP_SECTION_ROW_HEIGHT = 48;
 const TOP_SECTION_ANCHOR_HEIGHT = 64;
 
@@ -38,14 +40,26 @@ export function HabitsScreenContent() {
     }, [fetchToday]),
   );
 
-  const styles = useMemo(() => createStyles(insets), [insets]);
+  const styles = useMemo(() => createStyles(themeColors, insets), [themeColors, insets]);
 
   return (
-    <>
+    <View style={styles.container}>
       <View
         style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ANCHOR_HEIGHT }]}
         pointerEvents="box-none"
       >
+        <BlurView
+          tint={themeColors.isDark ? 'dark' : 'light'}
+          intensity={1}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <LinearGradient
+          colors={[themeColors.background.root(), themeColors.withOpacity(themeColors.background.root(), 0)]}
+          locations={[0.4, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
         <View style={styles.topSectionRow} pointerEvents="box-none">
           <View style={styles.topSectionCloseButton} pointerEvents="none" />
           {Platform.OS === 'android' ? (
@@ -54,51 +68,50 @@ export function HabitsScreenContent() {
         </View>
       </View>
 
-      <ScreenContainer
-        scrollable={false}
-        paddingHorizontal={0}
-        safeAreaTop={false}
-        safeAreaBottom={false}
-        paddingVertical={0}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={isTodayLoading}
+            onRefresh={() => void fetchToday()}
+            tintColor={themeColors.text.secondary()}
+          />
+        }
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'never' : undefined}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={
-            <RefreshControl
-              refreshing={isTodayLoading}
-              onRefresh={() => void fetchToday()}
-              tintColor={themeColors.text.secondary()}
-            />
-          }
-        >
-          <View style={styles.contentSection}>
-            <HabitsTodayList
-              habits={todayHabits}
-              summary={todaySummary}
-              isLoading={isTodayLoading}
-              error={todayError}
-              onOpenDetail={openHabitDetail}
-            />
-          </View>
-        </ScrollView>
-      </ScreenContainer>
-    </>
+        <View style={styles.contentSection}>
+          <HabitsTodayList
+            habits={todayHabits}
+            summary={todaySummary}
+            isLoading={isTodayLoading}
+            error={todayError}
+            onOpenDetail={openHabitDetail}
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
-const createStyles = (insets: ReturnType<typeof useSafeAreaInsets>) =>
+const createStyles = (
+  themeColors: ReturnType<typeof useThemeColors>,
+  insets: ReturnType<typeof useSafeAreaInsets>,
+) =>
   StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: themeColors.background.root(),
+    },
     topSectionAnchor: {
       position: 'absolute',
       top: 0,
       left: 0,
       right: 0,
       zIndex: 10,
-      backgroundColor: 'transparent',
+      overflow: 'hidden',
     },
     topSectionRow: {
       position: 'absolute',
@@ -126,7 +139,6 @@ const createStyles = (insets: ReturnType<typeof useSafeAreaInsets>) =>
     },
     scrollContent: {
       flexGrow: 1,
-      // productivity + browse: list starts below insets.top + 64 blur band
       paddingTop: insets.top + TOP_SECTION_ANCHOR_HEIGHT,
       paddingHorizontal: Paddings.screen,
       paddingBottom: Paddings.scrollBottomExtra + Paddings.contentVertical,

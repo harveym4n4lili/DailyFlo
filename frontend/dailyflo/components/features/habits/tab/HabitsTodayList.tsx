@@ -1,11 +1,11 @@
 /**
- * scrollable list of today's due habits — used on habits tab.
+ * scrollable list of today's due habits — each habit uses the gamification board card shell.
  */
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
-import { HabitListItem } from '../list/HabitListItem';
+import { HabitBoardCard } from '../list/HabitBoardCard';
 import { HabitTabSummaryHeader } from './HabitTabSummaryHeader';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -51,11 +51,21 @@ export function HabitsTodayList({ habits, summary, isLoading, error, onOpenDetai
   }
 
   return (
-    <View>
+    <View style={styles.list}>
       <HabitTabSummaryHeader summary={summary} />
-      {habits.map((habit) => (
-        <HabitListItem key={habit.id} habit={habit} onOpenDetail={onOpenDetail} />
-      ))}
+      <View style={styles.habitCards}>
+        {habits.map((habit) => (
+          <HabitBoardCard
+            key={habit.id}
+            title={habit.title}
+            color={habit.color}
+            currentStreak={habit.currentStreak}
+            heatmap={habit.heatmap}
+            habit={habit}
+            onPress={onOpenDetail ? () => onOpenDetail(habit.id) : undefined}
+          />
+        ))}
+      </View>
     </View>
   );
 }
@@ -82,5 +92,11 @@ const createStyles = (
     errorText: {
       ...typography.getTextStyle('body-medium'),
       color: themeColors.text.secondary(),
+    },
+    list: {
+      gap: Paddings.sectionCompact,
+    },
+    habitCards: {
+      gap: Paddings.screen,
     },
   });
