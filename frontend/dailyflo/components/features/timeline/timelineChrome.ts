@@ -20,6 +20,9 @@ export const TIMELINE_RAIL_MARGIN_LEFT =
 /** gap between rail (checkbox/icon) and task text — matches TaskCard checkbox-to-title spacing */
 export const TIMELINE_CONTENT_GAP = Paddings.cardCompact;
 
+/** vertical gap between timeline time row and task title — reused on habit card title → progress */
+export const TIMELINE_TASK_META_GAP = 2;
+
 /** left inset for task text, free-time gap copy, and overlapping separators (inside `tasksContainer`) */
 export const TIMELINE_CONTENT_LEFT =
   TIMELINE_RAIL_MARGIN_LEFT + TIMELINE_RAIL_WIDTH + TIMELINE_CONTENT_GAP;

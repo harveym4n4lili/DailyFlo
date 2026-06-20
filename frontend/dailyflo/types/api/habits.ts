@@ -114,6 +114,8 @@ export interface HabitHeatmapData {
   startDate: string;
   days: number;
   completedDates: string[];
+  /** iso date → 0–1 completion ratio; drives partial heatmap cell shades */
+  dayScores?: Record<string, number>;
 }
 
 export interface HabitTrendPoint {

@@ -236,11 +236,12 @@ export const SemanticColors = {
 // Picker order (`TASK_HABIT_COLOR_OPTIONS`) — color wheel clockwise from brand green (plant),
 // with green always in the first slot.
 //
-// Each color has exactly 4 shades:
+// Each color has exactly 5 shades:
 //   100 — lightest tint (subtle backgrounds, soft fills)
 //   300 — soft accent (borders, secondary highlights)
 //   500 — primary accent (picker swatch, list icons) ← default in getTaskColorValue
 //   700 — deep accent (pressed states, labels on light surfaces)
+//   900 — deepest accent (slightly darker than 700)
 
 // Picker order — color wheel clockwise from brand anchor (plant / green), slot 1 = default accent.
 export const TASK_HABIT_COLOR_OPTIONS = [
@@ -255,7 +256,7 @@ export const TASK_HABIT_COLOR_OPTIONS = [
   'teal',    // moss family
 ] as const;
 
-export const TASK_HABIT_COLOR_SHADES = [100, 300, 500, 700] as const;
+export const TASK_HABIT_COLOR_SHADES = [100, 300, 500, 700, 900] as const;
 
 export type TaskHabitColorName = (typeof TASK_HABIT_COLOR_OPTIONS)[number];
 export type TaskHabitColorShade = (typeof TASK_HABIT_COLOR_SHADES)[number];
@@ -266,54 +267,63 @@ export const TaskAndHabitColors = {
     300: '#A8C49A',
     500: '#7DB06A',
     700: '#456B3A',
+    900: '#3B5B31',
   },
   yellow: {
     100: '#FDF5E3',
     300: '#E8CB7A',
     500: '#F2C75A',
     700: '#8A6D22',
+    900: '#755D1D',
   },
   orange: {
     100: '#FDF0E6',
     300: '#F0B080',
     500: '#F19457',
     700: '#A04F1E',
+    900: '#88431A',
   },
   red: {
     100: '#FDECEC',
     300: '#F2A8A8',
     500: '#D95454',
     700: '#A83232',
+    900: '#8F2B2B',
   },
   pink: {
     100: '#FDE8F2',
     300: '#F0A8C8',
     500: '#E177AB',
     700: '#9E2D63',
+    900: '#862755',
   },
   purple: {
     100: '#F0E8F5',
     300: '#B89AD4',
     500: '#9C69D5',
     700: '#543A73',
+    900: '#473162',
   },
   blue: {
     100: '#E8EEF7',
-    300: '#93AED4',
+    300: '#A4C1EA',
     500: '#6594CE',
     700: '#2D5589',
+    900: '#264874',
   },
   cyan: {
     100: '#E5F7FC',
     300: '#7DD3E8',
     500: '#2BA8C4',
     700: '#157A8F',
+    900: '#12687A',
   },
   teal: {
     100: '#E4F3F0',
     300: '#7EC4B8',
     500: '#3A9A8A',
     700: '#236B60',
+    900: '#1E5B52',
   },
 } as const;
 
@@ -555,7 +565,7 @@ export function getSemanticColor(
 /**
  * Get a task or habit accent color value
  * @param color - color id (red, blue, green, yellow, purple, teal, orange)
- * @param shade - one of 100, 300, 500, 700 (default 500 = picker swatch)
+ * @param shade - one of 100, 300, 500, 700, 900 (default 500 = picker swatch)
  */
 export function getTaskHabitColor(
   color: TaskHabitColorName,

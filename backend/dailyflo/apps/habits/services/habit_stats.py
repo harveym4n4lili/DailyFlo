@@ -27,14 +27,33 @@ def habit_streaks(habit, today: date) -> dict:
 
 
 def habit_heatmap(habit, today: date) -> dict:
-    """last 365 calendar days — dates where habit was marked complete."""
+    """last 365 calendar days — per-day completion score 0–1 for heatmap shading."""
     start = today - timedelta(days=HEATMAP_DAYS - 1)
-    dates = _completion_dates_for_habit(habit)
-    completed = sorted(d for d in dates if start <= d <= today)
+    completed_dates = _completion_dates_for_habit(habit)
+    completed = sorted(d for d in completed_dates if start <= d <= today)
+
+    target = habit.target_value or 1
+    day_scores: dict[str, float] = {}
+
+    rows = HabitCompletion.objects.filter(
+        habit=habit,
+        completion_date__gte=start,
+        completion_date__lte=today,
+    )
+    for row in rows:
+        if habit.tracking_type == 'binary':
+            score = 1.0 if row.is_complete else 0.0
+        else:
+            logged = row.logged_value or 0
+            score = min(1.0, logged / target) if logged > 0 else 0.0
+        if score > 0:
+            day_scores[row.completion_date.isoformat()] = round(score, 4)
+
     return {
         'startDate': start.isoformat(),
         'days': HEATMAP_DAYS,
         'completedDates': [d.isoformat() for d in completed],
+        'dayScores': day_scores,
     }
 
 

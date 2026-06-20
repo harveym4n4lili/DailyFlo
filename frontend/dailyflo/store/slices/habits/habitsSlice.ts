@@ -23,6 +23,10 @@ import type {
   HabitsTodaySummary,
   UpdateHabitInput,
 } from '@/types/api/habits';
+import {
+  habitTodayHeatmapScore,
+  patchHabitHeatmapDayScore,
+} from '@/components/features/habits/detail/habitHeatmapColors';
 
 interface HabitsState {
   todayDate: string | null;
@@ -262,17 +266,19 @@ export const logHabitProgress = createAsyncThunk(
   },
 );
 
-/** add or remove one calendar day on the card heatmap when today is marked complete / reset */
-function patchHeatmapCompletedDay(
+/** sync today's heatmap cell shade when progress changes */
+function patchHeatmapForHabitToday(
   heatmap: HabitHeatmapData,
   dayIso: string,
-  completed: boolean,
+  habit: HabitTodayItem,
 ): HabitHeatmapData {
-  if (!dayIso) return heatmap;
-  const dates = new Set(heatmap.completedDates);
-  if (completed) dates.add(dayIso);
-  else dates.delete(dayIso);
-  return { ...heatmap, completedDates: [...dates].sort() };
+  const score = habitTodayHeatmapScore(
+    habit.trackingType,
+    habit.loggedValue ?? 0,
+    habit.isCompleteToday,
+    habit.targetValue,
+  );
+  return patchHabitHeatmapDayScore(heatmap, dayIso, score);
 }
 
 function mergeTodayHabitWithLocal(local: HabitTodayItem, incoming: HabitTodayItem): HabitTodayItem {
@@ -401,21 +407,17 @@ const habitsSlice = createSlice({
         }
       }
       if (state.todayDate && habit.heatmap) {
-        habit.heatmap = patchHeatmapCompletedDay(
-          habit.heatmap,
-          state.todayDate,
-          habit.isCompleteToday,
-        );
+        habit.heatmap = patchHeatmapForHabitToday(habit.heatmap, state.todayDate, habit);
       }
       if (
         state.detailStats &&
         state.detailHabit?.id === action.payload.id &&
         state.todayDate
       ) {
-        state.detailStats.heatmap = patchHeatmapCompletedDay(
+        state.detailStats.heatmap = patchHeatmapForHabitToday(
           state.detailStats.heatmap,
           state.todayDate,
-          habit.isCompleteToday,
+          habit,
         );
       }
       if (state.todaySummary) {
