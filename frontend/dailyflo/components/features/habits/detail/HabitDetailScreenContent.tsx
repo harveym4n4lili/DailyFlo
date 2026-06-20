@@ -135,7 +135,7 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
       longestStreak: detailStats?.longestStreak ?? 0,
       frequencyType: detailHabit.frequencyType,
       reminderTime: detailHabit.reminderTime ?? '',
-      heatmap: detailStats?.heatmap ?? { startDate: '', days: 365, completedDates: [] },
+      heatmap: detailStats?.heatmap ?? { startDate: '', days: 365, completedDates: [], dayScores: {} },
     };
   }, [todayHabits, habitId, detailHabit, detailStats]);
 

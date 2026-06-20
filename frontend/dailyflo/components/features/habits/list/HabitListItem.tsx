@@ -1,12 +1,14 @@
 /**
- * single habit row — binary checkbox tap or numeric +1 with streak pill.
+ * single habit row — increment ring for all trackable habits (binary + numeric).
  */
 
 import React, { useCallback, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { Checkbox } from '@/components/ui/Button';
+import { HabitProgressRing } from './HabitProgressRing';
+import { getHabitIncrementDisplay } from './habitIncrementDisplay';
+import { getHabitProgressRingColors } from './habitProgressRingColors';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
@@ -33,25 +35,14 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
   const snapshotRef = useRef<HabitTodayItem | null>(null);
 
   const accent = useMemo(() => getTaskColorValue(habit.color), [habit.color]);
+  const ringColors = useMemo(() => getHabitProgressRingColors(habit.color), [habit.color]);
   const titleColor = useMemo(() => getTaskHabitTitleColor(habit.color), [habit.color]);
   const styles = useMemo(
     () => createStyles(themeColors, typography, accent, compact),
     [themeColors, typography, accent, compact],
   );
 
-  const handleBinaryPress = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    snapshotRef.current = { ...habit };
-    const wasCompleteBefore = habit.isCompleteToday;
-    dispatch(optimisticLogHabit({ id: habit.id }));
-    void dispatch(logHabitProgress({ id: habit.id, wasCompleteBefore }))
-      .unwrap()
-      .catch(() => {
-        if (snapshotRef.current) {
-          dispatch(revertOptimisticLog({ id: habit.id, snapshot: snapshotRef.current }));
-        }
-      });
-  }, [dispatch, habit]);
+  const incrementDisplay = useMemo(() => getHabitIncrementDisplay(habit), [habit]);
 
   const handleIncrement = useCallback(() => {
     if (!habit) return;
@@ -68,28 +59,33 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
       });
   }, [dispatch, habit]);
 
-  const numericLabel =
-    habit.trackingType === 'numeric'
-      ? `${Math.round(habit.loggedValue)}/${habit.targetValue ?? 1}${habit.unitLabel ? ` ${habit.unitLabel}` : ''}`
-      : null;
+  const progressLabel = incrementDisplay
+    ? `Today's progress: ${incrementDisplay.scoreLabel}`
+    : null;
 
   return (
     <View style={styles.row}>
-      {habit.trackingType === 'binary' ? (
-        <Checkbox checked={habit.isCompleteToday} onPress={handleBinaryPress} expandTapArea />
-      ) : (
+      {incrementDisplay ? (
         <Pressable
           onPress={handleIncrement}
-          style={styles.incrementButton}
+          style={styles.ringAction}
           accessibilityLabel={
             habit.isCompleteToday
               ? `Reset today's count for ${habit.title}`
               : `Add one to ${habit.title}`
           }
         >
-          <Text style={styles.incrementText}>+1</Text>
+          <HabitProgressRing
+            current={incrementDisplay.current}
+            target={incrementDisplay.target}
+            color={ringColors.progress}
+            trackColor={ringColors.track}
+            iconColor={ringColors.icon}
+            showCenterLabel={false}
+            showCenterPlus
+          />
         </Pressable>
-      )}
+      ) : null}
       <Pressable
         style={styles.body}
         onPress={onOpenDetail ? () => onOpenDetail(habit.id) : undefined}
@@ -105,8 +101,8 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
         >
           {habit.title}
         </Text>
-        {numericLabel ? (
-          <Text style={styles.subtitle}>{numericLabel}</Text>
+        {progressLabel ? (
+          <Text style={styles.subtitle}>{progressLabel}</Text>
         ) : null}
       </Pressable>
       {habit.currentStreak > 0 ? (
@@ -158,18 +154,7 @@ const createStyles = (
       color: accent,
       fontWeight: '600',
     },
-    incrementButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      borderWidth: 1.5,
-      borderColor: accent,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    incrementText: {
-      ...typography.getTextStyle('body-medium'),
-      color: accent,
-      fontWeight: '600',
+    ringAction: {
+      flexShrink: 0,
     },
   });

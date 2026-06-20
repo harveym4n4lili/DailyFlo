@@ -1,6 +1,6 @@
 /**
  * github-style consistency grid — weeks as columns, days-of-week as rows.
- * left: day labels; top: month labels when the month changes.
+ * left: day labels; scrollable grid of completion cells + legend key.
  */
 
 import React, { useMemo, useRef, useCallback, useEffect } from 'react';
@@ -8,19 +8,33 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { getTaskColorValue } from '@/utils/taskColors';
+import { Paddings } from '@/constants/Paddings';
+import {
+  getHabitHeatmapCellFill,
+  getHabitHeatmapDayScore,
+  getHabitHeatmapLegendItems,
+} from './habitHeatmapColors';
 import type { HabitColor, HabitHeatmapData } from '@/types/api/habits';
 
-const CELL = 16;
-const GAP = 2;
-const MONTH_GRID_GAP = 2;
+const CELL = 14;
+const GAP = 3;
 const ROWS = 7;
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
+const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const;
+const DAY_LABEL_A11Y = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+/** sun, tue, thu, sat — keep row slots for grid alignment but hide the letter */
+const HIDDEN_DAY_ROW_INDICES = new Set([0, 2, 4, 6]);
 
 const ROW_PITCH = CELL + GAP;
-const DAY_LABEL_COLUMN_WIDTH = 30;
-const MONTH_ROW_HEIGHT = 12;
+const DAY_LABEL_COLUMN_WIDTH = 12;
+/** space between day letters and the first week column */
+const DAY_LABEL_GRID_GAP = 4;
+const DAY_LABEL_TRACK_WIDTH = DAY_LABEL_COLUMN_WIDTH + DAY_LABEL_GRID_GAP;
+const LEGEND_SWATCH_GAP = GAP;
+/** space between Less/More labels and the swatch cluster */
+const LEGEND_CAPTION_GAP = 6;
+
+/** gap between the grid and the Less/More key below — matches list row rhythm */
+const LEGEND_TOP_MARGIN = Paddings.listItemVertical;
 
 function parseLocalDate(iso: string): Date {
   const [y, m, d] = iso.split('-').map(Number);
@@ -56,14 +70,13 @@ function stripTime(d: Date): Date {
 
 type HeatmapCell = {
   key: string;
-  filled: boolean;
+  score: number;
   empty: boolean;
   date: Date;
 };
 
 type HeatmapWeekColumn = {
   key: string;
-  monthLabel: string | null;
   cells: HeatmapCell[];
 };
 
@@ -75,14 +88,12 @@ type HabitHeatmapProps = {
 export function HabitHeatmap({ heatmap, color }: HabitHeatmapProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
-  const accent = getTaskColorValue(color);
-
-  const completedSet = useMemo(
-    () => new Set(heatmap.completedDates),
-    [heatmap.completedDates],
-  );
 
   const labelColor = themeColors.text.tertiary();
+  const legendItems = useMemo(
+    () => getHabitHeatmapLegendItems(color, themeColors),
+    [color, themeColors],
+  );
   const styles = useMemo(
     () => createStyles(typography, labelColor),
     [typography, labelColor],
@@ -97,7 +108,6 @@ export function HabitHeatmap({ heatmap, color }: HabitHeatmapProps) {
     const lastWeekStart = weekStartSunday(rangeEnd);
 
     const columns: HeatmapWeekColumn[] = [];
-    let prevMonth: number | null = null;
     let weekIndex = 0;
 
     while (true) {
@@ -105,44 +115,22 @@ export function HabitHeatmap({ heatmap, color }: HabitHeatmapProps) {
       if (weekSunday > lastWeekStart) break;
 
       const cells: HeatmapCell[] = [];
-      let monthForLabel: number | null = null;
 
       for (let row = 0; row < ROWS; row += 1) {
         const date = addDays(weekSunday, row);
         const inRange = date >= rangeStart && date <= rangeEnd;
         const iso = localDateStr(date);
 
-        if (inRange && date.getDate() === 1) {
-          monthForLabel = date.getMonth();
-        }
-
         cells.push({
           key: iso,
           date,
           empty: !inRange,
-          filled: inRange && completedSet.has(iso),
+          score: inRange ? getHabitHeatmapDayScore(heatmap, iso) : 0,
         });
-      }
-
-      if (monthForLabel === null) {
-        const firstInRange = cells.find((cell) => !cell.empty);
-        if (firstInRange) {
-          monthForLabel = firstInRange.date.getMonth();
-        }
-      }
-
-      const monthLabel =
-        monthForLabel !== null && monthForLabel !== prevMonth
-          ? MONTH_LABELS[monthForLabel]
-          : null;
-
-      if (monthForLabel !== null) {
-        prevMonth = monthForLabel;
       }
 
       columns.push({
         key: `w-${weekIndex}`,
-        monthLabel,
         cells,
       });
 
@@ -150,10 +138,7 @@ export function HabitHeatmap({ heatmap, color }: HabitHeatmapProps) {
     }
 
     return columns;
-  }, [heatmap.startDate, heatmap.days, completedSet]);
-
-  const emptyFill = themeColors.withOpacity(themeColors.text.tertiary(), 0.2);
-  const doneFill = themeColors.withOpacity(accent, 0.85);
+  }, [heatmap]);
 
   // heatmap spans ~52 weeks — start scrolled to the right so today’s column is visible first
   const scrollRef = useRef<ScrollView>(null);
@@ -170,66 +155,67 @@ export function HabitHeatmap({ heatmap, color }: HabitHeatmapProps) {
 
   if (weekColumns.length === 0) return null;
 
-  const gridContentWidth =
-    weekColumns.length * CELL + Math.max(0, weekColumns.length - 1) * GAP;
-
   return (
-    <View style={styles.root}>
-      <View style={styles.dayLabelColumn}>
-        <View style={styles.monthSpacer} />
-        {DAY_LABELS.map((label, rowIdx) => (
-          <View key={label} style={styles.dayLabelSlot}>
-            <Text style={styles.dayLabel}>{label}</Text>
-          </View>
-        ))}
-      </View>
-
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.gridScroll}
-        contentContainerStyle={styles.gridScrollContent}
-        onContentSizeChange={scrollToLatestWeek}
-      >
-        <View style={styles.gridBody}>
-          <View style={[styles.monthHeaderTrack, { width: gridContentWidth }]}>
-            {weekColumns.map((column, weekIdx) =>
-              column.monthLabel ? (
-                <Text
-                  key={`m-${column.key}`}
-                  style={[styles.monthLabel, { left: weekIdx * (CELL + GAP) }]}
-                >
-                  {column.monthLabel}
+    <View style={styles.wrapper}>
+      <View style={styles.root}>
+        <View style={styles.dayLabelColumn}>
+          {DAY_LABELS.map((label, rowIdx) => (
+            <View key={`day-${rowIdx}`} style={styles.dayLabelSlot}>
+              {HIDDEN_DAY_ROW_INDICES.has(rowIdx) ? null : (
+                <Text style={styles.dayLabel} accessibilityLabel={DAY_LABEL_A11Y[rowIdx]}>
+                  {label}
                 </Text>
-              ) : null,
-            )}
-          </View>
+              )}
+            </View>
+          ))}
+        </View>
 
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.gridScroll}
+          contentContainerStyle={styles.gridScrollContent}
+          onContentSizeChange={scrollToLatestWeek}
+        >
           <View style={styles.weekRow}>
             {weekColumns.map((column) => (
-              <View key={column.key} style={styles.weekColumn}>
-                {column.cells.map((cell, rowIdx) => (
-                  <View
-                    key={cell.key}
-                    style={[
-                      styles.cell,
-                      rowIdx < ROWS - 1 ? styles.cellGap : null,
-                      {
-                        backgroundColor: cell.empty
-                          ? 'transparent'
-                          : cell.filled
-                            ? doneFill
-                            : emptyFill,
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
+                <View key={column.key} style={styles.weekColumn}>
+                  {column.cells.map((cell, rowIdx) => (
+                    <View
+                      key={cell.key}
+                      style={[
+                        styles.cell,
+                        rowIdx < ROWS - 1 ? styles.cellGap : null,
+                        {
+                          backgroundColor: cell.empty
+                            ? 'transparent'
+                            : getHabitHeatmapCellFill(cell.score, color, themeColors),
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+              ))}
+          </View>
+        </ScrollView>
+      </View>
+
+      <View style={styles.legendTrack}>
+        <View style={styles.legendSpacer} />
+        <View style={styles.legendRow} accessibilityLabel="Heatmap completion key, less to more">
+          <Text style={styles.legendCaption}>Less</Text>
+          <View style={styles.legendSwatchGroup}>
+            {legendItems.map((item) => (
+              <View
+                key={item.score}
+                style={[styles.legendSwatch, { backgroundColor: item.fill }]}
+              />
             ))}
           </View>
+          <Text style={styles.legendCaption}>More</Text>
         </View>
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -239,17 +225,17 @@ const createStyles = (
   labelColor: string,
 ) =>
   StyleSheet.create({
+    wrapper: {
+      width: '100%',
+    },
     root: {
       flexDirection: 'row',
       alignItems: 'flex-start',
     },
     dayLabelColumn: {
       width: DAY_LABEL_COLUMN_WIDTH,
-      marginRight: 6,
-    },
-    monthSpacer: {
-      height: MONTH_ROW_HEIGHT,
-      marginBottom: MONTH_GRID_GAP,
+      marginRight: DAY_LABEL_GRID_GAP,
+      alignItems: 'center',
     },
     dayLabelSlot: {
       height: ROW_PITCH,
@@ -260,6 +246,8 @@ const createStyles = (
       color: labelColor,
       fontSize: 10,
       lineHeight: 12,
+      textAlign: 'center',
+      width: DAY_LABEL_COLUMN_WIDTH,
     },
     gridScroll: {
       flex: 1,
@@ -267,22 +255,6 @@ const createStyles = (
     gridScrollContent: {
       flexGrow: 1,
       overflow: 'visible',
-    },
-    gridBody: {
-      flexDirection: 'column',
-    },
-    monthHeaderTrack: {
-      position: 'relative',
-      height: MONTH_ROW_HEIGHT,
-      marginBottom: MONTH_GRID_GAP,
-    },
-    monthLabel: {
-      position: 'absolute',
-      bottom: 0,
-      ...typography.getTextStyle('body-small'),
-      color: labelColor,
-      fontSize: 10,
-      lineHeight: MONTH_ROW_HEIGHT,
     },
     weekRow: {
       flexDirection: 'row',
@@ -298,5 +270,35 @@ const createStyles = (
     },
     cellGap: {
       marginBottom: GAP,
+    },
+    legendTrack: {
+      flexDirection: 'row',
+      marginTop: LEGEND_TOP_MARGIN,
+    },
+    legendSpacer: {
+      width: DAY_LABEL_TRACK_WIDTH,
+    },
+    legendRow: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: LEGEND_CAPTION_GAP,
+    },
+    legendSwatchGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: LEGEND_SWATCH_GAP,
+    },
+    legendSwatch: {
+      width: CELL,
+      height: CELL,
+      borderRadius: 4,
+    },
+    legendCaption: {
+      ...typography.getTextStyle('body-small'),
+      color: labelColor,
+      fontSize: 9,
+      lineHeight: 11,
     },
   });

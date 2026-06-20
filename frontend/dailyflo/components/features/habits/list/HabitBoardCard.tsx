@@ -1,13 +1,13 @@
 /**
  * habit card — same liquid-glass shell as the browse gamification board.
- * header: habit title (heading-4) + streak counter top-right; body: heatmap.
+ * single grouped row: title + today's score + increment ring + heatmap (no inner separator).
+ * only the ring increments today's score; title still opens detail when onPress is set.
  */
 
 import React, { useCallback, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { Checkbox } from '@/components/ui/Button';
 import { GroupedList } from '@/components/ui/List/GroupedList';
 import { ProgressBoardGlassShell } from '@/components/features/gamification/browse/ProgressBoardGlassShell';
 import {
@@ -23,10 +23,20 @@ import {
   PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_HORIZONTAL,
 } from '@/components/features/gamification/browse/progressBoardUiTokens';
 import { HabitHeatmap } from '../detail/HabitHeatmap';
+import { HabitProgressRing } from './HabitProgressRing';
+import { getHabitIncrementDisplay } from './habitIncrementDisplay';
+import { getHabitProgressRingColors } from './habitProgressRingColors';
+import {
+  HABIT_BOARD_PLUS_ICON_SIZE,
+  HABIT_BOARD_PLUS_STROKE_WIDTH,
+  HABIT_BOARD_RING_SIZE,
+  HABIT_BOARD_RING_STROKE_WIDTH,
+} from './habitBoardUiTokens';
+import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
-import { Paddings } from '@/constants/Paddings';
-import { getTaskColorValue, getTaskHabitTitleColor } from '@/utils/taskColors';
+import { TIMELINE_TASK_META_GAP } from '@/components/features/timeline/timelineChrome';
+import { getTaskHabitTitleColor } from '@/utils/taskColors';
 import { useAppDispatch } from '@/store';
 import {
   logHabitProgress,
@@ -44,7 +54,7 @@ export type HabitBoardCardProps = {
   color: HabitColor;
   currentStreak: number;
   heatmap: HabitHeatmapData;
-  /** when set, renders today's log controls below the graph */
+  /** when set, renders today's log controls in the header */
   habit?: HabitTodayItem;
   onPress?: () => void;
 };
@@ -62,7 +72,7 @@ export function HabitBoardCard({
   const dispatch = useAppDispatch();
   const snapshotRef = useRef<HabitTodayItem | null>(null);
 
-  const accent = useMemo(() => getTaskColorValue(color), [color]);
+  const ringColors = useMemo(() => getHabitProgressRingColors(color), [color]);
   const titleColor = useMemo(() => getTaskHabitTitleColor(color), [color]);
   const streakCounterStyle = getProgressBoardStreakCounterTextStyle();
   const streakUnitStyle = getProgressBoardStreakUnitTextStyle();
@@ -70,25 +80,12 @@ export function HabitBoardCard({
   const streakUnitLabel = getProgressBoardStreakUnitLabel(currentStreak);
   const streakCountColor = themeColors.interactive.active();
 
-  const styles = useMemo(
-    () => createStyles(typography, accent, streakCounterStyle, streakUnitStyle),
-    [typography, accent, streakCounterStyle, streakUnitStyle],
-  );
+  const incrementDisplay = habit ? getHabitIncrementDisplay(habit) : null;
 
-  const handleBinaryPress = useCallback(() => {
-    if (!habit) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    snapshotRef.current = { ...habit };
-    const wasCompleteBefore = habit.isCompleteToday;
-    dispatch(optimisticLogHabit({ id: habit.id }));
-    void dispatch(logHabitProgress({ id: habit.id, wasCompleteBefore }))
-      .unwrap()
-      .catch(() => {
-        if (snapshotRef.current) {
-          dispatch(revertOptimisticLog({ id: habit.id, snapshot: snapshotRef.current }));
-        }
-      });
-  }, [dispatch, habit]);
+  const styles = useMemo(
+    () => createStyles(typography, streakCounterStyle, streakUnitStyle),
+    [typography, streakCounterStyle, streakUnitStyle],
+  );
 
   const handleIncrement = useCallback(() => {
     if (!habit) return;
@@ -105,12 +102,7 @@ export function HabitBoardCard({
       });
   }, [dispatch, habit]);
 
-  const numericLabel =
-    habit?.trackingType === 'numeric'
-      ? `${Math.round(habit.loggedValue)}/${habit.targetValue ?? 1}${habit.unitLabel ? ` ${habit.unitLabel}` : ''}`
-      : null;
-
-  const showTodayActions = Boolean(habit);
+  const showTodayActions = Boolean(habit && incrementDisplay);
 
   return (
     <ProgressBoardGlassShell>
@@ -122,60 +114,78 @@ export function HabitBoardCard({
         itemPadding="child"
         separatorInsetRight={PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_HORIZONTAL}
       >
-        <Pressable
-          onPress={onPress}
-          disabled={!onPress}
-          style={({ pressed }) => [styles.content, pressed && onPress ? styles.contentPressed : null]}
-        >
+        <View style={styles.cardContent}>
           <View style={styles.headerRow}>
-            <Text
-              style={[
-                styles.title,
-                { color: titleColor },
-                habit?.isCompleteToday && styles.titleDone,
+            <Pressable
+              onPress={onPress}
+              disabled={!onPress}
+              style={({ pressed }) => [
+                styles.titleBlock,
+                pressed && onPress ? styles.sectionPressed : null,
               ]}
-              numberOfLines={2}
             >
-              {title}
-            </Text>
-            <View style={styles.streakCounter} accessibilityLabel={`${currentStreak} day streak`}>
-              <Text style={[styles.streakNumber, { color: streakCountColor }]}>{streakNumberLabel}</Text>
-              <Text style={[styles.streakUnit, { color: streakCountColor }]}>{streakUnitLabel}</Text>
-            </View>
+              <Text
+                style={[
+                  styles.title,
+                  { color: titleColor },
+                  habit?.isCompleteToday && styles.titleDone,
+                ]}
+                numberOfLines={2}
+              >
+                {title}
+              </Text>
+              {incrementDisplay ? (
+                <Text style={styles.todayScore}>
+                  <Text style={[styles.todayScore, { color: themeColors.text.tertiary() }]}>
+                    Today&apos;s progress:{' '}
+                  </Text>
+                  <Text style={[styles.todayScore, { color: themeColors.text.secondary() }]}>
+                    {incrementDisplay.scoreLabel}
+                  </Text>
+                </Text>
+              ) : null}
+            </Pressable>
+
+            {showTodayActions && incrementDisplay ? (
+              <Pressable
+                onPress={handleIncrement}
+                style={({ pressed }) => [
+                  styles.ringAction,
+                  pressed && styles.ringActionPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  habit!.isCompleteToday
+                    ? `Today's progress ${incrementDisplay.current} of ${incrementDisplay.target}. Tap to reset.`
+                    : `Today's progress ${incrementDisplay.current} of ${incrementDisplay.target}. Tap to add one.`
+                }
+              >
+                <HabitProgressRing
+                  current={incrementDisplay.current}
+                  target={incrementDisplay.target}
+                  color={ringColors.progress}
+                  trackColor={ringColors.track}
+                  iconColor={ringColors.icon}
+                  size={HABIT_BOARD_RING_SIZE}
+                  strokeWidth={HABIT_BOARD_RING_STROKE_WIDTH}
+                  plusIconSize={HABIT_BOARD_PLUS_ICON_SIZE}
+                  plusStrokeWidth={HABIT_BOARD_PLUS_STROKE_WIDTH}
+                  showCenterLabel={false}
+                  showCenterPlus
+                />
+              </Pressable>
+            ) : (
+              <View style={styles.streakCounter} accessibilityLabel={`${currentStreak} day streak`}>
+                <Text style={[styles.streakNumber, { color: streakCountColor }]}>{streakNumberLabel}</Text>
+                <Text style={[styles.streakUnit, { color: streakCountColor }]}>{streakUnitLabel}</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.graphWrap}>
             <HabitHeatmap heatmap={heatmap} color={color} />
           </View>
-        </Pressable>
-
-        {showTodayActions ? (
-          <View style={styles.todayRow}>
-            {habit!.trackingType === 'binary' ? (
-              <Checkbox checked={habit!.isCompleteToday} onPress={handleBinaryPress} expandTapArea />
-            ) : (
-              <Pressable
-                onPress={handleIncrement}
-                style={styles.incrementButton}
-                accessibilityLabel={
-                  habit!.isCompleteToday
-                    ? `Reset today's count for ${title}`
-                    : `Add one to ${title}`
-                }
-              >
-                <Text style={styles.incrementText}>+1</Text>
-              </Pressable>
-            )}
-            <View style={styles.todayMeta}>
-              <Text style={[styles.todayLabel, { color: themeColors.text.primary() }]}>Today</Text>
-              {numericLabel ? (
-                <Text style={[styles.todayProgress, { color: themeColors.text.secondary() }]}>
-                  {numericLabel}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-        ) : null}
+        </View>
       </GroupedList>
     </ProgressBoardGlassShell>
   );
@@ -183,37 +193,55 @@ export function HabitBoardCard({
 
 const createStyles = (
   typography: ReturnType<typeof useTypography>,
-  accent: string,
   streakCounterStyle: ReturnType<typeof getProgressBoardStreakCounterTextStyle>,
   streakUnitStyle: ReturnType<typeof getProgressBoardStreakUnitTextStyle>,
 ) =>
   StyleSheet.create({
-    content: {
-      gap: Paddings.formDataPillRowGap,
-    },
-    contentPressed: {
+    sectionPressed: {
       opacity: 0.92,
+    },
+    cardContent: {
+      width: '100%',
+      gap: Paddings.listItemVertical,
     },
     headerRow: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      alignItems: 'center',
       justifyContent: 'space-between',
       gap: 12,
     },
-    title: {
-      ...typography.getTextStyle('heading-4'),
+    titleBlock: {
       flex: 1,
       minWidth: 0,
+      gap: TIMELINE_TASK_META_GAP,
+    },
+    title: {
+      ...typography.getTextStyle('heading-4'),
     },
     titleDone: {
       opacity: 0.55,
       textDecorationLine: 'line-through',
+    },
+    todayScore: {
+      ...typography.getTextStyle('body-small'),
+      fontVariant: ['tabular-nums'],
+    },
+    ringAction: {
+      width: HABIT_BOARD_RING_SIZE,
+      height: HABIT_BOARD_RING_SIZE,
+      flexShrink: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    ringActionPressed: {
+      opacity: 0.88,
     },
     streakCounter: {
       flexDirection: 'row',
       alignItems: 'baseline',
       gap: 4,
       flexShrink: 0,
+      alignSelf: 'flex-start',
     },
     streakNumber: {
       ...streakCounterStyle,
@@ -223,35 +251,5 @@ const createStyles = (
     },
     graphWrap: {
       width: '100%',
-    },
-    todayRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    todayMeta: {
-      flex: 1,
-      minWidth: 0,
-    },
-    todayLabel: {
-      ...typography.getTextStyle('body-medium'),
-    },
-    todayProgress: {
-      ...typography.getTextStyle('body-small'),
-      marginTop: 2,
-    },
-    incrementButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      borderWidth: 1.5,
-      borderColor: accent,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    incrementText: {
-      ...typography.getTextStyle('body-medium'),
-      color: accent,
-      fontWeight: '600',
     },
   });
