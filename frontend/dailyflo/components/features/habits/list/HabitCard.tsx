@@ -5,9 +5,14 @@
  * tap the chevron row to switch forms; default comes from defaultVariant per section.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, type LayoutChangeEvent } from 'react-native';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { GroupedList } from '@/components/ui/List/GroupedList';
 import { ProgressBoardGlassShell } from '@/components/features/gamification/browse/ProgressBoardGlassShell';
@@ -23,7 +28,6 @@ import {
   PROGRESS_BOARD_CARD_BORDER_RADIUS,
   PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_HORIZONTAL,
 } from '@/components/features/gamification/browse/progressBoardUiTokens';
-import { LAYOUT_TRANSITION_SPRING } from '@/constants/LayoutTransitions';
 import { HabitHeatmap } from '../detail/HabitHeatmap';
 import { HabitAnimatedTitle } from './HabitAnimatedTitle';
 import { HabitProgressRing } from './HabitProgressRing';
@@ -38,7 +42,9 @@ import {
   HABIT_CARD_RING_STROKE_WIDTH,
   HABIT_CARD_TICK_ICON_SIZE,
   HABIT_CARD_BODY_TOP_GAP,
-  HABIT_CARD_VARIANT_FADE_MS,
+  HABIT_CARD_VARIANT_ENTERING,
+  HABIT_CARD_VARIANT_TIMING_CONFIG,
+  HABIT_CARD_VARIANT_TOGGLE_MARGIN_TOP,
 } from './habitCardUiTokens';
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -81,6 +87,16 @@ export function HabitCard({
   const themeColors = useThemeColors();
   const typography = useTypography();
   const [variant, setVariant] = useState<HabitCardVariant>(defaultVariant);
+  // bodyVariant can lag on collapse so body height shrinks before heatmap unmounts
+  const [bodyVariant, setBodyVariant] = useState<HabitCardVariant>(defaultVariant);
+  const footerHeight = useSharedValue(0);
+  const hasInitialFooterHeightRef = useRef(false);
+  const isCollapsingRef = useRef(false);
+  const isExpandingRef = useRef(false);
+  const footerHeightByVariant = useRef<Record<HabitCardVariant, number>>({
+    heatmap: 0,
+    simplified: 0,
+  });
 
   const ringColors = useMemo(() => getHabitProgressRingColors(color), [color]);
   const titleColor = useMemo(() => getTaskHabitTitleColor(color), [color]);
@@ -100,10 +116,90 @@ export function HabitCard({
       ? incrementDisplay.current / incrementDisplay.target
       : 0;
   const isHeatmapForm = variant === 'heatmap';
+  const isHeatmapBody = bodyVariant === 'heatmap';
+
+  const finishCollapse = useCallback(() => {
+    isCollapsingRef.current = false;
+    setBodyVariant('simplified');
+  }, []);
+
+  const finishExpand = useCallback(() => {
+    isExpandingRef.current = false;
+  }, []);
+
+  const animateFooterHeight = useCallback(
+    (targetHeight: number, onFinished?: () => void) => {
+      footerHeight.value = withTiming(
+        targetHeight,
+        HABIT_CARD_VARIANT_TIMING_CONFIG,
+        (finished) => {
+          if (finished && onFinished) {
+            runOnJS(onFinished)();
+          }
+        },
+      );
+    },
+    [footerHeight],
+  );
+
+  const handleFooterLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const nextHeight = event.nativeEvent.layout.height;
+      footerHeightByVariant.current[bodyVariant] = nextHeight;
+
+      if (!hasInitialFooterHeightRef.current) {
+        hasInitialFooterHeightRef.current = true;
+        footerHeight.value = nextHeight;
+        return;
+      }
+
+      if (isCollapsingRef.current) {
+        return;
+      }
+
+      if (isExpandingRef.current) {
+        if (Math.abs(nextHeight - footerHeight.value) > 1) {
+          animateFooterHeight(nextHeight, finishExpand);
+        }
+        return;
+      }
+
+      animateFooterHeight(nextHeight);
+    },
+    [animateFooterHeight, bodyVariant, finishExpand, footerHeight],
+  );
 
   const toggleVariant = useCallback(() => {
-    setVariant((current) => (current === 'heatmap' ? 'simplified' : 'heatmap'));
-  }, []);
+    if (variant === 'heatmap') {
+      setVariant('simplified');
+      const targetHeight = footerHeightByVariant.current.simplified;
+
+      if (targetHeight > 0 && bodyVariant === 'heatmap') {
+        isCollapsingRef.current = true;
+        isExpandingRef.current = false;
+        animateFooterHeight(targetHeight, finishCollapse);
+        return;
+      }
+
+      setBodyVariant('simplified');
+      return;
+    }
+
+    isCollapsingRef.current = false;
+    setVariant('heatmap');
+    setBodyVariant('heatmap');
+
+    const targetHeight = footerHeightByVariant.current.heatmap;
+    if (targetHeight > 0) {
+      isExpandingRef.current = true;
+      animateFooterHeight(targetHeight, finishExpand);
+    }
+  }, [animateFooterHeight, bodyVariant, finishCollapse, finishExpand, variant]);
+
+  const animatedFooterStyle = useAnimatedStyle(() => ({
+    height: footerHeight.value > 0 ? footerHeight.value : undefined,
+    overflow: 'hidden',
+  }));
 
   const styles = useMemo(
     () => createStyles(typography, streakCounterStyle, streakUnitStyle),
@@ -146,7 +242,7 @@ export function HabitCard({
     );
 
   return (
-    <Animated.View layout={LAYOUT_TRANSITION_SPRING} style={styles.cardShell}>
+    <View style={styles.cardShell}>
       <ProgressBoardGlassShell>
         <GroupedList
           backgroundColor={themeColors.background.primary()}
@@ -188,41 +284,46 @@ export function HabitCard({
               {incrementControl}
             </View>
 
-            <Animated.View layout={LAYOUT_TRANSITION_SPRING} style={styles.bodySection}>
-              {isHeatmapForm ? (
-                <Animated.View
-                  key="habit-card-heatmap"
-                  entering={FadeIn.duration(HABIT_CARD_VARIANT_FADE_MS)}
-                  exiting={FadeOut.duration(HABIT_CARD_VARIANT_FADE_MS)}
-                  style={styles.graphWrap}
-                >
-                  <HabitHeatmap heatmap={heatmapToShow} color={color} showLegend={false} />
-                </Animated.View>
-              ) : (
-                <Animated.View
-                  key="habit-card-bar"
-                  entering={FadeIn.duration(HABIT_CARD_VARIANT_FADE_MS)}
-                  exiting={FadeOut.duration(HABIT_CARD_VARIANT_FADE_MS)}
-                  style={styles.progressBarWrap}
-                >
-                  <HabitProgressBar
-                    progress={progressRatio}
-                    fillColor={ringColors.progress}
-                    trackColor={ringColors.track}
-                  />
-                </Animated.View>
-              )}
-            </Animated.View>
+            <Animated.View style={[styles.footerBlock, animatedFooterStyle]}>
+              <View onLayout={handleFooterLayout} style={styles.footerInner}>
+                <View style={styles.bodyClip}>
+                  {isHeatmapBody ? (
+                    <Animated.View
+                      key="habit-card-heatmap"
+                      entering={HABIT_CARD_VARIANT_ENTERING}
+                      style={styles.graphWrap}
+                    >
+                      <HabitHeatmap heatmap={heatmapToShow} color={color} showLegend={false} />
+                    </Animated.View>
+                  ) : (
+                    <Animated.View
+                      key="habit-card-bar"
+                      entering={HABIT_CARD_VARIANT_ENTERING}
+                      style={styles.progressBarWrap}
+                    >
+                      <HabitProgressBar
+                        progress={progressRatio}
+                        fillColor={ringColors.progress}
+                        trackColor={ringColors.track}
+                      />
+                    </Animated.View>
+                  )}
+                </View>
 
-            {showVariantToggle ? (
-              <Animated.View layout={LAYOUT_TRANSITION_SPRING}>
-                <HabitCardVariantToggle variant={variant} onPress={toggleVariant} color={color} />
-              </Animated.View>
-            ) : null}
+                {showVariantToggle ? (
+                  <HabitCardVariantToggle
+                    variant={variant}
+                    displayVariant={bodyVariant}
+                    onPress={toggleVariant}
+                    color={color}
+                  />
+                ) : null}
+              </View>
+            </Animated.View>
           </View>
         </GroupedList>
       </ProgressBoardGlassShell>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -279,16 +380,23 @@ const createStyles = (
     streakUnit: {
       ...streakUnitStyle,
     },
-    bodySection: {
+    bodyClip: {
       width: '100%',
       overflow: 'hidden',
+      paddingTop: HABIT_CARD_BODY_TOP_GAP,
+    },
+    footerBlock: {
+      width: '100%',
+      justifyContent: 'flex-end',
+    },
+    footerInner: {
+      width: '100%',
+      gap: HABIT_CARD_VARIANT_TOGGLE_MARGIN_TOP,
     },
     graphWrap: {
       width: '100%',
-      marginTop: HABIT_CARD_BODY_TOP_GAP,
     },
     progressBarWrap: {
       width: '100%',
-      marginTop: HABIT_CARD_BODY_TOP_GAP,
     },
   });

@@ -66,6 +66,7 @@ export function HabitsCollapsibleSection({
       />
       {isExpanded ? (
         <Animated.View
+          layout={LAYOUT_TRANSITION_SPRING}
           entering={FadeInUp.duration(200)}
           exiting={FadeOutUp.duration(200)}
         >

@@ -3,6 +3,13 @@
  */
 
 import { Paddings } from '@/constants/Paddings';
+import {
+  Easing,
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  type WithTimingConfig,
+} from 'react-native-reanimated';
 
 /** diameter (px) of the increment ring on HabitCard */
 export const HABIT_CARD_RING_SIZE = 36;
@@ -31,4 +38,22 @@ export const HABIT_CARD_BODY_TOP_GAP = Paddings.listItemVertical;
 export const HABIT_CARD_VARIANT_TOGGLE_MARGIN_TOP = Paddings.listItemVertical;
 
 /** fade duration when switching heatmap ↔ simplified card form */
-export const HABIT_CARD_VARIANT_FADE_MS = 200;
+export const HABIT_CARD_VARIANT_FADE_MS = 100;
+
+/** shared linear 200ms — body height, ring fade, layout transition, enter/exit */
+export const HABIT_CARD_VARIANT_TIMING_CONFIG: WithTimingConfig = {
+  duration: HABIT_CARD_VARIANT_FADE_MS,
+  easing: Easing.linear,
+};
+
+export const HABIT_CARD_LAYOUT_TRANSITION = LinearTransition.duration(
+  HABIT_CARD_VARIANT_FADE_MS,
+);
+
+export const HABIT_CARD_VARIANT_ENTERING = FadeIn.duration(
+  HABIT_CARD_VARIANT_FADE_MS,
+).easing(Easing.linear);
+
+export const HABIT_CARD_VARIANT_EXITING = FadeOut.duration(
+  HABIT_CARD_VARIANT_FADE_MS,
+).easing(Easing.linear);
