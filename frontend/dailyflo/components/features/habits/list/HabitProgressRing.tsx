@@ -22,30 +22,23 @@ import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withSequence,
   withSpring,
   withTiming,
-  type SharedValue,
 } from 'react-native-reanimated';
 
 import { AddIcon, TickIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import {
-  HABIT_RING_ANDROID_COMPLETE_TIMING,
-  HABIT_RING_ANDROID_PROGRESS_TIMING,
-  HABIT_RING_ANDROID_PULSE_TIMING,
   HABIT_RING_COMPLETE_TICK_COLOR,
-  HABIT_RING_IOS_COMPLETE_SPRING,
   HABIT_RING_IOS_PRESS_IN_SPRING,
   HABIT_RING_IOS_PRESS_OUT_SPRING,
   HABIT_RING_IOS_PRESS_SCALE,
-  HABIT_RING_IOS_PROGRESS_SPRING,
-  HABIT_RING_IOS_PULSE_PEAK_SPRING,
-  HABIT_RING_IOS_PULSE_SCALE,
-  HABIT_RING_IOS_PULSE_SETTLE_SPRING,
   isIosHabitRingPlatform,
   resolveHabitRingFillRadius,
+  runHabitRingCompleteAnimation,
+  runHabitRingProgressAnimation,
+  runHabitRingPulseAnimation,
 } from './habitProgressRingAnimation';
 import { HABIT_CARD_VARIANT_TIMING_CONFIG } from './habitCardUiTokens';
 import { playHabitRingTapHaptic } from './habitProgressRingHaptics';
@@ -54,62 +47,6 @@ const DEFAULT_SIZE = 24;
 const DEFAULT_STROKE_WIDTH = 1.75;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
-function runHabitRingProgressAnimation(
-  animatedProgress: SharedValue<number>,
-  toValue: number,
-  reduceMotion: boolean,
-) {
-  if (reduceMotion) {
-    animatedProgress.value = toValue;
-    return;
-  }
-
-  if (isIosHabitRingPlatform) {
-    animatedProgress.value = withSpring(toValue, HABIT_RING_IOS_PROGRESS_SPRING);
-    return;
-  }
-
-  animatedProgress.value = withTiming(toValue, HABIT_RING_ANDROID_PROGRESS_TIMING);
-}
-
-function runHabitRingPulseAnimation(pulseScale: SharedValue<number>, reduceMotion: boolean) {
-  if (reduceMotion) {
-    pulseScale.value = 1;
-    return;
-  }
-
-  if (isIosHabitRingPlatform) {
-    pulseScale.value = withSequence(
-      withSpring(HABIT_RING_IOS_PULSE_SCALE, HABIT_RING_IOS_PULSE_PEAK_SPRING),
-      withSpring(1, HABIT_RING_IOS_PULSE_SETTLE_SPRING),
-    );
-    return;
-  }
-
-  pulseScale.value = withSequence(
-    withTiming(1.1, HABIT_RING_ANDROID_PULSE_TIMING),
-    withTiming(1, HABIT_RING_ANDROID_PULSE_TIMING),
-  );
-}
-
-function runHabitRingCompleteAnimation(
-  animatedComplete: SharedValue<number>,
-  toValue: number,
-  reduceMotion: boolean,
-) {
-  if (reduceMotion) {
-    animatedComplete.value = toValue;
-    return;
-  }
-
-  if (isIosHabitRingPlatform) {
-    animatedComplete.value = withSpring(toValue, HABIT_RING_IOS_COMPLETE_SPRING);
-    return;
-  }
-
-  animatedComplete.value = withTiming(toValue, HABIT_RING_ANDROID_COMPLETE_TIMING);
-}
 
 type HabitProgressRingProps = {
   /** logged count today */
