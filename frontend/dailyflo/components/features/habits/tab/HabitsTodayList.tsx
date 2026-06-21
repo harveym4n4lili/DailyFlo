@@ -6,8 +6,10 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
 import { HabitBoardCard } from '../list/HabitBoardCard';
+import { HabitsDashboardSection } from './HabitsDashboardSection';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
+import { useHabits } from '@/store/hooks';
 import { Paddings } from '@/constants/Paddings';
 import type { HabitTodayItem } from '@/types/api/habits';
 
@@ -21,6 +23,7 @@ type HabitsTodayListProps = {
 export function HabitsTodayList({ habits, isLoading, error, onOpenDetail }: HabitsTodayListProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
+  const { todaySummary } = useHabits();
   const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
 
   if (isLoading && habits.length === 0) {
@@ -50,6 +53,7 @@ export function HabitsTodayList({ habits, isLoading, error, onOpenDetail }: Habi
 
   return (
     <View style={styles.habitCards}>
+      <HabitsDashboardSection habits={habits} summary={todaySummary} />
       {habits.map((habit) => (
           <HabitBoardCard
             key={habit.id}

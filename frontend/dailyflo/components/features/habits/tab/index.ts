@@ -4,3 +4,4 @@
 
 export { HabitsScreenContent } from './HabitsScreenContent';
 export { HabitsTodayList } from './HabitsTodayList';
+export { HabitsDashboardSection } from './HabitsDashboardSection';
