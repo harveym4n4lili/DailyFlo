@@ -2,23 +2,17 @@
  * single habit row — increment ring for all trackable habits (binary + numeric).
  */
 
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
 
 import { HabitProgressRing } from './HabitProgressRing';
 import { getHabitIncrementDisplay } from './habitIncrementDisplay';
 import { getHabitProgressRingColors } from './habitProgressRingColors';
+import { useHabitIncrementPress } from '@/hooks/useHabitIncrementPress';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
 import { getTaskColorValue, getTaskHabitTitleColor } from '@/utils/taskColors';
-import { useAppDispatch } from '@/store';
-import {
-  logHabitProgress,
-  optimisticLogHabit,
-  revertOptimisticLog,
-} from '@/store/slices/habits/habitsSlice';
 import type { HabitTodayItem } from '@/types/api/habits';
 
 type HabitListItemProps = {
@@ -31,8 +25,6 @@ type HabitListItemProps = {
 export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitListItemProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
-  const dispatch = useAppDispatch();
-  const snapshotRef = useRef<HabitTodayItem | null>(null);
 
   const accent = useMemo(() => getTaskColorValue(habit.color), [habit.color]);
   const ringColors = useMemo(() => getHabitProgressRingColors(habit.color), [habit.color]);
@@ -42,22 +34,12 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
     [themeColors, typography, accent, compact],
   );
 
-  const incrementDisplay = useMemo(() => getHabitIncrementDisplay(habit), [habit]);
+  const { handleIncrement, displayHabit } = useHabitIncrementPress(habit);
 
-  const handleIncrement = useCallback(() => {
-    if (!habit) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    snapshotRef.current = { ...habit };
-    const wasCompleteBefore = habit.isCompleteToday;
-    dispatch(optimisticLogHabit({ id: habit.id, delta: 1 }));
-    void dispatch(logHabitProgress({ id: habit.id, delta: 1, wasCompleteBefore }))
-      .unwrap()
-      .catch(() => {
-        if (snapshotRef.current) {
-          dispatch(revertOptimisticLog({ id: habit.id, snapshot: snapshotRef.current }));
-        }
-      });
-  }, [dispatch, habit]);
+  const incrementDisplay = useMemo(
+    () => (displayHabit ? getHabitIncrementDisplay(displayHabit) : null),
+    [displayHabit],
+  );
 
   const progressLabel = incrementDisplay
     ? `Today's progress: ${incrementDisplay.scoreLabel}`
@@ -70,7 +52,7 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
           onPress={handleIncrement}
           style={styles.ringAction}
           accessibilityLabel={
-            habit.isCompleteToday
+            displayHabit.isCompleteToday
               ? `Reset today's count for ${habit.title}`
               : `Add one to ${habit.title}`
           }
@@ -95,7 +77,7 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
           style={[
             styles.title,
             { color: titleColor },
-            habit.isCompleteToday && styles.titleDone,
+            displayHabit.isCompleteToday && styles.titleDone,
           ]}
           numberOfLines={1}
         >

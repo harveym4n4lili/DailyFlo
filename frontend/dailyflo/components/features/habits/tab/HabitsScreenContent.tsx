@@ -1,5 +1,5 @@
 /**
- * habits tab body — today's due habits list with summary header.
+ * habits tab body — today's due habits list.
  * canvas matches browse: background.root() + blur/gradient top band.
  */
 
@@ -16,6 +16,7 @@ import { HabitsTodayList } from './HabitsTodayList';
 import { useHabits } from '@/store/hooks';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
+import { flushAllPendingHabitIncrementSyncs } from '@/utils/pendingHabitIncrementSyncRegistry';
 
 // row = toolbar buttons; anchor = full blur band height — same as browse tab chrome
 const TOP_SECTION_ROW_HEIGHT = 48;
@@ -25,7 +26,7 @@ export function HabitsScreenContent() {
   const insets = useSafeAreaInsets();
   const router = useGuardedRouter();
   const themeColors = useThemeColors();
-  const { todayHabits, todaySummary, isTodayLoading, todayError, fetchToday } = useHabits();
+  const { todayHabits, isTodayLoading, todayError, fetchToday } = useHabits();
 
   const openHabitDetail = useCallback(
     (habitId: string) => {
@@ -37,6 +38,7 @@ export function HabitsScreenContent() {
   useFocusEffect(
     useCallback(() => {
       void fetchToday();
+      return () => flushAllPendingHabitIncrementSyncs();
     }, [fetchToday]),
   );
 
@@ -85,7 +87,6 @@ export function HabitsScreenContent() {
         <View style={styles.contentSection}>
           <HabitsTodayList
             habits={todayHabits}
-            summary={todaySummary}
             isLoading={isTodayLoading}
             error={todayError}
             onOpenDetail={openHabitDetail}

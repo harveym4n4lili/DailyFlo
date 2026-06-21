@@ -24,9 +24,9 @@ import type {
   UpdateHabitInput,
 } from '@/types/api/habits';
 import {
-  habitTodayHeatmapScore,
-  patchHabitHeatmapDayScore,
-} from '@/components/features/habits/detail/habitHeatmapColors';
+  applyHabitIncrementWithHeatmap,
+  patchHabitHeatmapForToday,
+} from '@/utils/habitIncrementLogic';
 
 interface HabitsState {
   todayDate: string | null;
@@ -236,11 +236,6 @@ export const logHabitProgress = createAsyncThunk(
       }
 
       const stateAfter = getState() as { habits: HabitsState };
-      if (stateAfter.habits.detailHabit?.id === id) {
-        void dispatch(fetchHabitStats(id));
-      }
-
-      // cancel today's reminder once habit is complete; reschedule if user undoes
       const todayDate = stateAfter.habits.todayDate;
       const todayHabit = stateAfter.habits.todayHabits.find((h) => h.id === id);
       if (todayDate && todayHabit) {
@@ -266,19 +261,13 @@ export const logHabitProgress = createAsyncThunk(
   },
 );
 
-/** sync today's heatmap cell shade when progress changes */
-function patchHeatmapForHabitToday(
+/** sync today's heatmap cell on detail stats when board row updates */
+function patchDetailStatsHeatmapForToday(
   heatmap: HabitHeatmapData,
   dayIso: string,
   habit: HabitTodayItem,
 ): HabitHeatmapData {
-  const score = habitTodayHeatmapScore(
-    habit.trackingType,
-    habit.loggedValue ?? 0,
-    habit.isCompleteToday,
-    habit.targetValue,
-  );
-  return patchHabitHeatmapDayScore(heatmap, dayIso, score);
+  return patchHabitHeatmapForToday(heatmap, dayIso, habit) ?? heatmap;
 }
 
 function mergeTodayHabitWithLocal(local: HabitTodayItem, incoming: HabitTodayItem): HabitTodayItem {
@@ -345,20 +334,21 @@ function applyTodayPayload(state: HabitsState, payload: HabitsTodayResponse) {
 function applyLogToHabit(state: HabitsState, habitId: string, response: HabitLogResponse) {
   const idx = state.todayHabits.findIndex((h) => h.id === habitId);
   if (idx === -1) return;
-  const habit = state.todayHabits[idx];
-  const target = habit.targetValue ?? 1;
+  const local = state.todayHabits[idx];
+  const target = local.targetValue ?? 1;
   let loggedValue = response.loggedValue;
-  if (habit.trackingType === 'numeric' && response.isCompleteToday) {
+  if (local.trackingType === 'numeric' && response.isCompleteToday) {
     loggedValue = Math.max(loggedValue, target);
   }
-  state.todayHabits[idx] = {
-    ...habit,
+  const incoming: HabitTodayItem = {
+    ...local,
     loggedValue,
     isCompleteToday: response.isCompleteToday,
     currentStreak: response.currentStreak,
     longestStreak: response.longestStreak,
-    heatmap: response.heatmap ?? habit.heatmap,
+    heatmap: response.heatmap ?? local.heatmap,
   };
+  state.todayHabits[idx] = mergeTodayHabitWithLocal(local, incoming);
   if (state.todaySummary) {
     const completedCount = state.todayHabits.filter((h) => h.isCompleteToday).length;
     state.todaySummary = {
@@ -385,39 +375,48 @@ const habitsSlice = createSlice({
       state.isDetailLoading = false;
       state.detailError = null;
     },
-    /** optimistic row update before API returns — reverted on rejected log thunk */
+    /** legacy per-tap redux bump — prefer setTodayHabitProgress from debounced hook sync */
     optimisticLogHabit(state, action: PayloadAction<{ id: string; delta?: number }>) {
-      const habit = state.todayHabits.find((h) => h.id === action.payload.id);
-      if (!habit) return;
-      if (habit.trackingType === 'binary') {
-        habit.isCompleteToday = !habit.isCompleteToday;
-        habit.loggedValue = habit.isCompleteToday ? 1 : 0;
-      } else {
-        const step = action.payload.delta ?? 1;
-        const target = habit.targetValue ?? 1;
-        const current = habit.loggedValue ?? 0;
-        if (current >= target && habit.isCompleteToday) {
-          // +1 at goal resets today's occurrence
-          habit.loggedValue = 0;
-          habit.isCompleteToday = false;
-        } else {
-          const next = Math.min(current + step, target);
-          habit.loggedValue = next;
-          habit.isCompleteToday = next >= target;
-        }
-      }
-      if (state.todayDate && habit.heatmap) {
-        habit.heatmap = patchHeatmapForHabitToday(habit.heatmap, state.todayDate, habit);
-      }
+      const idx = state.todayHabits.findIndex((h) => h.id === action.payload.id);
+      if (idx === -1) return;
+      const updated = applyHabitIncrementWithHeatmap(
+        state.todayHabits[idx],
+        state.todayDate,
+        action.payload.delta ?? 1,
+      );
+      state.todayHabits[idx] = updated;
       if (
         state.detailStats &&
         state.detailHabit?.id === action.payload.id &&
         state.todayDate
       ) {
-        state.detailStats.heatmap = patchHeatmapForHabitToday(
+        state.detailStats.heatmap = patchDetailStatsHeatmapForToday(
           state.detailStats.heatmap,
           state.todayDate,
-          habit,
+          updated,
+        );
+      }
+      if (state.todaySummary) {
+        state.todaySummary.completedCount = state.todayHabits.filter((h) => h.isCompleteToday).length;
+      }
+    },
+    /** apply debounced local overlay to redux before API — mirrors updateTask.pending */
+    setTodayHabitProgress(
+      state,
+      action: PayloadAction<{ id: string; habit: HabitTodayItem }>,
+    ) {
+      const idx = state.todayHabits.findIndex((h) => h.id === action.payload.id);
+      if (idx === -1) return;
+      state.todayHabits[idx] = action.payload.habit;
+      if (
+        state.detailStats &&
+        state.detailHabit?.id === action.payload.id &&
+        state.todayDate
+      ) {
+        state.detailStats.heatmap = patchDetailStatsHeatmapForToday(
+          state.detailStats.heatmap,
+          state.todayDate,
+          action.payload.habit,
         );
       }
       if (state.todaySummary) {
@@ -428,6 +427,13 @@ const habitsSlice = createSlice({
       const idx = state.todayHabits.findIndex((h) => h.id === action.payload.id);
       if (idx !== -1) {
         state.todayHabits[idx] = action.payload.snapshot;
+      }
+      if (
+        state.detailStats &&
+        state.detailHabit?.id === action.payload.id &&
+        action.payload.snapshot.heatmap
+      ) {
+        state.detailStats.heatmap = action.payload.snapshot.heatmap;
       }
       if (state.todaySummary) {
         state.todaySummary.completedCount = state.todayHabits.filter((h) => h.isCompleteToday).length;
@@ -462,9 +468,18 @@ const habitsSlice = createSlice({
       .addCase(logHabitProgress.fulfilled, (state, action) => {
         applyLogToHabit(state, action.payload.habitId, action.payload.response);
         if (state.detailStats && action.payload.habitId === state.detailHabit?.id) {
-          state.detailStats.currentStreak = action.payload.response.currentStreak;
-          state.detailStats.longestStreak = action.payload.response.longestStreak;
-          if (action.payload.response.heatmap) {
+          const local = state.todayHabits.find((h) => h.id === action.payload.habitId);
+          state.detailStats.currentStreak = Math.max(
+            local?.currentStreak ?? 0,
+            action.payload.response.currentStreak,
+          );
+          state.detailStats.longestStreak = Math.max(
+            local?.longestStreak ?? 0,
+            action.payload.response.longestStreak,
+          );
+          if (local?.heatmap) {
+            state.detailStats.heatmap = local.heatmap;
+          } else if (action.payload.response.heatmap) {
             state.detailStats.heatmap = action.payload.response.heatmap;
           }
         }
@@ -499,5 +514,11 @@ const habitsSlice = createSlice({
   },
 });
 
-export const { clearHabits, clearHabitDetail, optimisticLogHabit, revertOptimisticLog } = habitsSlice.actions;
+export const {
+  clearHabits,
+  clearHabitDetail,
+  optimisticLogHabit,
+  setTodayHabitProgress,
+  revertOptimisticLog,
+} = habitsSlice.actions;
 export default habitsSlice.reducer;
