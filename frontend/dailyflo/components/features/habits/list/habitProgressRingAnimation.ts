@@ -76,3 +76,11 @@ export const HABIT_RING_ANDROID_PULSE_TIMING: WithTimingConfig = {
 export const HABIT_RING_ANDROID_COMPLETE_TIMING: WithTimingConfig = {
   duration: HABIT_RING_ANDROID_COMPLETE_MS,
 };
+
+/**
+ * inner disc radius for complete-state fill — extends to the stroke centerline (not the inner
+ * edge) so the filled disc meets the progress/track ring without a track-colored hairline gap.
+ */
+export function resolveHabitRingFillRadius(ringRadius: number): number {
+  return ringRadius;
+}
