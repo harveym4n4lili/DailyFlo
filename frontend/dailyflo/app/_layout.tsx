@@ -9,7 +9,7 @@ import {
 import { useFonts } from 'expo-font';
 import { Stack, type Href, router } from 'expo-router';
 
-import { runAppColdStartBootstrap } from '@/utils/navigation/appColdStartBootstrap';
+import { runAppColdStartBootstrapTracked } from '@/utils/navigation/appColdStartBootstrap';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
 import { InteractionManager, Platform, StyleSheet, TextInput, View } from 'react-native';
@@ -85,7 +85,7 @@ function RootLayoutNavigation() {
     if (hasBootstrappedRef.current) return;
     hasBootstrappedRef.current = true;
 
-    void runAppColdStartBootstrap()
+    void runAppColdStartBootstrapTracked()
       .then(({ needsOnboarding }) => {
         if (needsOnboarding) {
           InteractionManager.runAfterInteractions(() => {

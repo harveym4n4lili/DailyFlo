@@ -19,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
+import { useAuthSessionReady } from '@/hooks/useAuthSessionReady';
 
 import { ScreenContainer } from '@/components/index';
 import { ListCard } from '@/components/ui/Card';
@@ -132,6 +133,7 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
   );
 
   const dispatch = useAppDispatch();
+  const authSessionReady = useAuthSessionReady();
   const { fetchToday: fetchHabitsToday } = useHabits();
   const {
     tasks,
@@ -142,8 +144,10 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
 
   useFocusEffect(
     useCallback(() => {
+      // wait for cold-start checkAuthStatus — same tokens for google, apple, and email
+      if (!authSessionReady) return;
       void fetchHabitsToday();
-    }, [fetchHabitsToday]),
+    }, [fetchHabitsToday, authSessionReady]),
   );
 
   useEffect(() => {
@@ -263,14 +267,14 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
   );
 
   useEffect(() => {
-    if (isAuthenticated && lastFetched === null && !isLoading && !error) {
+    if (authSessionReady && lastFetched === null && !isLoading && !error) {
       dispatch(fetchTasks());
     }
-    if (isAuthenticated && listsLastFetched === null && !listsLoading && !listsError) {
+    if (authSessionReady && listsLastFetched === null && !listsLoading && !listsError) {
       dispatch(fetchLists());
     }
   }, [
-    isAuthenticated,
+    authSessionReady,
     lastFetched,
     isLoading,
     error,
@@ -419,6 +423,7 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
   );
 
   const handleRefresh = async () => {
+    if (!authSessionReady) return;
     await Promise.all([
       dispatch(fetchTasks()),
       dispatch(fetchLists()),

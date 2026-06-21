@@ -18,6 +18,7 @@ import {
   loadPersistedNavTabOrder,
   persistNavTabOrder,
 } from '@/utils/navigation/navigationTabOrderStorage';
+import { markAuthBootstrapComplete } from '@/utils/navigation/authBootstrapState';
 
 export type AppColdStartBootstrapResult = {
   navTabOrder: NavTabKey[];
@@ -67,4 +68,13 @@ export async function runAppColdStartBootstrap(): Promise<AppColdStartBootstrapR
   const needsOnboarding = !onboardingComplete || !authState.isAuthenticated;
 
   return { navTabOrder, needsOnboarding };
+}
+
+/** wraps bootstrap so AuthSessionGate can skip duplicate checkAuthStatus during cold start */
+export async function runAppColdStartBootstrapTracked(): Promise<AppColdStartBootstrapResult> {
+  try {
+    return await runAppColdStartBootstrap();
+  } finally {
+    markAuthBootstrapComplete();
+  }
 }

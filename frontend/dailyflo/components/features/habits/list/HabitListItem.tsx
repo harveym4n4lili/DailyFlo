@@ -5,6 +5,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 
+import { HabitAnimatedTitle } from './HabitAnimatedTitle';
 import { HabitProgressRing } from './HabitProgressRing';
 import { getHabitIncrementDisplay } from './habitIncrementDisplay';
 import { getHabitProgressRingColors } from './habitProgressRingColors';
@@ -48,7 +49,7 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
   return (
     <View style={styles.row}>
       {incrementDisplay ? (
-        <Pressable
+        <HabitProgressRing
           onPress={handleIncrement}
           style={styles.ringAction}
           accessibilityLabel={
@@ -56,33 +57,28 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
               ? `Reset today's count for ${habit.title}`
               : `Add one to ${habit.title}`
           }
-        >
-          <HabitProgressRing
-            current={incrementDisplay.current}
-            target={incrementDisplay.target}
-            color={ringColors.progress}
-            trackColor={ringColors.track}
-            iconColor={ringColors.icon}
-            showCenterLabel={false}
-            showCenterPlus
-          />
-        </Pressable>
+          current={incrementDisplay.current}
+          target={incrementDisplay.target}
+          isComplete={displayHabit.isCompleteToday}
+          color={ringColors.progress}
+          trackColor={ringColors.track}
+          iconColor={ringColors.icon}
+          showCenterLabel={false}
+          showCenterPlus
+        />
       ) : null}
       <Pressable
         style={styles.body}
         onPress={onOpenDetail ? () => onOpenDetail(habit.id) : undefined}
         disabled={!onOpenDetail}
       >
-        <Text
-          style={[
-            styles.title,
-            { color: titleColor },
-            displayHabit.isCompleteToday && styles.titleDone,
-          ]}
+        <HabitAnimatedTitle
+          title={habit.title}
+          isComplete={displayHabit.isCompleteToday}
+          titleColor={titleColor}
+          textStyle={styles.title}
           numberOfLines={1}
-        >
-          {habit.title}
-        </Text>
+        />
         {progressLabel ? (
           <Text style={styles.subtitle}>{progressLabel}</Text>
         ) : null}
@@ -115,10 +111,6 @@ const createStyles = (
     },
     title: {
       ...typography.getTextStyle('body-large'),
-    },
-    titleDone: {
-      opacity: 0.55,
-      textDecorationLine: 'line-through',
     },
     subtitle: {
       ...typography.getTextStyle('body-small'),

@@ -11,6 +11,7 @@ import { AppState, type AppStateStatus } from 'react-native';
 
 import { store } from '@/store';
 import { checkAuthStatus } from '@/store/slices/auth/authSlice';
+import { isAuthBootstrapComplete } from '@/utils/navigation/authBootstrapState';
 
 export function AuthSessionGate() {
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
@@ -18,7 +19,12 @@ export function AuthSessionGate() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
       const prev = appStateRef.current;
-      if (prev.match(/inactive|background/) && nextState === 'active') {
+      // cold start already runs checkAuthStatus in _layout — skip until that finishes to avoid double refresh
+      if (
+        prev.match(/inactive|background/) &&
+        nextState === 'active' &&
+        isAuthBootstrapComplete()
+      ) {
         void store.dispatch(checkAuthStatus());
       }
       appStateRef.current = nextState;

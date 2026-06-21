@@ -11,6 +11,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
+import { useAuthSessionReady } from '@/hooks/useAuthSessionReady';
 import { ScreenHeaderActions } from '@/components/ui';
 import { HabitsTodayList } from './HabitsTodayList';
 import { useHabits } from '@/store/hooks';
@@ -26,6 +27,7 @@ export function HabitsScreenContent() {
   const insets = useSafeAreaInsets();
   const router = useGuardedRouter();
   const themeColors = useThemeColors();
+  const authSessionReady = useAuthSessionReady();
   const { todayHabits, isTodayLoading, todayError, fetchToday } = useHabits();
 
   const openHabitDetail = useCallback(
@@ -37,9 +39,10 @@ export function HabitsScreenContent() {
 
   useFocusEffect(
     useCallback(() => {
+      if (!authSessionReady) return () => undefined;
       void fetchToday();
       return () => flushAllPendingHabitIncrementSyncs();
-    }, [fetchToday]),
+    }, [fetchToday, authSessionReady]),
   );
 
   const styles = useMemo(() => createStyles(themeColors, insets), [themeColors, insets]);

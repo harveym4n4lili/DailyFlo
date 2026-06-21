@@ -23,8 +23,8 @@ export function getTaskColorValue(
   return getTaskHabitColor('blue', shade);
 }
 
-/** habit card / list title — task & habit palette shade 100 */
+/** habit card / list title — task & habit palette shade 500 */
 export function getTaskHabitTitleColor(color: string): string {
-  return getTaskColorValue(color, 100);
+  return getTaskColorValue(color, 500);
 }
 
