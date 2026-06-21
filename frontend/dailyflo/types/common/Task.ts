@@ -30,7 +30,7 @@ export interface Subtask {
 export interface TaskReminder {
   id: string;           // Unique identifier for the reminder
   type: 'due_date' | 'custom'; // Type of reminder
-  scheduledTime: Date;  // When the reminder should fire
+  scheduledTime: string;  // When the reminder should fire — ISO string for Redux serialization
   isEnabled: boolean;   // Whether the reminder is active
 }
 
