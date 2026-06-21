@@ -1,10 +1,16 @@
 /**
- * ios-style spring presets for the habit increment ring.
- * constants only — animation runners live in HabitProgressRing.tsx (same file as reanimated hooks).
+ * ios-style spring presets + shared progress/pulse runners for habit increment UI (ring + bar).
  */
 
 import { Platform } from 'react-native';
-import type { WithSpringConfig, WithTimingConfig } from 'react-native-reanimated';
+import {
+  withSequence,
+  withSpring,
+  withTiming,
+  type SharedValue,
+  type WithSpringConfig,
+  type WithTimingConfig,
+} from 'react-native-reanimated';
 
 /** quick compress on finger down — same feel as uibutton highlight */
 export const HABIT_RING_IOS_PRESS_IN_SPRING: WithSpringConfig = {
@@ -83,4 +89,63 @@ export const HABIT_RING_ANDROID_COMPLETE_TIMING: WithTimingConfig = {
  */
 export function resolveHabitRingFillRadius(ringRadius: number): number {
   return ringRadius;
+}
+
+/** fill grows to the new ratio — ios spring, android timing (ring arc + simplified bar) */
+export function runHabitRingProgressAnimation(
+  animatedProgress: SharedValue<number>,
+  toValue: number,
+  reduceMotion: boolean,
+) {
+  if (reduceMotion) {
+    animatedProgress.value = toValue;
+    return;
+  }
+
+  if (isIosHabitRingPlatform) {
+    animatedProgress.value = withSpring(toValue, HABIT_RING_IOS_PROGRESS_SPRING);
+    return;
+  }
+
+  animatedProgress.value = withTiming(toValue, HABIT_RING_ANDROID_PROGRESS_TIMING);
+}
+
+/** brief scale bump when today's count changes */
+export function runHabitRingPulseAnimation(pulseScale: SharedValue<number>, reduceMotion: boolean) {
+  if (reduceMotion) {
+    pulseScale.value = 1;
+    return;
+  }
+
+  if (isIosHabitRingPlatform) {
+    pulseScale.value = withSequence(
+      withSpring(HABIT_RING_IOS_PULSE_SCALE, HABIT_RING_IOS_PULSE_PEAK_SPRING),
+      withSpring(1, HABIT_RING_IOS_PULSE_SETTLE_SPRING),
+    );
+    return;
+  }
+
+  pulseScale.value = withSequence(
+    withTiming(1.1, HABIT_RING_ANDROID_PULSE_TIMING),
+    withTiming(1, HABIT_RING_ANDROID_PULSE_TIMING),
+  );
+}
+
+/** inner disc + tick crossfade when today's goal is reached or reset */
+export function runHabitRingCompleteAnimation(
+  animatedComplete: SharedValue<number>,
+  toValue: number,
+  reduceMotion: boolean,
+) {
+  if (reduceMotion) {
+    animatedComplete.value = toValue;
+    return;
+  }
+
+  if (isIosHabitRingPlatform) {
+    animatedComplete.value = withSpring(toValue, HABIT_RING_IOS_COMPLETE_SPRING);
+    return;
+  }
+
+  animatedComplete.value = withTiming(toValue, HABIT_RING_ANDROID_COMPLETE_TIMING);
 }
