@@ -45,6 +45,7 @@ import {
   HABIT_RING_IOS_PULSE_SCALE,
   HABIT_RING_IOS_PULSE_SETTLE_SPRING,
   isIosHabitRingPlatform,
+  resolveHabitRingFillRadius,
 } from './habitProgressRingAnimation';
 import { playHabitRingTapHaptic } from './habitProgressRingHaptics';
 
@@ -203,7 +204,7 @@ export function HabitProgressRing({
   const progress = clampedCurrent / safeTarget;
 
   const radius = (resolvedSize - strokeWidth) / 2;
-  const fillRadius = Math.max(0, radius - strokeWidth / 2);
+  const fillRadius = resolveHabitRingFillRadius(radius);
   const center = resolvedSize / 2;
   const circumference = 2 * Math.PI * radius;
 
