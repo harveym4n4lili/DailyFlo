@@ -30,6 +30,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { MainBackButton } from '@/components/ui/Button';
 import { GroupedList, FormDetailButton, GroupedListHeader } from '@/components/ui/List/GroupedList';
 import { Paddings } from '@/constants/Paddings';
+import { flushAllPendingHabitIncrementSyncs } from '@/utils/pendingHabitIncrementSyncRegistry';
 import { getTaskHabitTitleColor } from '@/utils/taskColors';
 import { useHabits } from '@/store/hooks';
 import { HabitBoardCard } from '../list/HabitBoardCard';
@@ -67,7 +68,10 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
       void fetchToday();
       void fetchHabit(habitId);
       void fetchHabitStats(habitId);
-      return () => clearHabitDetail();
+      return () => {
+        flushAllPendingHabitIncrementSyncs();
+        clearHabitDetail();
+      };
     }, [habitId, fetchToday, fetchHabit, fetchHabitStats, clearHabitDetail]),
   );
 

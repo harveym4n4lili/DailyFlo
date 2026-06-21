@@ -48,6 +48,7 @@ import { fetchLists } from '@/store/slices/lists/listsSlice';
 import { Task } from '@/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { flushAllPendingCheckboxSyncs } from '@/utils/pendingCheckboxSyncRegistry';
+import { flushAllPendingHabitIncrementSyncs } from '@/utils/pendingHabitIncrementSyncRegistry';
 import {
   expandTasksForDates,
   filterTasksForCalendarDay,
@@ -373,7 +374,10 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
   useFocusEffect(
     React.useCallback(() => {
       clearOverdueReschedule();
-      return () => flushAllPendingCheckboxSyncs();
+      return () => {
+        flushAllPendingCheckboxSyncs();
+        flushAllPendingHabitIncrementSyncs();
+      };
     }, [clearOverdueReschedule])
   );
 

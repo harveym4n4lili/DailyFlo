@@ -6,21 +6,19 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
 import { HabitBoardCard } from '../list/HabitBoardCard';
-import { HabitTabSummaryHeader } from './HabitTabSummaryHeader';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
-import type { HabitTodayItem, HabitsTodaySummary } from '@/types/api/habits';
+import type { HabitTodayItem } from '@/types/api/habits';
 
 type HabitsTodayListProps = {
   habits: HabitTodayItem[];
-  summary: HabitsTodaySummary | null;
   isLoading: boolean;
   error: string | null;
   onOpenDetail?: (habitId: string) => void;
 };
 
-export function HabitsTodayList({ habits, summary, isLoading, error, onOpenDetail }: HabitsTodayListProps) {
+export function HabitsTodayList({ habits, isLoading, error, onOpenDetail }: HabitsTodayListProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const styles = useMemo(() => createStyles(themeColors, typography), [themeColors, typography]);
@@ -51,10 +49,8 @@ export function HabitsTodayList({ habits, summary, isLoading, error, onOpenDetai
   }
 
   return (
-    <View style={styles.list}>
-      <HabitTabSummaryHeader summary={summary} />
-      <View style={styles.habitCards}>
-        {habits.map((habit) => (
+    <View style={styles.habitCards}>
+      {habits.map((habit) => (
           <HabitBoardCard
             key={habit.id}
             title={habit.title}
@@ -65,7 +61,6 @@ export function HabitsTodayList({ habits, summary, isLoading, error, onOpenDetai
             onPress={onOpenDetail ? () => onOpenDetail(habit.id) : undefined}
           />
         ))}
-      </View>
     </View>
   );
 }
@@ -92,9 +87,6 @@ const createStyles = (
     errorText: {
       ...typography.getTextStyle('body-medium'),
       color: themeColors.text.secondary(),
-    },
-    list: {
-      gap: Paddings.sectionCompact,
     },
     habitCards: {
       gap: Paddings.screen,

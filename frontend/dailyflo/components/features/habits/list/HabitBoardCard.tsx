@@ -4,9 +4,8 @@
  * only the ring increments today's score; title still opens detail when onPress is set.
  */
 
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
 
 import { GroupedList } from '@/components/ui/List/GroupedList';
 import { ProgressBoardGlassShell } from '@/components/features/gamification/browse/ProgressBoardGlassShell';
@@ -36,13 +35,8 @@ import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { TIMELINE_TASK_META_GAP } from '@/components/features/timeline/timelineChrome';
+import { useHabitIncrementPress } from '@/hooks/useHabitIncrementPress';
 import { getTaskHabitTitleColor } from '@/utils/taskColors';
-import { useAppDispatch } from '@/store';
-import {
-  logHabitProgress,
-  optimisticLogHabit,
-  revertOptimisticLog,
-} from '@/store/slices/habits/habitsSlice';
 import type {
   HabitColor,
   HabitHeatmapData,
@@ -69,8 +63,6 @@ export function HabitBoardCard({
 }: HabitBoardCardProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
-  const dispatch = useAppDispatch();
-  const snapshotRef = useRef<HabitTodayItem | null>(null);
 
   const ringColors = useMemo(() => getHabitProgressRingColors(color), [color]);
   const titleColor = useMemo(() => getTaskHabitTitleColor(color), [color]);
@@ -80,29 +72,16 @@ export function HabitBoardCard({
   const streakUnitLabel = getProgressBoardStreakUnitLabel(currentStreak);
   const streakCountColor = themeColors.interactive.active();
 
-  const incrementDisplay = habit ? getHabitIncrementDisplay(habit) : null;
+  const { handleIncrement, displayHabit } = useHabitIncrementPress(habit, { heatmapBase: heatmap });
+
+  const incrementDisplay = displayHabit ? getHabitIncrementDisplay(displayHabit) : null;
+  const heatmapToShow = displayHabit?.heatmap ?? heatmap;
+  const showTodayActions = Boolean(habit && incrementDisplay);
 
   const styles = useMemo(
     () => createStyles(typography, streakCounterStyle, streakUnitStyle),
     [typography, streakCounterStyle, streakUnitStyle],
   );
-
-  const handleIncrement = useCallback(() => {
-    if (!habit) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    snapshotRef.current = { ...habit };
-    const wasCompleteBefore = habit.isCompleteToday;
-    dispatch(optimisticLogHabit({ id: habit.id, delta: 1 }));
-    void dispatch(logHabitProgress({ id: habit.id, delta: 1, wasCompleteBefore }))
-      .unwrap()
-      .catch(() => {
-        if (snapshotRef.current) {
-          dispatch(revertOptimisticLog({ id: habit.id, snapshot: snapshotRef.current }));
-        }
-      });
-  }, [dispatch, habit]);
-
-  const showTodayActions = Boolean(habit && incrementDisplay);
 
   return (
     <ProgressBoardGlassShell>
@@ -128,7 +107,7 @@ export function HabitBoardCard({
                 style={[
                   styles.title,
                   { color: titleColor },
-                  habit?.isCompleteToday && styles.titleDone,
+                  displayHabit?.isCompleteToday && styles.titleDone,
                 ]}
                 numberOfLines={2}
               >
@@ -155,7 +134,7 @@ export function HabitBoardCard({
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel={
-                  habit!.isCompleteToday
+                  displayHabit!.isCompleteToday
                     ? `Today's progress ${incrementDisplay.current} of ${incrementDisplay.target}. Tap to reset.`
                     : `Today's progress ${incrementDisplay.current} of ${incrementDisplay.target}. Tap to add one.`
                 }
@@ -183,7 +162,7 @@ export function HabitBoardCard({
           </View>
 
           <View style={styles.graphWrap}>
-            <HabitHeatmap heatmap={heatmap} color={color} />
+            <HabitHeatmap heatmap={heatmapToShow} color={color} />
           </View>
         </View>
       </GroupedList>
