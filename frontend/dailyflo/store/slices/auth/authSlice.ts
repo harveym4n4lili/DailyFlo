@@ -178,7 +178,7 @@ export const checkAuthStatus = createAsyncThunk(
     } catch (error) {
       console.error('Failed to check auth status:', error);
       await clearAllTokens();
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to check auth status');
+      return null;
     }
   }
 );

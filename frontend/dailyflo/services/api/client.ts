@@ -15,15 +15,9 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 // token storage imports - secure storage for authentication tokens
 // these functions store and retrieve tokens from Expo SecureStore (encrypted storage)
-import {
-  getAccessToken,
-  getRefreshToken,
-  storeAccessToken,
-  storeRefreshToken,
-  storeTokenExpiry,
-  resolveAccessTokenExpiryMs,
-  clearAllTokens,
-} from '../auth/tokenStorage';
+import { getAccessToken, clearAllTokens } from '../auth/tokenStorage';
+// shared refresh mutex — same path as checkAuthStatus (google / apple / email all use SecureStore refresh)
+import { refreshStoredSessionTokens } from '../auth/sessionRefresh';
 
 /**
  * dispatch logout without importing authSlice — breaks `client` ↔ `authSlice` cycle that can
@@ -145,45 +139,17 @@ const createApiClient = (): AxiosInstance => {
         originalRequest._retry = true;
         
         try {
-          // Try to refresh the token by getting a new access token using the refresh token
-          // Get the refresh token from secure storage
-          const refreshTokenValue = await getRefreshToken();
-          
-          if (!refreshTokenValue) {
-            // No refresh token available, user needs to log in again
+          // reuse the same mutex as cold-start checkAuthStatus — avoids double refresh blacklisting the token
+          const refreshed = await refreshStoredSessionTokens();
+
+          if (!refreshed) {
             throw new Error('No refresh token available');
           }
-          
-          // Call the refresh token endpoint directly using axios (not apiClient to avoid interceptors)
-          // We need to use the base URL from defaultConfig since we're calling axios directly
-          const response = await axios.post(`${defaultConfig.baseURL}/accounts/auth/refresh/`, {
-            refresh: refreshTokenValue,
-          });
-          
-          // Extract the new tokens from the response
-          // Backend returns tokens in different formats, handle both
-          const { access, refresh: newRefreshToken } = response.data;
-          
-          if (!access) {
-            throw new Error('New access token not received');
-          }
-          
-          // Store the new tokens in secure storage
-          // This updates the tokens so future requests will use the new access token
-          await storeAccessToken(access);
-          await storeTokenExpiry(resolveAccessTokenExpiryMs(access));
-          if (newRefreshToken) {
-            // Store new refresh token if provided (some backends rotate refresh tokens)
-            await storeRefreshToken(newRefreshToken);
-          }
-          
-          // Update the original request with the new token
-          // This allows us to retry the failed request with the new token
+
           if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${access}`;
+            originalRequest.headers.Authorization = `Bearer ${refreshed.accessToken}`;
           }
-          
-          // Retry the original request with the new token
+
           return client(originalRequest);
         } catch (refreshError) {
           // refresh token is also expired or invalid – the user needs to log in again.

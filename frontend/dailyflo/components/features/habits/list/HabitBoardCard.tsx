@@ -22,6 +22,7 @@ import {
   PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_HORIZONTAL,
 } from '@/components/features/gamification/browse/progressBoardUiTokens';
 import { HabitHeatmap } from '../detail/HabitHeatmap';
+import { HabitAnimatedTitle } from './HabitAnimatedTitle';
 import { HabitProgressRing } from './HabitProgressRing';
 import { getHabitIncrementDisplay } from './habitIncrementDisplay';
 import { getHabitProgressRingColors } from './habitProgressRingColors';
@@ -30,6 +31,7 @@ import {
   HABIT_BOARD_PLUS_STROKE_WIDTH,
   HABIT_BOARD_RING_SIZE,
   HABIT_BOARD_RING_STROKE_WIDTH,
+  HABIT_BOARD_TICK_ICON_SIZE,
 } from './habitBoardUiTokens';
 import { Paddings } from '@/constants/Paddings';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -103,16 +105,13 @@ export function HabitBoardCard({
                 pressed && onPress ? styles.sectionPressed : null,
               ]}
             >
-              <Text
-                style={[
-                  styles.title,
-                  { color: titleColor },
-                  displayHabit?.isCompleteToday && styles.titleDone,
-                ]}
+              <HabitAnimatedTitle
+                title={title}
+                isComplete={Boolean(displayHabit?.isCompleteToday)}
+                titleColor={titleColor}
+                textStyle={styles.title}
                 numberOfLines={2}
-              >
-                {title}
-              </Text>
+              />
               {incrementDisplay ? (
                 <Text style={styles.todayScore}>
                   <Text style={[styles.todayScore, { color: themeColors.text.tertiary() }]}>
@@ -126,33 +125,28 @@ export function HabitBoardCard({
             </Pressable>
 
             {showTodayActions && incrementDisplay ? (
-              <Pressable
+              <HabitProgressRing
                 onPress={handleIncrement}
-                style={({ pressed }) => [
-                  styles.ringAction,
-                  pressed && styles.ringActionPressed,
-                ]}
-                accessibilityRole="button"
+                style={styles.ringAction}
                 accessibilityLabel={
                   displayHabit!.isCompleteToday
                     ? `Today's progress ${incrementDisplay.current} of ${incrementDisplay.target}. Tap to reset.`
                     : `Today's progress ${incrementDisplay.current} of ${incrementDisplay.target}. Tap to add one.`
                 }
-              >
-                <HabitProgressRing
-                  current={incrementDisplay.current}
-                  target={incrementDisplay.target}
-                  color={ringColors.progress}
-                  trackColor={ringColors.track}
-                  iconColor={ringColors.icon}
-                  size={HABIT_BOARD_RING_SIZE}
-                  strokeWidth={HABIT_BOARD_RING_STROKE_WIDTH}
-                  plusIconSize={HABIT_BOARD_PLUS_ICON_SIZE}
-                  plusStrokeWidth={HABIT_BOARD_PLUS_STROKE_WIDTH}
-                  showCenterLabel={false}
-                  showCenterPlus
-                />
-              </Pressable>
+                current={incrementDisplay.current}
+                target={incrementDisplay.target}
+                isComplete={displayHabit!.isCompleteToday}
+                color={ringColors.progress}
+                trackColor={ringColors.track}
+                iconColor={ringColors.icon}
+                size={HABIT_BOARD_RING_SIZE}
+                strokeWidth={HABIT_BOARD_RING_STROKE_WIDTH}
+                plusIconSize={HABIT_BOARD_PLUS_ICON_SIZE}
+                plusStrokeWidth={HABIT_BOARD_PLUS_STROKE_WIDTH}
+                tickIconSize={HABIT_BOARD_TICK_ICON_SIZE}
+                showCenterLabel={false}
+                showCenterPlus
+              />
             ) : (
               <View style={styles.streakCounter} accessibilityLabel={`${currentStreak} day streak`}>
                 <Text style={[styles.streakNumber, { color: streakCountColor }]}>{streakNumberLabel}</Text>
@@ -197,10 +191,6 @@ const createStyles = (
     title: {
       ...typography.getTextStyle('heading-4'),
     },
-    titleDone: {
-      opacity: 0.55,
-      textDecorationLine: 'line-through',
-    },
     todayScore: {
       ...typography.getTextStyle('body-small'),
       fontVariant: ['tabular-nums'],
@@ -211,9 +201,6 @@ const createStyles = (
       flexShrink: 0,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    ringActionPressed: {
-      opacity: 0.88,
     },
     streakCounter: {
       flexDirection: 'row',

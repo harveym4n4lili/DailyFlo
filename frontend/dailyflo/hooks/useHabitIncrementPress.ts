@@ -4,7 +4,6 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import * as Haptics from 'expo-haptics';
 
 import { store, useAppDispatch, useAppSelector } from '@/store';
 import {
@@ -171,8 +170,6 @@ export function useHabitIncrementPress(
   const handleIncrement = useCallback(() => {
     const baseHabit = habitRef.current;
     if (!baseHabit) return;
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const hasPendingBatch =
       pendingDeltaRef.current > 0 ||
