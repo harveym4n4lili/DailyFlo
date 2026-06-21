@@ -33,7 +33,7 @@ import { Paddings } from '@/constants/Paddings';
 import { flushAllPendingHabitIncrementSyncs } from '@/utils/pendingHabitIncrementSyncRegistry';
 import { getTaskHabitTitleColor } from '@/utils/taskColors';
 import { useHabits } from '@/store/hooks';
-import { HabitBoardCard } from '../list/HabitBoardCard';
+import { HabitCard } from '../list/HabitCard';
 import type { HabitTodayItem } from '@/types/api/habits';
 
 const TOP_SECTION_ROW_HEIGHT = 48;
@@ -234,7 +234,7 @@ export function HabitDetailScreenContent({ habitId }: HabitDetailScreenContentPr
       >
         <View style={styles.paddedHorizontal}>
           {detailStats ? (
-            <HabitBoardCard
+            <HabitCard
               title={title}
               color={detailHabit.color}
               currentStreak={detailStats.currentStreak}

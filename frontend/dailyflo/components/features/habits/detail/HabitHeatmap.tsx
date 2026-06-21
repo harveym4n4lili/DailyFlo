@@ -12,8 +12,8 @@ import { Paddings } from '@/constants/Paddings';
 import {
   getHabitHeatmapCellFill,
   getHabitHeatmapDayScore,
-  getHabitHeatmapLegendItems,
 } from './habitHeatmapColors';
+import { HabitHeatmapLegend } from './HabitHeatmapLegend';
 import type { HabitColor, HabitHeatmapData } from '@/types/api/habits';
 
 const CELL = 14;
@@ -29,12 +29,6 @@ const DAY_LABEL_COLUMN_WIDTH = 12;
 /** space between day letters and the first week column */
 const DAY_LABEL_GRID_GAP = 4;
 const DAY_LABEL_TRACK_WIDTH = DAY_LABEL_COLUMN_WIDTH + DAY_LABEL_GRID_GAP;
-const LEGEND_SWATCH_GAP = GAP;
-/** space between Less/More labels and the swatch cluster */
-const LEGEND_CAPTION_GAP = 6;
-
-/** gap between the grid and the Less/More key below — matches list row rhythm */
-const LEGEND_TOP_MARGIN = Paddings.listItemVertical;
 
 function parseLocalDate(iso: string): Date {
   const [y, m, d] = iso.split('-').map(Number);
@@ -83,17 +77,15 @@ type HeatmapWeekColumn = {
 type HabitHeatmapProps = {
   heatmap: HabitHeatmapData;
   color: HabitColor;
+  /** false on habit card — legend moves to the footer toggle row */
+  showLegend?: boolean;
 };
 
-export function HabitHeatmap({ heatmap, color }: HabitHeatmapProps) {
+export function HabitHeatmap({ heatmap, color, showLegend = true }: HabitHeatmapProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
 
   const labelColor = themeColors.text.tertiary();
-  const legendItems = useMemo(
-    () => getHabitHeatmapLegendItems(color, themeColors),
-    [color, themeColors],
-  );
   const styles = useMemo(
     () => createStyles(typography, labelColor),
     [typography, labelColor],
@@ -201,21 +193,14 @@ export function HabitHeatmap({ heatmap, color }: HabitHeatmapProps) {
         </ScrollView>
       </View>
 
-      <View style={styles.legendTrack}>
-        <View style={styles.legendSpacer} />
-        <View style={styles.legendRow} accessibilityLabel="Heatmap completion key, less to more">
-          <Text style={styles.legendCaption}>Less</Text>
-          <View style={styles.legendSwatchGroup}>
-            {legendItems.map((item) => (
-              <View
-                key={item.score}
-                style={[styles.legendSwatch, { backgroundColor: item.fill }]}
-              />
-            ))}
+      {showLegend ? (
+        <View style={styles.legendTrack}>
+          <View style={styles.legendSpacer} />
+          <View style={styles.legendRowEnd}>
+            <HabitHeatmapLegend color={color} />
           </View>
-          <Text style={styles.legendCaption}>More</Text>
         </View>
-      </View>
+      ) : null}
     </View>
   );
 }
@@ -273,32 +258,14 @@ const createStyles = (
     },
     legendTrack: {
       flexDirection: 'row',
-      marginTop: LEGEND_TOP_MARGIN,
+      marginTop: Paddings.listItemVertical,
+      alignItems: 'center',
     },
     legendSpacer: {
       width: DAY_LABEL_TRACK_WIDTH,
     },
-    legendRow: {
+    legendRowEnd: {
       flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'flex-end',
-      gap: LEGEND_CAPTION_GAP,
-    },
-    legendSwatchGroup: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: LEGEND_SWATCH_GAP,
-    },
-    legendSwatch: {
-      width: CELL,
-      height: CELL,
-      borderRadius: 4,
-    },
-    legendCaption: {
-      ...typography.getTextStyle('body-small'),
-      color: labelColor,
-      fontSize: 9,
-      lineHeight: 11,
+      alignItems: 'flex-end',
     },
   });

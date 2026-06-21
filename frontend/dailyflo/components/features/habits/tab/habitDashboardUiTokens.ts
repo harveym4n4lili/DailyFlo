@@ -13,11 +13,11 @@ import { Paddings } from '@/constants/Paddings';
 /** gap between the four dashboard tiles (same as grouped-list icon-to-text spacing) */
 export const HABIT_DASHBOARD_TILE_GAP = Paddings.groupedListIconTextSpacing;
 
-/** horizontal inset — matches browse dashboard GroupedList + habit board cards */
+/** horizontal inset — matches browse dashboard GroupedList + habit cards */
 export const HABIT_DASHBOARD_TILE_PADDING_HORIZONTAL =
   PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_HORIZONTAL;
 
-/** vertical inset — child grouped-list rows (habit board cards use itemPadding="child") */
+/** vertical inset — child grouped-list rows (habit cards use itemPadding="child") */
 export const HABIT_DASHBOARD_TILE_PADDING_VERTICAL = Paddings.groupedListChildContentVertical;
 
 /** space below tile section labels — same rhythm as progress board streak/tasks headers */

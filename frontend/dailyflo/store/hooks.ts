@@ -30,6 +30,7 @@ import {
 import type { CreateUserGoalInput } from '@/types/api/gamification';
 import {
   fetchHabitsToday,
+  fetchHabits,
   createHabit,
   updateHabit,
   deleteHabit,
@@ -274,6 +275,7 @@ export const useHabits = () => {
   return {
     ...habitsState,
     fetchToday: useCallback(() => dispatch(fetchHabitsToday()), [dispatch]),
+    fetchAll: useCallback(() => dispatch(fetchHabits()), [dispatch]),
     createHabit: useCallback(
       (input: CreateHabitInput) => dispatch(createHabit(input)).unwrap(),
       [dispatch],

@@ -13,7 +13,7 @@
  */
 
 export { HabitsScreenContent, HabitsTodayList } from './tab';
-export { HabitListItem, HabitBoardCard } from './list';
+export { HabitListItem, HabitCard } from './list';
 export { default as HabitCreateScreen } from './forms/HabitCreateScreen';
 export { default as HabitEditScreen } from './forms/HabitEditScreen';
 export { HABIT_COLORS, HABIT_FREQUENCIES, HABIT_WEEKDAYS } from './forms/habitFormConstants';

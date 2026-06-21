@@ -15,6 +15,7 @@ import type { User } from '@/types';
 import type {
   CreateHabitInput,
   Habit,
+  HabitLibraryItem,
   HabitHeatmapData,
   HabitLogResponse,
   HabitStatsResponse,
@@ -41,6 +42,10 @@ interface HabitsState {
   detailStats: HabitStatsResponse | null;
   isDetailLoading: boolean;
   detailError: string | null;
+  /** full library from GET /habits/ — powers "All habits" section below today's habit cards */
+  allHabits: HabitLibraryItem[];
+  isAllLoading: boolean;
+  allError: string | null;
 }
 
 const initialState: HabitsState = {
@@ -55,6 +60,9 @@ const initialState: HabitsState = {
   detailStats: null,
   isDetailLoading: false,
   detailError: null,
+  allHabits: [],
+  isAllLoading: false,
+  allError: null,
 };
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -138,6 +146,18 @@ export const fetchHabitsToday = createAsyncThunk(
   },
 );
 
+/** load every active habit — used by habits tab "All habits" section */
+export const fetchHabits = createAsyncThunk(
+  'habits/fetchAll',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await habitsApiService.fetchHabits();
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error, 'Failed to load all habits'));
+    }
+  },
+);
+
 /** POST /habits/ — create from FAB or onboarding */
 export const createHabit = createAsyncThunk(
   'habits/create',
@@ -145,8 +165,8 @@ export const createHabit = createAsyncThunk(
     try {
       const habit = await habitsApiService.createHabit(input);
       await scheduleReminderForHabitAfterSave(habit.id, habit.reminderTime ?? '', getState, dispatch);
-      // refresh today's list so the new habit appears when the create modal closes
       await dispatch(fetchHabitsToday());
+      void dispatch(fetchHabits());
       return habit;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Failed to create habit'));
@@ -175,6 +195,7 @@ export const deleteHabit = createAsyncThunk(
       await habitsApiService.deleteHabit(id);
       await cancelHabitReminders(id);
       void dispatch(fetchHabitsToday());
+      void dispatch(fetchHabits());
       return id;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Failed to delete habit'));
@@ -261,7 +282,7 @@ export const logHabitProgress = createAsyncThunk(
   },
 );
 
-/** sync today's heatmap cell on detail stats when board row updates */
+/** sync today's heatmap cell on detail stats when habit card updates */
 function patchDetailStatsHeatmapForToday(
   heatmap: HabitHeatmapData,
   dayIso: string,
@@ -453,6 +474,18 @@ const habitsSlice = createSlice({
       .addCase(fetchHabitsToday.rejected, (state, action) => {
         state.isTodayLoading = false;
         state.todayError = (action.payload as string) || 'Failed to load habits';
+      })
+      .addCase(fetchHabits.pending, (state) => {
+        state.isAllLoading = true;
+        state.allError = null;
+      })
+      .addCase(fetchHabits.fulfilled, (state, action: PayloadAction<HabitLibraryItem[]>) => {
+        state.isAllLoading = false;
+        state.allHabits = action.payload;
+      })
+      .addCase(fetchHabits.rejected, (state, action) => {
+        state.isAllLoading = false;
+        state.allError = (action.payload as string) || 'Failed to load all habits';
       })
       .addCase(createHabit.pending, (state) => {
         state.isSaving = true;

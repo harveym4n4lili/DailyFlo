@@ -1,6 +1,6 @@
 /**
- * single habit dashboard stat tile — primary fill + border, same radius as habit board cards.
- * title typography matches habit board card titles (heading-4 + secondary).
+ * single habit dashboard stat tile — primary fill + border, same radius as habit cards.
+ * title typography matches habit card titles (heading-4 + secondary).
  */
 
 import React, { useMemo } from 'react';
@@ -27,7 +27,7 @@ type HabitDashboardTileProps = {
 
 export function HabitDashboardTile({ label, children, style }: HabitDashboardTileProps) {
   const themeColors = useThemeColors();
-  // same token as HabitBoardCard title — heading-4 with Inter medium
+  // same token as HabitCard title — heading-4 with Inter medium
   const titleStyle = getTypographyStyle('heading-4', Platform.OS as 'ios' | 'android' | 'web');
 
   const styles = useMemo(

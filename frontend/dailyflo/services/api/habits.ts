@@ -9,6 +9,7 @@ import apiClient from './client';
 import type {
   CreateHabitInput,
   Habit,
+  HabitLibraryItem,
   HabitLogResponse,
   HabitsTodayResponse,
   HabitStatsResponse,
@@ -16,9 +17,9 @@ import type {
 } from '@/types/api/habits';
 
 class HabitsApiService {
-  /** GET /habits/ — all active habits for the signed-in user */
-  async fetchHabits(): Promise<Habit[]> {
-    const { data } = await apiClient.get<Habit[]>('/habits/');
+  /** GET /habits/ — all active habits with streak + heatmap for habit cards */
+  async fetchHabits(): Promise<HabitLibraryItem[]> {
+    const { data } = await apiClient.get<HabitLibraryItem[]>('/habits/');
     return Array.isArray(data) ? data : [];
   }
 
