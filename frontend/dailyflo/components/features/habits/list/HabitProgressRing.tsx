@@ -47,7 +47,7 @@ import {
   isIosHabitRingPlatform,
   resolveHabitRingFillRadius,
 } from './habitProgressRingAnimation';
-import { HABIT_CARD_VARIANT_FADE_MS } from './habitCardUiTokens';
+import { HABIT_CARD_VARIANT_TIMING_CONFIG } from './habitCardUiTokens';
 import { playHabitRingTapHaptic } from './habitProgressRingHaptics';
 
 const DEFAULT_SIZE = 24;
@@ -264,7 +264,7 @@ export function HabitProgressRing({
       return;
     }
 
-    ringVisibility.value = withTiming(target, { duration: HABIT_CARD_VARIANT_FADE_MS });
+    ringVisibility.value = withTiming(target, HABIT_CARD_VARIANT_TIMING_CONFIG);
   }, [prefersReducedMotion, ringVisibility, showRing]);
 
   const onPressRef = useRef(onPress);
