@@ -319,7 +319,26 @@ export function transformApiTaskToTask(apiTask: any): Task {
             sortOrder: s.sort_order ?? s.sortOrder ?? 0,
           }))
         : [],
-      reminders: apiTask.metadata?.reminders || [],
+      reminders: Array.isArray(apiTask.metadata?.reminders)
+        ? apiTask.metadata.reminders.map((r: any) => ({
+            id: String(r.id ?? ''),
+            type: r.type === 'due_date' ? 'due_date' : 'custom',
+            scheduledTime:
+              typeof r.scheduledTime === 'string'
+                ? r.scheduledTime
+                : typeof r.scheduled_time === 'string'
+                  ? r.scheduled_time
+                  : r.scheduledTime instanceof Date
+                    ? r.scheduledTime.toISOString()
+                    : new Date().toISOString(),
+            isEnabled:
+              r.is_enabled !== undefined
+                ? r.is_enabled
+                : r.isEnabled !== undefined
+                  ? r.isEnabled
+                  : true,
+          }))
+        : [],
       notes: apiTask.metadata?.notes,
       tags: apiTask.metadata?.tags,
       recurrence_completions: apiTask.metadata?.recurrence_completions,

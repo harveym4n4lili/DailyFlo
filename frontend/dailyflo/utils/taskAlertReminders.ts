@@ -19,7 +19,7 @@ export function mapAlertIdsToTaskReminders(
   return alertIds.map((id) => ({
     id,
     type: 'custom',
-    scheduledTime: new Date(),
+    scheduledTime: new Date().toISOString(),
     isEnabled: true,
   }));
 }
