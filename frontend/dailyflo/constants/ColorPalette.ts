@@ -8,7 +8,8 @@
  * The color system is organized into:
  * - Brand colors — four botanical ramps (`PlantBrandColors`, `SageBrandColors`, `MarpleBrandColors`, `MossBrandColors`; same step keys as `PrimaryColors`)
  * - Primary colors (neutral grays)
- * - Semantic colors (success, error, warning, info)
+ * - System status colors (red, orange, yellow, green — shared with task/habit ramps)
+ * - Semantic colors (success, error, warning, caution, info)
  * - Task & habit color options (user-selectable accents)
  * - Theme-aware color mappings
  * - Utility functions for color usage
@@ -183,50 +184,6 @@ export const BrandPalettes = {
 
 export type BrandPaletteId = keyof typeof BrandPalettes;
 
-/**
- * Semantic Color Palette
- * 
- * Colors that convey meaning and status throughout the app.
- * These colors remain consistent across light and dark themes.
- */
-export const SemanticColors = {
-  // success colors - for completed tasks, success states
-  success: {
-    25: '#ECFDF5',   // lightest green - success backgrounds
-    100: '#D1FAE5',  // light green - success hover states
-    500: '#10B981',  // base green - success text, icons
-    600: '#059669',  // darker green - success buttons
-    900: '#064E3B',  // darkest green - success text on light backgrounds
-  },
-  
-  // error colors - for overdue tasks, error states
-  error: {
-    25: '#FEF2F2',   // lightest red - error backgrounds
-    100: '#FEE2E2',  // light red - error hover states
-    500: '#EF4444',  // base red - error text, icons
-    600: '#DC2626',  // darker red - error buttons
-    900: '#7F1D1D',  // darkest red - error text on light backgrounds
-  },
-  
-  // warning colors - for warning states, caution
-  warning: {
-    25: '#FFFBEB',   // lightest amber - warning backgrounds
-    100: '#FEF3C7',  // light amber - warning hover states
-    500: '#F59E0B',  // base amber - warning text, icons
-    600: '#D97706',  // darker amber - warning buttons
-    900: '#78350F',  // darkest amber - warning text on light backgrounds
-  },
-  
-  // info colors - for primary tasks, active states
-  info: {
-    25: '#EFF6FF',   // lightest blue - info backgrounds
-    100: '#DBEAFE',  // light blue - info hover states
-    500: '#3B82F6',  // base blue - info text, icons
-    600: '#2563EB',  // darker blue - info buttons
-    900: '#1E3A8A',  // darkest blue - info text on light backgrounds
-  },
-} as const;
-
 // =============================================================================
 // TASK & HABIT COLOR OPTIONS
 // =============================================================================
@@ -329,6 +286,62 @@ export const TaskAndHabitColors = {
 
 /** @deprecated use `TaskAndHabitColors` — kept for existing imports */
 export const TaskCategoryColors = TaskAndHabitColors;
+
+// =============================================================================
+// SYSTEM STATUS COLORS
+// =============================================================================
+// Reusable feedback scale — same ramps as task/habit red, orange, yellow, green.
+// Use for errors, warnings, completion, and graded stats (e.g. consistency %).
+
+/** low → high order for percentage-based UI (stats, progress tiers) */
+export const SYSTEM_STATUS_COLOR_SCALE = ['red', 'orange', 'yellow', 'green'] as const;
+
+export type SystemStatusColorName = (typeof SYSTEM_STATUS_COLOR_SCALE)[number];
+export type SystemStatusColorShade = TaskHabitColorShade;
+
+export const SystemStatusColors = {
+  red: TaskAndHabitColors.red,
+  orange: TaskAndHabitColors.orange,
+  yellow: TaskAndHabitColors.yellow,
+  green: TaskAndHabitColors.green,
+} as const;
+
+type TaskHabitFiveShadeRamp = (typeof SystemStatusColors)[SystemStatusColorName];
+
+/** maps task/habit 100–900 ramps onto legacy semantic shade keys (25, 100, 500, 600, 900) */
+function mapTaskHabitRampToSemanticShades(ramp: TaskHabitFiveShadeRamp) {
+  return {
+    25: ramp[100],
+    100: ramp[100],
+    500: ramp[500],
+    600: ramp[700],
+    900: ramp[900],
+  } as const;
+}
+
+/**
+ * Semantic Color Palette
+ *
+ * Meaning-based colors for the app. error / warning / caution / success reuse
+ * `SystemStatusColors` (task & habit red, orange, yellow, green). info stays blue.
+ */
+export const SemanticColors = {
+  error: mapTaskHabitRampToSemanticShades(SystemStatusColors.red),
+  warning: mapTaskHabitRampToSemanticShades(SystemStatusColors.orange),
+  caution: mapTaskHabitRampToSemanticShades(SystemStatusColors.yellow),
+  success: mapTaskHabitRampToSemanticShades(SystemStatusColors.green),
+
+  // info colors - for primary tasks, active states
+  info: {
+    25: '#EFF6FF',   // lightest blue - info backgrounds
+    100: '#DBEAFE',  // light blue - info hover states
+    500: '#3B82F6',  // base blue - info text, icons
+    600: '#2563EB',  // darker blue - info buttons
+    900: '#1E3A8A',  // darkest blue - info text on light backgrounds
+  },
+} as const;
+
+export type SemanticColorShade = keyof typeof SemanticColors.success;
 
 /**
  * Gamification / browse progress board — fixed accent hex values (not theme-mapped).
@@ -557,9 +570,38 @@ export function getColorValue<T extends Record<string, string>>(
  */
 export function getSemanticColor(
   color: keyof typeof SemanticColors,
-  shade: keyof typeof SemanticColors.success = 500
+  shade: SemanticColorShade = 500
 ): string {
   return SemanticColors[color][shade];
+}
+
+/**
+ * System status ramp — red, orange, yellow, green (same hex as task/habit picks).
+ * @param color - status step on the feedback scale
+ * @param shade - 100, 300, 500, 700, or 900 (default 500)
+ */
+export function getSystemStatusColor(
+  color: SystemStatusColorName,
+  shade: SystemStatusColorShade = 500,
+): string {
+  return SystemStatusColors[color][shade];
+}
+
+/**
+ * Pick a status color from a 0–1 value (e.g. consistency ratio).
+ * Buckets: red → orange → yellow → green across four equal bands.
+ */
+export function getSystemStatusScaleColor(
+  normalizedProgress: number,
+  shade: SystemStatusColorShade = 500,
+): string {
+  const progress = Math.min(1, Math.max(0, normalizedProgress));
+  const bucketIndex = Math.min(
+    SYSTEM_STATUS_COLOR_SCALE.length - 1,
+    Math.floor(progress * SYSTEM_STATUS_COLOR_SCALE.length),
+  );
+  const colorName = SYSTEM_STATUS_COLOR_SCALE[bucketIndex];
+  return getSystemStatusColor(colorName, shade);
 }
 
 /**
@@ -693,10 +735,12 @@ export function withOpacity(color: string, opacity: number): string {
  *    backgroundColor: ThemeColors.light.background.invertedPrimary (gives dark background in light theme)
  *    color: ThemeColors.light.text.invertedPrimary (gives light text in light theme)
  * 
- * 3. Semantic Colors:
- *    - Success: getSemanticColor('success', 500)
- *    - Error: getSemanticColor('error', 500)
- *    - Warning: getSemanticColor('warning', 500)
+ * 3. Semantic Colors (backed by SystemStatusColors for red/orange/yellow/green):
+ *    - Error: getSemanticColor('error', 500) or getSystemStatusColor('red', 500)
+ *    - Warning: getSemanticColor('warning', 500) or getSystemStatusColor('orange', 500)
+ *    - Caution: getSemanticColor('caution', 500) or getSystemStatusColor('yellow', 500)
+ *    - Success: getSemanticColor('success', 500) or getSystemStatusColor('green', 500)
+ *    - Graded stats: getSystemStatusScaleColor(0.72) — red → orange → yellow → green
  *    - Info: getSemanticColor('info', 500)
  * 
  * 4. Task & habit color options:
@@ -769,12 +813,16 @@ export default {
   MarpleBrandColors,
   MossBrandColors,
   BrandPalettes,
+  SystemStatusColors,
+  SYSTEM_STATUS_COLOR_SCALE,
   SemanticColors,
   TaskCategoryColors,
   PrimaryButtonColors,
   ThemeColors,
   getColorValue,
   getSemanticColor,
+  getSystemStatusColor,
+  getSystemStatusScaleColor,
   getTaskCategoryColor,
   getBrandPaletteColor,
   getPlantBrandColor,
