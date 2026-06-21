@@ -1,12 +1,19 @@
 /**
- * scrollable list of today's due habits — each habit uses the gamification board card shell.
+ * scrollable list of today's due habits — each habit uses the habit card shell.
  */
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import Animated from 'react-native-reanimated';
 
-import { HabitBoardCard } from '../list/HabitBoardCard';
+import { HabitCard } from '../list/HabitCard';
+import { LAYOUT_TRANSITION_SPRING } from '@/constants/LayoutTransitions';
 import { HabitsDashboardSection } from './HabitsDashboardSection';
+import { HabitsCollapsibleSection } from './HabitsCollapsibleSection';
+import {
+  HABIT_DASHBOARD_TO_SECTION_HEADER_GAP,
+  HABIT_SECTION_HEADER_CONTENT_GAP,
+} from './habitSectionUiTokens';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useHabits } from '@/store/hooks';
@@ -44,7 +51,7 @@ export function HabitsTodayList({ habits, isLoading, error, onOpenDetail }: Habi
 
   if (habits.length === 0) {
     return (
-      <View style={styles.centered}>
+      <View style={styles.emptyWrap}>
         <Text style={styles.emptyTitle}>No habits due today</Text>
         <Text style={styles.emptyHint}>Tap + to create a habit and build consistency.</Text>
       </View>
@@ -52,19 +59,29 @@ export function HabitsTodayList({ habits, isLoading, error, onOpenDetail }: Habi
   }
 
   return (
-    <View style={styles.habitCards}>
+    <View style={styles.todaySection}>
       <HabitsDashboardSection habits={habits} summary={todaySummary} />
-      {habits.map((habit) => (
-          <HabitBoardCard
-            key={habit.id}
-            title={habit.title}
-            color={habit.color}
-            currentStreak={habit.currentStreak}
-            heatmap={habit.heatmap}
-            habit={habit}
-            onPress={onOpenDetail ? () => onOpenDetail(habit.id) : undefined}
-          />
-        ))}
+      <HabitsCollapsibleSection
+        title="Today's Habits"
+        itemCount={habits.length}
+        headerStyle={styles.todaySectionHeader}
+      >
+        <View style={styles.habitCards}>
+          {habits.map((habit) => (
+            <Animated.View key={habit.id} layout={LAYOUT_TRANSITION_SPRING}>
+              <HabitCard
+                defaultVariant="heatmap"
+                title={habit.title}
+                color={habit.color}
+                currentStreak={habit.currentStreak}
+                heatmap={habit.heatmap}
+                habit={habit}
+                onPress={onOpenDetail ? () => onOpenDetail(habit.id) : undefined}
+              />
+            </Animated.View>
+          ))}
+        </View>
+      </HabitsCollapsibleSection>
     </View>
   );
 }
@@ -92,7 +109,18 @@ const createStyles = (
       ...typography.getTextStyle('body-medium'),
       color: themeColors.text.secondary(),
     },
+    todaySection: {
+      gap: 0,
+    },
+    todaySectionHeader: {
+      marginTop: HABIT_DASHBOARD_TO_SECTION_HEADER_GAP,
+    },
     habitCards: {
       gap: Paddings.screen,
+      paddingTop: HABIT_SECTION_HEADER_CONTENT_GAP,
+    },
+    emptyWrap: {
+      paddingVertical: Paddings.sectionCompact,
+      alignItems: 'center',
     },
   });

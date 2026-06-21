@@ -14,9 +14,11 @@ import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useAuthSessionReady } from '@/hooks/useAuthSessionReady';
 import { ScreenHeaderActions } from '@/components/ui';
 import { HabitsTodayList } from './HabitsTodayList';
+import { HabitsAllSection } from './HabitsAllSection';
 import { useHabits } from '@/store/hooks';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
+import { tabScreenScrollPaddingBottom } from '@/constants/tabScreenScrollPaddingBottom';
 import { flushAllPendingHabitIncrementSyncs } from '@/utils/pendingHabitIncrementSyncRegistry';
 
 // row = toolbar buttons; anchor = full blur band height — same as browse tab chrome
@@ -28,7 +30,7 @@ export function HabitsScreenContent() {
   const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const authSessionReady = useAuthSessionReady();
-  const { todayHabits, isTodayLoading, todayError, fetchToday } = useHabits();
+  const { todayHabits, isTodayLoading, todayError, fetchToday, fetchAll } = useHabits();
 
   const openHabitDetail = useCallback(
     (habitId: string) => {
@@ -41,8 +43,9 @@ export function HabitsScreenContent() {
     useCallback(() => {
       if (!authSessionReady) return () => undefined;
       void fetchToday();
+      void fetchAll();
       return () => flushAllPendingHabitIncrementSyncs();
-    }, [fetchToday, authSessionReady]),
+    }, [fetchToday, fetchAll, authSessionReady]),
   );
 
   const styles = useMemo(() => createStyles(themeColors, insets), [themeColors, insets]);
@@ -82,7 +85,10 @@ export function HabitsScreenContent() {
         refreshControl={
           <RefreshControl
             refreshing={isTodayLoading}
-            onRefresh={() => void fetchToday()}
+            onRefresh={() => {
+              void fetchToday();
+              void fetchAll();
+            }}
             tintColor={themeColors.text.secondary()}
           />
         }
@@ -94,6 +100,8 @@ export function HabitsScreenContent() {
             error={todayError}
             onOpenDetail={openHabitDetail}
           />
+
+          <HabitsAllSection onOpenDetail={openHabitDetail} />
         </View>
       </ScrollView>
     </View>
@@ -145,7 +153,8 @@ const createStyles = (
       flexGrow: 1,
       paddingTop: insets.top + TOP_SECTION_ANCHOR_HEIGHT,
       paddingHorizontal: Paddings.screen,
-      paddingBottom: Paddings.scrollBottomExtra + Paddings.contentVertical,
+      // extra room so last habit card clears tab bar + FAB (matches today list scroll inset)
+      paddingBottom: tabScreenScrollPaddingBottom(insets.bottom),
     },
     contentSection: {
       marginTop: Paddings.sectionCompact,

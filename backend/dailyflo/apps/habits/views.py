@@ -38,6 +38,16 @@ def _serialize_today_item(habit, completion, today: date) -> dict:
     }
 
 
+def _serialize_habit_library_item(habit, today: date, serializer_context) -> dict:
+    """GET /habits/ list row — CRUD fields plus streak + heatmap for habit cards."""
+    streaks = habit_streaks(habit, today)
+    payload = HabitSerializer(habit, context=serializer_context).data
+    payload['currentStreak'] = streaks['currentStreak']
+    payload['longestStreak'] = streaks['longestStreak']
+    payload['heatmap'] = habit_heatmap(habit, today)
+    return payload
+
+
 def _sync_activity_log_on_complete(habit, completion_date: date, user):
     """write one habit_completed log per habit+day when completion first becomes true."""
     exists = ActivityLog.objects.filter(
@@ -83,6 +93,16 @@ class HabitViewSet(viewsets.ModelViewSet):
         instance.soft_deleted = True
         instance.is_active = False
         instance.save(update_fields=['soft_deleted', 'is_active', 'updated_at'])
+
+    def list(self, request, *args, **kwargs):
+        """GET /habits/ — library list with streak + heatmap for habits tab habit cards."""
+        queryset = self.filter_queryset(self.get_queryset())
+        today = user_today_from_prefs(request.user)
+        context = self.get_serializer_context()
+        return Response([
+            _serialize_habit_library_item(habit, today, context)
+            for habit in queryset
+        ])
 
     @action(detail=False, methods=['get'], url_path='today')
     def today(self, request):

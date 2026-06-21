@@ -1,7 +1,8 @@
 /**
- * Shared habit list UI — row (today section) and board card (habits tab + detail).
+ * Shared habit list UI — row (today section) and habit card (habits tab + detail).
  */
 
 export { HabitListItem } from './HabitListItem';
-export { HabitBoardCard } from './HabitBoardCard';
-export type { HabitBoardCardProps } from './HabitBoardCard';
+export { HabitCard } from './HabitCard';
+export type { HabitCardProps, HabitCardVariant } from './HabitCard';
+export { HabitCardVariantToggle } from './HabitCardVariantToggle';

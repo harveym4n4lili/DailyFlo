@@ -40,6 +40,13 @@ export interface Habit {
   updated_at?: string;
 }
 
+/** GET /habits/ list item — habit record plus habit-card streak + heatmap fields */
+export interface HabitLibraryItem extends Habit {
+  currentStreak: number;
+  longestStreak: number;
+  heatmap: HabitHeatmapData;
+}
+
 export interface HabitTodayItem {
   id: string;
   title: string;

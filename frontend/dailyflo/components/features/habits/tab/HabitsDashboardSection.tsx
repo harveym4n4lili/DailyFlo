@@ -1,5 +1,5 @@
 /**
- * habits tab dashboard — 2×2 grid of summary tiles above today's habit board cards.
+ * habits tab dashboard — 2×2 grid of summary tiles above today's habit cards.
  * typography + spacing reuse browse progress board tokens (grouped-list rhythm).
  */
 
@@ -53,7 +53,7 @@ export function HabitsDashboardSection({ habits, summary }: HabitsDashboardSecti
   // numbers — heading-3 with Inter semibold; stat titles use heading-4 (see HabitDashboardTile)
   const numberStyle = getTypographyStyle('heading-3', Platform.OS as 'ios' | 'android' | 'web');
   const statTitleStyle = getTypographyStyle('heading-4', Platform.OS as 'ios' | 'android' | 'web');
-  // subtext — body-small + text.tertiary, same as HabitBoardCard "Today's progress:" label
+  // subtext — body-small + text.tertiary, same as HabitCard "Today's progress:" label
   const subtextStyle = typography.getTextStyle('body-small');
   const statSubtextColor = themeColors.text.tertiary();
 
@@ -125,7 +125,7 @@ export function HabitsDashboardSection({ habits, summary }: HabitsDashboardSecti
           ...numberStyle,
           color: streaksAtRiskColor,
         },
-        // supporting copy — body-small + text.tertiary (habit board "Today's progress:" label)
+        // supporting copy — body-small + text.tertiary (habit card "Today's progress:" label)
         statSubtext: {
           ...subtextStyle,
           color: statSubtextColor,

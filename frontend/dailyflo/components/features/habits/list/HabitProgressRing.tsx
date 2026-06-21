@@ -1,6 +1,6 @@
 /**
  * circular progress ring — shows current/target inside the ring.
- * used on habit board cards for numeric daily tracking.
+ * used on habit cards for numeric daily tracking.
  * ios: uikit press compress + spring arc fill + tap pulse (ui-thread via reanimated).
  * complete: ring fills, inner disc tints to habit color, plus crossfades to tick.
  */
@@ -47,6 +47,7 @@ import {
   isIosHabitRingPlatform,
   resolveHabitRingFillRadius,
 } from './habitProgressRingAnimation';
+import { HABIT_CARD_VARIANT_FADE_MS } from './habitCardUiTokens';
 import { playHabitRingTapHaptic } from './habitProgressRingHaptics';
 
 const DEFAULT_SIZE = 24;
@@ -124,13 +125,15 @@ type HabitProgressRingProps = {
   trackColor?: string;
   /** center plus — defaults to color */
   iconColor?: string;
-  /** stretch to parent height/width — used in habit board header */
+  /** stretch to parent height/width — used in habit card header */
   fillContainer?: boolean;
   /** when false, ring is arc-only — score shown elsewhere in the row */
   showCenterLabel?: boolean;
   /** plus icon in the ring center (used when score is shown outside the ring) */
   showCenterPlus?: boolean;
-  /** optional overrides — habit board card passes tokens from habitBoardUiTokens.ts */
+  /** when false, hides the arc/track svg — simplified card keeps the increment icon slot only */
+  showRing?: boolean;
+  /** optional overrides — HabitCard passes tokens from habitCardUiTokens.ts */
   strokeWidth?: number;
   plusIconSize?: number;
   plusStrokeWidth?: number;
@@ -177,6 +180,7 @@ export function HabitProgressRing({
   fillContainer = false,
   showCenterLabel = true,
   showCenterPlus = false,
+  showRing = true,
   strokeWidth: strokeWidthOverride,
   plusIconSize: plusIconSizeOverride,
   plusStrokeWidth: plusStrokeWidthOverride,
@@ -217,8 +221,10 @@ export function HabitProgressRing({
   const animatedComplete = useSharedValue(isComplete ? 1 : 0);
   const pressScale = useSharedValue(1);
   const pulseScale = useSharedValue(1);
+  const ringVisibility = useSharedValue(showRing ? 1 : 0);
   const hasMountedRef = useRef(false);
   const hasMountedCompleteRef = useRef(false);
+  const hasMountedRingVisibilityRef = useRef(false);
 
   // arc fill + completion pulse when count changes after a tap
   useEffect(() => {
@@ -242,6 +248,24 @@ export function HabitProgressRing({
 
     runHabitRingCompleteAnimation(animatedComplete, isComplete ? 1 : 0, prefersReducedMotion);
   }, [animatedComplete, isComplete, prefersReducedMotion]);
+
+  // fade arc in/out when card switches heatmap ↔ simplified form
+  useEffect(() => {
+    const target = showRing ? 1 : 0;
+
+    if (!hasMountedRingVisibilityRef.current) {
+      hasMountedRingVisibilityRef.current = true;
+      ringVisibility.value = target;
+      return;
+    }
+
+    if (prefersReducedMotion) {
+      ringVisibility.value = target;
+      return;
+    }
+
+    ringVisibility.value = withTiming(target, { duration: HABIT_CARD_VARIANT_FADE_MS });
+  }, [prefersReducedMotion, ringVisibility, showRing]);
 
   const onPressRef = useRef(onPress);
   onPressRef.current = onPress;
@@ -298,6 +322,10 @@ export function HabitProgressRing({
   const tickIconStyle = useAnimatedStyle(() => ({
     opacity: animatedComplete.value,
     transform: [{ scale: 0.55 + animatedComplete.value * 0.45 }],
+  }));
+
+  const ringVisibilityStyle = useAnimatedStyle(() => ({
+    opacity: ringVisibility.value,
   }));
 
   const handleLayout = useCallback(
@@ -365,36 +393,41 @@ export function HabitProgressRing({
       importantForAccessibility={accessibilityLabel ? 'yes' : 'no-hide-descendants'}
     >
       {resolvedSize > 0 ? (
-        <Svg width={resolvedSize} height={resolvedSize} style={StyleSheet.absoluteFill}>
-          <Circle
-            cx={center}
-            cy={center}
-            r={radius}
-            stroke={resolvedTrackColor}
-            strokeWidth={strokeWidth}
-            fill="none"
-          />
-          <AnimatedCircle
-            cx={center}
-            cy={center}
-            r={fillRadius}
-            fill={color}
-            stroke="none"
-            animatedProps={fillCircleProps}
-          />
-          <AnimatedCircle
-            cx={center}
-            cy={center}
-            r={radius}
-            stroke={color}
-            strokeWidth={strokeWidth}
-            fill="none"
-            strokeDasharray={dashArray}
-            animatedProps={progressCircleProps}
-            strokeLinecap="round"
-            transform={`rotate(-90 ${center} ${center})`}
-          />
-        </Svg>
+        <Animated.View
+          style={[StyleSheet.absoluteFill, ringVisibilityStyle]}
+          pointerEvents="none"
+        >
+          <Svg width={resolvedSize} height={resolvedSize} style={StyleSheet.absoluteFill}>
+            <Circle
+              cx={center}
+              cy={center}
+              r={radius}
+              stroke={resolvedTrackColor}
+              strokeWidth={strokeWidth}
+              fill="none"
+            />
+            <AnimatedCircle
+              cx={center}
+              cy={center}
+              r={fillRadius}
+              fill={color}
+              stroke="none"
+              animatedProps={fillCircleProps}
+            />
+            <AnimatedCircle
+              cx={center}
+              cy={center}
+              r={radius}
+              stroke={color}
+              strokeWidth={strokeWidth}
+              fill="none"
+              strokeDasharray={dashArray}
+              animatedProps={progressCircleProps}
+              strokeLinecap="round"
+              transform={`rotate(-90 ${center} ${center})`}
+            />
+          </Svg>
+        </Animated.View>
       ) : null}
       {showCenterLabel ? <Text style={styles.label}>{label}</Text> : null}
       {showCenterPlus ? (
