@@ -14,14 +14,12 @@ import { useHabits } from '@/store/hooks';
 import { HabitFormModalShell } from './HabitFormModalShell';
 import { HabitFormFields } from './HabitFormFields';
 import {
-  buildHabitFrequencyConfig,
+  buildHabitUpdateInput,
   completionsPerDayFromHabit,
-  deriveFrequencyFromScheduleDays,
-  habitTrackingFromCompletionsPerDay,
   MIN_HABIT_COMPLETIONS_PER_DAY,
   scheduleDaysFromHabit,
 } from './habitFormUtils';
-import type { CreateHabitInput, HabitColor, UpdateHabitInput } from '@/types/api/habits';
+import type { HabitColor, UpdateHabitInput } from '@/types/api/habits';
 
 export default function HabitEditScreen() {
   const { habitId } = useLocalSearchParams<{ habitId: string }>();
@@ -34,6 +32,7 @@ export default function HabitEditScreen() {
   const [completionsPerDay, setCompletionsPerDay] = useState(MIN_HABIT_COMPLETIONS_PER_DAY);
   const [scheduleDays, setScheduleDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
   const [color, setColor] = useState<HabitColor>('green');
+  const [reminderTime, setReminderTime] = useState('');
   const [hydrated, setHydrated] = useState(false);
 
   useFocusEffect(
@@ -56,27 +55,22 @@ export default function HabitEditScreen() {
         (detailHabit.frequencyConfig ?? {}) as Record<string, unknown>,
       ),
     );
+    setReminderTime(detailHabit.reminderTime ?? '');
     setHydrated(true);
   }, [detailHabit, habitId, hydrated]);
 
   const canSubmit = title.trim().length > 0 && !isSaving && hydrated;
 
   const buildInput = useCallback((): UpdateHabitInput => {
-    const { frequencyType, dayOfWeek, customDays } = deriveFrequencyFromScheduleDays(scheduleDays);
-    const { trackingType, targetValue } = habitTrackingFromCompletionsPerDay(completionsPerDay);
-
-    const input: CreateHabitInput = {
-      title: title.trim(),
-      description: description.trim(),
+    return buildHabitUpdateInput({
+      title,
+      description,
       color,
-      trackingType,
-      targetValue,
-      frequencyType,
-      frequencyConfig: buildHabitFrequencyConfig(frequencyType, dayOfWeek, '', customDays),
-      reminderTime: '',
-    };
-    return input;
-  }, [title, description, color, completionsPerDay, scheduleDays]);
+      completionsPerDay,
+      scheduleDays,
+      reminderTime,
+    });
+  }, [title, description, color, completionsPerDay, scheduleDays, reminderTime]);
 
   const handleSubmit = useCallback(() => {
     if (!habitId || !title.trim()) return;

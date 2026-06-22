@@ -20,7 +20,7 @@ import {
   type ListRenderItemInfo,
 } from 'react-native';
 
-import { useColorPalette } from '@/hooks/useColorPalette';
+import { useColorPalette, useBrandColors } from '@/hooks/useColorPalette';
 
 import { ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_BAND_MIN_HEIGHT_PX } from '../constants/pagerLayout';
 import { ONBOARDING_SLIDES_TIME_WHEEL_ROW_LABEL_TEXT_STYLE } from '../constants/typography';

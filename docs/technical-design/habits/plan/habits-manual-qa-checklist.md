@@ -19,6 +19,7 @@
 | **2 — Detail + graphs** | §5 | Heatmap, trend, edit, delete from detail |
 | **3 — Gamification** | §7b–7d | Tab summary, `first_habit_completion`, unlock banner |
 | **4 — Reminders** | §8 | Local notification at `reminderTime` when due today |
+| **5 — Detail pickers + save** | §10 | Root formSheet, stack pickers, Save vs auto-save |
 
 ---
 
@@ -146,6 +147,22 @@
 
 ---
 
+## §10 Phase 5 — Detail pickers + task-style save
+
+**Entry:** Tap habit card → root formSheet `/habit/[habitId]`.
+
+| # | Check | Pass | Fail |
+| --- | --- | --- | --- |
+| 10a | Detail visible behind picker sheets (not blank) | ☐ | ☐ |
+| 10b | Completion Count + Frequency + Reminder → auto-save | ☐ | ☐ |
+| 10c | Color picker → auto-save (no Save for color alone) | ☐ | ☐ |
+| 10d | Title / description → Save only | ☐ | ☐ |
+| 10e | List row → list-select (draft label; no API PATCH yet) | ☐ | ☐ |
+| 10f | Tab create + tab edit (reminder not wiped) | ☐ | ☐ |
+| 10g | Today increment + delete from overflow | ☐ | ☐ |
+
+---
+
 ## §9 Platform-specific
 
 | Platform | Check | Pass | Fail |
@@ -159,7 +176,7 @@
 
 | Role | Name | Date | Phases tested |
 | --- | --- | --- | --- |
-| Tester | | | 1, 1.5, 2, 3, 4 |
+| Tester | | | 1, 1.5, 2, 3, 4, 5 |
 | Reviewer | | | |
 
 ---
@@ -171,3 +188,4 @@
 | 2026-06-07 | Initial draft |
 | 2026-06-07 | Link to full testing guide |
 | 2026-06-07 | Phase coverage table; §5d/5e edit-delete; §7d banner; §8a–8c reminders; Phase 1.5 §2c |
+| 2026-06-22 | §10 Phase 5 detail pickers + task-style save |

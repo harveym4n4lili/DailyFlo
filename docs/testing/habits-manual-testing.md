@@ -16,8 +16,11 @@ Step-by-step manual test plan for the **Habits** feature. Use on a physical devi
 
 | Area | Location |
 | --- | --- |
-| Routes | `frontend/dailyflo/app/(tabs)/habits/` |
+| Tab routes | `frontend/dailyflo/app/(tabs)/habits/` (list, create, tab edit) |
+| Detail route | `frontend/dailyflo/app/habit/[habitId]/` (root formSheet) |
+| Picker routes | `app/habit-completions-select`, `habit-frequency-select`, `habit-reminder-select`, `habit-color-select`, `list-select?habitId=` |
 | UI | `frontend/dailyflo/components/features/habits/` (`tab/`, `list/`, `detail/`, `forms/`, `today/`) |
+| Draft state | `frontend/dailyflo/app/habit/CreateHabitDraftContext.tsx` |
 | Redux + API | `frontend/dailyflo/store/slices/habits/`, `frontend/dailyflo/services/api/habits.ts` |
 | Backend | `backend/dailyflo/apps/habits/` |
 | Onboarding | `frontend/dailyflo/components/features/onboarding/auth/hooks/useCompleteOnboardingAndExit.ts` |
@@ -34,8 +37,9 @@ Step-by-step manual test plan for the **Habits** feature. Use on a physical devi
 | **2 — Detail + graphs** | Detail route, heatmap, trend, edit, delete | #11–16 | Tests 11–16 |
 | **3 — Gamification** | Tab summary, `first_habit_completion`, unlock banner | #7–8, #21–22 | Tests 9, 21–22 |
 | **4 — Reminders** | Local notification at `reminderTime` when due today | #23–25 | Tests 23–25 |
+| **5 — Detail pickers + save** | Root formSheet detail, stack pickers, Save vs auto-save | #26–38 | Tests 26–38 |
 
-**Out of scope for v1:** quit/sobriety habits, Planner integration, `linked_habit` goals, push notifications.
+**Out of scope for v1:** quit/sobriety habits, Planner integration, `linked_habit` goals, push notifications, habit `listId` PATCH (list row is draft-only until API adds field).
 
 ---
 
@@ -90,6 +94,19 @@ Step-by-step manual test plan for the **Habits** feature. Use on a physical devi
 | 23 | 4 | Reminder fires when due today | ☐ | ☐ |
 | 24 | 4 | Complete habit cancels today's reminder | ☐ | ☐ |
 | 25 | 4 | Delete / logout cancel pending reminders | ☐ | ☐ |
+| 26 | 5 | Detail opens as root formSheet (`/habit/[id]`) | ☐ | ☐ |
+| 27 | 5 | Detail stays visible behind picker sheets | ☐ | ☐ |
+| 28 | 5 | Completion Count picker → auto-save | ☐ | ☐ |
+| 29 | 5 | Frequency picker → auto-save | ☐ | ☐ |
+| 30 | 5 | Reminder picker (wheel + No reminder) → auto-save | ☐ | ☐ |
+| 31 | 5 | Color picker → auto-save (no Save button) | ☐ | ☐ |
+| 32 | 5 | Title / description → explicit Save only | ☐ | ☐ |
+| 33 | 5 | Picker changes do not show Save button | ☐ | ☐ |
+| 34 | 5 | List row opens list-select (draft label only) | ☐ | ☐ |
+| 35 | 5 | Tab create habit still works | ☐ | ☐ |
+| 36 | 5 | Tab edit habit preserves `reminderTime` | ☐ | ☐ |
+| 37 | 5 | Today increment + heatmap on detail | ☐ | ☐ |
+| 38 | 5 | Delete habit from detail overflow menu | ☐ | ☐ |
 
 ---
 
@@ -239,11 +256,26 @@ Create one habit per type; verify only **due today** appear:
 
 ### Test 11 — Navigate to habit detail
 
-1. Tap habit **title/body** (not checkbox/+1) on Habits tab and Today section.
+1. Tap habit **card/body** (not increment ring) on Habits tab or Today section.
 
-**Expected:** Opens `/(tabs)/habits/[habitId]`; streak cards + charts load.
+**Expected:** Root formSheet opens at `/habit/[habitId]` (not tab-nested route); heatmap, today progress, grouped list, and description load.
 
 ---
+
+### Test 11b — Detail stays mounted under pickers
+
+1. Open habit detail.
+2. Tap **Frequency**, **Completion Count**, **Reminder**, or **palette badge**.
+
+**Expected:**
+
+- [ ] Picker opens as a **second formSheet** stacked on top (same pattern as task date/time pickers).
+- [ ] Habit detail content **remains visible behind** the picker (not blank / loading).
+- [ ] Close picker → detail still shows same habit with updated row labels.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
 
 ### Test 12 — Detail heatmap
 
@@ -265,13 +297,32 @@ Create one habit per type; verify only **due today** appear:
 
 ---
 
-### Test 15 — Edit habit
+### Test 15 — Edit habit (tab form + detail Save)
 
-1. Detail → **Edit**; change title, colour, frequency; save.
+**Detail — inline + Save (task-style):**
 
-**Expected:** Persists; list updates; stats refetch; non-due frequency hides from today list.
+1. Open detail → edit **title** or **description**.
+2. Confirm **Save** button appears; picker-only changes do **not** show Save.
+3. Tap **Save** → sheet dismisses; list reflects changes.
 
----
+**Detail — auto-save pickers:**
+
+1. Tap **Completion Count** → change stepper → back.
+2. Tap **Frequency** → change weekdays → back.
+3. Tap **Reminder** pill → set time or **No reminder** → back.
+
+**Expected:** Row labels update immediately; network PATCH fires for picker fields (check Redux / network). No Save button for picker-only edits.
+
+**Tab edit (overflow → Edit habit):**
+
+1. Detail overflow → **Edit habit** → tab create-style form.
+2. Change fields; save.
+
+**Expected:** Persists; tab edit does **not** wipe `reminderTime` if unchanged.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
 
 ### Test 16 — Delete habit
 
@@ -367,6 +418,143 @@ Create one habit per type; verify only **due today** appear:
 
 ---
 
+## Phase 5 — Detail field pickers + task-style save
+
+Use this section to confirm the **current** habit detail UX (root formSheet + stack pickers). Run after Phases 1–2 basics pass.
+
+### Test 26 — Completion Count picker
+
+1. Open detail → tap **Completion Count**.
+2. Change value on stepper → tap close (top-right).
+
+**Expected:**
+
+- [ ] Sheet title “Completions per day”; stepper matches create form.
+- [ ] Detail row shows new count (e.g. `3 completions`).
+- [ ] `PATCH /habits/{id}/` with updated `trackingType` / `targetValue`.
+- [ ] Save button **not** shown for this change alone.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+### Test 27 — Frequency picker
+
+1. Open detail → tap **Frequency**.
+2. Toggle weekday circles → close.
+
+**Expected:**
+
+- [ ] Weekday picker matches create/edit form.
+- [ ] Detail frequency label updates (e.g. `Mon, Wed, Fri`).
+- [ ] Auto-save PATCH; no Save button.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+### Test 28 — Reminder picker
+
+1. Open detail → tap **Reminder** pill (bell).
+2. Spin time wheel → close **or** tap **No reminder**.
+
+**Expected:**
+
+- [ ] Time wheel renders (no crash); pill label updates (`1 Alert` / `No Alerts`).
+- [ ] Auto-save PATCH with `reminderTime` (empty string when off).
+- [ ] Opening with no reminder: closing without “No reminder” commits default wheel time (same as task time picker).
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+### Test 29 — Color picker
+
+1. Open detail → tap **palette badge** on progress ring.
+2. Tap a different color swatch (`ColorCirclePicker` grid, same as create) → close.
+
+**Expected:**
+
+- [ ] Root sheet `/habit-color-select`; circle grid matches habit create form.
+- [ ] Title accent + ring colors update after close (auto-save PATCH).
+- [ ] **Save** button **not** shown for color-only change.
+- [ ] Reopen detail — color persisted on server.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+### Test 30 — Title and description Save
+
+1. Change **title** inline → Save appears.
+2. Change **description** → Save still visible.
+3. Save → verify API; reopen detail.
+
+**Expected:** Title/description persist; Save dismisses sheet on success.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+### Test 31 — List row (scaffold)
+
+1. Open detail → tap **List** row.
+
+**Expected:**
+
+- [ ] Opens shared `/list-select?habitId=…`.
+- [ ] Picking a list updates row label locally (draft).
+- [ ] No habit `listId` PATCH yet (backend TODO) — OK if label reverts after full reload until API exists.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+### Test 32 — Create flow (tab)
+
+1. Habits tab → FAB → create habit with name, completions, frequency, color.
+2. Save.
+
+**Expected:** Habit appears on today/all lists; all fields persisted.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+### Test 33 — Tab edit preserves reminder
+
+1. Set reminder on detail (auto-save).
+2. Tab **Edit habit** from overflow → save without touching reminder UI.
+
+**Expected:** `reminderTime` unchanged on server after tab edit save.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+### Test 34 — Today progress on detail
+
+1. Open detail for habit due today.
+2. Use increment ring on detail; check heatmap/progress bar.
+
+**Expected:** Today progress updates; matches Habits tab card after navigate back.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+### Test 35 — Delete from detail
+
+1. Overflow → **Delete habit** → confirm.
+
+**Expected:** Sheet closes; habit removed from Habits tab and Today section.
+
+| Pass | Fail | Notes |
+| --- | --- | --- |
+| ☐ | ☐ | |
+
+---
+
 ## Optional — Backend API smoke
 
 ```bash
@@ -390,6 +578,9 @@ curl -H "Authorization: Bearer TOKEN" http://localhost:8000/api/habits/HABIT_ID/
 | Empty today list | `frequencyType` may not be due today |
 | Streak wrong | User `preferences.timezone` |
 | Detail charts blank | `GET /habits/{id}/stats/` in network tab |
+| Detail blank behind picker | Should not happen — detail must not clear Redux on picker blur |
+| Wrong picker opens | Check row handler maps to correct route (`habit-completions-select`, etc.) |
+| Reminder picker crash | `useBrandColors` import in `OnboardingQuestionnaireTimeWheel.tsx` |
 | Reminder not scheduled | Empty `reminderTime`, not due today, time passed, or permission denied |
 | Reminder after complete | Should not fire — cancelled on `logHabitProgress` |
 
@@ -406,6 +597,7 @@ Record in [`habits-verification-log.md`](habits-verification-log.md).
 | 2 | `HabitStatsView`; detail UI; edit/delete routes |
 | 3 | `first_habit_completion` fixture; unlock banner in `(tabs)/_layout` |
 | 4 | `habitReminderScheduler.ts`; `reminderTime` on today API; logout cancel |
+| 5 | Root `/habit/[habitId]`; picker routes; `CreateHabitDraftContext`; `buildHabitUpdateInput` |
 
 ---
 
@@ -413,7 +605,7 @@ Record in [`habits-verification-log.md`](habits-verification-log.md).
 
 | Role | Name | Date | Phases verified |
 | --- | --- | --- | --- |
-| Tester | | | 1, 1.5, 2, 3, 4 |
+| Tester | | | 1, 1.5, 2, 3, 4, 5 |
 | Reviewer | | | |
 
 ---
@@ -424,3 +616,4 @@ Record in [`habits-verification-log.md`](habits-verification-log.md).
 | --- | --- |
 | 2026-06-07 | Initial guide (Phases 1–2) |
 | 2026-06-07 | Full phase coverage matrix; renumbered tests; Phases 1.5, 3, 4 |
+| 2026-06-22 | Phase 5: detail formSheet, stack pickers, Save vs auto-save, updated routes |

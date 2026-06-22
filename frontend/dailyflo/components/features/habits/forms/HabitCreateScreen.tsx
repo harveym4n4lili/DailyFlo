@@ -11,10 +11,8 @@ import { useHabits } from '@/store/hooks';
 import { HabitFormModalShell } from './HabitFormModalShell';
 import { HabitFormFields } from './HabitFormFields';
 import {
-  buildHabitFrequencyConfig,
-  deriveFrequencyFromScheduleDays,
+  buildHabitUpdateInput,
   getDefaultScheduleDays,
-  habitTrackingFromCompletionsPerDay,
   MIN_HABIT_COMPLETIONS_PER_DAY,
 } from './habitFormUtils';
 import type { CreateHabitInput, HabitColor } from '@/types/api/habits';
@@ -39,19 +37,14 @@ export default function HabitCreateScreen() {
       return;
     }
 
-    const { frequencyType, dayOfWeek, customDays } = deriveFrequencyFromScheduleDays(scheduleDays);
-    const { trackingType, targetValue } = habitTrackingFromCompletionsPerDay(completionsPerDay);
-
-    const input: CreateHabitInput = {
-      title: title.trim(),
-      description: description.trim(),
+    const input: CreateHabitInput = buildHabitUpdateInput({
+      title,
+      description,
       color,
-      trackingType,
-      targetValue,
-      frequencyType,
-      frequencyConfig: buildHabitFrequencyConfig(frequencyType, dayOfWeek, '', customDays),
+      completionsPerDay,
+      scheduleDays,
       reminderTime: '',
-    };
+    }) as CreateHabitInput;
 
     void (async () => {
       try {

@@ -7,28 +7,33 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ActivityIndicator,
   Alert,
   Platform,
   ScrollView,
   Pressable,
+  Keyboard,
+  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { GroupedList, FormDetailButton } from '@/components/ui/List/GroupedList';
 import { ActionContextMenu, type ActionContextMenuItem } from '@/components/ui';
+import { SaveButton } from '@/components/ui/Button';
 import { Ionicons } from '@expo/vector-icons';
 import { DashedSeparator } from '@/components/ui/borders';
 import { Paddings } from '@/constants/Paddings';
 import { getTypographyStyle } from '@/constants/Typography';
-import { flushAllPendingHabitIncrementSyncs } from '@/utils/pendingHabitIncrementSyncRegistry';
 import { getTaskColorValue } from '@/utils/taskColors';
-import { useHabits } from '@/store/hooks';
+import { useHabits, useLists } from '@/store/hooks';
 import { useHabitIncrementPress } from '@/hooks/useHabitIncrementPress';
 import { HabitHeatmap } from './HabitHeatmap';
 import { HabitProgressBar } from '../list/HabitProgressBar';
@@ -48,9 +53,11 @@ import {
   HABIT_DETAIL_TITLE_RING_STROKE_WIDTH,
 } from '../list/habitCardUiTokens';
 import {
-  completionsPerDayFromHabit,
+  buildHabitFrequencyConfig,
+  deriveFrequencyFromScheduleDays,
   getHabitAlertPillLabel,
   getHabitFrequencyDisplayLabel,
+  type HabitDetailFormValues,
 } from '../forms/habitFormUtils';
 import { HabitDescriptionSection } from '../forms/HabitDescriptionSection';
 import { SFSymbolIcon, RepeatIcon, BellIcon } from '@/components/ui/Icon';
@@ -59,13 +66,38 @@ import type { HabitColor, HabitTodayItem } from '@/types/api/habits';
 const HEADER_STRIP_HEIGHT = 48;
 const SCROLL_PADDING_TOP = HEADER_STRIP_HEIGHT + 8;
 
-type HabitDetailScreenContentProps = {
-  habitId: string;
-  /** dismisses the root formSheet — passed from HabitDetailModalScreen */
-  onClose: () => void;
+/** stack picker routes — parent seeds CreateHabitDraftContext before push */
+export type HabitDetailPickerHandlers = {
+  onShowCompletionsPicker?: () => void;
+  onShowFrequencyPicker?: () => void;
+  onShowReminderPicker?: () => void;
+  onShowListPicker?: () => void;
+  onShowColorPicker?: () => void;
 };
 
-export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreenContentProps) {
+type HabitDetailScreenContentProps = {
+  habitId: string;
+  onClose: () => void;
+  values: HabitDetailFormValues;
+  onChange: <K extends keyof HabitDetailFormValues>(key: K, v: HabitDetailFormValues[K]) => void;
+  hasChanges: boolean;
+  onSave: () => void;
+  isSaving?: boolean;
+  validationError?: string | null;
+  pickerHandlers?: HabitDetailPickerHandlers;
+};
+
+export function HabitDetailScreenContent({
+  habitId,
+  onClose,
+  values,
+  onChange,
+  hasChanges,
+  onSave,
+  isSaving = false,
+  validationError,
+  pickerHandlers,
+}: HabitDetailScreenContentProps) {
   const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -79,58 +111,53 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
     fetchHabitStats,
     fetchToday,
     deleteHabit,
-    clearHabitDetail,
-    updateHabit,
   } = useHabits();
+  const { lists: reduxLists } = useLists();
 
-  // local description draft — synced from redux detailHabit, PATCH on blur when text changed
-  const [description, setDescription] = useState('');
-  const [descriptionHydrated, setDescriptionHydrated] = useState(false);
-  const [descriptionFieldKey, setDescriptionFieldKey] = useState(0);
-  const savedDescriptionRef = useRef('');
-
-  // reset hydration when opening a different habit in the same sheet instance
-  useEffect(() => {
-    setDescriptionHydrated(false);
-    setDescriptionFieldKey(0);
-  }, [habitId]);
+  const titleInputRef = useRef<TextInput>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    if (!detailHabit || detailHabit.id !== habitId || descriptionHydrated) return;
-    const serverText = detailHabit.description ?? '';
-    setDescription(serverText);
-    savedDescriptionRef.current = serverText.trim();
-    setDescriptionHydrated(true);
-  }, [detailHabit, habitId, descriptionHydrated]);
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardHeight(0),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
-  // load habit + stats whenever this sheet gains focus; flush pending log syncs on leave
+  // refresh habit + stats when sheet gains focus (e.g. returning from a picker route)
   useFocusEffect(
     useCallback(() => {
       void fetchToday();
       void fetchHabit(habitId);
       void fetchHabitStats(habitId);
-      return () => {
-        flushAllPendingHabitIncrementSyncs();
-        clearHabitDetail();
-      };
-    }, [habitId, fetchToday, fetchHabit, fetchHabitStats, clearHabitDetail]),
+      // do not clearHabitDetail here — root picker routes are stack siblings; blur would empty the sheet behind them (task edit keeps redux task loaded the same way)
+    }, [habitId, fetchToday, fetchHabit, fetchHabitStats]),
   );
 
-  const title = detailHabit?.title ?? 'Habit';
-  // habit color 300 — title + grouped-list row icons share the same accent tint
   const titleColor = useMemo(
-    () => getTaskColorValue(detailHabit?.color ?? 'green', 300),
-    [detailHabit?.color],
+    () => getTaskColorValue(values.color ?? detailHabit?.color ?? 'green', 300),
+    [values.color, detailHabit?.color],
   );
   const groupedListIconColor = titleColor;
-
-  // same heading-2 + platform Inter stack as TaskScreenContent title input
   const typographyPlatform =
     Platform.OS === 'web' ? 'web' : Platform.OS === 'android' ? 'android' : 'ios';
   const titleStyle = useMemo(
     () => [
       getTypographyStyle('heading-2', typographyPlatform),
-      { color: titleColor, maxHeight: 68 },
+      {
+        color: titleColor,
+        maxHeight: 68,
+        paddingBottom: Paddings.none,
+        paddingHorizontal: Paddings.none,
+      },
     ],
     [titleColor, typographyPlatform],
   );
@@ -153,30 +180,33 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
     [themeColors],
   );
 
-  // daily goal from stored habit — shown as read-only "Completion Count" row
-  const completionsPerDay = useMemo(() => {
-    if (!detailHabit) return null;
-    return completionsPerDayFromHabit(detailHabit.trackingType, detailHabit.targetValue);
-  }, [detailHabit]);
+  // daily goal from merged form values — shown on Completion Count row
+  const completionsPerDay = values.completionsPerDay;
 
   const completionCountValue = useMemo(() => {
-    if (completionsPerDay == null) return '';
     return completionsPerDay === 1 ? '1 completion' : `${completionsPerDay} completions`;
   }, [completionsPerDay]);
 
   const frequencyValue = useMemo(() => {
-    if (!detailHabit) return '';
+    const { frequencyType, dayOfWeek, customDays } = deriveFrequencyFromScheduleDays(values.scheduleDays);
     return getHabitFrequencyDisplayLabel(
-      detailHabit.frequencyType,
-      (detailHabit.frequencyConfig ?? {}) as Record<string, unknown>,
+      frequencyType,
+      buildHabitFrequencyConfig(frequencyType, dayOfWeek, '', customDays) as Record<string, unknown>,
     );
-  }, [detailHabit]);
+  }, [values.scheduleDays]);
 
-  // reminder pill — habits store one optional daily reminderTime (empty = off)
   const alertPillLabel = useMemo(
-    () => getHabitAlertPillLabel(detailHabit?.reminderTime),
-    [detailHabit?.reminderTime],
+    () => getHabitAlertPillLabel(values.reminderTime),
+    [values.reminderTime],
   );
+
+  // list row label — draft pickedListId until backend exposes habit listId on API
+  const listRowValue = useMemo(() => {
+    const picked = values.listId;
+    if (picked === undefined || picked === null) return 'Habits';
+    const match = reduxLists.find((l) => l.id === picked && !l.softDeleted);
+    return match?.name ?? 'Habits';
+  }, [values.listId, reduxLists]);
 
   // merge today's list row with detail record so increment + heatmap stay in sync on this screen
   const todayRow: HabitTodayItem | null = useMemo(() => {
@@ -209,8 +239,8 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
   const incrementDisplay = displayHabit ? getHabitIncrementDisplay(displayHabit) : null;
   const heatmapToShow = displayHabit?.heatmap ?? heatmapBase;
   const ringColors = useMemo(
-    () => getHabitProgressRingColors(detailHabit?.color ?? 'green'),
-    [detailHabit?.color],
+    () => getHabitProgressRingColors(values.color ?? detailHabit?.color ?? 'green'),
+    [values.color, detailHabit?.color],
   );
   const progressRatio =
     incrementDisplay && incrementDisplay.target > 0
@@ -218,30 +248,35 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
       : 0;
   const showTodayProgress = Boolean(todayRow && incrementDisplay);
 
-  const handleEdit = useCallback(() => {
-    // edit stays on the habits tab stack modal — push after closing detail so sheets do not stack awkwardly
+  const handleAdvancedEdit = useCallback(() => {
     onClose();
     router.push(`/(tabs)/habits/${habitId}/edit` as any);
   }, [router, habitId, onClose]);
 
-  const handleDescriptionBlur = useCallback(() => {
-    if (!detailHabit) return;
-    const trimmed = description.trim();
-    if (trimmed === savedDescriptionRef.current) return;
+  const handleShowCompletionsPicker = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    pickerHandlers?.onShowCompletionsPicker?.();
+  }, [pickerHandlers]);
 
-    void (async () => {
-      try {
-        // partial PATCH — only description so frequency / color / etc stay untouched
-        await updateHabit(habitId, { description: trimmed });
-        savedDescriptionRef.current = trimmed;
-      } catch (e) {
-        Alert.alert('Could not save description', e instanceof Error ? e.message : 'Try again');
-        setDescription(savedDescriptionRef.current);
-        // Description keeps its own local state — bump key so it remounts with reverted text
-        setDescriptionFieldKey((key) => key + 1);
-      }
-    })();
-  }, [description, detailHabit, habitId, updateHabit]);
+  const handleShowFrequencyPicker = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    pickerHandlers?.onShowFrequencyPicker?.();
+  }, [pickerHandlers]);
+
+  const handleShowReminderPicker = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    pickerHandlers?.onShowReminderPicker?.();
+  }, [pickerHandlers]);
+
+  const handleShowListPicker = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    pickerHandlers?.onShowListPicker?.();
+  }, [pickerHandlers]);
+
+  const handleShowColorPicker = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    pickerHandlers?.onShowColorPicker?.();
+  }, [pickerHandlers]);
 
   const handleDelete = useCallback(() => {
     Alert.alert('Delete habit', 'This habit will be removed from your lists.', [
@@ -269,7 +304,7 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
         id: 'edit',
         label: 'Edit habit',
         icon: 'create-outline',
-        onPress: handleEdit,
+        onPress: handleAdvancedEdit,
       },
       {
         id: 'delete',
@@ -282,7 +317,7 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
         onPress: handleDelete,
       },
     ];
-  }, [handleEdit, handleDelete]);
+  }, [handleAdvancedEdit, handleDelete]);
 
   const incrementAccessibilityLabel =
     showTodayProgress && incrementDisplay
@@ -307,6 +342,24 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
   const pillWidth = isNewerIOS ? 36 : 42;
   const pillHeight = isNewerIOS ? 5 : 6;
   const pillRadius = isNewerIOS ? 2 : 3;
+
+  const insets = useSafeAreaInsets();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const saveButtonBottom =
+    keyboardHeight > 0 ? keyboardHeight + 72 : insets.bottom + 44;
+  const animatedBottom = useSharedValue(saveButtonBottom);
+  useEffect(() => {
+    animatedBottom.value = withTiming(saveButtonBottom, {
+      duration: 250,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [saveButtonBottom, animatedBottom]);
+  const animatedSaveBarStyle = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
+    bottom: animatedBottom.value,
+  }));
 
   const screenBg = { backgroundColor: themeColors.background.primary() };
 
@@ -333,7 +386,13 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
     <View style={[styles.container, screenBg]} collapsable={false}>
       <ScrollView
         style={[styles.scroll, screenBg]}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: SCROLL_PADDING_TOP }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: SCROLL_PADDING_TOP,
+            paddingBottom: keyboardHeight > 0 ? keyboardHeight + 32 : 160,
+          },
+        ]}
         showsVerticalScrollIndicator
         keyboardShouldPersistTaps="handled"
       >
@@ -354,7 +413,7 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
                 accessibilityLabel={titleRingAccessibilityLabel}
               />
               <Pressable
-                onPress={handleEdit}
+                onPress={handleShowColorPicker}
                 style={[
                   styles.colorPaletteBadge,
                   { backgroundColor: themeColors.background.darkOverlay() },
@@ -377,9 +436,21 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
               !(showTodayProgress && incrementDisplay) && styles.titleInputWrapNoRing,
             ]}
           >
-            <Text style={titleStyle} numberOfLines={2}>
-              {title}
-            </Text>
+            <TextInput
+              ref={titleInputRef}
+              value={values.title}
+              onChangeText={(t) => onChange('title', t)}
+              placeholder="Habit name"
+              placeholderTextColor={themeColors.text.tertiary()}
+              selectionColor="#FFFFFF"
+              cursorColor="#FFFFFF"
+              style={titleStyle}
+              multiline
+              numberOfLines={2}
+              scrollEnabled
+              returnKeyType="next"
+              accessibilityLabel="Habit name"
+            />
             {/* dashed underline — same spacing as TaskScreenContent title row */}
             <DashedSeparator style={styles.titleDashedSeparator} />
             <View style={styles.titleSpacer} />
@@ -388,7 +459,7 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
 
         {detailStats && heatmapToShow ? (
           <View style={styles.sectionBreak}>
-            <HabitHeatmap heatmap={heatmapToShow} color={detailHabit.color} showLegend />
+            <HabitHeatmap heatmap={heatmapToShow} color={values.color ?? detailHabit.color} showLegend />
           </View>
         ) : (
           <View style={[styles.statsLoading, styles.sectionBreak]}>
@@ -439,7 +510,7 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
           </View>
         ) : null}
 
-        {detailHabit && completionsPerDay != null ? (
+        {detailHabit ? (
           <View style={[styles.detailFormSection, styles.sectionBreak]}>
             <View style={styles.groupedCard}>
               <GroupedList containerStyle={styles.listContainer} {...habitDetailListProps}>
@@ -457,7 +528,7 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
                   }
                   label="Frequency"
                   value={frequencyValue}
-                  onPress={handleEdit}
+                  onPress={handleShowFrequencyPicker}
                   showChevron
                 />
 
@@ -475,7 +546,7 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
                   }
                   label="Completion Count"
                   value={completionCountValue}
-                  onPress={handleEdit}
+                  onPress={handleShowCompletionsPicker}
                   showChevron
                 />
 
@@ -492,8 +563,8 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
                     />
                   }
                   label="List"
-                  value="Habits"
-                  onPress={handleEdit}
+                  value={listRowValue}
+                  onPress={handleShowListPicker}
                   showChevron
                 />
               </GroupedList>
@@ -509,10 +580,7 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
                   left: Paddings.touchTarget,
                   right: Paddings.touchTarget,
                 }}
-                onPress={() => {
-                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  handleEdit();
-                }}
+                onPress={handleShowReminderPicker}
                 accessibilityRole="button"
                 accessibilityLabel={`Reminder: ${alertPillLabel}`}
               >
@@ -545,15 +613,18 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
           </View>
         ) : null}
 
-        {descriptionHydrated ? (
-          <HabitDescriptionSection
-            description={description}
-            onDescriptionChange={setDescription}
-            onBlur={handleDescriptionBlur}
-            habitColor={(detailHabit.color ?? 'green') as HabitColor}
-            listIconColor={groupedListIconColor}
-            descriptionInputKey={`${habitId}-${descriptionFieldKey}`}
-          />
+        <HabitDescriptionSection
+          description={values.description}
+          onDescriptionChange={(text) => onChange('description', text)}
+          habitColor={(values.color ?? detailHabit.color ?? 'green') as HabitColor}
+          listIconColor={groupedListIconColor}
+          descriptionInputKey={habitId}
+        />
+
+        {validationError ? (
+          <Text style={[styles.errorText, { color: themeColors.text.secondary(), marginTop: 8 }]}>
+            {validationError}
+          </Text>
         ) : null}
 
         <View style={styles.bottomSpacer} />
@@ -584,6 +655,38 @@ export function HabitDetailScreenContent({ habitId, onClose }: HabitDetailScreen
               ]}
             />
           </View>
+        </View>
+        <View
+          pointerEvents="box-none"
+          style={[styles.saveOverlayWrap, { width: windowWidth, height: windowHeight }]}
+        >
+          <Animated.View
+            pointerEvents="box-none"
+            style={[
+              animatedSaveBarStyle,
+              {
+                left: 0,
+                right: 0,
+                width: windowWidth,
+                flexDirection: 'row',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                paddingHorizontal: Paddings.groupedListContentHorizontal,
+              },
+            ]}
+          >
+            <SaveButton
+              onPress={onSave}
+              isLoading={isSaving}
+              taskCategoryColor={values.color ?? detailHabit.color}
+              text="Save"
+              loadingText="Saving..."
+              size={28}
+              iconSize={28}
+              visible={hasChanges}
+              showLabel
+            />
+          </Animated.View>
         </View>
       </View>
     </View>
@@ -768,5 +871,13 @@ const createStyles = (
     },
     bottomSpacer: {
       height: 120,
+    },
+    saveOverlayWrap: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 2,
     },
   });

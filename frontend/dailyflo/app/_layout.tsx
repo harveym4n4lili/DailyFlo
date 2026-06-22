@@ -10,6 +10,10 @@ import { useFonts } from 'expo-font';
 import { Stack, type Href, router } from 'expo-router';
 
 import { runAppColdStartBootstrapTracked } from '@/utils/navigation/appColdStartBootstrap';
+import {
+  rootDetailFormSheetOptions,
+  rootPickerFormSheetOptions,
+} from '@/utils/navigation/rootFormSheetOptions';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
 import { InteractionManager, Platform, StyleSheet, TextInput, View } from 'react-native';
@@ -25,6 +29,7 @@ import { ReduxProvider } from '@/store/Provider';
 import { AuthSessionGate } from '@/components/navigation/AuthSessionGate';
 import { CustomTabNavMetricsProvider } from '@/contexts/CustomTabNavMetricsContext';
 import { CreateTaskDraftProvider } from './task/CreateTaskDraftContext';
+import { CreateHabitDraftProvider } from './habit/CreateHabitDraftContext';
 import { DuplicateTaskProvider } from './task/DuplicateTaskContext';
 import { PlannerMonthSelectProvider } from './PlannerMonthSelectContext';
 import { setupNotifications } from '@/services/notifications/notificationsSetup';
@@ -120,6 +125,7 @@ function RootLayoutNavigation() {
         <ThemeProvider value={navTheme}>
           {/* Task stack and sub-screens share draft via context; DuplicateTaskProvider for pre-filling create from Duplicate */}
           <CreateTaskDraftProvider>
+          <CreateHabitDraftProvider>
           <DuplicateTaskProvider>
           <PlannerMonthSelectProvider>
           <View style={styles.appShell}>
@@ -198,106 +204,46 @@ function RootLayoutNavigation() {
                 },
               }}
             />
-            {/* task: view/edit form sheet with indent (detents) */}
-            <Stack.Screen
-              name="task"
-              options={{
-                headerShown: false,
-                presentation: 'formSheet',
-                gestureEnabled: true,
-                sheetGrabberVisible: false,
-                sheetAllowedDetents: [0.7, 1],
-                // ios 26+ scroll edge “hard” style can show a line at the sheet header; hide edges on the presented route
-                ...(Platform.OS === 'ios'
-                  ? { scrollEdgeEffects: { top: 'hidden' as const, bottom: 'hidden' as const } }
-                  : {}),
-                contentStyle: {
-                  backgroundColor: useLiquidGlass ? 'transparent' : 'transparent',
-                },
-              }}
-            />
-            {/* habit: detail form sheet — same presentation tier as task edit */}
-            <Stack.Screen
-              name="habit"
-              options={{
-                headerShown: false,
-                presentation: 'formSheet',
-                gestureEnabled: true,
-                sheetGrabberVisible: false,
-                sheetAllowedDetents: [0.7, 1],
-                ...(Platform.OS === 'ios'
-                  ? { scrollEdgeEffects: { top: 'hidden' as const, bottom: 'hidden' as const } }
-                  : {}),
-                contentStyle: {
-                  backgroundColor: useLiquidGlass ? 'transparent' : 'transparent',
-                },
-              }}
-            />
-            {/* root-level picker screens (each has own folder with _layout + index) */}
+            {/* task + habit detail formSheets; field pickers below are root siblings that stack on top (see task/_layout, habit/_layout) */}
+            <Stack.Screen name="task" options={rootDetailFormSheetOptions(useLiquidGlass)} />
+            <Stack.Screen name="habit" options={rootDetailFormSheetOptions(useLiquidGlass)} />
+            {/* task field pickers — date / time / alert / list */}
             <Stack.Screen
               name="date-select"
-              options={{
-                headerShown: false,
-                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
-                sheetGrabberVisible: false,
-                sheetAllowedDetents: [0.8, 1],
-                sheetInitialDetentIndex: 0,
-                contentStyle: {
-                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
-                },
-              }}
+              options={rootPickerFormSheetOptions(useLiquidGlass, themeColors.background, [0.8, 1])}
             />
             <Stack.Screen
               name="time-duration-select"
-              options={{
-                headerShown: false,
-                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
-                sheetGrabberVisible: false,
-                sheetAllowedDetents: [0.7],
-                sheetInitialDetentIndex: 0,
-                contentStyle: {
-                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
-                },
-              }}
+              options={rootPickerFormSheetOptions(useLiquidGlass, themeColors.background)}
             />
             <Stack.Screen
               name="alert-select"
-              options={{
-                headerShown: false,
-                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
-                sheetGrabberVisible: false,
-                sheetAllowedDetents: [0.7],
-                sheetInitialDetentIndex: 0,
-                contentStyle: {
-                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
-                },
-              }}
+              options={rootPickerFormSheetOptions(useLiquidGlass, themeColors.background)}
             />
             <Stack.Screen
               name="alert-offset-select"
-              options={{
-                headerShown: false,
-                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
-                sheetGrabberVisible: false,
-                sheetAllowedDetents: [0.7],
-                sheetInitialDetentIndex: 0,
-                contentStyle: {
-                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
-                },
-              }}
+              options={rootPickerFormSheetOptions(useLiquidGlass, themeColors.background)}
             />
             <Stack.Screen
               name="list-select"
-              options={{
-                headerShown: false,
-                presentation: Platform.OS === 'ios' ? (useLiquidGlass ? 'formSheet' : 'modal') : 'modal',
-                sheetGrabberVisible: false,
-                sheetAllowedDetents: [0.8],
-                sheetInitialDetentIndex: 0,
-                contentStyle: {
-                  backgroundColor: useLiquidGlass ? 'transparent' : themeColors.background.secondary(),
-                },
-              }}
+              options={rootPickerFormSheetOptions(useLiquidGlass, themeColors.background, [0.8])}
+            />
+            {/* habit field pickers — same root-stack tier as time-duration-select / alert-select */}
+            <Stack.Screen
+              name="habit-completions-select"
+              options={rootPickerFormSheetOptions(useLiquidGlass, themeColors.background)}
+            />
+            <Stack.Screen
+              name="habit-frequency-select"
+              options={rootPickerFormSheetOptions(useLiquidGlass, themeColors.background)}
+            />
+            <Stack.Screen
+              name="habit-reminder-select"
+              options={rootPickerFormSheetOptions(useLiquidGlass, themeColors.background)}
+            />
+            <Stack.Screen
+              name="habit-color-select"
+              options={rootPickerFormSheetOptions(useLiquidGlass, themeColors.background)}
             />
             <Stack.Screen name="+not-found" />
           </Stack>
@@ -305,6 +251,7 @@ function RootLayoutNavigation() {
           </View>
           </PlannerMonthSelectProvider>
           </DuplicateTaskProvider>
+          </CreateHabitDraftProvider>
           </CreateTaskDraftProvider>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
           <NotificationResponseHandler />
