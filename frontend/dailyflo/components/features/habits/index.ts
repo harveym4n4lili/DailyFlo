@@ -1,7 +1,7 @@
 /**
  * Habits feature barrel
  *
- * UI for habit tracking. Routes live under app/(tabs)/habits/.
+ * UI for habit tracking. Detail opens at root /habit/[habitId] formSheet; create/edit under app/(tabs)/habits/.
  * Data: store/slices/habits + services/api/habits + types/api/habits.
  *
  * Folder layout:

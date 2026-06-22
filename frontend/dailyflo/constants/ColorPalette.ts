@@ -649,17 +649,41 @@ export function getMossBrandColor(shade: BrandColorShade = 500): string {
   return getBrandPaletteColor('moss', shade);
 }
 
+/** maps onboarding-style shade steps (e.g. `:600`) onto the task/habit 100|300|500|700|900 ramp */
+function normalizeTaskHabitShadeFromToken(rawShade: number): TaskHabitColorShade {
+  if (rawShade <= 100) return 100;
+  if (rawShade <= 300) return 300;
+  if (rawShade <= 500) return 500;
+  if (rawShade <= 700) return 700;
+  return 900;
+}
+
 /**
- * Parses intro / config strings like `brand:500`, `plant:300`, `sage:100`, `marple:500` — `brand` is an alias for **plant**.
+ * Parses task/habit strings like `green:600`, `blue:500` — same token shape as brand ramps in slide config.
+ * Returns null when the string is not that pattern.
+ */
+export function resolveTaskHabitStyleToken(token: string): string | null {
+  const match =
+    /^(green|yellow|orange|red|pink|purple|blue|cyan|teal):(\d+)$/.exec(token);
+  if (!match) return null;
+  const color = match[1] as TaskHabitColorName;
+  const shade = normalizeTaskHabitShadeFromToken(Number(match[2]));
+  return getTaskHabitColor(color, shade);
+}
+
+/**
+ * Parses intro / config strings like `brand:500`, `plant:300`, `green:600`, `blue:500` — `brand` is an alias for **plant**.
  * Returns null if the string is not that pattern (so callers can fall through to theme keys or raw hex).
  */
 export function resolveBrandStyleToken(token: string): string | null {
   const match = /^(brand|plant|sage|marple|moss):(\d+)$/.exec(token);
-  if (!match) return null;
-  const prefix = match[1] as 'brand' | 'plant' | 'sage' | 'marple' | 'moss';
-  const shade = Number(match[2]) as BrandColorShade;
-  const palette: BrandPaletteId = prefix === 'brand' || prefix === 'plant' ? 'plant' : prefix;
-  return getBrandPaletteColor(palette, shade);
+  if (match) {
+    const prefix = match[1] as 'brand' | 'plant' | 'sage' | 'marple' | 'moss';
+    const shade = Number(match[2]) as BrandColorShade;
+    const palette: BrandPaletteId = prefix === 'brand' || prefix === 'plant' ? 'plant' : prefix;
+    return getBrandPaletteColor(palette, shade);
+  }
+  return resolveTaskHabitStyleToken(token);
 }
 
 /**

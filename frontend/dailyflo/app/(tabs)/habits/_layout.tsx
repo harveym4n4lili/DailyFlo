@@ -54,24 +54,6 @@ export default function HabitsLayout() {
         }
       />
       <Stack.Screen
-        name="[habitId]/index"
-        options={
-          Platform.OS === 'ios'
-            ? {
-                headerShown: true,
-                headerTransparent: true,
-                headerTitle: '',
-                headerShadowVisible: false,
-                headerBackVisible: false,
-                contentStyle: { backgroundColor: themeColors.background.root() },
-              }
-            : {
-                title: 'Habit',
-                headerShown: false,
-              }
-        }
-      />
-      <Stack.Screen
         name="[habitId]/edit"
         options={
           Platform.OS === 'ios'

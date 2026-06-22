@@ -30,14 +30,16 @@ export function isPlannerScheduleAnchorTaskId(id: string): boolean {
   return id === PLANNER_WAKE_ANCHOR_TASK_ID || id === PLANNER_SLEEP_ANCHOR_TASK_ID;
 }
 
-/** light grey-ish card tone so anchors read as ambience, not a category */
-const ANCHOR_TASK_COLOR: TaskColor = 'teal';
+/** rise anchor uses system green; wind-down uses task/habit blue — matches onboarding wake/sleep colorways */
+const WAKE_ANCHOR_TASK_COLOR: TaskColor = 'green';
+const SLEEP_ANCHOR_TASK_COLOR: TaskColor = 'blue';
 
 function baseAnchorPartial(
   id: string,
   title: string,
   timeHm: string,
   dueDateIso: string,
+  color: TaskColor,
   options?: { includeWindDownDefaultAlert?: boolean },
 ): Task {
   return {
@@ -52,7 +54,7 @@ function baseAnchorPartial(
     isCompleted: false,
     completedAt: null,
     priorityLevel: 3,
-    color: ANCHOR_TASK_COLOR,
+    color,
     routineType: 'once',
     sortOrder: 0,
     metadata: {
@@ -83,12 +85,19 @@ export function buildPlannerWakeSleepAnchorTasks(
   const sleep = sleepHHMM.trim();
   if (!isValidWakeSleepHHMM(wake) || !isValidWakeSleepHHMM(sleep)) return [];
 
-  const wakeTask = baseAnchorPartial(PLANNER_WAKE_ANCHOR_TASK_ID, 'Wake up', wake, dueDateIso);
+  const wakeTask = baseAnchorPartial(
+    PLANNER_WAKE_ANCHOR_TASK_ID,
+    'Wake up',
+    wake,
+    dueDateIso,
+    WAKE_ANCHOR_TASK_COLOR,
+  );
   const sleepTask = baseAnchorPartial(
     PLANNER_SLEEP_ANCHOR_TASK_ID,
     'Wind Down',
     sleep,
     dueDateIso,
+    SLEEP_ANCHOR_TASK_COLOR,
     { includeWindDownDefaultAlert: true },
   );
   return [wakeTask, sleepTask];
@@ -106,6 +115,7 @@ export function buildPlannerWindDownReminderTask(sleepHHMM: string, dateStr: str
       'Wind Down',
       sleepHHMM,
       dueDate,
+      SLEEP_ANCHOR_TASK_COLOR,
       { includeWindDownDefaultAlert: true },
     ),
   };
