@@ -10,6 +10,7 @@ import { HabitListItem } from '../list/HabitListItem';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useHabits } from '@/store/hooks';
 import { Paddings } from '@/constants/Paddings';
+import { habitDetailHref } from '@/utils/habitDetailHref';
 
 export function TodayHabitsSection() {
   const router = useGuardedRouter();
@@ -18,7 +19,7 @@ export function TodayHabitsSection() {
 
   const openHabitDetail = useCallback(
     (habitId: string) => {
-      router.push(`/(tabs)/habits/${habitId}` as any);
+      router.push(habitDetailHref(habitId));
     },
     [router],
   );

@@ -20,6 +20,7 @@ import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
 import { tabScreenScrollPaddingBottom } from '@/constants/tabScreenScrollPaddingBottom';
 import { flushAllPendingHabitIncrementSyncs } from '@/utils/pendingHabitIncrementSyncRegistry';
+import { habitDetailHref } from '@/utils/habitDetailHref';
 
 // row = toolbar buttons; anchor = full blur band height — same as browse tab chrome
 const TOP_SECTION_ROW_HEIGHT = 48;
@@ -34,7 +35,7 @@ export function HabitsScreenContent() {
 
   const openHabitDetail = useCallback(
     (habitId: string) => {
-      router.push(`/(tabs)/habits/${habitId}` as any);
+      router.push(habitDetailHref(habitId));
     },
     [router],
   );

@@ -3,6 +3,7 @@
  */
 
 import type { CreateHabitInput, HabitFrequencyType, HabitTrackingType } from '@/types/api/habits';
+import { HABIT_FREQUENCIES, HABIT_WEEKDAYS } from './habitFormConstants';
 
 /** min/max for the completions-per-day stepper in create/edit forms */
 export const MIN_HABIT_COMPLETIONS_PER_DAY = 1;
@@ -134,4 +135,49 @@ export function readCustomDaysFromConfig(config: Record<string, unknown> | undef
   const raw = config?.days;
   if (!Array.isArray(raw)) return [];
   return raw.filter((d): d is number => typeof d === 'number' && d >= 0 && d <= 6);
+}
+
+const WEEKDAY_SHORT_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+
+/** human-readable schedule copy for habit detail / read-only grouped-list rows */
+export function getHabitFrequencyDisplayLabel(
+  frequencyType: HabitFrequencyType,
+  frequencyConfig?: Record<string, unknown>,
+): string {
+  const config = frequencyConfig ?? {};
+  const preset = HABIT_FREQUENCIES.find((entry) => entry.id === frequencyType);
+
+  if (frequencyType === 'weekly') {
+    const days = scheduleDaysFromHabit(frequencyType, config);
+    const weekday = HABIT_WEEKDAYS.find((entry) => entry.value === days[0]);
+    return weekday ? `Every ${weekday.label}` : (preset?.label ?? 'Once a week');
+  }
+
+  if (frequencyType === 'custom') {
+    const days = scheduleDaysFromHabit(frequencyType, config);
+    if (days.length === 0) return 'Custom days';
+    if (days.length === 7) return 'Every day';
+    return [...days]
+      .sort((a, b) => a - b)
+      .map((day) => WEEKDAY_SHORT_LABELS[day])
+      .join(', ');
+  }
+
+  if (frequencyType === 'times_per_week') {
+    const raw = config.targetCount ?? config.target_count ?? 0;
+    const count = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+    if (Number.isFinite(count) && count > 0) {
+      return `${count} ${count === 1 ? 'time' : 'times'} per week`;
+    }
+    return preset?.label ?? 'X times per week';
+  }
+
+  return preset?.label ?? frequencyType;
+}
+
+/** bell pill on habit detail — same copy pattern as task FormDetailSection alertsMainLabel */
+export function getHabitAlertPillLabel(reminderTime: string | undefined | null): string {
+  const trimmed = (reminderTime ?? '').trim();
+  if (!trimmed) return 'No Alerts';
+  return '1 Alert';
 }

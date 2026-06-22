@@ -216,6 +216,23 @@ function RootLayoutNavigation() {
                 },
               }}
             />
+            {/* habit: detail form sheet — same presentation tier as task edit */}
+            <Stack.Screen
+              name="habit"
+              options={{
+                headerShown: false,
+                presentation: 'formSheet',
+                gestureEnabled: true,
+                sheetGrabberVisible: false,
+                sheetAllowedDetents: [0.7, 1],
+                ...(Platform.OS === 'ios'
+                  ? { scrollEdgeEffects: { top: 'hidden' as const, bottom: 'hidden' as const } }
+                  : {}),
+                contentStyle: {
+                  backgroundColor: useLiquidGlass ? 'transparent' : 'transparent',
+                },
+              }}
+            />
             {/* root-level picker screens (each has own folder with _layout + index) */}
             <Stack.Screen
               name="date-select"

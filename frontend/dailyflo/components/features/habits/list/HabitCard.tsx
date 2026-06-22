@@ -2,7 +2,7 @@
  * habit card — liquid-glass shell with two layouts:
  * - heatmap: ring + consistency grid (expanded)
  * - simplified: progress bar + increment icon slot, no heatmap (minimized)
- * tap the chevron row to switch forms; default comes from defaultVariant per section.
+ * tap anywhere except the form switch row or increment control to open habit detail.
  */
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
@@ -215,31 +215,109 @@ export function HabitCard({
 
   const incrementControl =
     showTodayActions && incrementDisplay ? (
-      <HabitProgressRing
-        onPress={handleIncrement}
-        style={styles.actionSlot}
-        accessibilityLabel={incrementAccessibilityLabel}
-        current={incrementDisplay.current}
-        target={incrementDisplay.target}
-        isComplete={displayHabit!.isCompleteToday}
-        color={ringColors.progress}
-        trackColor={ringColors.track}
-        iconColor={ringColors.icon}
-        size={HABIT_CARD_RING_SIZE}
-        strokeWidth={HABIT_CARD_RING_STROKE_WIDTH}
-        plusIconSize={HABIT_CARD_PLUS_ICON_SIZE}
-        plusStrokeWidth={HABIT_CARD_PLUS_STROKE_WIDTH}
-        tickIconSize={HABIT_CARD_TICK_ICON_SIZE}
-        showCenterLabel={false}
-        showCenterPlus
-        showRing={isHeatmapForm}
-      />
+      // capture touches here so the card-wide detail press does not fire when logging progress
+      <View
+        style={styles.actionSlotWrap}
+        onStartShouldSetResponder={() => true}
+        onResponderTerminationRequest={() => false}
+      >
+        <HabitProgressRing
+          onPress={handleIncrement}
+          style={styles.actionSlot}
+          accessibilityLabel={incrementAccessibilityLabel}
+          current={incrementDisplay.current}
+          target={incrementDisplay.target}
+          isComplete={displayHabit!.isCompleteToday}
+          color={ringColors.progress}
+          trackColor={ringColors.track}
+          iconColor={ringColors.icon}
+          size={HABIT_CARD_RING_SIZE}
+          strokeWidth={HABIT_CARD_RING_STROKE_WIDTH}
+          plusIconSize={HABIT_CARD_PLUS_ICON_SIZE}
+          plusStrokeWidth={HABIT_CARD_PLUS_STROKE_WIDTH}
+          tickIconSize={HABIT_CARD_TICK_ICON_SIZE}
+          showCenterLabel={false}
+          showCenterPlus
+          showRing={isHeatmapForm}
+        />
+      </View>
     ) : (
       <View style={styles.streakCounter} accessibilityLabel={`${currentStreak} day streak`}>
         <Text style={[styles.streakNumber, { color: streakCountColor }]}>{streakNumberLabel}</Text>
         <Text style={[styles.streakUnit, { color: streakCountColor }]}>{streakUnitLabel}</Text>
       </View>
     );
+
+  const cardInner = (
+    <View style={styles.cardContent}>
+      <View style={styles.headerRow}>
+        <View style={styles.titleBlock}>
+          <HabitAnimatedTitle
+            title={title}
+            isComplete={Boolean(displayHabit?.isCompleteToday)}
+            titleColor={titleColor}
+            textStyle={styles.title}
+            numberOfLines={2}
+          />
+          {incrementDisplay ? (
+            <Text style={styles.todayScore}>
+              <Text style={[styles.todayScore, { color: themeColors.text.tertiary() }]}>
+                Today&apos;s progress:{' '}
+              </Text>
+              <Text style={[styles.todayScore, { color: themeColors.text.secondary() }]}>
+                {incrementDisplay.scoreLabel}
+              </Text>
+            </Text>
+          ) : null}
+        </View>
+
+        {incrementControl}
+      </View>
+
+      <Animated.View style={[styles.footerBlock, animatedFooterStyle]}>
+        <View onLayout={handleFooterLayout} style={styles.footerInner}>
+          <View style={styles.bodyClip}>
+            {isHeatmapBody ? (
+              <Animated.View
+                key="habit-card-heatmap"
+                entering={HABIT_CARD_VARIANT_ENTERING}
+                style={styles.graphWrap}
+              >
+                <HabitHeatmap heatmap={heatmapToShow} color={color} showLegend={false} />
+              </Animated.View>
+            ) : (
+              <Animated.View
+                key="habit-card-bar"
+                entering={HABIT_CARD_VARIANT_ENTERING}
+                style={styles.progressBarWrap}
+              >
+                <HabitProgressBar
+                  progress={progressRatio}
+                  fillColor={ringColors.progress}
+                  trackColor={ringColors.track}
+                />
+              </Animated.View>
+            )}
+          </View>
+
+          {showVariantToggle ? (
+            // capture touches on the form switch row so expand/minimize stays independent of detail navigation
+            <View
+              onStartShouldSetResponder={() => true}
+              onResponderTerminationRequest={() => false}
+            >
+              <HabitCardVariantToggle
+                variant={variant}
+                displayVariant={bodyVariant}
+                onPress={toggleVariant}
+                color={color}
+              />
+            </View>
+          ) : null}
+        </View>
+      </Animated.View>
+    </View>
+  );
 
   return (
     <View style={styles.cardShell}>
@@ -252,75 +330,21 @@ export function HabitCard({
           itemPadding="child"
           separatorInsetRight={PROGRESS_BOARD_GROUPED_LIST_CONTENT_PADDING_HORIZONTAL}
         >
-          <View style={styles.cardContent}>
-            <View style={styles.headerRow}>
-              <Pressable
-                onPress={onPress}
-                disabled={!onPress}
-                style={({ pressed }) => [
-                  styles.titleBlock,
-                  pressed && onPress ? styles.sectionPressed : null,
-                ]}
-              >
-                <HabitAnimatedTitle
-                  title={title}
-                  isComplete={Boolean(displayHabit?.isCompleteToday)}
-                  titleColor={titleColor}
-                  textStyle={styles.title}
-                  numberOfLines={2}
-                />
-                {incrementDisplay ? (
-                  <Text style={styles.todayScore}>
-                    <Text style={[styles.todayScore, { color: themeColors.text.tertiary() }]}>
-                      Today&apos;s progress:{' '}
-                    </Text>
-                    <Text style={[styles.todayScore, { color: themeColors.text.secondary() }]}>
-                      {incrementDisplay.scoreLabel}
-                    </Text>
-                  </Text>
-                ) : null}
-              </Pressable>
-
-              {incrementControl}
-            </View>
-
-            <Animated.View style={[styles.footerBlock, animatedFooterStyle]}>
-              <View onLayout={handleFooterLayout} style={styles.footerInner}>
-                <View style={styles.bodyClip}>
-                  {isHeatmapBody ? (
-                    <Animated.View
-                      key="habit-card-heatmap"
-                      entering={HABIT_CARD_VARIANT_ENTERING}
-                      style={styles.graphWrap}
-                    >
-                      <HabitHeatmap heatmap={heatmapToShow} color={color} showLegend={false} />
-                    </Animated.View>
-                  ) : (
-                    <Animated.View
-                      key="habit-card-bar"
-                      entering={HABIT_CARD_VARIANT_ENTERING}
-                      style={styles.progressBarWrap}
-                    >
-                      <HabitProgressBar
-                        progress={progressRatio}
-                        fillColor={ringColors.progress}
-                        trackColor={ringColors.track}
-                      />
-                    </Animated.View>
-                  )}
-                </View>
-
-                {showVariantToggle ? (
-                  <HabitCardVariantToggle
-                    variant={variant}
-                    displayVariant={bodyVariant}
-                    onPress={toggleVariant}
-                    color={color}
-                  />
-                ) : null}
-              </View>
-            </Animated.View>
-          </View>
+          {onPress ? (
+            <Pressable
+              onPress={onPress}
+              style={({ pressed }) => [
+                styles.cardPressable,
+                pressed ? styles.sectionPressed : null,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`View ${title} details`}
+            >
+              {cardInner}
+            </Pressable>
+          ) : (
+            cardInner
+          )}
         </GroupedList>
       </ProgressBoardGlassShell>
     </View>
@@ -334,6 +358,9 @@ const createStyles = (
 ) =>
   StyleSheet.create({
     cardShell: {
+      width: '100%',
+    },
+    cardPressable: {
       width: '100%',
     },
     sectionPressed: {
@@ -359,6 +386,9 @@ const createStyles = (
     todayScore: {
       ...typography.getTextStyle('body-small'),
       fontVariant: ['tabular-nums'],
+    },
+    actionSlotWrap: {
+      flexShrink: 0,
     },
     actionSlot: {
       width: HABIT_CARD_RING_SIZE,

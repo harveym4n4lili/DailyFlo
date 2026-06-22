@@ -164,9 +164,10 @@ export default function TimelineView({
       ? insets.top
       : 0
     : (scrollContentPaddingTop ?? 0) + (scrollPastTopInset ? insets.top : 0);
-  const { getMossBrandColor, getSageBrandColor } = useColorPalette();
-  const plannerWakeIconColor = getMossBrandColor(600);
-  const plannerSleepIconColor = getSageBrandColor(600);
+  // wake = system green, sleep = task/habit blue — same colorways as onboarding rise/sleep steps
+  const { getSystemStatusColor, getTaskHabitColor } = useColorPalette();
+  const plannerWakeIconColor = getSystemStatusColor('green', 700);
+  const plannerSleepIconColor = getTaskHabitColor('blue', 700);
 
   // track measured/animated card heights (used for both rendering and spacing)
   // spacing now follows the animated height so the whole timeline moves smoothly
