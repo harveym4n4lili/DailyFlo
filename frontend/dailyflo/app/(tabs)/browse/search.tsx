@@ -11,7 +11,7 @@ import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useAppDispatch, store, useAppSelector } from '@/store';
-import { useLists, useTasks } from '@/store/hooks';
+import { useLists, useTasks, useHabits } from '@/store/hooks';
 import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
 import { MainCloseButton } from '@/components/ui/Button';
 import { SFSymbolIcon, BrowseIcon } from '@/components/ui/Icon';
@@ -22,6 +22,7 @@ import {
   getOccurrenceDateFromId,
 } from '@/utils/recurrenceUtils';
 import { Task, type List } from '@/types';
+import type { HabitLibraryItem } from '@/types/api/habits';
 import {
   loadRecentSearches,
   loadRecentlyViewed,
@@ -34,6 +35,9 @@ import {
 import {
   BrowseSearchContent,
   DEFAULT_SEARCH_FILTER_CHIP_ID,
+  filterHabitsByDescriptionForBrowseSearch,
+  filterHabitsByTitleForBrowseSearch,
+  filterHabitsForBrowseSearch,
   filterListsForBrowseSearch,
   filterTasksByDescriptionForBrowseSearch,
   filterTasksByTitleForBrowseSearch,
@@ -56,6 +60,7 @@ export default function BrowseSearchScreen() {
   const inputRef = useRef<TextInput>(null);
   const { lists, fetchLists, isLoading: listsLoading } = useLists();
   const { tasks, isLoading: tasksLoading } = useTasks();
+  const { allHabits, isAllLoading: habitsLoading, fetchAll } = useHabits();
 
   const [query, setQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
@@ -107,13 +112,26 @@ export default function BrowseSearchScreen() {
   }, [userId]);
 
   useEffect(() => {
-    if (activeSearchFilterId === 'task' || activeSearchFilterId === 'description' || activeSearchFilterId === 'top' || activeSearchFilterId === 'recent') {
+    if (
+      activeSearchFilterId === 'task' ||
+      activeSearchFilterId === 'description' ||
+      activeSearchFilterId === 'top' ||
+      activeSearchFilterId === 'recent'
+    ) {
       void dispatch(fetchTasks());
+    }
+    if (
+      activeSearchFilterId === 'habits' ||
+      activeSearchFilterId === 'description' ||
+      activeSearchFilterId === 'top' ||
+      activeSearchFilterId === 'recent'
+    ) {
+      void fetchAll();
     }
     if (activeSearchFilterId === 'lists' || activeSearchFilterId === 'top' || activeSearchFilterId === 'recent') {
       void fetchLists();
     }
-  }, [activeSearchFilterId, dispatch, fetchLists]);
+  }, [activeSearchFilterId, dispatch, fetchLists, fetchAll]);
 
   const taskSearchMatches = useMemo(() => (activeSearchFilterId === 'task' ? filterTasksForBrowseSearch(tasks, query) : []), [tasks, query, activeSearchFilterId]);
   const descriptionSearchMatches = useMemo(
@@ -133,6 +151,31 @@ export default function BrowseSearchScreen() {
     () => (activeSearchFilterId === 'top' || activeSearchFilterId === 'recent' ? filterListsForBrowseSearch(lists, query) : []),
     [lists, query, activeSearchFilterId]
   );
+  const habitSearchMatches = useMemo(
+    () => (activeSearchFilterId === 'habits' ? filterHabitsForBrowseSearch(allHabits, query) : []),
+    [allHabits, query, activeSearchFilterId]
+  );
+  const topOrRecentTitleHabits = useMemo(
+    () =>
+      activeSearchFilterId === 'top' || activeSearchFilterId === 'recent'
+        ? filterHabitsByTitleForBrowseSearch(allHabits, query)
+        : [],
+    [allHabits, query, activeSearchFilterId]
+  );
+  const topOrRecentDescriptionHabits = useMemo(
+    () =>
+      activeSearchFilterId === 'top' || activeSearchFilterId === 'recent'
+        ? filterHabitsByDescriptionForBrowseSearch(allHabits, query)
+        : [],
+    [allHabits, query, activeSearchFilterId]
+  );
+  const habitDescriptionSearchMatches = useMemo(
+    () =>
+      activeSearchFilterId === 'description'
+        ? filterHabitsByDescriptionForBrowseSearch(allHabits, query)
+        : [],
+    [allHabits, query, activeSearchFilterId]
+  );
 
   const browseSearchTaskTitleRightLabel = useCallback(
     (task: Task) => (task.listId ? lists.find((l) => l.id === task.listId)?.name ?? 'List' : 'Inbox'),
@@ -148,6 +191,8 @@ export default function BrowseSearchScreen() {
       });
       if (entry.kind === 'task') {
         router.push({ pathname: '/task/[taskId]', params: { taskId: entry.id } });
+      } else if (entry.kind === 'habit') {
+        router.push({ pathname: '/habit/[habitId]', params: { habitId: entry.id } });
       } else {
         router.push(`/(tabs)/browse/list/${entry.id}` as any);
       }
@@ -209,6 +254,18 @@ export default function BrowseSearchScreen() {
         return next;
       });
       router.push(`/(tabs)/browse/list/${list.id}` as any);
+    },
+    [router, userId]
+  );
+
+  const handleBrowseSearchHabitPress = useCallback(
+    (habit: HabitLibraryItem) => {
+      setRecentlyViewed((prev) => {
+        const next = pushRecentlyViewed({ kind: 'habit', id: habit.id, label: habit.title }, prev);
+        void persistRecentlyViewed(next, userId);
+        return next;
+      });
+      router.push({ pathname: '/habit/[habitId]', params: { habitId: habit.id } });
     },
     [router, userId]
   );
@@ -293,15 +350,21 @@ export default function BrowseSearchScreen() {
           onToggleFilter={setActiveSearchFilterId}
           tasks={tasks}
           lists={lists}
+          habits={allHabits}
           tasksLoading={tasksLoading}
           listsLoading={listsLoading}
+          habitsLoading={habitsLoading}
           recentSearches={recentSearches}
           recentlyViewed={recentlyViewed}
           taskSearchMatches={taskSearchMatches}
           descriptionSearchMatches={descriptionSearchMatches}
+          habitSearchMatches={habitSearchMatches}
+          habitDescriptionSearchMatches={habitDescriptionSearchMatches}
           listSearchMatches={listSearchMatches}
           topOrRecentTitleTasks={topOrRecentTitleTasks}
+          topOrRecentTitleHabits={topOrRecentTitleHabits}
           topOrRecentDescriptionTasks={topOrRecentDescriptionTasks}
+          topOrRecentDescriptionHabits={topOrRecentDescriptionHabits}
           topOrRecentListMatches={topOrRecentListMatches}
           browseSearchTaskTitleRightLabel={browseSearchTaskTitleRightLabel}
           handleRecentlyViewedPress={handleRecentlyViewedPress}
@@ -309,6 +372,7 @@ export default function BrowseSearchScreen() {
           handleBrowseSearchTaskComplete={handleBrowseSearchTaskComplete}
           handleBrowseSearchTaskEdit={handleBrowseSearchTaskEdit}
           handleBrowseSearchTaskDelete={handleBrowseSearchTaskDelete}
+          handleBrowseSearchHabitPress={handleBrowseSearchHabitPress}
           handleBrowseSearchListPress={handleBrowseSearchListPress}
         />
       </View>

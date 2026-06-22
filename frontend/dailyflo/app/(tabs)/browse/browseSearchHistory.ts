@@ -19,7 +19,7 @@ const userRecentlyViewedKey = (userId: string) =>
   `@DailyFlo:browseRecentlyViewed/user/${userId}`;
 
 export type RecentlyViewedEntry = {
-  kind: 'task' | 'list';
+  kind: 'task' | 'list' | 'habit';
   id: string;
   label: string;
 };
@@ -68,7 +68,7 @@ function isRecentlyViewedEntry(x: unknown): x is RecentlyViewedEntry {
   if (!x || typeof x !== 'object') return false;
   const o = x as Record<string, unknown>;
   return (
-    (o.kind === 'task' || o.kind === 'list') &&
+    (o.kind === 'task' || o.kind === 'list' || o.kind === 'habit') &&
     typeof o.id === 'string' &&
     typeof o.label === 'string'
   );

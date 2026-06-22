@@ -7,7 +7,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { GroupedListHeader } from '@/components/ui/List/GroupedList';
 import { SFSymbolIcon, ClockIcon } from '@/components/ui/Icon';
-import { TaskCard, BrowseDescriptionSearchCard, BrowseListSearchCard } from '@/components/ui/Card';
+import {
+  TaskCard,
+  BrowseDescriptionSearchCard,
+  BrowseHabitDescriptionSearchCard,
+  BrowseHabitSearchCard,
+  BrowseListSearchCard,
+} from '@/components/ui/Card';
 import { SolidSeparator } from '@/components/ui/borders';
 import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/Button';
 import { Paddings } from '@/constants/Paddings';
@@ -15,6 +21,7 @@ import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPres
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Task, type List } from '@/types';
+import type { HabitLibraryItem } from '@/types/api/habits';
 import type { RecentlyViewedEntry } from '@/app/(tabs)/browse/browseSearchHistory';
 
 const CHIP_COLOR_ANIM_MS = 260;
@@ -23,9 +30,15 @@ export const DEFAULT_SEARCH_FILTER_CHIP_ID = 'recent';
 export const SEARCH_FILTER_CHIPS: { id: string; label: string }[] = [
   { id: 'top', label: 'Top' },
   { id: 'task', label: 'Task' },
+  { id: 'habits', label: 'Habits' },
   { id: 'description', label: 'Description' },
   { id: 'lists', label: 'Lists' },
 ];
+
+/** skip inactive habits from browse search results */
+function activeHabitsForBrowseSearch(habits: HabitLibraryItem[]): HabitLibraryItem[] {
+  return habits.filter((h) => h.isActive !== false);
+}
 
 // title-first ranking keeps task results stable while typing
 export function filterTasksForBrowseSearch(tasks: Task[], query: string): Task[] {
@@ -94,6 +107,63 @@ export function filterListsForBrowseSearch(lists: List[], query: string): List[]
   });
 }
 
+// title-first ranking for habits — mirrors filterTasksForBrowseSearch
+export function filterHabitsForBrowseSearch(habits: HabitLibraryItem[], query: string): HabitLibraryItem[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const active = activeHabitsForBrowseSearch(habits);
+  return active
+    .map((habit) => {
+      const title = habit.title.toLowerCase();
+      const desc = (habit.description || '').toLowerCase();
+      if (title === q) return { habit, score: 100_000 };
+      if (title.startsWith(q)) return { habit, score: 50_000 - title.length };
+      const titleIndex = title.indexOf(q);
+      if (titleIndex >= 0) return { habit, score: 40_000 - titleIndex * 100 - title.length * 0.01 };
+      const descIndex = desc.indexOf(q);
+      if (descIndex >= 0) return { habit, score: 20_000 - descIndex * 50 };
+      return { habit, score: -1 };
+    })
+    .filter((x) => x.score >= 0)
+    .sort((a, b) => b.score - a.score)
+    .map((x) => x.habit);
+}
+
+export function filterHabitsByTitleForBrowseSearch(habits: HabitLibraryItem[], query: string): HabitLibraryItem[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const active = activeHabitsForBrowseSearch(habits);
+  return active
+    .map((habit) => {
+      const title = habit.title.toLowerCase();
+      if (title === q) return { habit, score: 100_000 };
+      if (title.startsWith(q)) return { habit, score: 50_000 - title.length };
+      const titleIndex = title.indexOf(q);
+      if (titleIndex >= 0) return { habit, score: 40_000 - titleIndex * 100 - title.length * 0.01 };
+      return { habit, score: -1 };
+    })
+    .filter((x) => x.score >= 0)
+    .sort((a, b) => b.score - a.score)
+    .map((x) => x.habit);
+}
+
+export function filterHabitsByDescriptionForBrowseSearch(habits: HabitLibraryItem[], query: string): HabitLibraryItem[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const active = activeHabitsForBrowseSearch(habits).filter(
+    (h) => (h.description || '').trim().length > 0,
+  );
+  return active
+    .map((habit) => {
+      const desc = (habit.description || '').toLowerCase();
+      const descIndex = desc.indexOf(q);
+      return { habit, score: descIndex < 0 ? -1 : 10_000 - descIndex * 10 };
+    })
+    .filter((x) => x.score >= 0)
+    .sort((a, b) => b.score - a.score)
+    .map((x) => x.habit);
+}
+
 function BrowseSearchFilterChip({
   chip,
   selected,
@@ -160,15 +230,21 @@ type BrowseSearchContentProps = {
   onToggleFilter: (id: string) => void;
   tasks: Task[];
   lists: List[];
+  habits: HabitLibraryItem[];
   tasksLoading: boolean;
   listsLoading: boolean;
+  habitsLoading: boolean;
   recentSearches: string[];
   recentlyViewed: RecentlyViewedEntry[];
   taskSearchMatches: Task[];
   descriptionSearchMatches: Task[];
+  habitSearchMatches: HabitLibraryItem[];
+  habitDescriptionSearchMatches: HabitLibraryItem[];
   listSearchMatches: List[];
   topOrRecentTitleTasks: Task[];
+  topOrRecentTitleHabits: HabitLibraryItem[];
   topOrRecentDescriptionTasks: Task[];
+  topOrRecentDescriptionHabits: HabitLibraryItem[];
   topOrRecentListMatches: List[];
   browseSearchTaskTitleRightLabel: (task: Task) => string;
   handleRecentlyViewedPress: (entry: RecentlyViewedEntry) => void;
@@ -176,6 +252,7 @@ type BrowseSearchContentProps = {
   handleBrowseSearchTaskComplete: (task: Task, targetCompleted?: boolean) => void;
   handleBrowseSearchTaskEdit: (task: Task) => void;
   handleBrowseSearchTaskDelete: (task: Task) => void;
+  handleBrowseSearchHabitPress: (habit: HabitLibraryItem) => void;
   handleBrowseSearchListPress: (list: List) => void;
 };
 
@@ -187,15 +264,21 @@ export function BrowseSearchContent(props: BrowseSearchContentProps) {
     onToggleFilter,
     tasks,
     lists,
+    habits,
     tasksLoading,
     listsLoading,
+    habitsLoading,
     recentSearches,
     recentlyViewed,
     taskSearchMatches,
     descriptionSearchMatches,
+    habitSearchMatches,
+    habitDescriptionSearchMatches,
     listSearchMatches,
     topOrRecentTitleTasks,
+    topOrRecentTitleHabits,
     topOrRecentDescriptionTasks,
+    topOrRecentDescriptionHabits,
     topOrRecentListMatches,
     browseSearchTaskTitleRightLabel,
     handleRecentlyViewedPress,
@@ -203,11 +286,20 @@ export function BrowseSearchContent(props: BrowseSearchContentProps) {
     handleBrowseSearchTaskComplete,
     handleBrowseSearchTaskEdit,
     handleBrowseSearchTaskDelete,
+    handleBrowseSearchHabitPress,
     handleBrowseSearchListPress,
   } = props;
   const themeColors = useThemeColors();
   const typography = useTypography();
   const styles = createStyles(themeColors, typography);
+
+  const topDescriptionCount =
+    topOrRecentDescriptionTasks.length + topOrRecentDescriptionHabits.length;
+  const hasTopResults =
+    topOrRecentTitleTasks.length > 0 ||
+    topOrRecentTitleHabits.length > 0 ||
+    topDescriptionCount > 0 ||
+    topOrRecentListMatches.length > 0;
 
   return (
     <View style={styles.container}>
@@ -236,7 +328,7 @@ export function BrowseSearchContent(props: BrowseSearchContentProps) {
             )}
             <GroupedListHeader title="Recently viewed" style={styles.groupHeaderGap} />
             {recentlyViewed.length === 0 ? (
-              <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>Tasks and lists you open from search appear here (up to six).</Text>
+              <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>Tasks, habits, and lists you open from search appear here (up to six).</Text>
             ) : (
               <View>
                 {recentlyViewed.map((entry, i) => {
@@ -271,6 +363,31 @@ export function BrowseSearchContent(props: BrowseSearchContentProps) {
                       </View>
                     );
                   }
+                  if (entry.kind === 'habit') {
+                    const habit = habits.find((h) => h.id === entry.id);
+                    if (habit) {
+                      return (
+                        <BrowseHabitSearchCard
+                          key={`habit:${entry.id}`}
+                          title={habit.title}
+                          color={habit.color}
+                          onPress={() => handleBrowseSearchHabitPress(habit)}
+                          isLastItem={isLast}
+                          separatorPaddingHorizontal={Paddings.screen}
+                          cardSpacing={0}
+                        />
+                      );
+                    }
+                    return (
+                      <View key={`habit:${entry.id}`}>
+                        <Pressable onPress={() => handleRecentlyViewedPress(entry)} style={styles.recentSearchRow}>
+                          <SFSymbolIcon name="clock.arrow.circlepath" size={20} color={themeColors.text.tertiary()} fallback={<ClockIcon size={18} color={themeColors.text.tertiary()} />} />
+                          <Text style={[styles.recentSearchRowText, { color: themeColors.text.secondary() }]} numberOfLines={2}>{entry.label}</Text>
+                        </Pressable>
+                        {!isLast ? <SolidSeparator paddingLeft={CHECKBOX_SIZE_DEFAULT + 12} paddingRight={0} /> : null}
+                      </View>
+                    );
+                  }
                   return (
                     <BrowseListSearchCard
                       key={`list:${entry.id}`}
@@ -289,10 +406,20 @@ export function BrowseSearchContent(props: BrowseSearchContentProps) {
 
         {(activeSearchFilterId === 'top' || (activeSearchFilterId === 'recent' && query.trim() !== '')) ? (
           <>
-            {(tasksLoading && tasks.length === 0) || (listsLoading && lists.length === 0) ? <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>Loading…</Text> : null}
-            {query.trim() === '' && activeSearchFilterId === 'top' ? <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>Type to search tasks, descriptions, and lists together.</Text> : null}
-            {query.trim() !== '' && topOrRecentTitleTasks.length === 0 && topOrRecentDescriptionTasks.length === 0 && topOrRecentListMatches.length === 0 ? (
-              <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>No tasks, descriptions, or lists match “{query.trim()}”.</Text>
+            {(tasksLoading && tasks.length === 0) ||
+            (listsLoading && lists.length === 0) ||
+            (habitsLoading && habits.length === 0) ? (
+              <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>Loading…</Text>
+            ) : null}
+            {query.trim() === '' && activeSearchFilterId === 'top' ? (
+              <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                Type to search tasks, habits, descriptions, and lists together.
+              </Text>
+            ) : null}
+            {query.trim() !== '' && !hasTopResults ? (
+              <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+                No tasks, habits, descriptions, or lists match “{query.trim()}”.
+              </Text>
             ) : null}
             {topOrRecentTitleTasks.length > 0 ? (
               <>
@@ -309,13 +436,38 @@ export function BrowseSearchContent(props: BrowseSearchContentProps) {
                     onEdit={handleBrowseSearchTaskEdit}
                     onDelete={handleBrowseSearchTaskDelete}
                     isFirstItem={i === 0}
-                    isLastItem={i === topOrRecentTitleTasks.length - 1 && topOrRecentDescriptionTasks.length === 0 && topOrRecentListMatches.length === 0}
+                    isLastItem={
+                      i === topOrRecentTitleTasks.length - 1 &&
+                      topOrRecentTitleHabits.length === 0 &&
+                      topDescriptionCount === 0 &&
+                      topOrRecentListMatches.length === 0
+                    }
                     separatorPaddingHorizontal={Paddings.screen}
                   />
                 ))}
               </>
             ) : null}
-            {topOrRecentDescriptionTasks.length > 0 ? (
+            {topOrRecentTitleHabits.length > 0 ? (
+              <>
+                <GroupedListHeader title="Habits" style={styles.groupHeaderGap} />
+                {topOrRecentTitleHabits.map((habit, i) => (
+                  <BrowseHabitSearchCard
+                    key={`top-habit:${habit.id}`}
+                    title={habit.title}
+                    color={habit.color}
+                    onPress={() => handleBrowseSearchHabitPress(habit)}
+                    isLastItem={
+                      i === topOrRecentTitleHabits.length - 1 &&
+                      topDescriptionCount === 0 &&
+                      topOrRecentListMatches.length === 0
+                    }
+                    separatorPaddingHorizontal={Paddings.screen}
+                    cardSpacing={0}
+                  />
+                ))}
+              </>
+            ) : null}
+            {topDescriptionCount > 0 ? (
               <>
                 <GroupedListHeader title="Descriptions" style={styles.groupHeaderGap} />
                 {topOrRecentDescriptionTasks.map((task, i) => (
@@ -326,7 +478,27 @@ export function BrowseSearchContent(props: BrowseSearchContentProps) {
                     query={query}
                     listOrInboxLabel={browseSearchTaskTitleRightLabel(task)}
                     onPress={() => handleBrowseSearchTaskPress(task)}
-                    isLastItem={i === topOrRecentDescriptionTasks.length - 1 && topOrRecentListMatches.length === 0}
+                    isLastItem={
+                      i === topOrRecentDescriptionTasks.length - 1 &&
+                      topOrRecentDescriptionHabits.length === 0 &&
+                      topOrRecentListMatches.length === 0
+                    }
+                    separatorPaddingHorizontal={Paddings.screen}
+                    cardSpacing={0}
+                  />
+                ))}
+                {topOrRecentDescriptionHabits.map((habit, i) => (
+                  <BrowseHabitDescriptionSearchCard
+                    key={`desc-habit:${habit.id}`}
+                    descriptionText={(habit.description || '').trim()}
+                    habitTitle={habit.title}
+                    habitColor={habit.color}
+                    query={query}
+                    onPress={() => handleBrowseSearchHabitPress(habit)}
+                    isLastItem={
+                      i === topOrRecentDescriptionHabits.length - 1 &&
+                      topOrRecentListMatches.length === 0
+                    }
                     separatorPaddingHorizontal={Paddings.screen}
                     cardSpacing={0}
                   />
@@ -370,20 +542,64 @@ export function BrowseSearchContent(props: BrowseSearchContentProps) {
           ))
         ) : null}
 
+        {activeSearchFilterId === 'habits' ? (
+          query.trim() === '' ? (
+            <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+              Type to search habits by title or description.
+            </Text>
+          ) : (
+            habitSearchMatches.map((habit, i) => (
+              <BrowseHabitSearchCard
+                key={habit.id}
+                title={habit.title}
+                color={habit.color}
+                onPress={() => handleBrowseSearchHabitPress(habit)}
+                isLastItem={i === habitSearchMatches.length - 1}
+                separatorPaddingHorizontal={Paddings.screen}
+                cardSpacing={0}
+              />
+            ))
+          )
+        ) : null}
+
         {activeSearchFilterId === 'description' ? (
-          query.trim() === '' ? <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>Type to search task descriptions and notes.</Text> : descriptionSearchMatches.map((task, i) => (
-            <BrowseDescriptionSearchCard
-              key={task.id}
-              descriptionText={(task.description || '').trim()}
-              taskTitle={task.title}
-              query={query}
-              listOrInboxLabel={browseSearchTaskTitleRightLabel(task)}
-              onPress={() => handleBrowseSearchTaskPress(task)}
-              isLastItem={i === descriptionSearchMatches.length - 1}
-              separatorPaddingHorizontal={Paddings.screen}
-              cardSpacing={0}
-            />
-          ))
+          query.trim() === '' ? (
+            <Text style={[styles.searchModeBody, { color: themeColors.text.secondary() }]}>
+              Type to search task and habit descriptions and notes.
+            </Text>
+          ) : (
+            <>
+              {descriptionSearchMatches.map((task, i) => (
+                <BrowseDescriptionSearchCard
+                  key={task.id}
+                  descriptionText={(task.description || '').trim()}
+                  taskTitle={task.title}
+                  query={query}
+                  listOrInboxLabel={browseSearchTaskTitleRightLabel(task)}
+                  onPress={() => handleBrowseSearchTaskPress(task)}
+                  isLastItem={
+                    i === descriptionSearchMatches.length - 1 &&
+                    habitDescriptionSearchMatches.length === 0
+                  }
+                  separatorPaddingHorizontal={Paddings.screen}
+                  cardSpacing={0}
+                />
+              ))}
+              {habitDescriptionSearchMatches.map((habit, i) => (
+                <BrowseHabitDescriptionSearchCard
+                  key={`habit-desc:${habit.id}`}
+                  descriptionText={(habit.description || '').trim()}
+                  habitTitle={habit.title}
+                  habitColor={habit.color}
+                  query={query}
+                  onPress={() => handleBrowseSearchHabitPress(habit)}
+                  isLastItem={i === habitDescriptionSearchMatches.length - 1}
+                  separatorPaddingHorizontal={Paddings.screen}
+                  cardSpacing={0}
+                />
+              ))}
+            </>
+          )
         ) : null}
 
         {activeSearchFilterId === 'lists' ? (
