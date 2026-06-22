@@ -6,16 +6,15 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 import { ColorCirclePicker } from '@/components/ui/ColorCirclePicker';
-import { GroupedList, GroupedListHeader } from '@/components/ui/List/GroupedList';
-import { WeekdayCirclePicker, WEEKDAY_PICKER_TRACK_HEIGHT } from '@/components/ui/WeekdayCirclePicker';
+import { GroupedListHeader } from '@/components/ui/List/GroupedList';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 import type { HabitColor } from '@/types/api/habits';
-import { getHabitFormListGroupProps } from './habitFormChrome';
 import { HABIT_COLORS } from './habitFormConstants';
 import { HabitNameDescriptionSection } from './HabitNameDescriptionSection';
-import { HabitCompletionsPerDayStepper } from './HabitCompletionsPerDayStepper';
+import { HabitCompletionsPickerBody } from './HabitCompletionsPickerBody';
+import { HabitFrequencyPickerBody } from './HabitFrequencyPickerBody';
 
 export type HabitFormFieldsState = {
   title: string;
@@ -56,8 +55,6 @@ export function HabitFormFields({
   const themeColors = useThemeColors();
   const styles = useMemo(() => createStyles(), []);
 
-  const listGroupProps = useMemo(() => getHabitFormListGroupProps(themeColors), [themeColors]);
-
   return (
     <>
       <View style={styles.groupedListSectionFirst}>
@@ -74,36 +71,15 @@ export function HabitFormFields({
         </Text>
       </View>
 
-      <GroupedListHeader title="Completions per day" style={styles.sectionHeader} />
-      <GroupedList
-        containerStyle={styles.listContainer}
-        {...listGroupProps}
-        separatorConsiderIconColumn={false}
-        contentPaddingHorizontal={0}
-      >
-        <HabitCompletionsPerDayStepper value={completionsPerDay} onChange={onCompletionsPerDayChange} />
-      </GroupedList>
-      <Text style={[styles.sectionHint, { color: themeColors.text.secondary() }]}>
-        How many times you want to complete this habit on each due day.
-      </Text>
+      <HabitCompletionsPickerBody
+        value={completionsPerDay}
+        onChange={onCompletionsPerDayChange}
+      />
 
-      <GroupedListHeader title="Frequency" style={styles.sectionHeader} />
-      <GroupedList
-        containerStyle={styles.listContainer}
-        {...listGroupProps}
-        contentPaddingHorizontal={0}
-        contentPaddingVertical={0}
-        contentMinHeight={WEEKDAY_PICKER_TRACK_HEIGHT}
-      >
-        <WeekdayCirclePicker
-          mode="multi"
-          selectedDays={scheduleDays}
-          onChange={onScheduleDaysChange}
-        />
-      </GroupedList>
-      <Text style={[styles.sectionHint, { color: themeColors.text.secondary() }]}>
-        Tap the days this habit is due.
-      </Text>
+      <HabitFrequencyPickerBody
+        scheduleDays={scheduleDays}
+        onScheduleDaysChange={onScheduleDaysChange}
+      />
 
       <GroupedListHeader title="Color" style={styles.sectionHeader} />
       <ColorCirclePicker<HabitColor>
@@ -119,9 +95,6 @@ const createStyles = () =>
   StyleSheet.create({
     groupedListSectionFirst: {
       marginTop: 0,
-    },
-    listContainer: {
-      marginVertical: 0,
     },
     sectionHeader: {
       marginTop: Paddings.section,

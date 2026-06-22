@@ -2,7 +2,7 @@
  * shared habit form helpers — frequency config + reminder time validation for create/edit.
  */
 
-import type { CreateHabitInput, HabitFrequencyType, HabitTrackingType } from '@/types/api/habits';
+import type { CreateHabitInput, HabitColor, HabitFrequencyType, HabitTrackingType, UpdateHabitInput } from '@/types/api/habits';
 import { HABIT_FREQUENCIES, HABIT_WEEKDAYS } from './habitFormConstants';
 
 /** min/max for the completions-per-day stepper in create/edit forms */
@@ -180,4 +180,97 @@ export function getHabitAlertPillLabel(reminderTime: string | undefined | null):
   const trimmed = (reminderTime ?? '').trim();
   if (!trimmed) return 'No Alerts';
   return '1 Alert';
+}
+
+export type HabitDetailFormValues = {
+  title: string;
+  description: string;
+  color: HabitColor;
+  completionsPerDay: number;
+  scheduleDays: number[];
+  reminderTime: string;
+  listId?: string | null;
+};
+
+/** shared POST/PATCH payload builder — used by detail save, auto-save, and create/edit modals */
+export function buildHabitUpdateInput(values: {
+  title: string;
+  description: string;
+  color: HabitColor;
+  completionsPerDay: number;
+  scheduleDays: number[];
+  reminderTime: string;
+}): UpdateHabitInput {
+  const { frequencyType, dayOfWeek, customDays } = deriveFrequencyFromScheduleDays(values.scheduleDays);
+  const { trackingType, targetValue } = habitTrackingFromCompletionsPerDay(values.completionsPerDay);
+
+  return {
+    title: values.title.trim(),
+    description: values.description.trim(),
+    color: values.color,
+    trackingType,
+    targetValue,
+    frequencyType,
+    frequencyConfig: buildHabitFrequencyConfig(frequencyType, dayOfWeek, '', customDays),
+    reminderTime: values.reminderTime.trim(),
+  };
+}
+
+/** partial PATCH for auto-save fields (completions, frequency, reminder, color) */
+export function buildHabitPickerUpdateInput(values: {
+  completionsPerDay: number;
+  scheduleDays: number[];
+  reminderTime: string;
+  color: HabitColor;
+}): UpdateHabitInput {
+  const { frequencyType, dayOfWeek, customDays } = deriveFrequencyFromScheduleDays(values.scheduleDays);
+  const { trackingType, targetValue } = habitTrackingFromCompletionsPerDay(values.completionsPerDay);
+
+  return {
+    color: values.color,
+    trackingType,
+    targetValue,
+    frequencyType,
+    frequencyConfig: buildHabitFrequencyConfig(frequencyType, dayOfWeek, '', customDays),
+    reminderTime: values.reminderTime.trim(),
+  };
+}
+
+function scheduleDaysEqual(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort((x, y) => x - y);
+  const sortedB = [...b].sort((x, y) => x - y);
+  return sortedA.every((day, index) => day === sortedB[index]);
+}
+
+/** compare merged picker draft against loaded habit record (auto-save diff) */
+export function habitPickerDraftChanged(
+  habit: {
+    color: HabitColor;
+    trackingType: HabitTrackingType;
+    targetValue: number | null | undefined;
+    frequencyType: HabitFrequencyType;
+    frequencyConfig?: Record<string, unknown> | null;
+    reminderTime?: string | null;
+  },
+  draft: {
+    completionsPerDay: number;
+    scheduleDays: number[];
+    reminderTime: string;
+    pickedColor?: HabitColor;
+  },
+): boolean {
+  const serverCompletions = completionsPerDayFromHabit(habit.trackingType, habit.targetValue);
+  const serverSchedule = scheduleDaysFromHabit(
+    habit.frequencyType,
+    (habit.frequencyConfig ?? {}) as Record<string, unknown>,
+  );
+  const serverReminder = (habit.reminderTime ?? '').trim();
+  const effectiveColor = draft.pickedColor ?? habit.color;
+  return (
+    effectiveColor !== habit.color ||
+    draft.completionsPerDay !== serverCompletions ||
+    !scheduleDaysEqual(draft.scheduleDays, serverSchedule) ||
+    draft.reminderTime.trim() !== serverReminder
+  );
 }
