@@ -84,7 +84,7 @@ export default function TaskEditScreen() {
       return {
         title: task.title,
         description: task.description || '',
-        dueDate: task.dueDate ?? new Date().toISOString(),
+        dueDate: task.dueDate ?? undefined,
         priorityLevel: task.priorityLevel,
         color: task.color,
         icon: task.icon,
@@ -140,7 +140,7 @@ export default function TaskEditScreen() {
             return d.toISOString();
           })()
         : params.occurrenceDate + 'T12:00:00.000Z')
-      : (t.dueDate ?? new Date().toISOString());
+      : (t.dueDate ?? undefined);
     initialDraftSyncedRef.current = false;
     setDraft({
       dueDate: effectiveDueDate,
@@ -179,18 +179,24 @@ export default function TaskEditScreen() {
       return;
     }
     const taskAlerts = getAlertIdsFromTask(task);
-    const taskDueDate = task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : '';
-    const draftDueDate = draft.dueDate ? new Date(draft.dueDate).toISOString().slice(0, 10) : '';
+    const taskDueDay = task.dueDate
+      ? new Date(task.dueDate).toISOString().slice(0, 10)
+      : '';
+    const draftDueDay =
+      draft.dueDate && draft.dueDate.trim()
+        ? new Date(draft.dueDate).toISOString().slice(0, 10)
+        : '';
     const draftChanged =
-      draftDueDate !== taskDueDate ||
+      draftDueDay !== taskDueDay ||
       (draft.time ?? '') !== (task.time ?? '') ||
       (draft.duration ?? 0) !== (task.duration ?? 0) ||
       JSON.stringify(draft.alerts ?? []) !== JSON.stringify(taskAlerts);
     if (!draftChanged) return;
-    const draftKey = `${draft.dueDate}|${draft.time}|${draft.duration}|${JSON.stringify(draft.alerts ?? [])}`;
+    const draftKey = `${draftDueDay}|${draft.time}|${draft.duration}|${JSON.stringify(draft.alerts ?? [])}`;
     if (prevAutoSaveDraftRef.current === draftKey) return;
     prevAutoSaveDraftRef.current = draftKey;
-    const dueDateToSave = draft.dueDate ?? task.dueDate ?? new Date().toISOString();
+    // null tells the API to remove due_date; undefined would skip the field entirely
+    const dueDateToSave = draftDueDay ? draft.dueDate! : null;
     dispatch(
       updateTask({
         id: taskId,
@@ -202,7 +208,7 @@ export default function TaskEditScreen() {
           metadata: {
             ...(task.metadata ?? {}),
             reminders: mapAlertIdsToTaskReminders(draft.alerts, {
-              dueDate: draft.dueDate ?? task.dueDate,
+              dueDate: draftDueDay ? draft.dueDate : null,
               time: draft.time ?? task.time,
             }),
           },
@@ -214,7 +220,7 @@ export default function TaskEditScreen() {
   const values: Partial<TaskFormValues> = useMemo(
     () => ({
       ...localValues,
-      dueDate: draft.dueDate ?? localValues.dueDate ?? new Date().toISOString(),
+      dueDate: draft.dueDate ?? localValues.dueDate,
       time: draft.time,
       duration: draft.duration,
       alerts: draft.alerts?.length ? draft.alerts : localValues.alerts,
@@ -382,11 +388,14 @@ export default function TaskEditScreen() {
 
     const occurrenceDate = params.occurrenceDate ?? (values.dueDate ? new Date(values.dueDate).toISOString().slice(0, 10) : null);
     const isRecurring = task && isRecurringTask(task);
-    const anchoredDueDate = resolveRecurrenceAnchorDueDate(
-      values.dueDate,
-      values.routineType || 'once',
-      values.time,
-    );
+    const hasDueDate = Boolean(values.dueDate?.trim());
+    const anchoredDueDate = hasDueDate
+      ? resolveRecurrenceAnchorDueDate(
+          values.dueDate,
+          values.routineType || 'once',
+          values.time,
+        )
+      : null;
 
     const performUpdateAll = async () => {
       const result = await dispatch(
@@ -399,7 +408,7 @@ export default function TaskEditScreen() {
             icon: values.icon && values.icon.trim() ? values.icon.trim() : undefined,
             time: values.time || undefined,
             duration: values.duration ?? undefined,
-            dueDate: anchoredDueDate || undefined,
+            dueDate: anchoredDueDate,
             priorityLevel: values.priorityLevel || 3,
             color: values.color || themeColor,
             routineType: values.routineType || 'once',
@@ -407,7 +416,7 @@ export default function TaskEditScreen() {
             metadata: {
               subtasks: taskSubtasks,
               reminders: mapAlertIdsToTaskReminders(values.alerts, {
-                dueDate: anchoredDueDate,
+                dueDate: hasDueDate ? anchoredDueDate : null,
                 time: values.time,
               }),
               notes: values.description?.trim() || undefined,

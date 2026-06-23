@@ -99,7 +99,7 @@ export interface ListCardProps {
   silentWhenEmpty?: boolean;
 
   // optional list configuration
-  groupBy?: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'none'; // routine = one-time vs recurring (browse list detail); allDay = planner all-day bucket
+  groupBy?: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'listDetail' | 'none'; // listDetail = Today + one-time + recurring (browse list detail)
   /** titles that render collapsed until the user taps the header — planner seeds `ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES`; remount with a day key resets per day */
   initialCollapsedGroupTitles?: readonly string[];
   sortBy?: 'none' | 'createdAt' | 'dueDate' | 'priority' | 'title'; // how to sort tasks

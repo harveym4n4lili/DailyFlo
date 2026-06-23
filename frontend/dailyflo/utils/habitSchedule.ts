@@ -208,3 +208,23 @@ export function getHabitsDueOnDay(
 
   return rows.sort((a, b) => a.item.title.localeCompare(b.item.title));
 }
+
+/** list-assigned habits not due on dayKey — read-only rows for One-time section */
+export function getListHabitsNotDueOnDay(
+  listHabits: HabitLibraryItem[],
+  dayKey: string,
+): HabitForCalendarDay[] {
+  const rows = listHabits
+    .filter((source) => !habitIsDueOnDate(source, dayKey))
+    .map((source) => {
+      const item = buildHabitTodayItemForDay(source, dayKey);
+      return {
+        item,
+        source,
+        canIncrement: false,
+        readOnlyProgress: getHabitIncrementDisplay(item),
+      };
+    });
+
+  return rows.sort((a, b) => a.item.title.localeCompare(b.item.title));
+}

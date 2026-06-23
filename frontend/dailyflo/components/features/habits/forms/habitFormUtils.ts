@@ -200,6 +200,8 @@ export function buildHabitUpdateInput(values: {
   completionsPerDay: number;
   scheduleDays: number[];
   reminderTime: string;
+  /** null = default Habits bucket */
+  listId?: string | null;
 }): UpdateHabitInput {
   const { frequencyType, dayOfWeek, customDays } = deriveFrequencyFromScheduleDays(values.scheduleDays);
   const { trackingType, targetValue } = habitTrackingFromCompletionsPerDay(values.completionsPerDay);
@@ -213,15 +215,17 @@ export function buildHabitUpdateInput(values: {
     frequencyType,
     frequencyConfig: buildHabitFrequencyConfig(frequencyType, dayOfWeek, '', customDays),
     reminderTime: values.reminderTime.trim(),
+    ...(values.listId !== undefined ? { listId: values.listId } : {}),
   };
 }
 
-/** partial PATCH for auto-save fields (completions, frequency, reminder, color) */
+/** partial PATCH for auto-save fields (completions, frequency, reminder, color, list) */
 export function buildHabitPickerUpdateInput(values: {
   completionsPerDay: number;
   scheduleDays: number[];
   reminderTime: string;
   color: HabitColor;
+  listId?: string | null;
 }): UpdateHabitInput {
   const { frequencyType, dayOfWeek, customDays } = deriveFrequencyFromScheduleDays(values.scheduleDays);
   const { trackingType, targetValue } = habitTrackingFromCompletionsPerDay(values.completionsPerDay);
@@ -233,6 +237,7 @@ export function buildHabitPickerUpdateInput(values: {
     frequencyType,
     frequencyConfig: buildHabitFrequencyConfig(frequencyType, dayOfWeek, '', customDays),
     reminderTime: values.reminderTime.trim(),
+    ...(values.listId !== undefined ? { listId: values.listId } : {}),
   };
 }
 
@@ -252,12 +257,14 @@ export function habitPickerDraftChanged(
     frequencyType: HabitFrequencyType;
     frequencyConfig?: Record<string, unknown> | null;
     reminderTime?: string | null;
+    listId?: string | null;
   },
   draft: {
     completionsPerDay: number;
     scheduleDays: number[];
     reminderTime: string;
     pickedColor?: HabitColor;
+    pickedListId?: string | null;
   },
 ): boolean {
   const serverCompletions = completionsPerDayFromHabit(habit.trackingType, habit.targetValue);
@@ -267,10 +274,13 @@ export function habitPickerDraftChanged(
   );
   const serverReminder = (habit.reminderTime ?? '').trim();
   const effectiveColor = draft.pickedColor ?? habit.color;
+  const serverListId = habit.listId ?? null;
+  const draftListId = draft.pickedListId !== undefined ? draft.pickedListId : serverListId;
   return (
     effectiveColor !== habit.color ||
     draft.completionsPerDay !== serverCompletions ||
     !scheduleDaysEqual(draft.scheduleDays, serverSchedule) ||
-    draft.reminderTime.trim() !== serverReminder
+    draft.reminderTime.trim() !== serverReminder ||
+    draftListId !== serverListId
   );
 }

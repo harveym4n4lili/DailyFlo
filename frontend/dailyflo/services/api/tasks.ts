@@ -253,7 +253,7 @@ class TasksApiService {
       // Handle null case - if dueDate is explicitly null, send null to remove the due date
       // Otherwise, send the date as-is (can be past, present, or future dates)
       if (taskData.dueDate !== undefined) {
-        if (taskData.dueDate === null) {
+        if (taskData.dueDate === null || taskData.dueDate === '') {
           // Explicitly setting to null removes the due date
           apiData.due_date = null;
         } else {

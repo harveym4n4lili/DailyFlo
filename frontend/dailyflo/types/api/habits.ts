@@ -36,6 +36,8 @@ export interface Habit {
   reminderTime: string;
   sortOrder: number;
   isActive: boolean;
+  /** null = default Habits bucket; uuid = user list */
+  listId?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -62,6 +64,7 @@ export interface HabitTodayItem {
   frequencyType: HabitFrequencyType;
   /** HH:MM local — used by habitReminderScheduler when habit is due today */
   reminderTime: string;
+  listId?: string | null;
   /** last 365 days — powers habit card heatmap on the habits tab */
   heatmap: HabitHeatmapData;
 }
@@ -89,6 +92,8 @@ export interface CreateHabitInput {
   frequencyType?: HabitFrequencyType;
   frequencyConfig?: HabitFrequencyConfig;
   reminderTime?: string;
+  /** null = default Habits bucket */
+  listId?: string | null;
 }
 
 export interface UpdateHabitInput {
@@ -103,6 +108,7 @@ export interface UpdateHabitInput {
   frequencyConfig?: HabitFrequencyConfig;
   reminderTime?: string;
   isActive?: boolean;
+  listId?: string | null;
 }
 
 export interface HabitLogResponse {

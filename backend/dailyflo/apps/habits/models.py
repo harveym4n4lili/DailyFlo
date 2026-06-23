@@ -39,6 +39,15 @@ class Habit(models.Model):
         on_delete=models.CASCADE,
         related_name='habits',
     )
+    # nullable — null means default "Habits" bucket (not tied to a user list)
+    list = models.ForeignKey(
+        'lists.List',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='habits',
+        help_text='List this habit belongs to (null for default Habits bucket)',
+    )
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, default='')
     icon_key = models.CharField(max_length=64, blank=True, default='')
@@ -60,6 +69,7 @@ class Habit(models.Model):
         ordering = ['sort_order', 'created_at']
         indexes = [
             models.Index(fields=['user', 'soft_deleted', 'is_active']),
+            models.Index(fields=['user', 'list']),
         ]
 
     def __str__(self):

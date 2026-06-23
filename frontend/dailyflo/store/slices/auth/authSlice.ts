@@ -278,11 +278,13 @@ function transformApiDisplayPreferences(apiPrefs: Record<string, unknown>): User
   const today = transformApiDisplayTabPrefs(r.today);
   const planner = transformApiDisplayTabPrefs(r.planner);
   const inbox = transformApiDisplayTabPrefs(r.inbox);
-  if (!today && !planner && !inbox) return undefined;
+  const list = transformApiDisplayTabPrefs(r.list);
+  if (!today && !planner && !inbox && !list) return undefined;
   return {
     ...(today ? { today } : {}),
     ...(planner ? { planner } : {}),
     ...(inbox ? { inbox } : {}),
+    ...(list ? { list } : {}),
   };
 }
 
@@ -430,6 +432,9 @@ export function preferencesPartialToSnakePayload(prefs: Partial<UserPreferences>
     }
     if (prefs.displayPreferences.inbox !== undefined) {
       dp.inbox = tabDisplayPrefsToSnake(prefs.displayPreferences.inbox);
+    }
+    if (prefs.displayPreferences.list !== undefined) {
+      dp.list = tabDisplayPrefsToSnake(prefs.displayPreferences.list);
     }
     if (Object.keys(dp).length > 0) out.display_preferences = dp;
   }
@@ -988,11 +993,11 @@ export const patchUserSchedulePreferences = createAsyncThunk<
 
 export const patchUserDisplayPreferences = createAsyncThunk<
   UserThunkSerializablePayload,
-  { context: 'today' | 'planner' | 'inbox'; patch: TabDisplayPreferences }
+  { context: 'today' | 'planner' | 'inbox' | 'list'; patch: TabDisplayPreferences }
 >(
   'auth/patchUserDisplayPreferences',
   async (
-    { context, patch }: { context: 'today' | 'planner' | 'inbox'; patch: TabDisplayPreferences },
+    { context, patch }: { context: 'today' | 'planner' | 'inbox' | 'list'; patch: TabDisplayPreferences },
     { getState, rejectWithValue }
   ) => {
     try {

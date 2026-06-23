@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.habits.models import Habit, HabitCompletion
+from apps.lists.models import List
 
 
 class HabitSerializer(serializers.ModelSerializer):
@@ -15,6 +16,12 @@ class HabitSerializer(serializers.ModelSerializer):
     reminderTime = serializers.CharField(source='reminder_time', required=False, allow_blank=True, default='')
     sortOrder = serializers.IntegerField(source='sort_order', required=False, default=0)
     isActive = serializers.BooleanField(source='is_active', required=False, default=True)
+    listId = serializers.PrimaryKeyRelatedField(
+        source='list',
+        queryset=List.objects.filter(soft_deleted=False),
+        allow_null=True,
+        required=False,
+    )
 
     class Meta:
         model = Habit
@@ -32,10 +39,19 @@ class HabitSerializer(serializers.ModelSerializer):
             'reminderTime',
             'sortOrder',
             'isActive',
+            'listId',
             'created_at',
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_listId(self, value):
+        if value is None:
+            return value
+        request = self.context.get('request')
+        if request and value.user_id != request.user.id:
+            raise serializers.ValidationError('You can only assign habits to your own lists.')
+        return value
 
     def validate(self, attrs):
         tracking = attrs.get('tracking_type', getattr(self.instance, 'tracking_type', 'binary'))

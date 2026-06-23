@@ -38,7 +38,7 @@ export function displaySortPushStackOptions(themeColors: ReturnType<typeof useTh
 export type DisplaySettingsPickerRoute = 'sorting' | 'ordering' | 'date' | 'priority';
 
 /** today vs planner vs inbox display modal — date filter default differs by tab */
-export type DisplaySettingsContext = 'today' | 'planner' | 'inbox';
+export type DisplaySettingsContext = 'today' | 'planner' | 'inbox' | 'list';
 
 export const DISPLAY_SETTINGS_ROW_TO_ROUTE = {
   sorting: 'sorting',
