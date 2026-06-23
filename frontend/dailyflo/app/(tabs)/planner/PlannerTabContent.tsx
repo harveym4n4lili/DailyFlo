@@ -19,7 +19,8 @@ import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboar
 import { IosPlannerBulkSelectionToolbar } from '@/components/navigation/IosPlannerBulkSelectionToolbar';
 import { IosTaskSelectionCloseStackToolbar } from '@/components/navigation/IosTaskSelectionCloseStackToolbar';
 import { WeekView } from '@/components/features/calendar/sections';
-import { DayTimelineWithAllDayFooter } from '@/components/features/timeline';
+import { DayTimelineWithAllDayFooter, DayListSegmentChrome } from '@/components/features/timeline';
+import { useHabitsForCalendarDay } from '@/components/features/habits/day';
 import { ListCard } from '@/components/ui/Card';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
@@ -466,6 +467,39 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
     return toLocalCalendarDayString(new Date(sourceDate));
   }, [timelineDate, selectedDate]);
 
+  const {
+    habits: plannerDayHabits,
+    count: plannerHabitsCount,
+    isToday: plannerHabitsIsToday,
+    isLoading: plannerHabitsLoading,
+  } = useHabitsForCalendarDay(plannerDisplayedDayKey);
+
+  const handleHabitDetailPress = useCallback(
+    (habitId: string) => {
+      router.push({ pathname: '/habit/[habitId]', params: { habitId } });
+    },
+    [router],
+  );
+
+  const plannerHabitsSegment = useMemo(
+    () => ({
+      dayKey: plannerDisplayedDayKey,
+      habits: plannerDayHabits,
+      count: plannerHabitsCount,
+      isToday: plannerHabitsIsToday,
+      isLoading: plannerHabitsLoading,
+      onOpenDetail: handleHabitDetailPress,
+    }),
+    [
+      plannerDisplayedDayKey,
+      plannerDayHabits,
+      plannerHabitsCount,
+      plannerHabitsIsToday,
+      plannerHabitsLoading,
+      handleHabitDetailPress,
+    ],
+  );
+
   const handleTaskPress = (task: Task) => {
     const baseId = isExpandedRecurrenceId(task.id) ? getBaseTaskId(task.id) : task.id;
     const occurrenceDate = isExpandedRecurrenceId(task.id) ? getOccurrenceDateFromId(task.id) : undefined;
@@ -680,38 +714,49 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
             <View
               style={[
                 styles.contentContainer,
-                layoutView === 'list' && styles.contentContainerList,
+                layoutView === 'list' && styles.contentContainerListGlassBleed,
                 layoutView === 'timeline' && styles.contentContainerTimelineGlassBleed,
               ]}
             >
             {layoutView === 'list' ? (
-              <ListCard
-                key={`planner-list-${plannerDisplayedDayKey || 'unknown'}`}
-                tasks={plannerListTasks}
-                selectionMode={timelineListSelection}
-                selectedTaskIds={selection.selectedItems}
-                onToggleTaskSelection={timelineListSelection ? toggleItemSelection : undefined}
-                hideCompletedTasks={plannerListDisplayProps.hideCompletedTasks}
-                onTaskPress={handleTaskPress}
-                onTaskComplete={handleTaskComplete}
-                onTaskEdit={handleTaskEdit}
-                onTaskDelete={handleTaskDelete}
-                {...LIST_CARD_TASK_ROW_PRESET_TODAY}
-                emptyMessage="No tasks for this date yet."
-                loading={false}
-                groupBy="dueDate"
-                sortBy={plannerListDisplayProps.sortBy}
-                sortDirection={plannerListDisplayProps.sortDirection}
-                onOverdueReschedule={handleOverdueReschedulePress}
-                bigTodayHeader={false}
-                hideTodayHeader={false}
-                paddingHorizontal={Paddings.screen}
-                paddingTop={16}
-                scrollEnabled={true}
-                paddingBottom={
-                  mode === 'select' && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
-                }
-              />
+              <DayListSegmentChrome
+                dayKey={plannerDisplayedDayKey}
+                habits={plannerDayHabits}
+                habitsCount={plannerHabitsCount}
+                habitsIsToday={plannerHabitsIsToday}
+                habitsLoading={plannerHabitsLoading}
+                onOpenHabitDetail={handleHabitDetailPress}
+              >
+              {(chrome) => (
+                <ListCard
+                  key={`planner-list-${plannerDisplayedDayKey || 'unknown'}`}
+                  tasks={plannerListTasks}
+                  selectionMode={timelineListSelection}
+                  selectedTaskIds={selection.selectedItems}
+                  onToggleTaskSelection={timelineListSelection ? toggleItemSelection : undefined}
+                  hideCompletedTasks={plannerListDisplayProps.hideCompletedTasks}
+                  onTaskPress={handleTaskPress}
+                  onTaskComplete={handleTaskComplete}
+                  onTaskEdit={handleTaskEdit}
+                  onTaskDelete={handleTaskDelete}
+                  {...LIST_CARD_TASK_ROW_PRESET_TODAY}
+                  emptyMessage="No tasks for this date yet."
+                  loading={false}
+                  groupBy="dueDate"
+                  sortBy={plannerListDisplayProps.sortBy}
+                  sortDirection={plannerListDisplayProps.sortDirection}
+                  onOverdueReschedule={handleOverdueReschedulePress}
+                  bigTodayHeader={false}
+                  hideTodayHeader={false}
+                  paddingHorizontal={Paddings.screen}
+                  paddingTop={chrome.scrollTopInset}
+                  scrollEnabled={true}
+                  paddingBottom={
+                    mode === 'select' && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
+                  }
+                />
+              )}
+              </DayListSegmentChrome>
             ) : (
               <DayTimelineWithAllDayFooter
                 dayKey={
@@ -740,6 +785,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
                 allDayFooterKeyPrefix="planner-allday"
                 transparentTimelineBackground
                 useAllDayPillBar
+                habitsSegment={plannerHabitsSegment}
               />
             )}
             </View>
@@ -830,6 +876,12 @@ const createStyles = (
     },
     contentContainerList: {
       backgroundColor: 'transparent',
+    },
+    contentContainerListGlassBleed: {
+      backgroundColor: 'transparent',
+      marginTop: -Paddings.liquidGlassBleed,
+      paddingTop: Paddings.liquidGlassBleed,
+      overflow: 'visible',
     },
     // room inside clipped glass panel so segment pills can expand without being cut off (net layout unchanged)
     contentContainerTimelineGlassBleed: {

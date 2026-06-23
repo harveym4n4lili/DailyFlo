@@ -4,28 +4,46 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import type { SharedValue } from 'react-native-reanimated';
+import { StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedScrollHandler, type SharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import TimelineView from '@/components/features/timeline/TimelineView';
-import { TimelineAllDayPill } from '@/components/features/timeline/TimelineAllDayPill';
 import {
   TimelinePlannerPillChrome,
   resolvePlannerAllDayTopSpacerHeight,
 } from '@/components/features/timeline/TimelinePlannerPillChrome';
 import { PlannerSegmentScroll } from '@/components/features/timeline/PlannerSegmentScroll';
+import { DaySegmentPillBar } from '@/components/features/timeline/DaySegmentPillBar';
+import { DayHabitsList } from '@/components/features/habits/day/DayHabitsList';
 import { ListCard } from '@/components/ui/Card';
 import { TodayBigScrollHeader } from '@/components/features/today/TodayBigScrollHeader';
+import {
+  TodayScrollPillBarFade,
+  TodayStickyScrollPillOverlay,
+  useTodayStickyScrollPillCrossfade,
+} from '@/components/features/today/TodayStickyScrollPillChrome';
+import { todayListScrollTopPadding, TODAY_TIMELINE_ROW_BELOW_PILLS_GAP } from '@/constants/todayScreenChrome';
 import type { TimelineAllDayListDisplayProps } from '@/components/features/display/displayPreferenceMappers';
+import type { HabitForCalendarDay } from '@/utils/habitSchedule';
 import { Paddings } from '@/constants/Paddings';
 import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
 import { ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES, ALL_DAY_TASKS_GROUP_TITLE } from '@/utils/taskGrouping';
 import type { Task } from '@/types';
 
-/** planner pill bar: which full-screen segment is shown (timeline spine vs all-day list only) */
-type PlannerTimelineSegment = 'timeline' | 'allDay';
+/** planner pill bar: which full-screen segment is shown */
+export type DayTimelineSegment = 'timeline' | 'allDay' | 'habits';
 
 const PLANNER_TIMELINE_PILL_LABEL = 'Timeline';
+
+export type DayTimelineHabitsSegment = {
+  dayKey: string;
+  habits: HabitForCalendarDay[];
+  count: number;
+  isToday: boolean;
+  isLoading?: boolean;
+  onOpenDetail: (habitId: string) => void;
+};
 
 export type DayTimelineWithAllDayFooterProps = {
   /** remount key when calendar day changes — resets segment + collapse state */
@@ -57,8 +75,13 @@ export type DayTimelineWithAllDayFooterProps = {
   emptyAllDayMessage?: string;
   allDayFooterKeyPrefix?: string;
   transparentTimelineBackground?: boolean;
-  /** planner: anchored pill bar + separate timeline / all-day scroll areas */
+  /** planner/today timeline: anchored pill bar + timeline / all-day / habits scroll areas */
   useAllDayPillBar?: boolean;
+  habitsSegment?: DayTimelineHabitsSegment;
+  /** pin segment pills below a fixed screen header (planner / legacy today) */
+  pillBarTopInset?: number;
+  /** today timeline: big title + scroll pills that lock under blur (matches today list) */
+  useTodayStickyPillHeader?: boolean;
 };
 
 export function DayTimelineWithAllDayFooter({
@@ -87,10 +110,17 @@ export function DayTimelineWithAllDayFooter({
   allDayFooterKeyPrefix = 'day-allday',
   transparentTimelineBackground = false,
   useAllDayPillBar = false,
+  habitsSegment,
+  pillBarTopInset = 0,
+  useTodayStickyPillHeader = false,
 }: DayTimelineWithAllDayFooterProps) {
+  const insets = useSafeAreaInsets();
+  const stickyPillChrome = useTodayStickyScrollPillCrossfade(
+    useTodayStickyPillHeader ? scrollYSharedValue : undefined,
+  );
   const allDayTasks = useMemo(
     () => tasks.filter((task) => !task.time || task.time === ''),
-    [tasks]
+    [tasks],
   );
 
   const visibleAllDayCount = useMemo(() => {
@@ -99,6 +129,8 @@ export function DayTimelineWithAllDayFooter({
   }, [allDayTasks, allDayListDisplayProps.hideCompletedTasks]);
 
   const allDayPillLabel = `${ALL_DAY_TASKS_GROUP_TITLE} (${visibleAllDayCount})`;
+  const habitsCount = habitsSegment?.count ?? 0;
+  const habitsPillLabel = `Habits (${habitsCount})`;
 
   const shouldShowAllDayFooter = useMemo(() => {
     if (!allDayListDisplayProps.showAllDayTasks || allDayTasks.length === 0) return false;
@@ -110,15 +142,26 @@ export function DayTimelineWithAllDayFooter({
     allDayListDisplayProps.showAllDayTasks,
   ]);
 
-  const usePlannerSegmentSwitch = useAllDayPillBar && shouldShowAllDayFooter;
+  const showAllDayPill = shouldShowAllDayFooter && visibleAllDayCount > 0;
+  const showHabitsPill = habitsCount > 0;
 
-  const [plannerSegment, setPlannerSegment] = useState<PlannerTimelineSegment>('timeline');
+  const usePlannerSegmentSwitch =
+    useAllDayPillBar && (showAllDayPill || showHabitsPill);
+
+  const [plannerSegment, setPlannerSegment] = useState<DayTimelineSegment>('timeline');
   useEffect(() => {
     setPlannerSegment('timeline');
   }, [dayKey]);
 
-  const timelineRowPaddingTop =
-    shouldShowAllDayFooter && !usePlannerSegmentSwitch
+  useEffect(() => {
+    if (!useTodayStickyPillHeader || !scrollYSharedValue) return;
+    scrollYSharedValue.value = 0;
+  }, [plannerSegment, useTodayStickyPillHeader, scrollYSharedValue]);
+
+  // pill-segment planner/today: TimelinePlannerPillChrome scroll spacer clears pills — never add timelineTopWhenAllDayHidden (56px) on top
+  const timelineRowPaddingTop = usePlannerSegmentSwitch
+    ? undefined
+    : shouldShowAllDayFooter && !usePlannerSegmentSwitch
       ? undefined
       : !shouldShowAllDayFooter
         ? Paddings.timelineTopWhenAllDayHidden
@@ -157,37 +200,59 @@ export function DayTimelineWithAllDayFooter({
       onTaskEdit,
       onTaskDelete,
       emptyAllDayMessage,
-    ]
+    ],
   );
 
   const listCardKey = `${allDayFooterKeyPrefix}-${dayKey || 'unknown'}`;
 
+  const segmentPills = useMemo(() => {
+    const pills: { id: DayTimelineSegment; label: string; accessibilityLabel: string }[] = [
+      {
+        id: 'timeline',
+        label: PLANNER_TIMELINE_PILL_LABEL,
+        accessibilityLabel: 'Show timeline',
+      },
+    ];
+    if (showAllDayPill) {
+      pills.push({
+        id: 'allDay',
+        label: allDayPillLabel,
+        accessibilityLabel: 'Show all-day tasks',
+      });
+    }
+    if (showHabitsPill) {
+      pills.push({
+        id: 'habits',
+        label: habitsPillLabel,
+        accessibilityLabel: `Show habits, ${habitsCount} due`,
+      });
+    }
+    return pills;
+  }, [showAllDayPill, showHabitsPill, allDayPillLabel, habitsPillLabel, habitsCount]);
+
   const plannerPillBarScroll = useMemo(
     () => (
-      <View style={styles.pillMeasureRoot} collapsable={false}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.pillScroll}
-          contentContainerStyle={styles.pillScrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-        <TimelineAllDayPill
-          label={PLANNER_TIMELINE_PILL_LABEL}
-          selected={plannerSegment === 'timeline'}
-          onPress={() => setPlannerSegment('timeline')}
-          accessibilityLabel="Show timeline"
-        />
-        <TimelineAllDayPill
-          label={allDayPillLabel}
-          selected={plannerSegment === 'allDay'}
-          onPress={() => setPlannerSegment('allDay')}
-          accessibilityLabel="Show all-day tasks"
-        />
-        </ScrollView>
-      </View>
+      <DaySegmentPillBar
+        pills={segmentPills}
+        selectedId={plannerSegment}
+        onSelect={(id) => setPlannerSegment(id as DayTimelineSegment)}
+        compactHeaderTop={useTodayStickyPillHeader}
+        embeddedInListHeader={useTodayStickyPillHeader}
+      />
     ),
-    [plannerSegment, allDayPillLabel]
+    [segmentPills, plannerSegment, useTodayStickyPillHeader],
+  );
+
+  const plannerPillBarSticky = useMemo(
+    () => (
+      <DaySegmentPillBar
+        pills={segmentPills}
+        selectedId={plannerSegment}
+        onSelect={(id) => setPlannerSegment(id as DayTimelineSegment)}
+        compactHeaderTop={useTodayStickyPillHeader}
+      />
+    ),
+    [segmentPills, plannerSegment, useTodayStickyPillHeader],
   );
 
   const allDayFooter = useMemo(() => {
@@ -215,12 +280,59 @@ export function DayTimelineWithAllDayFooter({
     return <TodayBigScrollHeader scrollY={scrollYSharedValue} label={todayHeaderLabel} />;
   }, [showTodayBigHeader, scrollYSharedValue, todayHeaderLabel]);
 
+  const scrollPills = useMemo(
+    () => (
+      <TodayScrollPillBarFade
+        scrollPillBarStyle={stickyPillChrome.scrollPillBarStyle}
+        pillsStuck={stickyPillChrome.pillsStuck}
+      >
+        {plannerPillBarScroll}
+      </TodayScrollPillBarFade>
+    ),
+    [
+      stickyPillChrome.scrollPillBarStyle,
+      stickyPillChrome.pillsStuck,
+      plannerPillBarScroll,
+    ],
+  );
+
+  const todayScrollHeader = useMemo(
+    () => (
+      <>
+        {todayHeader}
+        {scrollPills}
+      </>
+    ),
+    [todayHeader, scrollPills],
+  );
+
+  const todayStickyScrollPaddingTop = insets.top + todayListScrollTopPadding();
+
+  const segmentScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      if (scrollYSharedValue) {
+        scrollYSharedValue.value = event.contentOffset.y;
+      }
+    },
+  });
+
   const scrollBottomInset =
     scrollContentPaddingBottom !== undefined
       ? Paddings.timelineScrollBottom + scrollContentPaddingBottom
       : Paddings.timelineScrollBottom;
 
-  const renderTimelineView = (scrollTopSpacerHeight: number) => (
+  const scrollContentInsetTop = scrollPastTopInset ? insets.top : 0;
+
+  const resolveSegmentTopSpacer = (timelineSpacerHeight: number) =>
+    resolvePlannerAllDayTopSpacerHeight(timelineSpacerHeight) +
+    (scrollPastTopInset ? insets.top : 0);
+
+  const renderTimelineView = (
+    scrollTopSpacerHeight?: number,
+    headerComponent?: React.ReactNode,
+    contentPaddingTop?: number,
+    rowPaddingTop?: number,
+  ) => (
     <TimelineView
       key={dayKey || 'day-timeline'}
       tasks={tasks}
@@ -236,25 +348,105 @@ export function DayTimelineWithAllDayFooter({
       endHour={endHour}
       timeInterval={60}
       scrollTopSpacerHeight={scrollTopSpacerHeight}
-      scrollContentPaddingTop={0}
+      scrollContentPaddingTop={contentPaddingTop ?? scrollContentPaddingTop}
       scrollContentPaddingBottom={scrollContentPaddingBottom}
       scrollPastTopInset={scrollPastTopInset}
       scrollYSharedValue={scrollYSharedValue}
-      headerComponent={todayHeader}
-      timelineRowPaddingTop={timelineRowPaddingTop}
+      headerComponent={headerComponent ?? todayHeader}
+      timelineRowPaddingTop={rowPaddingTop ?? timelineRowPaddingTop}
       footerComponent={allDayFooter}
       calendarDayKey={dayKey}
       transparentBackground={transparentTimelineBackground}
     />
   );
 
+  if (usePlannerSegmentSwitch && useTodayStickyPillHeader) {
+    return (
+      <View style={styles.todayStickyRoot}>
+        <TodayStickyScrollPillOverlay
+          top={stickyPillChrome.stickyPillBarTop}
+          stickyPillBarStyle={stickyPillChrome.stickyPillBarStyle}
+          pillsStuck={stickyPillChrome.pillsStuck}
+        >
+          {plannerPillBarSticky}
+        </TodayStickyScrollPillOverlay>
+
+        {plannerSegment === 'allDay' ? (
+          <Animated.ScrollView
+            style={styles.flex1}
+            contentContainerStyle={[
+              styles.todayStickyScrollContent,
+              {
+                paddingTop: todayStickyScrollPaddingTop,
+                paddingBottom: scrollBottomInset,
+              },
+            ]}
+            contentInsetAdjustmentBehavior="never"
+            showsVerticalScrollIndicator={false}
+            onScroll={segmentScrollHandler}
+            scrollEventThrottle={16}
+          >
+            {todayScrollHeader}
+            <ListCard
+              key={listCardKey}
+              {...listCardSharedProps}
+              groupBy="none"
+              paddingTop={0}
+              paddingHorizontal={0}
+              scrollEnabled={false}
+              embeddedInParentScroll
+              contentInsetAdjustmentBehavior="never"
+            />
+          </Animated.ScrollView>
+        ) : plannerSegment === 'habits' && habitsSegment ? (
+          <Animated.ScrollView
+            style={styles.flex1}
+            contentContainerStyle={[
+              styles.todayStickyScrollContent,
+              {
+                paddingTop: todayStickyScrollPaddingTop,
+                paddingBottom: scrollBottomInset,
+              },
+            ]}
+            contentInsetAdjustmentBehavior="never"
+            showsVerticalScrollIndicator={false}
+            onScroll={segmentScrollHandler}
+            scrollEventThrottle={16}
+          >
+            {todayScrollHeader}
+            <DayHabitsList
+              dayKey={habitsSegment.dayKey}
+              habits={habitsSegment.habits}
+              isToday={habitsSegment.isToday}
+              isLoading={habitsSegment.isLoading}
+              onOpenDetail={habitsSegment.onOpenDetail}
+              embeddedInParentScroll
+              paddingHorizontal={0}
+            />
+          </Animated.ScrollView>
+        ) : (
+          renderTimelineView(
+            undefined,
+            todayScrollHeader,
+            todayListScrollTopPadding(),
+            TODAY_TIMELINE_ROW_BELOW_PILLS_GAP,
+          )
+        )}
+      </View>
+    );
+  }
+
   if (usePlannerSegmentSwitch) {
     return (
-      <TimelinePlannerPillChrome pillBar={plannerPillBarScroll}>
+      <TimelinePlannerPillChrome
+        pillBar={plannerPillBarScroll}
+        pillBarTopInset={pillBarTopInset}
+        scrollContentInsetTop={scrollContentInsetTop}
+      >
         {(scrollTopSpacerHeight) =>
           plannerSegment === 'allDay' ? (
             <PlannerSegmentScroll
-              topSpacerHeight={resolvePlannerAllDayTopSpacerHeight(scrollTopSpacerHeight)}
+              topSpacerHeight={resolveSegmentTopSpacer(scrollTopSpacerHeight)}
               paddingBottom={scrollBottomInset}
             >
               <ListCard
@@ -265,6 +457,20 @@ export function DayTimelineWithAllDayFooter({
                 scrollEnabled={false}
                 embeddedInParentScroll
                 contentInsetAdjustmentBehavior="never"
+              />
+            </PlannerSegmentScroll>
+          ) : plannerSegment === 'habits' && habitsSegment ? (
+            <PlannerSegmentScroll
+              topSpacerHeight={resolveSegmentTopSpacer(scrollTopSpacerHeight)}
+              paddingBottom={scrollBottomInset}
+            >
+              <DayHabitsList
+                dayKey={habitsSegment.dayKey}
+                habits={habitsSegment.habits}
+                isToday={habitsSegment.isToday}
+                isLoading={habitsSegment.isLoading}
+                onOpenDetail={habitsSegment.onOpenDetail}
+                embeddedInParentScroll
               />
             </PlannerSegmentScroll>
           ) : (
@@ -280,23 +486,14 @@ export function DayTimelineWithAllDayFooter({
 
 const styles = StyleSheet.create({
   allDayFooter: {},
-  pillMeasureRoot: {
-    paddingTop: Paddings.screen,
-    paddingBottom: Paddings.timelineAllDayPillPaddingBottom,
-    overflow: 'visible',
+  todayStickyRoot: {
+    flex: 1,
   },
-  pillScroll: {
-    flexGrow: 0,
-    backgroundColor: 'transparent',
-    overflow: 'visible',
+  flex1: {
+    flex: 1,
   },
-  pillScrollContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Paddings.formDataPillRowGap,
+  todayStickyScrollContent: {
     paddingHorizontal: Paddings.screen,
-    paddingVertical: Paddings.liquidGlassBleed,
-    overflow: 'visible',
   },
 });
 

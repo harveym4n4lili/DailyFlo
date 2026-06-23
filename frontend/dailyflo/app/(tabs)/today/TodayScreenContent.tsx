@@ -13,8 +13,6 @@ import AnimatedReanimated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 
@@ -23,7 +21,12 @@ import { useAuthSessionReady } from '@/hooks/useAuthSessionReady';
 
 import { ScreenContainer } from '@/components/index';
 import { ListCard } from '@/components/ui/Card';
-import { DayTimelineWithAllDayFooter } from '@/components/features/timeline';
+import { DayTimelineWithAllDayFooter, DayListSegmentChrome } from '@/components/features/timeline';
+import { useHabitsForCalendarDay } from '@/components/features/habits/day';
+import {
+  TabRootTopSectionChrome,
+  TabRootScreenBackdrop,
+} from '@/components/navigation/TabRootTopSectionChrome';
 import { SelectionCloseButton, SelectAllButton } from '@/components/ui/Button';
 import { ScreenHeaderActions } from '@/components/ui';
 import { IosTaskSelectionCloseStackToolbar } from '@/components/navigation/IosTaskSelectionCloseStackToolbar';
@@ -33,6 +36,7 @@ import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { useThemeColors, useSemanticColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { Paddings } from '@/constants/Paddings';
+import { todayListScrollTopPadding } from '@/constants/todayScreenChrome';
 import { LIST_CARD_TASK_ROW_PRESET_TODAY } from '@/constants/listCardTaskRowPreset';
 import { DEFAULT_DISPLAY_LAYOUT_VIEW_TODAY } from '@/components/features/display/displayLayoutOptions';
 import {
@@ -40,8 +44,7 @@ import {
   mapTimelineAllDayListDisplayProps,
 } from '@/components/features/display/displayPreferenceMappers';
 
-import { useTasks, useUI, useHabits } from '@/store/hooks';
-import { TodayHabitsSection } from '@/components/features/habits/today';
+import { useTasks, useUI } from '@/store/hooks';
 import { useAppDispatch, useAppSelector, store } from '@/store';
 import { fetchTasks, updateTask, deleteTask } from '@/store/slices/tasks/tasksSlice';
 import { fetchLists } from '@/store/slices/lists/listsSlice';
@@ -134,7 +137,6 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
 
   const dispatch = useAppDispatch();
   const authSessionReady = useAuthSessionReady();
-  const { fetchToday: fetchHabitsToday } = useHabits();
   const {
     tasks,
     isLoading,
@@ -142,17 +144,18 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
     lastFetched,
   } = useTasks();
 
-  useFocusEffect(
-    useCallback(() => {
-      // wait for cold-start checkAuthStatus — same tokens for google, apple, and email
-      if (!authSessionReady) return;
-      void fetchHabitsToday();
-    }, [fetchHabitsToday, authSessionReady]),
-  );
+  useEffect(() => {
+    if (!isLoading) {
+      scrollY.value = 0;
+      miniHeaderOpacity.value = 0;
+    }
+  }, [isLoading, scrollY, miniHeaderOpacity]);
 
   useEffect(() => {
-    if (!isLoading) scrollY.value = 0;
-  }, [isLoading, scrollY]);
+    if (!isSelectRoute) return;
+    scrollY.value = 0;
+    miniHeaderOpacity.value = 0;
+  }, [isSelectRoute, scrollY, miniHeaderOpacity]);
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const todayDisplayPrefs = useAppSelector(
@@ -195,6 +198,40 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
   }, [tasks]);
 
   const todayDateStr = useMemo(() => toLocalCalendarDayString(new Date()), []);
+
+  const {
+    habits: todayDayHabits,
+    count: todayHabitsCount,
+    isToday: todayHabitsIsToday,
+    isLoading: todayHabitsLoading,
+    refresh: refreshTodayHabits,
+  } = useHabitsForCalendarDay(todayDateStr);
+
+  const handleHabitDetailPress = useCallback(
+    (habitId: string) => {
+      router.push({ pathname: '/habit/[habitId]', params: { habitId } });
+    },
+    [router],
+  );
+
+  const todayHabitsSegment = useMemo(
+    () => ({
+      dayKey: todayDateStr,
+      habits: todayDayHabits,
+      count: todayHabitsCount,
+      isToday: todayHabitsIsToday,
+      isLoading: todayHabitsLoading,
+      onOpenDetail: handleHabitDetailPress,
+    }),
+    [
+      todayDateStr,
+      todayDayHabits,
+      todayHabitsCount,
+      todayHabitsIsToday,
+      todayHabitsLoading,
+      handleHabitDetailPress,
+    ],
+  );
 
   // timeline layout: calendar today only — no overdue section
   const todayCalendarTasks = useMemo(
@@ -409,25 +446,14 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
     router.push('/date-select');
   };
 
-  const screenBackdrop = useMemo(
-    () => (
-      <View
-        style={[
-          StyleSheet.absoluteFillObject,
-          { backgroundColor: themeColors.background.primary(), zIndex: -1 },
-        ]}
-        pointerEvents="none"
-      />
-    ),
-    [themeColors.theme]
-  );
+  const screenBackdrop = <TabRootScreenBackdrop />;
 
   const handleRefresh = async () => {
     if (!authSessionReady) return;
     await Promise.all([
       dispatch(fetchTasks()),
       dispatch(fetchLists()),
-      fetchHabitsToday(),
+      refreshTodayHabits(),
     ]);
   };
 
@@ -487,44 +513,56 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
           backgroundColor="transparent"
         >
           {layoutView === 'list' ? (
-            <ListCard
-              key={isSelectRoute ? 'today-select-listcard' : 'today-screen-listcard'}
-              prependListContent={<TodayHabitsSection />}
-              tasks={todaysTasks}
-              selectionMode={listSelectionMode}
-              selectedTaskIds={selection.selectedItems}
-              onToggleTaskSelection={listSelectionMode ? toggleItemSelection : undefined}
-              hideCompletedTasks={todayListDisplayProps.hideCompletedTasks}
-              onTaskPress={handleTaskPress}
-              onTaskComplete={handleTaskComplete}
-              onTaskEdit={handleTaskEdit}
-              onTaskDelete={handleTaskDelete}
-              {...LIST_CARD_TASK_ROW_PRESET_TODAY}
-              emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
-              loading={isLoading && todaysTasks.length === 0}
-              groupBy="dueDate"
-              lockTodayGroupExpanded
-              sortBy={todayListDisplayProps.sortBy}
-              sortDirection={todayListDisplayProps.sortDirection}
-              onOverdueReschedule={handleOverdueReschedulePress}
-              hideTodayHeader={false}
-              bigTodayHeader={true}
-              onRefresh={handleRefresh}
-              refreshing={isLoading}
+            <DayListSegmentChrome
+              dayKey={todayDateStr}
+              habits={todayDayHabits}
+              habitsCount={todayHabitsCount}
+              habitsIsToday={todayHabitsIsToday}
+              habitsLoading={todayHabitsLoading}
+              onOpenHabitDetail={handleHabitDetailPress}
+              useInboxTabHeader
               scrollYSharedValue={scrollY}
-              showsVerticalScrollIndicator={true}
-              paddingTop={64}
-              paddingHorizontal={Paddings.screen}
-              scrollPastTopInset={true}
-              paddingBottom={
-                isSelectRoute && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
-              }
-            />
+              bigHeaderLabel={todayBigHeaderLabel}
+            >
+              {(chrome) => (
+                <ListCard
+                  key={isSelectRoute ? 'today-select-listcard' : 'today-screen-listcard'}
+                  tasks={todaysTasks}
+                  selectionMode={listSelectionMode}
+                  selectedTaskIds={selection.selectedItems}
+                  onToggleTaskSelection={listSelectionMode ? toggleItemSelection : undefined}
+                  hideCompletedTasks={todayListDisplayProps.hideCompletedTasks}
+                  onTaskPress={handleTaskPress}
+                  onTaskComplete={handleTaskComplete}
+                  onTaskEdit={handleTaskEdit}
+                  onTaskDelete={handleTaskDelete}
+                  {...LIST_CARD_TASK_ROW_PRESET_TODAY}
+                  emptyMessage="No tasks for today yet. Tap the + button to add your first task!"
+                  loading={isLoading && todaysTasks.length === 0}
+                  groupBy="dueDate"
+                  lockTodayGroupExpanded
+                  sortBy={todayListDisplayProps.sortBy}
+                  sortDirection={todayListDisplayProps.sortDirection}
+                  onOverdueReschedule={handleOverdueReschedulePress}
+                  hideTodayHeader
+                  bigTodayHeader
+                  bigHeaderLabel={todayBigHeaderLabel}
+                  prependListContent={chrome.scrollPills}
+                  onRefresh={handleRefresh}
+                  refreshing={isLoading}
+                  scrollYSharedValue={scrollY}
+                  showsVerticalScrollIndicator
+                  paddingTop={todayListScrollTopPadding()}
+                  paddingHorizontal={Paddings.screen}
+                  scrollPastTopInset
+                  paddingBottom={
+                    isSelectRoute && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
+                  }
+                />
+              )}
+            </DayListSegmentChrome>
           ) : (
             <View style={styles.todayTimelineContainer}>
-              <View style={{ paddingHorizontal: Paddings.screen }}>
-                <TodayHabitsSection />
-              </View>
               <DayTimelineWithAllDayFooter
               dayKey={todayDateStr}
               tasks={todayCalendarTasks}
@@ -541,45 +579,29 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
               plannerScheduleAnchors={todayScheduleAnchorsPayload}
               startHour={todayTimelineStartHour}
               endHour={todayTimelineEndHour}
-              scrollContentPaddingTop={64}
+              scrollContentPaddingTop={0}
               scrollPastTopInset={true}
               scrollYSharedValue={scrollY}
-              showTodayBigHeader={true}
+              showTodayBigHeader
               todayHeaderLabel={todayBigHeaderLabel}
               scrollContentPaddingBottom={
                 isSelectRoute && Platform.OS === 'ios' ? 56 + 28 + insets.bottom : undefined
               }
               emptyAllDayMessage="No all-day tasks for today."
               allDayFooterKeyPrefix="today-allday"
+              useAllDayPillBar
+              habitsSegment={todayHabitsSegment}
+              useTodayStickyPillHeader
             />
             </View>
           )}
         </ScreenContainer>
         {screenBackdrop}
-        <View style={[styles.topSectionAnchor, { height: insets.top + 64 }]}>
-          <BlurView
-            tint={themeColors.isDark ? 'dark' : 'light'}
-            intensity={1}
-            style={StyleSheet.absoluteFill}
-          />
-          <LinearGradient
-            colors={
-              themeColors.isDark
-                ? [
-                    themeColors.withOpacity(themeColors.background.primary(), 0.55),
-                    themeColors.withOpacity(themeColors.background.primary(), 0),
-                  ]
-                : [
-                    themeColors.background.primary(),
-                    themeColors.withOpacity(themeColors.background.primary(), 0),
-                  ]
-            }
-            locations={[0.4, 1]}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-          <View style={styles.topSectionRow}>
-            {Platform.OS === 'android' ? (
+        <TabRootTopSectionChrome
+          miniHeaderLabel={miniHeaderLabel}
+          miniHeaderStyle={miniTodayHeaderStyle}
+          leftSlot={
+            Platform.OS === 'android' ? (
               <AnimatedReanimated.View
                 style={[styles.topSectionCloseButton, closeButtonAnimatedStyle]}
                 pointerEvents={androidInPlaceSelection ? 'auto' : 'none'}
@@ -588,16 +610,10 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
               </AnimatedReanimated.View>
             ) : (
               <View style={styles.topSectionCloseButton} pointerEvents="none" />
-            )}
-            <AnimatedReanimated.View
-              style={[styles.miniTodayHeader, miniTodayHeaderStyle]}
-              pointerEvents="none"
-            >
-              <Text style={[styles.miniTodayHeaderText, { color: themeColors.text.primary() }]}>
-                {miniHeaderLabel}
-              </Text>
-            </AnimatedReanimated.View>
-            {androidInPlaceSelection ? (
+            )
+          }
+          rightSlot={
+            androidInPlaceSelection ? (
               <SelectAllButton
                 onPress={handleSelectAllToday}
                 label={selectAllLabel}
@@ -610,9 +626,9 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
                 style={styles.topSectionContextButton}
                 tint="primary"
               />
-            ) : null}
-          </View>
-        </View>
+            ) : null
+          }
+        />
       </View>
     </>
   );
@@ -625,23 +641,6 @@ const createStyles = (
   insets: ReturnType<typeof useSafeAreaInsets>
 ) =>
   StyleSheet.create({
-    topSectionAnchor: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 10,
-      overflow: 'hidden',
-    },
-    miniTodayHeader: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      top: 0,
-      bottom: 0,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
     topSectionCloseButton: {
       width: 44,
       height: 44,
@@ -656,19 +655,6 @@ const createStyles = (
     topSectionSelectAllButton: {
       marginLeft: 'auto',
       alignSelf: 'center',
-    },
-    topSectionRow: {
-      position: 'absolute',
-      top: insets.top,
-      left: 0,
-      right: 0,
-      height: 48,
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: Paddings.screen,
-    },
-    miniTodayHeaderText: {
-      ...typography.getTextStyle('heading-3'),
     },
     loadingText: {
       ...typography.getTextStyle('body-large'),

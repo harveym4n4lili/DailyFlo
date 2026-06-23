@@ -38,7 +38,12 @@ import { useHabitIncrementPress } from '@/hooks/useHabitIncrementPress';
 import { HabitHeatmap } from './HabitHeatmap';
 import { HabitProgressBar } from '../list/HabitProgressBar';
 import { HabitProgressRing } from '../list/HabitProgressRing';
+import { HabitProgressScoreLabel } from '../list/HabitProgressScoreLabel';
 import { getHabitIncrementDisplay } from '../list/habitIncrementDisplay';
+import {
+  formatHabitProgressAccessibilityLabel,
+  resolveHabitProgressLabelVariant,
+} from '../list/habitProgressLabel';
 import { getHabitProgressRingColors } from '../list/habitProgressRingColors';
 import {
   HABIT_DETAIL_INCREMENT_COLOR_BADGE_ICON_SIZE,
@@ -208,28 +213,11 @@ export function HabitDetailScreenContent({
     return match?.name ?? 'Habits';
   }, [values.listId, reduxLists]);
 
-  // merge today's list row with detail record so increment + heatmap stay in sync on this screen
-  const todayRow: HabitTodayItem | null = useMemo(() => {
-    const fromToday = todayHabits.find((h) => h.id === habitId);
-    if (fromToday) return fromToday;
-    if (!detailHabit) return null;
-    return {
-      id: detailHabit.id,
-      title: detailHabit.title,
-      iconKey: detailHabit.iconKey,
-      color: detailHabit.color,
-      trackingType: detailHabit.trackingType,
-      targetValue: detailHabit.targetValue,
-      loggedValue: 0,
-      unitLabel: detailHabit.unitLabel,
-      isCompleteToday: false,
-      currentStreak: detailStats?.currentStreak ?? 0,
-      longestStreak: detailStats?.longestStreak ?? 0,
-      frequencyType: detailHabit.frequencyType,
-      reminderTime: detailHabit.reminderTime ?? '',
-      heatmap: detailStats?.heatmap ?? { startDate: '', days: 365, completedDates: [], dayScores: {} },
-    };
-  }, [todayHabits, habitId, detailHabit, detailStats]);
+  // only use today's API row — habits not due today have no increment/progress block on detail
+  const todayRow: HabitTodayItem | null = useMemo(
+    () => todayHabits.find((h) => h.id === habitId) ?? null,
+    [todayHabits, habitId],
+  );
 
   const heatmapBase = detailStats?.heatmap;
   const { handleIncrement, displayHabit } = useHabitIncrementPress(todayRow ?? undefined, {
@@ -247,6 +235,9 @@ export function HabitDetailScreenContent({
       ? incrementDisplay.current / incrementDisplay.target
       : 0;
   const showTodayProgress = Boolean(todayRow && incrementDisplay);
+  const progressLabelVariant = resolveHabitProgressLabelVariant({
+    isTodayInteractive: showTodayProgress,
+  });
 
   const handleAdvancedEdit = useCallback(() => {
     onClose();
@@ -321,14 +312,21 @@ export function HabitDetailScreenContent({
 
   const incrementAccessibilityLabel =
     showTodayProgress && incrementDisplay
-      ? displayHabit!.isCompleteToday
-        ? `Today's progress ${incrementDisplay.current} of ${incrementDisplay.target}. Tap to reset.`
-        : `Today's progress ${incrementDisplay.current} of ${incrementDisplay.target}. Tap to add one.`
+      ? formatHabitProgressAccessibilityLabel(
+          progressLabelVariant,
+          incrementDisplay.current,
+          incrementDisplay.target,
+          displayHabit!.isCompleteToday ? 'tap-reset' : 'tap-add',
+        )
       : undefined;
 
   const titleRingAccessibilityLabel =
     showTodayProgress && incrementDisplay
-      ? `Today's progress ${incrementDisplay.current} of ${incrementDisplay.target}`
+      ? formatHabitProgressAccessibilityLabel(
+          progressLabelVariant,
+          incrementDisplay.current,
+          incrementDisplay.target,
+        )
       : undefined;
 
   // drag pill sizing — same as TaskScreenContent / ModalHeader
@@ -469,14 +467,11 @@ export function HabitDetailScreenContent({
 
         {showTodayProgress && incrementDisplay ? (
           <View style={[styles.todayProgressSection, styles.sectionBreak]}>
-            <Text style={styles.todayScore}>
-              <Text style={[styles.todayScore, { color: themeColors.text.tertiary() }]}>
-                Today&apos;s progress:{' '}
-              </Text>
-              <Text style={[styles.todayScore, { color: themeColors.text.secondary() }]}>
-                {incrementDisplay.scoreLabel}
-              </Text>
-            </Text>
+            <HabitProgressScoreLabel
+              variant={progressLabelVariant}
+              scoreLabel={incrementDisplay.scoreLabel}
+              textStyle={styles.todayScore}
+            />
             <View style={styles.progressRow}>
               <View style={styles.progressBarWrap}>
                 <HabitProgressBar

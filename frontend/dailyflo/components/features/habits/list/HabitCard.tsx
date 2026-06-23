@@ -32,8 +32,13 @@ import { HabitHeatmap } from '../detail/HabitHeatmap';
 import { HabitAnimatedTitle } from './HabitAnimatedTitle';
 import { HabitProgressRing } from './HabitProgressRing';
 import { HabitProgressBar } from './HabitProgressBar';
+import { HabitProgressScoreLabel } from './HabitProgressScoreLabel';
 import { HabitCardVariantToggle } from './HabitCardVariantToggle';
-import { getHabitIncrementDisplay } from './habitIncrementDisplay';
+import { getHabitIncrementDisplay, type HabitIncrementDisplay } from './habitIncrementDisplay';
+import {
+  formatHabitProgressAccessibilityLabel,
+  resolveHabitProgressLabelVariant,
+} from './habitProgressLabel';
 import { getHabitProgressRingColors } from './habitProgressRingColors';
 import {
   HABIT_CARD_PLUS_ICON_SIZE,
@@ -71,6 +76,10 @@ export type HabitCardProps = {
   showVariantToggle?: boolean;
   /** when set, renders today's log controls in the header */
   habit?: HabitTodayItem;
+  /** planner/today non-today days — show ring + bar without increment */
+  readOnlyDayProgress?: HabitIncrementDisplay;
+  /** past/future calendar day — completions label, neutral ring/bar, no title strike */
+  isHistoricalDay?: boolean;
   onPress?: () => void;
 };
 
@@ -82,6 +91,8 @@ export function HabitCard({
   defaultVariant = 'heatmap',
   showVariantToggle = true,
   habit,
+  readOnlyDayProgress,
+  isHistoricalDay = false,
   onPress,
 }: HabitCardProps) {
   const themeColors = useThemeColors();
@@ -109,12 +120,28 @@ export function HabitCard({
   const { handleIncrement, displayHabit } = useHabitIncrementPress(habit, { heatmapBase: heatmap });
 
   const incrementDisplay = displayHabit ? getHabitIncrementDisplay(displayHabit) : null;
+  const readOnlyDisplay = readOnlyDayProgress ?? null;
+  const activeProgressDisplay = incrementDisplay ?? readOnlyDisplay;
   const heatmapToShow = displayHabit?.heatmap ?? heatmap;
   const showTodayActions = Boolean(habit && incrementDisplay);
+  const progressLabelVariant = resolveHabitProgressLabelVariant({
+    isTodayInteractive: showTodayActions,
+    isHistoricalDay,
+  });
+  // historical days still show the decorative ring slot but never fill arc or strike title
+  const showHistoricalRing = Boolean(isHistoricalDay && readOnlyDisplay);
+  const showReadOnlyRing = Boolean(!habit && readOnlyDisplay && !isHistoricalDay);
+  const showDecorativeRing = showHistoricalRing || showReadOnlyRing;
   const progressRatio =
-    incrementDisplay && incrementDisplay.target > 0
-      ? incrementDisplay.current / incrementDisplay.target
-      : 0;
+    showHistoricalRing
+      ? 0
+      : activeProgressDisplay && activeProgressDisplay.target > 0
+        ? activeProgressDisplay.current / activeProgressDisplay.target
+        : 0;
+  const progressComplete =
+    !isHistoricalDay &&
+    activeProgressDisplay != null &&
+    activeProgressDisplay.current >= activeProgressDisplay.target;
   const isHeatmapForm = variant === 'heatmap';
   const isHeatmapBody = bodyVariant === 'heatmap';
 
@@ -208,9 +235,12 @@ export function HabitCard({
 
   const incrementAccessibilityLabel =
     showTodayActions && incrementDisplay
-      ? displayHabit!.isCompleteToday
-        ? `Today's progress ${incrementDisplay.current} of ${incrementDisplay.target}. Tap to reset.`
-        : `Today's progress ${incrementDisplay.current} of ${incrementDisplay.target}. Tap to add one.`
+      ? formatHabitProgressAccessibilityLabel(
+          progressLabelVariant,
+          incrementDisplay.current,
+          incrementDisplay.target,
+          displayHabit!.isCompleteToday ? 'tap-reset' : 'tap-add',
+        )
       : undefined;
 
   const incrementControl =
@@ -241,6 +271,24 @@ export function HabitCard({
           showRing={isHeatmapForm}
         />
       </View>
+    ) : showDecorativeRing && readOnlyDisplay ? (
+      <View style={styles.actionSlotWrap} pointerEvents="none">
+        <HabitProgressRing
+          style={styles.actionSlot}
+          current={showHistoricalRing ? 0 : readOnlyDisplay.current}
+          target={readOnlyDisplay.target}
+          isComplete={showHistoricalRing ? false : progressComplete}
+          color={ringColors.progress}
+          trackColor={ringColors.track}
+          iconColor={ringColors.icon}
+          size={HABIT_CARD_RING_SIZE}
+          strokeWidth={HABIT_CARD_RING_STROKE_WIDTH}
+          showCenterLabel={false}
+          showCenterPlus={false}
+          showCenterDash={showHistoricalRing}
+          showRing
+        />
+      </View>
     ) : (
       <View style={styles.streakCounter} accessibilityLabel={`${currentStreak} day streak`}>
         <Text style={[styles.streakNumber, { color: streakCountColor }]}>{streakNumberLabel}</Text>
@@ -254,20 +302,17 @@ export function HabitCard({
         <View style={styles.titleBlock}>
           <HabitAnimatedTitle
             title={title}
-            isComplete={Boolean(displayHabit?.isCompleteToday)}
+            isComplete={Boolean(displayHabit?.isCompleteToday ?? (progressComplete && !isHistoricalDay))}
             titleColor={titleColor}
             textStyle={styles.title}
             numberOfLines={2}
           />
-          {incrementDisplay ? (
-            <Text style={styles.todayScore}>
-              <Text style={[styles.todayScore, { color: themeColors.text.tertiary() }]}>
-                Today&apos;s progress:{' '}
-              </Text>
-              <Text style={[styles.todayScore, { color: themeColors.text.secondary() }]}>
-                {incrementDisplay.scoreLabel}
-              </Text>
-            </Text>
+          {activeProgressDisplay ? (
+            <HabitProgressScoreLabel
+              variant={progressLabelVariant}
+              scoreLabel={activeProgressDisplay.scoreLabel}
+              textStyle={styles.todayScore}
+            />
           ) : null}
         </View>
 
