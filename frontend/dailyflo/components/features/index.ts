@@ -11,6 +11,7 @@ export * from './onboarding';
 export * from './activity-log';
 export * from './gamification';
 export * from './habits';
+export * from './ai';
 
 
 

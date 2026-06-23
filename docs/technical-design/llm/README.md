@@ -36,7 +36,7 @@ Each lesson ends with **Check yourself** questions and links to DailyFlo files.
 
 Nothing is auto-deleted or auto-created without your confirmation.
 
----
+--- 
 
 ## Doc map
 
@@ -63,10 +63,10 @@ Nothing is auto-deleted or auto-created without your confirmation.
 
 | Area | Today | After v1 |
 |------|-------|----------|
-| AI tab UI | Chat composer only; send clears input | Chat history + proposal cards |
-| `services/api/llm.ts` | Exported in index but **file missing** | Calls `POST /llm/assistant/` |
-| Django | No LLM routes | `apps/llm` proxies provider |
-| Task changes from AI | N/A | User confirms → existing Redux thunks |
+| AI tab UI | Chat + proposals + Confirm/Dismiss wired | Polish forms (date pickers, list picker) |
+| `services/api/llm.ts` | Calls `POST /llm/assistant/` | — |
+| Django `apps/llm` | Gemini proxy at `/llm/assistant/` | Prompt tuning as you test |
+| Task changes from AI | User confirms → Redux `createTask` / `updateTask` / `deleteTask` | — |
 
 ---
 

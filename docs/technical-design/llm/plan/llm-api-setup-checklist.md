@@ -24,13 +24,13 @@ The mobile app talks to **Django**. Django talks to the **LLM provider**. You ne
 
 Pick **one** hosted API for the prototype. The backend will use a single abstraction; you swap providers via env vars.
 
+**Recommendation for DailyFlo:** Google **Gemini** (`gemini-2.5-flash`) — configured in backend settings; get a free-tier key from [Google AI Studio](https://aistudio.google.com/apikey).
+
 | Provider | Typical env vars | Notes |
 |----------|------------------|-------|
-| **OpenAI** | `OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4o-mini` | Good structured JSON; cheap mini model for dev |
-| **Anthropic** | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL=claude-3-5-haiku-latest` | Strong instruction following |
-| **Google Gemini** | `GOOGLE_AI_API_KEY`, `GEMINI_MODEL=gemini-2.0-flash` | Alternative if you already use Google Cloud |
-
-**Recommendation for first integration:** OpenAI `gpt-4o-mini` — low cost, widely documented JSON mode.
+| **Google Gemini** | `GOOGLE_AI_API_KEY`, `GEMINI_MODEL=gemini-2.5-flash` | **Default for this project** |
+| **OpenAI** | `OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4o-mini` | Supported later via provider switch |
+| **Anthropic** | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL=claude-3-5-haiku-latest` | Supported later via provider switch |
 
 ### What to do
 
@@ -45,6 +45,20 @@ Pick **one** hosted API for the prototype. The backend will use a single abstrac
 
 **File:** `backend/dailyflo/.env` (gitignored — create if missing)
 
+### Example (Gemini — DailyFlo default)
+
+```env
+# --- LLM (prototype) — get key at https://aistudio.google.com/apikey ---
+LLM_PROVIDER=gemini
+GOOGLE_AI_API_KEY=your-gemini-api-key-here
+GEMINI_MODEL=gemini-2.5-flash
+
+# Safety caps (optional but recommended)
+LLM_MAX_INPUT_CHARS=4000
+LLM_MAX_TOKENS=4096
+LLM_REQUEST_TIMEOUT_SECONDS=30
+```
+
 ### Example (OpenAI)
 
 ```env
@@ -55,7 +69,7 @@ OPENAI_MODEL=gpt-4o-mini
 
 # Safety caps (optional but recommended)
 LLM_MAX_INPUT_CHARS=4000
-LLM_MAX_TOKENS=1024
+LLM_MAX_TOKENS=4096
 LLM_REQUEST_TIMEOUT_SECONDS=30
 ```
 
@@ -66,7 +80,7 @@ LLM_PROVIDER=anthropic
 ANTHROPIC_API_KEY=sk-ant-your-key-here
 ANTHROPIC_MODEL=claude-3-5-haiku-latest
 LLM_MAX_INPUT_CHARS=4000
-LLM_MAX_TOKENS=1024
+LLM_MAX_TOKENS=4096
 LLM_REQUEST_TIMEOUT_SECONDS=30
 ```
 
@@ -141,13 +155,24 @@ The LLM endpoint requires the same login as tasks.
 
 ### Option B — curl login (email/password)
 
+**Windows PowerShell** — use `curl.exe` (not `curl` alias). JSON body in **single quotes**, no `\"` backslashes.
+
+```powershell
+# replace YOUR_EMAIL and YOUR_PASSWORD (username = email in DailyFlo)
+curl.exe -X POST http://localhost:8000/accounts/auth/login/ `
+  -H "Content-Type: application/json" `
+  -d '{"username":"YOUR_EMAIL","password":"YOUR_PASSWORD"}'
+```
+
+**macOS / Linux / Git Bash:**
+
 ```bash
 curl -X POST http://localhost:8000/accounts/auth/login/ \
   -H "Content-Type: application/json" \
-  -d "{\"username\": \"your@email.com\", \"password\": \"yourpassword\"}"
+  -d '{"username":"aitest@gmail.con","password":"123password123"}'
 ```
 
-Response includes `access` and `refresh`. Copy `access`.
+Response includes `access` and `refresh`. Copy the full **`access`** string for Step 6.
 
 **Checklist:**
 
@@ -158,13 +183,37 @@ Response includes `access` and `refresh`. Copy `access`.
 
 ## Step 6 — Test the LLM endpoint (after backend is implemented)
 
-Once `POST /llm/assistant/` exists:
+Once `POST /llm/assistant/` exists, test with **curl**.
+
+### Windows PowerShell
+
+**1.** Paste your `access` token from Step 5 on line 1 only.  
+**2.** Run both lines. Use **`curl.exe`** and keep `-d '...'` exactly as shown (no `\` in the JSON).
+
+```powershell
+$token = "PASTE_ACCESS_TOKEN_HERE"
+
+curl.exe -X POST http://localhost:8000/llm/assistant/ `
+  -H "Content-Type: application/json" `
+  -H "Authorization: Bearer $token" `
+  -d '{"messages":[{"role":"user","content":"Create a task to call the dentist tomorrow"}]}'
+```
+
+**One-line version** (after `$token` is set):
+
+```powershell
+curl.exe -X POST http://localhost:8000/llm/assistant/ -H "Content-Type: application/json" -H "Authorization: Bearer $token" -d '{"messages":[{"role":"user","content":"Create a task to call the dentist tomorrow"}]}'
+```
+
+### macOS / Linux / Git Bash
 
 ```bash
+TOKEN="PASTE_ACCESS_TOKEN_HERE"
+
 curl -X POST http://localhost:8000/llm/assistant/ \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"messages\":[{\"role\":\"user\",\"content\":\"Create a task to call the dentist tomorrow\"}]}"
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"messages":[{"role":"user","content":"Create a task to call the dentist tomorrow"}]}'
 ```
 
 **Expected success:**
@@ -211,7 +260,7 @@ You should see your task list JSON. Confirmed AI proposals will use the same `/t
 |---------|--------------|-----|
 | App can’t reach API | Wrong IP or firewall | Match `EXPO_PUBLIC_API_URL`; allow port 8000 on Windows Firewall |
 | `401` on all requests | Expired access token | Log in again or refresh token |
-| `503` from `/llm/assistant/` | Bad/missing provider key | Check `backend/dailyflo/.env` and restart Django |
+| `503` from `/llm/assistant/` | Bad/missing provider key, or **deprecated model name** | Check `.env`; use `GEMINI_MODEL=gemini-2.5-flash` (2.0 shut down June 2026); restart Django |
 | Empty `proposals` | Model replied with chat only | Normal for general questions; try explicit “create a task…” |
 | Import error for `llm` service | `llm.ts` not created yet | Expected until frontend Phase 2 in implementation plan |
 

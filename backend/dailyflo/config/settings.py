@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'apps.lists',
     'apps.gamification',
     'apps.habits.apps.HabitsConfig',
+    'apps.llm.apps.LlmConfig',
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
@@ -173,6 +174,16 @@ GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 APPLE_TEAM_ID = os.environ.get('APPLE_TEAM_ID')
 APPLE_CLIENT_ID = os.environ.get('APPLE_CLIENT_ID')
 APPLE_KEY_ID = os.environ.get('APPLE_KEY_ID')
+
+# llm assistant — gemini proxy (server-only key; never expose to expo client)
+# get a key at https://aistudio.google.com/apikey
+LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'gemini')
+GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY')
+# gemini-2.0-flash shut down 2026-06-01 — use 2.5+ (override via GEMINI_MODEL in .env)
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
+LLM_MAX_INPUT_CHARS = int(os.environ.get('LLM_MAX_INPUT_CHARS', '4000'))
+LLM_MAX_TOKENS = int(os.environ.get('LLM_MAX_TOKENS', '4096'))
+LLM_REQUEST_TIMEOUT_SECONDS = int(os.environ.get('LLM_REQUEST_TIMEOUT_SECONDS', '30'))
 
 # CORS Configuration - allows mobile app (expo go) to access django api
 # cors (cross-origin resource sharing) lets your phone make requests to django server
