@@ -135,6 +135,8 @@ export function InboxTaskListContent({
 
   useFocusEffect(
     useCallback(() => {
+      // sync shared cache first so ios select → back shows removals immediately (index keeps its own state)
+      setInboxTasks(getCachedInboxTasks());
       void loadInbox();
     }, [loadInbox])
   );

@@ -43,6 +43,7 @@ export function SelectionActionsBar(props: SelectionActionsBarProps) {
   if (
     Platform.OS === 'ios' &&
     (pathname.includes('/today/select') ||
+      pathname.includes('/inbox/select') ||
       pathname.includes('/planner/select') ||
       pathname.includes('/browse/task-select') ||
       pathname.includes('/date-select'))
