@@ -1,141 +1,74 @@
-# LLM Integration Planning Document
+# LLM Integration — Overview
 
-## Overview
+> **New to LLM integration?** Start with the [learning guide](./guide/README.md) — six lessons that teach how to integrate an LLM into any project, using DailyFlo as the worked example.
 
-This document is the technical design plan for adding **LLM-assisted features** to DailyFlo (e.g. task suggestions, goal breakdown, copy helpers). The app **does not** train a foundation model; it **calls an existing model** through the Django backend so API keys stay off the device and behaviour stays consistent.
+> **DailyFlo doc index:** [LLM README](./README.md) — feature overview, doc map, and build checklist.
 
-### Current State
-
-- **Frontend**: No LLM flows; tasks/auth follow Redux → API service → Django.
-- **Backend**: No LLM endpoints or provider integration.
-- **Secrets**: Pattern to follow: same as existing API auth (tokens server-side only).
-
-### Target State
-
-- **Frontend**: Feature screens call **only** DailyFlo Django endpoints; loading/error UX; output treated as untrusted text until validated.
-- **Backend**: Authenticated routes proxy to a **single provider abstraction** (hosted API or self-hosted model [TBD]); timeouts, token limits, and minimal logging.
-- **Data flow**: UI → Redux/thunk or hook → `llm` API service → Django → provider → JSON/text response → UI.
-
-### Key Concepts (first-time LLM integration)
-
-- **Provider**: The service that runs the model (e.g. hosted API). The app talks to **Django**, not to the provider directly.
-- **Prompt**: System instructions + user text/context sent in one request; keep context small and intentional.
-- **Tokens**: Billing and length units; cap `max_tokens` and input size to control cost and latency.
+This file is a **short overview**. Teaching content lives in `guide/`; implementation detail lives in `plan/` and `design/`.
 
 ---
 
-## Integration Architecture
+## What we’re building
 
-### Data Flow Diagram
+An **LLM-assisted task assistant** on the AI tab. Users chat in natural language; the model **proposes** create, update, or delete actions. The user **reviews, edits, and confirms** each proposal before Redux runs the same task CRUD the rest of the app uses.
 
-```
-User action (Expo UI)
-    ↓
-API service method (e.g. services/api/llm.ts) + auth header
-    ↓
-POST /api/.../llm/...  (Django, JWT/session as today)
-    ↓
-Auth + rate limit + validate payload
-    ↓
-Provider client (server-only API key)
-    ↓
-LLM provider
-    ↓
-Normalised response { text | structured JSON } + error mapping
-    ↓
-Redux / local state → UI
-```
-
-### Component Responsibilities
-
-- **UI**: Collect input, show loading/errors, display model output; no provider URLs or keys.
-- **API service**: Typed requests to Django LLM routes; maps errors to user-safe messages.
-- **Django views**: Auth, validation, prompt assembly, call provider, return stable JSON schema.
-- **Provider module**: One place for SDK/HTTP calls, retries policy [TBD], timeouts.
+We do **not** train a model. We call a hosted provider through Django so API keys stay off the device.
 
 ---
 
-## Backend Design (Django)
+## Doc map
 
-| Item | Decision / template |
-|------|---------------------|
-| **Base path** | `[TBD]` e.g. `/api/v1/llm/` |
-| **Endpoints** | `[TBD]` e.g. `POST .../suggest-tasks/` — one route per product feature or one generic route with `feature` key |
-| **Request body** | `{ "input": string, "context"?: object }` — shape fixed per endpoint |
-| **Response body** | `{ "result": string \| object, "meta"?: { "model"?: string } }` |
-| **Auth** | Same as existing API: require authenticated user |
-| **Limits** | `[TBD]` max input chars, `max_tokens`, request timeout (e.g. 30s) |
-| **Rate limiting** | `[TBD]` per user/day or per IP |
-
-**Environment**: Provider API key in Django settings / secrets manager — never committed.
+| Document | Purpose |
+|----------|---------|
+| [guide/README.md](./guide/README.md) | **Learn** — how to integrate an LLM (lessons 1–6) |
+| [README.md](./README.md) | DailyFlo entry point, decisions, current vs target |
+| [llm-architecture.md](./llm-architecture.md) | Data flow, API contract, file layout |
+| [plan/llm-api-setup-checklist.md](./plan/llm-api-setup-checklist.md) | **Your** env setup: provider key, `.env`, curl tests |
+| [plan/llm-assistant-implementation.md](./plan/llm-assistant-implementation.md) | Build order: backend → service → hook → UI |
+| [design/proposal-confirmation-ui.md](./design/proposal-confirmation-ui.md) | Proposal cards, Confirm/Dismiss, forms |
 
 ---
 
-## Frontend Design (Expo)
+## Current state
 
-| Item | Decision / template |
-|------|---------------------|
-| **Service file** | `[TBD]` e.g. `services/api/llm.ts` |
-| **State** | Feature-local state or small slice [TBD]; avoid bloating global store until multiple features exist |
-| **UX** | Spinner, retry on transient failure, empty states |
+- **Frontend:** AI tab shell with composer ([`app/(tabs)/ai/index.tsx`](../../../frontend/dailyflo/app/(tabs)/ai/index.tsx)); send clears input only. `llmApiService` exported but [`llm.ts`](../../../frontend/dailyflo/services/api/llm.ts) not implemented.
+- **Backend:** No LLM app or routes.
+- **Tasks:** Full CRUD via Redux + Django — reused after user confirms proposals.
 
 ---
 
-## Security & Privacy
+## Target state (v1)
 
-- No provider credentials in the client bundle or repo.
-- Log request ids and errors; avoid logging full user prompts in production unless required [TBD].
-- Data sent to provider is subject to provider policy — document in privacy copy when feature ships.
-
----
-
-## Cost & Observability
-
-- **Cost**: Estimate from expected daily active users × calls × tokens [TBD].
-- **Metrics** [optional v1]: count requests, latency, error rate server-side.
+- **Endpoint:** `POST /llm/assistant/` (JWT auth)
+- **Response:** `{ reply, proposals[], meta }` with structured create/update/delete payloads
+- **UX:** Chat + editable proposal cards + Confirm → `createTask` / `updateTask` / `deleteTask`
+- **Secrets:** Provider key in `backend/dailyflo/.env` only
 
 ---
 
-## Out of Scope (this plan)
+## Key concepts
 
-- Training or fine-tuning a custom base model inside DailyFlo’s repo.
-- On-device large models (revisit if product requires offline-first AI).
-
----
-
-## Implementation Phases
-
-### Phase 1 — Foundation
-
-**Purpose**: Backend can call provider for one feature behind auth.
-
-**Files / areas** [TBD]: Django app or module for LLM, settings for secret key, one endpoint, one provider implementation.
-
-**Testing**: Manual call with token; invalid auth rejected; timeout handled.
+| Term | Meaning |
+|------|---------|
+| **Provider** | OpenAI, Anthropic, etc. — Django calls it; the app does not. |
+| **Proposal** | Suggested action JSON — not executed until Confirm. |
+| **API service** | `services/api/llm.ts` — HTTP to Django (like `tasks.ts`). |
+| **Hook** | `useAiAssistant` — chat + proposal state on the AI tab. |
 
 ---
 
-### Phase 2 — First feature in the app
+## Out of scope (v1)
 
-**Purpose**: One screen uses the new service end-to-end.
-
-**Files / areas** [TBD]: `services/api/llm.ts`, screen + hook/thunk, strings/error handling.
-
-**Testing**: Happy path, empty input, offline/network error.
+- Custom model training or on-device LLMs
+- Auto-executing task changes without confirmation
+- Streaming responses (optional later)
 
 ---
 
-### Phase 3 — Hardening [optional]
+## Open questions (defer until after prototype)
 
-**Purpose**: Rate limits, structured output validation, analytics.
-
----
-
-## Open Questions
-
-| Topic | Options / notes |
-|-------|-----------------|
-| Provider | Hosted API vs self-hosted open weights |
-| Features v1 | Which single user-facing feature ships first |
-| Output format | Plain text vs JSON schema for structured tasks |
-| Rate limits | Per user vs global |
+| Topic | Notes |
+|-------|-------|
+| Provider | Env-switchable; pick one for dev (see setup checklist) |
+| Rate limits | Optional Phase 7 |
+| Conversation persistence | Optional later |
