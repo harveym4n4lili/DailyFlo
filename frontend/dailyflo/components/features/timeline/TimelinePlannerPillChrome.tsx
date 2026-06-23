@@ -38,9 +38,18 @@ export type TimelinePlannerPillChromeProps = {
   pillBar: React.ReactNode;
   /** receives fixed spacer height so scroll content starts below anchored pills */
   children: (scrollTopSpacerHeight: number) => React.ReactNode;
+  /** pin pills below a fixed screen header (today blur strip) instead of y=0 */
+  pillBarTopInset?: number;
+  /** scroll padding already applied outside the pill spacer (e.g. safe area via scrollPastTopInset) */
+  scrollContentInsetTop?: number;
 };
 
-export function TimelinePlannerPillChrome({ children, pillBar }: TimelinePlannerPillChromeProps) {
+export function TimelinePlannerPillChrome({
+  children,
+  pillBar,
+  pillBarTopInset = 0,
+  scrollContentInsetTop = 0,
+}: TimelinePlannerPillChromeProps) {
   const themeColors = useThemeColors();
   const fadeBase = themeColors.background.primary();
   const [pillBarHeight, setPillBarHeight] = useState(0);
@@ -52,10 +61,14 @@ export function TimelinePlannerPillChrome({ children, pillBar }: TimelinePlanner
     }
   }, []);
 
-  const scrollTopSpacerHeight =
+  const baseScrollTopSpacerHeight =
     pillBarHeight > 0
       ? resolveScrollTopSpacer(pillBarHeight)
       : PLANNER_PILL_SCROLL_TOP_SPACER_FALLBACK;
+
+  // when pills sit below a header, extend scroll spacer so content clears the pill row
+  const scrollTopSpacerHeight =
+    baseScrollTopSpacerHeight + Math.max(0, pillBarTopInset - scrollContentInsetTop);
 
   const chromeHeight =
     pillBarHeight > 0 ? Math.max(pillBarHeight, PLANNER_PILL_ROW_MIN_HEIGHT) : PLANNER_PILL_ROW_MIN_HEIGHT;
@@ -63,7 +76,10 @@ export function TimelinePlannerPillChrome({ children, pillBar }: TimelinePlanner
   return (
     <View style={styles.root}>
       <View style={styles.content}>{children(scrollTopSpacerHeight)}</View>
-      <View style={[styles.chromeWrap, { height: chromeHeight }]} pointerEvents="box-none">
+      <View
+        style={[styles.chromeWrap, { top: pillBarTopInset, height: chromeHeight }]}
+        pointerEvents="box-none"
+      >
         <View style={styles.chromeFade} pointerEvents="none">
           <BlurView
             tint={themeColors.isDark ? 'dark' : 'light'}

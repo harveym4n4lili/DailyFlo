@@ -8,6 +8,10 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { HabitAnimatedTitle } from './HabitAnimatedTitle';
 import { HabitProgressRing } from './HabitProgressRing';
 import { getHabitIncrementDisplay } from './habitIncrementDisplay';
+import {
+  formatHabitProgressInlineLabel,
+  resolveHabitProgressLabelVariant,
+} from './habitProgressLabel';
 import { getHabitProgressRingColors } from './habitProgressRingColors';
 import { useHabitIncrementPress } from '@/hooks/useHabitIncrementPress';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -42,8 +46,9 @@ export function HabitListItem({ habit, compact = false, onOpenDetail }: HabitLis
     [displayHabit],
   );
 
+  const progressLabelVariant = resolveHabitProgressLabelVariant({ isTodayInteractive: true });
   const progressLabel = incrementDisplay
-    ? `Today's progress: ${incrementDisplay.scoreLabel}`
+    ? formatHabitProgressInlineLabel(progressLabelVariant, incrementDisplay.scoreLabel)
     : null;
 
   return (

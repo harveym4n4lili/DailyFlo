@@ -68,6 +68,8 @@ type HabitProgressRingProps = {
   showCenterLabel?: boolean;
   /** plus icon in the ring center (used when score is shown outside the ring) */
   showCenterPlus?: boolean;
+  /** neutral dash in the center — past calendar days (no increment, no arc fill) */
+  showCenterDash?: boolean;
   /** when false, hides the arc/track svg — simplified card keeps the increment icon slot only */
   showRing?: boolean;
   /** optional overrides — HabitCard passes tokens from habitCardUiTokens.ts */
@@ -117,6 +119,7 @@ export function HabitProgressRing({
   fillContainer = false,
   showCenterLabel = true,
   showCenterPlus = false,
+  showCenterDash = false,
   showRing = true,
   strokeWidth: strokeWidthOverride,
   plusIconSize: plusIconSizeOverride,
@@ -312,8 +315,13 @@ export function HabitProgressRing({
           fontWeight: '600',
           fontVariant: ['tabular-nums'],
         },
+        centerDash: {
+          width: Math.max(8, Math.round(resolvedSize * 0.28)),
+          height: Math.max(2, Math.round(plusStrokeWidth * 0.85)),
+          borderRadius: 1,
+        },
       }),
-    [fillContainer, resolvedSize, themeColors, typography],
+    [fillContainer, plusStrokeWidth, resolvedSize, themeColors, typography],
   );
 
   const dashArray = `${circumference} ${circumference}`;
@@ -367,6 +375,11 @@ export function HabitProgressRing({
         </Animated.View>
       ) : null}
       {showCenterLabel ? <Text style={styles.label}>{label}</Text> : null}
+      {showCenterDash ? (
+        <View style={styles.iconStack} pointerEvents="none">
+          <View style={[styles.centerDash, { backgroundColor: resolvedIconColor }]} />
+        </View>
+      ) : null}
       {showCenterPlus ? (
         <View style={styles.iconStack} pointerEvents="none">
           <Animated.View style={[styles.iconLayer, plusIconStyle]}>

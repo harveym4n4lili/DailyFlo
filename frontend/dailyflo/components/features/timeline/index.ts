@@ -6,9 +6,17 @@
 
 export { default as TimelineView } from './TimelineView';
 export { DayTimelineWithAllDayFooter } from './DayTimelineWithAllDayFooter';
-export type { DayTimelineWithAllDayFooterProps } from './DayTimelineWithAllDayFooter';
+export type {
+  DayTimelineWithAllDayFooterProps,
+  DayTimelineSegment,
+  DayTimelineHabitsSegment,
+} from './DayTimelineWithAllDayFooter';
 export { TimelineAllDayPill } from './TimelineAllDayPill';
 export type { TimelineAllDayPillProps } from './TimelineAllDayPill';
+export { DaySegmentPillBar } from './DaySegmentPillBar';
+export type { DaySegmentPill } from './DaySegmentPillBar';
+export { DayListSegmentChrome } from './DayListSegmentChrome';
+export type { DayListSegment } from './DayListSegmentChrome';
 export {
   TimelinePlannerPillChrome,
   PLANNER_PILL_ROW_MIN_HEIGHT,
