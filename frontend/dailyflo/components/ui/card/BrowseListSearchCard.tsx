@@ -1,11 +1,13 @@
 /**
  * browse search result row for a user list — mirrors TaskCard chrome (same padding, row structure, solid rule)
  * leaf sits in the same box as TaskCardCheckbox; title row matches TaskCardContent with “List” instead of time range.
+ * list-select reuses this card with metaText + isSelected + tray icon for Inbox/Habits bucket.
  */
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { LeafIcon } from '@/components/ui/Icon';
+import { LeafIcon, SFSymbolIcon } from '@/components/ui/Icon';
 import { SolidSeparator } from '@/components/ui/borders';
 import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/Button';
 import { useThemeColors } from '@/hooks/useColorPalette';
@@ -20,6 +22,14 @@ export type BrowseListSearchCardProps = {
   isLastItem?: boolean;
   separatorPaddingHorizontal?: number;
   cardSpacing?: number;
+  /** list-select: tasks · habits subtitle under the title */
+  metaText?: string;
+  /** list-select: highlight picked row */
+  isSelected?: boolean;
+  /** override trailing label — defaults to "List" in browse, "Selected" when isSelected in list-select */
+  rightLabel?: string;
+  /** leaf = user list row; tray = Inbox / default Habits bucket */
+  leadingIcon?: 'leaf' | 'tray';
 };
 
 export function BrowseListSearchCard({
@@ -28,6 +38,10 @@ export function BrowseListSearchCard({
   isLastItem = true,
   separatorPaddingHorizontal = 0,
   cardSpacing = 0,
+  metaText,
+  isSelected = false,
+  rightLabel,
+  leadingIcon = 'leaf',
 }: BrowseListSearchCardProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -38,21 +52,36 @@ export function BrowseListSearchCard({
     onPress();
   };
 
+  const trailingLabel = rightLabel ?? (isSelected ? 'Selected' : 'List');
+  const trailingColor = isSelected ? themeColors.text.secondary() : themeColors.text.tertiary();
+  const iconColor = themeColors.text.tertiary();
+
+  const leadingNode =
+    leadingIcon === 'tray' ? (
+      <SFSymbolIcon
+        name="tray.fill"
+        size={LEAF_IN_CHECKBOX_SLOT}
+        color={iconColor}
+        fallback={<Ionicons name="file-tray" size={LEAF_IN_CHECKBOX_SLOT} color={iconColor} />}
+      />
+    ) : (
+      <LeafIcon size={LEAF_IN_CHECKBOX_SLOT} color={iconColor} />
+    );
+
   return (
     <View style={styles.cardContainer}>
       <View style={[styles.card, styles.transparentBackground, styles.noInnerPadding]}>
         <View style={styles.contentRow}>
-          {/* same footprint as TaskCardCheckbox — leaf instead of checkbox */}
-          <View style={styles.leafSlot}>
-            <LeafIcon size={LEAF_IN_CHECKBOX_SLOT} color={themeColors.text.tertiary()} />
-          </View>
+          <View style={[styles.leafSlot, metaText ? styles.leafSlotWithMeta : null]}>{leadingNode}</View>
 
           <TouchableOpacity
             style={styles.cardContentTouchable}
             onPress={handlePress}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={`${name}, list`}
+            accessibilityLabel={
+              metaText ? `${name}, ${metaText}${isSelected ? ', selected' : ''}` : `${name}, list`
+            }
           >
             <View style={styles.contentColumn}>
               <View style={styles.content}>
@@ -65,13 +94,22 @@ export function BrowseListSearchCard({
                     </View>
                   </View>
                   <Text
-                    style={[styles.rightLabel, { color: themeColors.text.tertiary() }]}
+                    style={[styles.rightLabel, { color: trailingColor }]}
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
-                    List
+                    {trailingLabel}
                   </Text>
                 </View>
+                {metaText ? (
+                  <Text
+                    style={[styles.metaText, { color: themeColors.text.tertiary() }]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {metaText}
+                  </Text>
+                ) : null}
               </View>
             </View>
           </TouchableOpacity>
@@ -81,7 +119,7 @@ export function BrowseListSearchCard({
       {!isLastItem ? (
         <SolidSeparator
           paddingLeft={CHECKBOX_SIZE_DEFAULT + 12}
-          paddingRight={0}
+          paddingRight={separatorPaddingHorizontal}
         />
       ) : null}
     </View>
@@ -132,6 +170,10 @@ function createStyles(
       alignSelf: 'center',
       zIndex: 1,
     },
+    leafSlotWithMeta: {
+      alignSelf: 'flex-start',
+      marginTop: 2,
+    },
     cardContentTouchable: {
       flex: 1,
       flexDirection: 'row',
@@ -165,6 +207,10 @@ function createStyles(
     },
     title: {
       ...typography.getTextStyle('heading-4'),
+    },
+    metaText: {
+      ...typography.getTextStyle('body-medium'),
+      marginTop: 4,
     },
     rightLabel: {
       ...typography.getTextStyle('body-medium'),

@@ -49,7 +49,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useAppDispatch } from '@/store';
-import { useTasks } from '@/store/hooks';
+import { useTasks, useLists } from '@/store/hooks';
 import { createTask } from '@/store/slices/tasks/tasksSlice';
 import { validateAll } from '@/components/forms/TaskForm/TaskValidation';
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
@@ -58,6 +58,7 @@ import { getTextStyle, getTypographyStyle } from '@/constants/Typography';
 import type { CreateTaskInput, RoutineType, Subtask as TaskSubtask } from '@/types';
 import { mapAlertIdsToTaskReminders, getConfigurableAlertsCount } from '@/utils/taskAlertReminders';
 import { resolveRecurrenceAnchorDueDate } from '@/utils/recurrenceUtils';
+import { getListDisplayName } from '@/utils/listDisplayName';
 
 // same labels as FormDetailSection repeating menu — keeps quick-add repeat options aligned with task create
 const ROUTINE_TYPE_LABELS: Record<RoutineType, string> = {
@@ -181,6 +182,7 @@ export function TaskQuickAddForm({
   const dispatch = useAppDispatch();
   const { themeColor } = useThemeColor();
   const { isCreating } = useTasks();
+  const { lists: reduxLists } = useLists();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -261,6 +263,29 @@ export function TaskQuickAddForm({
     router.push('/alert-select');
   }, [router, seedDraftForPickers]);
 
+  // list pill opens /list-select — writes pickedListId on CreateTaskDraftContext (same as task create)
+  const handleOpenListPicker = useCallback(() => {
+    Keyboard.dismiss();
+    setDraft({
+      dueDate: draft.dueDate ?? new Date().toISOString(),
+      time: draft.time,
+      duration: draft.duration,
+      alerts: draft.alerts ?? [],
+      routineType: draft.routineType ?? 'once',
+      pickedListId: draft.pickedListId === undefined ? null : draft.pickedListId,
+    });
+    router.push('/list-select');
+  }, [
+    draft.alerts,
+    draft.dueDate,
+    draft.duration,
+    draft.pickedListId,
+    draft.routineType,
+    draft.time,
+    router,
+    setDraft,
+  ]);
+
   // selected/empty state per pill — "selected" means user has chosen a non-empty value
   const hasDeadline = !!draft.dueDate;
   const hasDuration = !!draft.time || (typeof draft.duration === 'number' && draft.duration > 0);
@@ -291,6 +316,19 @@ export function TaskQuickAddForm({
     hasDuration && durationDisplay ? durationDisplay.iconColor : pillChromeDefaultColor;
   const repeatChipIconColor = hasRepeat ? themeColors.text.primary() : pillChromeDefaultColor;
   const alertsChipIconColor = hasAlerts && alertsDisplay ? alertsDisplay.iconColor : pillChromeDefaultColor;
+
+  // inbox (null) vs user list — pickedListId comes from list-select sheet
+  const listIdForLabel =
+    draft.pickedListId === undefined || draft.pickedListId === null
+      ? undefined
+      : draft.pickedListId;
+  const listDestinationLabel = useMemo(
+    () => getListDisplayName(listIdForLabel, reduxLists),
+    [listIdForLabel, reduxLists],
+  );
+  const hasListDestination = typeof draft.pickedListId === 'string' && draft.pickedListId.length > 0;
+  const listChipIconColor = hasListDestination ? themeColors.text.primary() : pillChromeDefaultColor;
+  const listChipTextColor = hasListDestination ? themeColors.text.primary() : pillChromeDefaultColor;
 
   const repeatMenuItems = useMemo(
     () =>
@@ -729,7 +767,8 @@ export function TaskQuickAddForm({
           style={[styles.pillTapArea, styles.bottomBarListPill]}
           hitSlop={{ top: Paddings.touchTarget, bottom: Paddings.touchTarget, left: Paddings.touchTarget, right: Paddings.touchTarget }}
           accessibilityRole="button"
-          accessibilityLabel="List destination"
+          accessibilityLabel={`List destination: ${listDestinationLabel}`}
+          onPress={handleOpenListPicker}
         >
           <View style={styles.pillSurfaceShell}>
             <View
@@ -747,13 +786,15 @@ export function TaskQuickAddForm({
                 <SFSymbolIcon
                   name="tray.fill"
                   size={18}
-                  color={pillChromeDefaultColor}
+                  color={listChipIconColor}
                   fallback={
-                    <Ionicons name="file-tray" size={18} color={pillChromeDefaultColor} />
+                    <Ionicons name="file-tray" size={18} color={listChipIconColor} />
                   }
                 />
               </View>
-              <Text style={[styles.pillText, { color: pillChromeDefaultColor }]}>Inbox</Text>
+              <Text style={[styles.pillText, { color: listChipTextColor }]} numberOfLines={1}>
+                {listDestinationLabel}
+              </Text>
             </View>
           </View>
         </Pressable>
@@ -899,6 +940,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     minHeight: QUICK_ADD_PRIMARY_FAB_SIZE,
     justifyContent: 'center',
+    flexShrink: 1,
+    maxWidth: '68%',
   },
   pillTapArea: {
     flexDirection: 'row',
