@@ -14,6 +14,7 @@ class ActivityLog(models.Model):
     ACTION_CHOICES = [
         ('created', 'Created'),
         ('completed', 'Completed'),
+        ('habit_completed', 'Habit Completed'),
         ('updated', 'Updated'),
         ('deleted', 'Deleted'),
     ]
@@ -77,6 +78,8 @@ class Task(models.Model):
         ('purple', 'Purple'),
         ('teal', 'Teal'),
         ('orange', 'Orange'),
+        ('pink', 'Pink'),
+        ('cyan', 'Cyan'),
     ]
     
     # routine type choices - how often the task repeats (once = no repeat)

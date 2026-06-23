@@ -13,6 +13,7 @@ import type { TabDisplayPreferences, UserDisplayPreferences, UserNavigationPrefe
 // this service makes HTTP requests to login, register, and other auth endpoints
 import authApiService from '../../../services/api/auth';
 import { cancelAllTaskReminders } from '../../../services/notifications/taskReminderScheduler';
+import { cancelAllHabitReminders } from '../../../services/notifications/habitReminderScheduler';
 import { syncPlannerWindDownReminders } from '../../../services/notifications/plannerWindDownReminders';
 // token storage functions - secure storage for authentication tokens using Expo SecureStore
 // these functions store and retrieve tokens from encrypted device storage
@@ -177,7 +178,7 @@ export const checkAuthStatus = createAsyncThunk(
     } catch (error) {
       console.error('Failed to check auth status:', error);
       await clearAllTokens();
-      return rejectWithValue(error instanceof Error ? error.message : 'Failed to check auth status');
+      return null;
     }
   }
 );
@@ -277,15 +278,17 @@ function transformApiDisplayPreferences(apiPrefs: Record<string, unknown>): User
   const today = transformApiDisplayTabPrefs(r.today);
   const planner = transformApiDisplayTabPrefs(r.planner);
   const inbox = transformApiDisplayTabPrefs(r.inbox);
-  if (!today && !planner && !inbox) return undefined;
+  const list = transformApiDisplayTabPrefs(r.list);
+  if (!today && !planner && !inbox && !list) return undefined;
   return {
     ...(today ? { today } : {}),
     ...(planner ? { planner } : {}),
     ...(inbox ? { inbox } : {}),
+    ...(list ? { list } : {}),
   };
 }
 
-const NAVIGATION_TAB_KEYS = new Set<NavigationTabKey>(['today', 'planner', 'ai', 'browse', 'inbox']);
+const NAVIGATION_TAB_KEYS = new Set<NavigationTabKey>(['today', 'planner', 'ai', 'browse', 'inbox', 'habits']);
 
 function transformApiNavigationPreferences(apiPrefs: Record<string, unknown>): UserNavigationPreferences | undefined {
   const raw = apiPrefs.navigation_preferences ?? apiPrefs.navigationPreferences;
@@ -429,6 +432,9 @@ export function preferencesPartialToSnakePayload(prefs: Partial<UserPreferences>
     }
     if (prefs.displayPreferences.inbox !== undefined) {
       dp.inbox = tabDisplayPrefsToSnake(prefs.displayPreferences.inbox);
+    }
+    if (prefs.displayPreferences.list !== undefined) {
+      dp.list = tabDisplayPrefsToSnake(prefs.displayPreferences.list);
     }
     if (Object.keys(dp).length > 0) out.display_preferences = dp;
   }
@@ -987,11 +993,11 @@ export const patchUserSchedulePreferences = createAsyncThunk<
 
 export const patchUserDisplayPreferences = createAsyncThunk<
   UserThunkSerializablePayload,
-  { context: 'today' | 'planner' | 'inbox'; patch: TabDisplayPreferences }
+  { context: 'today' | 'planner' | 'inbox' | 'list'; patch: TabDisplayPreferences }
 >(
   'auth/patchUserDisplayPreferences',
   async (
-    { context, patch }: { context: 'today' | 'planner' | 'inbox'; patch: TabDisplayPreferences },
+    { context, patch }: { context: 'today' | 'planner' | 'inbox' | 'list'; patch: TabDisplayPreferences },
     { getState, rejectWithValue }
   ) => {
     try {
@@ -1133,8 +1139,12 @@ export const logoutUser = createAsyncThunk(
       const { clearGamification } = await import('../gamification/gamificationSlice');
       dispatch(clearGamification());
 
+      const { clearHabits } = await import('../habits/habitsSlice');
+      dispatch(clearHabits());
+
       try {
         await cancelAllTaskReminders();
+        await cancelAllHabitReminders();
       } catch (reminderErr) {
         console.warn('[notifications] cancel all on logout skipped', reminderErr);
       }
@@ -1182,7 +1192,15 @@ export const logoutUser = createAsyncThunk(
       }
 
       try {
+        const { clearHabits } = await import('../habits/habitsSlice');
+        dispatch(clearHabits());
+      } catch (habitsClearError) {
+        console.error('Error clearing habits during logout:', habitsClearError);
+      }
+
+      try {
         await cancelAllTaskReminders();
+        await cancelAllHabitReminders();
       } catch (reminderErr) {
         console.warn('[notifications] cancel all on logout skipped', reminderErr);
       }

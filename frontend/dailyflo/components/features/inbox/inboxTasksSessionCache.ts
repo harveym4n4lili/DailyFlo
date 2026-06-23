@@ -13,3 +13,9 @@ export function getCachedInboxTasks(): Task[] {
 export function setCachedInboxTasks(tasks: Task[]): void {
   cachedInboxTasks = tasks;
 }
+
+/** drop deleted base ids so inbox index reflects bulk delete before the next api fetch */
+export function removeCachedInboxTasksByIds(baseIds: string[]): void {
+  const idSet = new Set(baseIds);
+  cachedInboxTasks = cachedInboxTasks.filter((task) => !idSet.has(task.id));
+}

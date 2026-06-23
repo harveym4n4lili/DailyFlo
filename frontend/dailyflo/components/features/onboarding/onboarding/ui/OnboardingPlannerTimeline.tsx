@@ -1,6 +1,6 @@
 /**
  * small planner-style column for onboarding: same row geometry as `TimelineView` (label column + tasks column + dashed line).
- * wake + sleep use `TimelineItem` with sun/moon `leadingAccessory` (moss 600 + sage 600) and `hugContent` so pills don’t span the column; middle row stays full width via `children`.
+ * wake + sleep use `TimelineItem` with sun/moon `leadingAccessory` (system green + task blue) and `hugContent` so pills don’t span the column; middle row stays full width via `children`.
  * gaps reuse planner free-time copy + sparkles.
  * spacing uses `getTimelineTaskGapPx`.
  * intentionally no: redux, drag, overlap merge, footer list, or layout transition delays.
@@ -323,16 +323,16 @@ export function OnboardingPlannerTimeline({
   const [taskHeight, setTaskHeight] = useState(() => getTaskCardHeight(taskDurationMinutes));
   const anchorRowHeight = getTaskCardHeight(0);
 
-  // brand ramps for wake/sleep icons — same `useColorPalette` getters as elsewhere (`moss:` / `sage:` intro tokens)
-  const moss600 = colorPalette.getMossBrandColor(600);
-  const sage600 = colorPalette.getSageBrandColor(600);
+  // rise = system green, sleep = task/habit blue — matches wake/sleep slide tokens and planner anchors
+  const riseIconColor = colorPalette.getSystemStatusColor('green', 700);
+  const sleepIconColor = colorPalette.getTaskHabitColor('blue', 700);
   const wakeSunLeading = useMemo(
-    () => <SunshineFillIcon size={CHECKBOX_SIZE_TASK_VIEW} color={moss600} />,
-    [moss600],
+    () => <SunshineFillIcon size={CHECKBOX_SIZE_TASK_VIEW} color={riseIconColor} />,
+    [riseIconColor],
   );
   const sleepMoonLeading = useMemo(
-    () => <MoonFillIcon size={CHECKBOX_SIZE_TASK_VIEW} color={sage600} />,
-    [sage600],
+    () => <MoonFillIcon size={CHECKBOX_SIZE_TASK_VIEW} color={sleepIconColor} />,
+    [sleepIconColor],
   );
 
   // timeline item reports real card height after layout — same hook the main planner uses to resize gaps
@@ -374,11 +374,11 @@ export function OnboardingPlannerTimeline({
   );
 
   const wakeTask = useMemo(
-    () => createOnboardingAnchorTask('onboarding-planner-wake', 'Rise and Shine', layout.wakeHm, 'yellow'),
+    () => createOnboardingAnchorTask('onboarding-planner-wake', 'Rise and Shine', layout.wakeHm, 'green'),
     [layout.wakeHm],
   );
   const sleepTask = useMemo(
-    () => createOnboardingAnchorTask('onboarding-planner-sleep', 'Switch Off', layout.sleepHm, 'teal'),
+    () => createOnboardingAnchorTask('onboarding-planner-sleep', 'Switch Off', layout.sleepHm, 'blue'),
     [layout.sleepHm],
   );
   const agendaTask = useMemo(

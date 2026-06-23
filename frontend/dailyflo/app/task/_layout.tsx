@@ -3,6 +3,10 @@
  * use Stack (not Slot): Slot can leave multiple child natives mounted; RNScreens formSheet
  * then warns "expects at most 2 subviews" on RNSSafeAreaView and layout/content breaks.
  *
+ * Field pickers (date, time, alert, list) are root-level siblings — NOT nested here.
+ * They stack as separate formSheets on top via router.push('/date-select'), etc.
+ * Routine/recurrence is an inline Menu pill on TaskScreenContent, not a stack route.
+ *
  * task edit uses no native header; drag pill + overflow sit in TaskScreenContent.
  */
 

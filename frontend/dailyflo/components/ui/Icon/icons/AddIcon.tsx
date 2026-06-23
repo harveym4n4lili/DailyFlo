@@ -9,11 +9,17 @@ import Svg, { Path } from 'react-native-svg';
 export type AddIconProps = {
   size?: number;
   color?: string;
+  strokeWidth?: number;
   /** When true, render the solid variant (paste solid SVG path(s) in the solid block below). */
   isSolid?: boolean;
 };
 
-export function AddIcon({ size = 24, color = '#000', isSolid = false }: AddIconProps) {
+export function AddIcon({
+  size = 24,
+  color = '#000',
+  strokeWidth = 2.75,
+  isSolid = false,
+}: AddIconProps) {
   if (isSolid) {
     return (
       <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -28,14 +34,14 @@ export function AddIcon({ size = 24, color = '#000', isSolid = false }: AddIconP
       <Path
         d="M5 12h14"
         stroke={color}
-        strokeWidth={2.75}
+        strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
         d="M12 5v14"
         stroke={color}
-        strokeWidth={2.75}
+        strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />

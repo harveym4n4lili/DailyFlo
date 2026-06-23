@@ -202,6 +202,30 @@ export function filterTasksForCalendarDay(tasks: Task[], dayStr: string): Task[]
   });
 }
 
+/** true when a task row (base or expanded occurrence) is scheduled on dayStr */
+export function isTaskOccurrenceDueOnCalendarDay(task: Task, dayStr: string): boolean {
+  if (isExpandedRecurrenceId(task.id)) {
+    return getOccurrenceDateFromId(task.id) === dayStr;
+  }
+  if (!task.dueDate) return false;
+  return toLocalCalendarDayString(new Date(task.dueDate)) === dayStr;
+}
+
+/**
+ * merge list tasks for browse list-detail ListCard:
+ * - all one-off tasks stay as-is
+ * - recurring tasks due today become expanded occurrences (for Today section)
+ * - recurring tasks not due today stay as base rows (Recurring section)
+ */
+export function buildListDetailDisplayTasks(tasks: Task[], todayDateStr: string): Task[] {
+  const oneOffs = tasks.filter((t) => t.routineType === 'once' || !t.routineType);
+  const recurring = tasks.filter((t) => t.routineType && t.routineType !== 'once');
+  const expandedToday = expandTasksForDates(recurring, [todayDateStr]);
+  const recurringDueTodayIds = new Set(expandedToday.map((t) => getBaseTaskId(t.id)));
+  const recurringNotToday = recurring.filter((t) => !recurringDueTodayIds.has(t.id));
+  return [...oneOffs, ...expandedToday, ...recurringNotToday];
+}
+
 export interface ExpandTasksOptions {
   /** when true, also include one-off tasks with dueDate before min(targetDates) (e.g. old overdue) */
   includeOneOffBeforeRange?: boolean;

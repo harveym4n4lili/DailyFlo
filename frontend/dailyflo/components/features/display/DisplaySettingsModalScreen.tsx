@@ -169,9 +169,11 @@ export default function DisplaySettingsModalScreen({ context }: DisplaySettingsM
   const handleOpenPicker = useCallback(
     (row: DisplaySettingsPickerRow) => {
       const route = DISPLAY_SETTINGS_ROW_TO_ROUTE[row];
-      router.push(`/(tabs)/${context}/display/${route}` as any);
+      const displayBase =
+        context === 'list' ? '/(tabs)/browse/display' : `/(tabs)/${context}/display`;
+      router.push(`${displayBase}/${route}` as any);
     },
-    [context, router]
+    [context, router],
   );
 
   const renderGroupedListIcon = useCallback(

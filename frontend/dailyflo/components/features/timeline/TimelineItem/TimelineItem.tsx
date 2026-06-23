@@ -36,6 +36,7 @@ import {
   TIMELINE_RAIL_WIDTH,
   TIMELINE_RAIL_MARGIN_LEFT,
   TIMELINE_CONTENT_GAP,
+  TIMELINE_TASK_META_GAP,
 } from '../timelineChrome';
 import { isRecurringTask } from '@/utils/recurrenceUtils';
 import { TimelineCheckbox } from './sections';
@@ -1008,7 +1009,7 @@ const createStyles = (
   timeRangeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: TIMELINE_TASK_META_GAP,
   },
 
   // title row - title on left, subtask and recurrence indicators on the right (same line)

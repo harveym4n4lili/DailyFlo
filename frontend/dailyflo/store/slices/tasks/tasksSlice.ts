@@ -319,7 +319,26 @@ export function transformApiTaskToTask(apiTask: any): Task {
             sortOrder: s.sort_order ?? s.sortOrder ?? 0,
           }))
         : [],
-      reminders: apiTask.metadata?.reminders || [],
+      reminders: Array.isArray(apiTask.metadata?.reminders)
+        ? apiTask.metadata.reminders.map((r: any) => ({
+            id: String(r.id ?? ''),
+            type: r.type === 'due_date' ? 'due_date' : 'custom',
+            scheduledTime:
+              typeof r.scheduledTime === 'string'
+                ? r.scheduledTime
+                : typeof r.scheduled_time === 'string'
+                  ? r.scheduled_time
+                  : r.scheduledTime instanceof Date
+                    ? r.scheduledTime.toISOString()
+                    : new Date().toISOString(),
+            isEnabled:
+              r.is_enabled !== undefined
+                ? r.is_enabled
+                : r.isEnabled !== undefined
+                  ? r.isEnabled
+                  : true,
+          }))
+        : [],
       notes: apiTask.metadata?.notes,
       tags: apiTask.metadata?.tags,
       recurrence_completions: apiTask.metadata?.recurrence_completions,
@@ -822,6 +841,17 @@ export const createTask = createAsyncThunk(
 export const updateTask = createAsyncThunk(
   'tasks/updateTask',
   async ({ id, updates }: { id: string; updates: UpdateTaskInput }, { rejectWithValue, getState, dispatch }) => {
+    const {
+      collectPriorUnlockedCodesAfterHydrate,
+      isNewTaskCompletion,
+      refreshAchievementsAndDetectUnlock,
+    } = await import('../gamification/achievementUnlockDetection');
+
+    const shouldDetectAchievementUnlock = isNewTaskCompletion(updates);
+    const priorUnlockedCodes = shouldDetectAchievementUnlock
+      ? await collectPriorUnlockedCodesAfterHydrate(dispatch, getState)
+      : null;
+
     try {
       console.log('🔄 updateTask thunk started - calling API');
       
@@ -877,8 +907,10 @@ export const updateTask = createAsyncThunk(
 
       await scheduleRemindersAfterTaskChange(transformedTask, getState);
 
-      // refresh browse streak/stats when completion changed — keeps gamification in sync without waiting for browse focus
-      if (updates.isCompleted !== undefined) {
+      // new completion may unlock achievements — diff against pre-update codes and show global toast
+      if (shouldDetectAchievementUnlock && priorUnlockedCodes) {
+        await refreshAchievementsAndDetectUnlock(dispatch, priorUnlockedCodes);
+      } else if (updates.isCompleted !== undefined) {
         const { fetchGamificationSummary } = await import('../gamification/gamificationSlice');
         void dispatch(fetchGamificationSummary());
       }

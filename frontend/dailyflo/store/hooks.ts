@@ -25,8 +25,22 @@ import {
   createGoal,
   deleteGoal,
   clearGamification,
+  resetAchievementsDev,
 } from './slices/gamification/gamificationSlice';
 import type { CreateUserGoalInput } from '@/types/api/gamification';
+import {
+  fetchHabitsToday,
+  fetchHabits,
+  createHabit,
+  updateHabit,
+  deleteHabit,
+  logHabitProgress,
+  fetchHabit,
+  fetchHabitStats,
+  clearHabits,
+  clearHabitDetail,
+} from './slices/habits/habitsSlice';
+import type { CreateHabitInput, UpdateHabitInput } from '@/types/api/habits';
 
 /**
  * Custom hook for accessing tasks state
@@ -244,6 +258,46 @@ export const useGamification = () => {
     ),
     deleteGoal: useCallback((goalId: string) => dispatch(deleteGoal(goalId)), [dispatch]),
     clearGamification: useCallback(() => dispatch(clearGamification()), [dispatch]),
+    resetAchievementsDev: useCallback(
+      () => dispatch(resetAchievementsDev()).unwrap(),
+      [dispatch],
+    ),
+  };
+};
+
+/**
+ * habits hook — today's due habits from GET /habits/today/
+ */
+export const useHabits = () => {
+  const dispatch = useAppDispatch();
+  const habitsState = useAppSelector((state: RootState) => state.habits);
+
+  return {
+    ...habitsState,
+    fetchToday: useCallback(() => dispatch(fetchHabitsToday()), [dispatch]),
+    fetchAll: useCallback(() => dispatch(fetchHabits()), [dispatch]),
+    createHabit: useCallback(
+      (input: CreateHabitInput) => dispatch(createHabit(input)).unwrap(),
+      [dispatch],
+    ),
+    updateHabit: useCallback(
+      (id: string, input: UpdateHabitInput) =>
+        dispatch(updateHabit({ id, input })).unwrap(),
+      [dispatch],
+    ),
+    deleteHabit: useCallback(
+      (id: string) => dispatch(deleteHabit(id)).unwrap(),
+      [dispatch],
+    ),
+    fetchHabit: useCallback((id: string) => dispatch(fetchHabit(id)), [dispatch]),
+    fetchHabitStats: useCallback((id: string) => dispatch(fetchHabitStats(id)), [dispatch]),
+    clearHabitDetail: useCallback(() => dispatch(clearHabitDetail()), [dispatch]),
+    logHabit: useCallback(
+      (id: string, options?: { date?: string; delta?: number }) =>
+        dispatch(logHabitProgress({ id, ...options })),
+      [dispatch],
+    ),
+    clearHabits: useCallback(() => dispatch(clearHabits()), [dispatch]),
   };
 };
 

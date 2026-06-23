@@ -164,9 +164,10 @@ export default function TimelineView({
       ? insets.top
       : 0
     : (scrollContentPaddingTop ?? 0) + (scrollPastTopInset ? insets.top : 0);
-  const { getMossBrandColor, getSageBrandColor } = useColorPalette();
-  const plannerWakeIconColor = getMossBrandColor(600);
-  const plannerSleepIconColor = getSageBrandColor(600);
+  // wake = system green, sleep = task/habit blue — same colorways as onboarding rise/sleep steps
+  const { getSystemStatusColor, getTaskHabitColor } = useColorPalette();
+  const plannerWakeIconColor = getSystemStatusColor('green', 500);
+  const plannerSleepIconColor = getTaskHabitColor('blue', 500);
 
   // track measured/animated card heights (used for both rendering and spacing)
   // spacing now follows the animated height so the whole timeline moves smoothly
@@ -453,8 +454,9 @@ export default function TimelineView({
       
       cardHeight = resolveCardHeight(task, combinedTask);
 
-      // planner pill chrome: first row center sits half a card below y=0 so the card top lines up with all-day list
-      if (index === 0 && currentPosition === 0 && usesTopSpacer) {
+      // stacked all-day footer above timeline: nudge first row down so wake lines up with list rows.
+      // pill-segment timeline (no footer in scroll) starts at y=0 — avoids extra gap below pills on other days.
+      if (index === 0 && currentPosition === 0 && usesTopSpacer && footerComponent) {
         currentPosition = cardHeight / 2;
       }
       
@@ -525,7 +527,7 @@ export default function TimelineView({
     });
     
     return positions;
-  }, [sortedTasks, taskCardHeights, combinedOverlappingTasks, usesTopSpacer]);
+  }, [sortedTasks, taskCardHeights, combinedOverlappingTasks, usesTopSpacer, footerComponent]);
 
   // free time segments - gaps between non-overlapping tasks where we show contextual messages
   // derived from equalSpacingPositions: gap = space between bottom of current task and top of next
@@ -750,8 +752,15 @@ export default function TimelineView({
   const currentTimeLabel = useMemo(() => {
     if (!isViewingToday) return null;
 
-    // after wind-down the day band ends — hide the live clock so it does not sit past the sleep anchor
+    const wakeHHMM = plannerScheduleAnchors?.wakeHHMM?.trim();
     const windDownHHMM = plannerScheduleAnchors?.sleepHHMM?.trim();
+
+    // before wake / after wind-down — hide the live clock so it does not float in the gap below pills
+    if (wakeHHMM && isValidWakeSleepHHMM(wakeHHMM)) {
+      if (timeToMinutes(currentTimeHHMM) < timeToMinutes(wakeHHMM)) {
+        return null;
+      }
+    }
     if (windDownHHMM && isValidWakeSleepHHMM(windDownHHMM)) {
       if (timeToMinutes(currentTimeHHMM) >= timeToMinutes(windDownHHMM)) {
         return null;
@@ -767,6 +776,7 @@ export default function TimelineView({
   }, [
     isViewingToday,
     currentTimeHHMM,
+    plannerScheduleAnchors?.wakeHHMM,
     plannerScheduleAnchors?.sleepHHMM,
     sortedTasks.length,
     dynamicStartHour,

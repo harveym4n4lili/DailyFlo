@@ -24,6 +24,7 @@ import {
   TIMELINE_RAIL_WIDTH,
   TIMELINE_RAIL_MARGIN_LEFT,
   TIMELINE_CONTENT_GAP,
+  TIMELINE_TASK_META_GAP,
 } from './timelineChrome';
 
 /** how far in from top/bottom the column reaches full opacity (larger = longer, softer fade) */
@@ -279,7 +280,7 @@ const createStyles = (
     timeRangeRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 2,
+      marginBottom: TIMELINE_TASK_META_GAP,
     },
 
     textContainer: {

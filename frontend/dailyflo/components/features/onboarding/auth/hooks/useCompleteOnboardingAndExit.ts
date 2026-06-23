@@ -28,6 +28,8 @@ import { resolvePrimaryTabHomeHref } from '@/utils/navigation/resolvePrimaryTabH
 import type { OnboardingQuestionnaireStoredAnswersV1 } from '@/components/features/onboarding/onboarding/constants/onboardingQuestionnaireAnswers';
 import { ONBOARDING_QUESTIONNAIRE_ANSWERS_STORAGE_KEY } from '@/components/features/onboarding/onboarding/constants/onboardingQuestionnaireAnswers';
 import { buildCreateTaskInputFromOnboardingAnswers } from '@/components/features/onboarding/onboarding/utils/buildCreateTaskInputFromOnboardingAnswers';
+import { buildCreateHabitInputFromOnboardingAnswers } from '@/components/features/onboarding/onboarding/utils/buildCreateHabitInputFromOnboardingAnswers';
+import { createHabit } from '@/store/slices/habits/habitsSlice';
 import { mapStoredAnswersToProfileQuestionnaire } from '@/components/features/onboarding/onboarding/utils/mapStoredAnswersToProfileQuestionnaire';
 import {
   DEFAULT_SLEEP_HHMM,
@@ -56,13 +58,21 @@ export function useCompleteOnboardingAndExit() {
       setBusy(true);
       try {
         if (answers) {
-          const taskInput = buildCreateTaskInputFromOnboardingAnswers(answers);
-          if (taskInput) {
-            const created = await dispatch(createTask(taskInput)).unwrap();
-            if (answers.branch === 'task' && answers.task?.completed) {
-              await dispatch(
-                updateTask({ id: created.id, updates: { id: created.id, isCompleted: true } }),
-              ).unwrap();
+          // task branch → createTask; habit branch → POST /habits/ (no more onboarding recurring task)
+          if (answers.branch === 'habit') {
+            const habitInput = buildCreateHabitInputFromOnboardingAnswers(answers);
+            if (habitInput) {
+              await dispatch(createHabit(habitInput)).unwrap();
+            }
+          } else {
+            const taskInput = buildCreateTaskInputFromOnboardingAnswers(answers);
+            if (taskInput) {
+              const created = await dispatch(createTask(taskInput)).unwrap();
+              if (answers.branch === 'task' && answers.task?.completed) {
+                await dispatch(
+                  updateTask({ id: created.id, updates: { id: created.id, isCompleted: true } }),
+                ).unwrap();
+              }
             }
           }
           await AsyncStorage.setItem(ONBOARDING_QUESTIONNAIRE_ANSWERS_STORAGE_KEY, JSON.stringify(answers));

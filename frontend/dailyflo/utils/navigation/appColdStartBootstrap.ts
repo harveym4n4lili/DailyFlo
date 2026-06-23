@@ -5,6 +5,7 @@
 
 import { store } from '@/store';
 import { checkAuthStatus, logout } from '@/store/slices/auth/authSlice';
+import { fetchAchievements } from '@/store/slices/gamification/gamificationSlice';
 import { fetchLists } from '@/store/slices/lists/listsSlice';
 import { fetchTasks } from '@/store/slices/tasks/tasksSlice';
 import { resolveNavTabOrderForBootstrap } from '@/components/features/settings/navigation/navigationPreferenceUtils';
@@ -17,6 +18,7 @@ import {
   loadPersistedNavTabOrder,
   persistNavTabOrder,
 } from '@/utils/navigation/navigationTabOrderStorage';
+import { markAuthBootstrapComplete } from '@/utils/navigation/authBootstrapState';
 
 export type AppColdStartBootstrapResult = {
   navTabOrder: NavTabKey[];
@@ -50,6 +52,8 @@ export async function runAppColdStartBootstrap(): Promise<AppColdStartBootstrapR
     if (lists.lastFetched === null) {
       void store.dispatch(fetchLists());
     }
+    // prefetch unlock baseline so first completion after reopen does not replay old toasts
+    void store.dispatch(fetchAchievements());
   }
 
   const navTabOrder = resolveNavTabOrderForBootstrap(
@@ -64,4 +68,13 @@ export async function runAppColdStartBootstrap(): Promise<AppColdStartBootstrapR
   const needsOnboarding = !onboardingComplete || !authState.isAuthenticated;
 
   return { navTabOrder, needsOnboarding };
+}
+
+/** wraps bootstrap so AuthSessionGate can skip duplicate checkAuthStatus during cold start */
+export async function runAppColdStartBootstrapTracked(): Promise<AppColdStartBootstrapResult> {
+  try {
+    return await runAppColdStartBootstrap();
+  } finally {
+    markAuthBootstrapComplete();
+  }
 }

@@ -6,6 +6,10 @@
  */
 
 import { Task } from '@/types';
+import {
+  isTaskOccurrenceDueOnCalendarDay,
+  toLocalCalendarDayString,
+} from '@/utils/recurrenceUtils';
 
 /** U+2022 bullet with spaces — same character as in task metadata (`formatDateWithTags`); use next to list name + recurrence row */
 export const GROUP_HEADER_META_SEPARATOR = ' • ';
@@ -34,17 +38,36 @@ export function formatDateForGroup(date: Date): string {
 export const ROUTINE_GROUP_ONE_TIME = 'One-time';
 export const ROUTINE_GROUP_RECURRING = 'Recurring';
 
+/** browse list detail: tasks due today — shown above One-time / Recurring */
+export const LIST_GROUP_TODAY = 'Today';
+
 /** single planner bucket for tasks without a time — must match collapse/expand logic in ListCard */
 export const ALL_DAY_TASKS_GROUP_TITLE = 'All day tasks';
 
 /** Today timeline footer: group starts collapsed until user expands the chevron header. Planner uses TimelineAllDayPill instead. */
 export const ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES: readonly string[] = [ALL_DAY_TASKS_GROUP_TITLE];
 
-export function getTaskGroupKey(
-  task: Task,
-  groupBy: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'none'
-): string {
+export type TaskGroupByMode =
+  | 'priority'
+  | 'dueDate'
+  | 'color'
+  | 'allDay'
+  | 'routine'
+  | 'listDetail'
+  | 'none';
+
+export function getTaskGroupKey(task: Task, groupBy: TaskGroupByMode): string {
   switch (groupBy) {
+    case 'listDetail': {
+      // peel off today's rows first, then bucket the rest like routine grouping
+      const todayKey = toLocalCalendarDayString(new Date());
+      if (isTaskOccurrenceDueOnCalendarDay(task, todayKey)) {
+        return LIST_GROUP_TODAY;
+      }
+      return task.routineType === 'once' || !task.routineType
+        ? ROUTINE_GROUP_ONE_TIME
+        : ROUTINE_GROUP_RECURRING;
+    }
     case 'routine':
       // routineType "once" = single occurrence; anything else repeats on a schedule
       return task.routineType === 'once' ? ROUTINE_GROUP_ONE_TIME : ROUTINE_GROUP_RECURRING;
@@ -89,10 +112,7 @@ export function getTaskGroupKey(
  * @param groupBy - Grouping strategy
  * @returns Record of group keys to task arrays
  */
-export function groupTasks(
-  tasks: Task[],
-  groupBy: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'none'
-): Record<string, Task[]> {
+export function groupTasks(tasks: Task[], groupBy: TaskGroupByMode): Record<string, Task[]> {
   if (groupBy === 'none') {
     return { 'All Tasks': tasks };
   }
@@ -108,11 +128,12 @@ export function groupTasks(
     groups[groupKey].push(task);
   });
 
-  // sort tasks within "Today" group by time
+  // sort tasks within today groups by time (dueDate header key or list-detail "Today" bucket)
   const today = new Date();
   const todayGroupKey = formatDateForGroup(today);
-  if (groups[todayGroupKey]) {
-    groups[todayGroupKey].sort((a, b) => {
+  for (const key of [todayGroupKey, LIST_GROUP_TODAY]) {
+    if (!groups[key]) continue;
+    groups[key].sort((a, b) => {
       // if both have time, sort by time (ascending - earlier times first)
       if (a.time && b.time) {
         return a.time.localeCompare(b.time);
@@ -203,9 +224,15 @@ export function sortGroupEntries(
     if (titleA === 'Overdue') return 1;
     if (titleB === 'Overdue') return -1;
 
-    // browse list: show one-time tasks above recurring sections
+    // browse list detail: Today → One-time → Recurring
     const routineRank = (t: string) =>
-      t === ROUTINE_GROUP_ONE_TIME ? 0 : t === ROUTINE_GROUP_RECURRING ? 1 : 2;
+      t === LIST_GROUP_TODAY
+        ? -1
+        : t === ROUTINE_GROUP_ONE_TIME
+          ? 0
+          : t === ROUTINE_GROUP_RECURRING
+            ? 1
+            : 2;
     const ra = routineRank(titleA);
     const rb = routineRank(titleB);
     if (ra !== 2 || rb !== 2) {

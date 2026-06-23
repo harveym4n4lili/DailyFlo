@@ -7,10 +7,10 @@
  * brand ramps (`plant:500`, …) resolve the same hex from any scope — scope still documents intent.
  *
  * - header progress **track**: `{ scope: 'track', token: 'primarySecondaryBlend' }` (explicit blend) or any `{ scope: 'background'|'text'|'button'|'border', token }`.
- * - `plant:500`, `moss:600`, `marple:800`, … = ColorPalette ramps (same as intro).
+ * - `plant:500`, `green:600`, `blue:500`, `marple:800`, … = ColorPalette ramps (same as intro).
  *
  * time wheel: `timeWheelBrandRamp` tints the spinner for wake/sleep steps.
- * fixed core: marple → moss → sage → marple (intro, wake, sleep, picker).
+ * fixed core: marple → green → blue → marple (intro, wake, sleep, picker).
  * title highlight: `titleHighlightColor` tints the emphasized word in each headline (see rows below).
  * picker cards: `nextStepChoiceCardTitleColor` on the last core step — `OnboardingNextStepChoiceCards`.
  */
@@ -57,28 +57,28 @@ export const ONBOARDING_QUESTIONNAIRE_CORE_PAGE_SLIDE_UI: readonly OnboardingSli
   {
     background: { scope: 'background', token: 'primary' },
     titleColor: { scope: 'text', token: 'primary' },
-    titleHighlightColor: { scope: 'text', token: 'moss:600' },
+    titleHighlightColor: { scope: 'text', token: 'green:600' },
     captionColor: { scope: 'text', token: 'primary' },
-    dotIndicatorColor: { scope: 'text', token: 'moss:600' },
-    continueButtonBackground: { scope: 'button', token: 'moss:500' },
-    continueButtonIcon: { scope: 'button', token: 'moss:800' },
+    dotIndicatorColor: { scope: 'text', token: 'green:600' },
+    continueButtonBackground: { scope: 'button', token: 'green:500' },
+    continueButtonIcon: { scope: 'button', token: 'green:800' },
     progressBarTrack: { scope: 'track', token: 'primarySecondaryBlend' },
-    progressBarFill: { scope: 'button', token: 'moss:500' },
+    progressBarFill: { scope: 'button', token: 'green:500' },
     headerBackIconColor: { scope: 'text', token: 'secondary' },
-    timeWheelBrandRamp: 'moss',
+    timeWheelBrandRamp: 'green',
   },
   {
     background: { scope: 'background', token: 'primary' },
     titleColor: { scope: 'text', token: 'primary' },
-    titleHighlightColor: { scope: 'text', token: 'sage:600' },
+    titleHighlightColor: { scope: 'text', token: 'blue:600' },
     captionColor: { scope: 'text', token: 'primary' },
-    dotIndicatorColor: { scope: 'text', token: 'sage:600' },
-    continueButtonBackground: { scope: 'button', token: 'sage:500' },
-    continueButtonIcon: { scope: 'text', token: 'sage:700' },
+    dotIndicatorColor: { scope: 'text', token: 'blue:600' },
+    continueButtonBackground: { scope: 'button', token: 'blue:500' },
+    continueButtonIcon: { scope: 'text', token: 'blue:700' },
     progressBarTrack: { scope: 'track', token: 'primarySecondaryBlend' },
-    progressBarFill: { scope: 'button', token: 'sage:500' },
+    progressBarFill: { scope: 'button', token: 'blue:500' },
     headerBackIconColor: { scope: 'text', token: 'secondary' },
-    timeWheelBrandRamp: 'sage',
+    timeWheelBrandRamp: 'blue',
   },
   {
     background: { scope: 'background', token: 'primary' },

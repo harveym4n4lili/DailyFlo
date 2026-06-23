@@ -12,6 +12,7 @@ import { usePathname } from 'expo-router';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 
 import { useCreateTaskDraft } from '@/app/task/CreateTaskDraftContext';
+import { removeCachedInboxTasksByIds } from '@/components/features/inbox/inboxTasksSessionCache';
 import { store, useAppDispatch } from '@/store';
 import { useUI } from '@/store/hooks';
 import { deleteTask, updateTask } from '@/store/slices/tasks/tasksSlice';
@@ -37,6 +38,7 @@ export function useTaskBulkSelectionActions() {
 
   const onRouteSelectScreen =
     pathname.includes('/today/select') ||
+    pathname.includes('/inbox/select') ||
     pathname.includes('/planner/select') ||
     pathname.includes('/browse/task-select');
 
@@ -107,13 +109,25 @@ export function useTaskBulkSelectionActions() {
         text: 'Delete',
         style: 'destructive',
         onPress: () => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          baseTaskIds.forEach((id) => dispatch(deleteTask(id)));
-          dismissSelectionFlow();
+          void (async () => {
+            try {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              // wait for api deletes before popping select — otherwise inbox index refetches stale rows
+              await Promise.all(
+                baseTaskIds.map((id) => dispatch(deleteTask(id)).unwrap()),
+              );
+              if (pathname.includes('/inbox')) {
+                removeCachedInboxTasksByIds(baseTaskIds);
+              }
+              dismissSelectionFlow();
+            } catch (err) {
+              console.error('Failed to bulk delete tasks:', err);
+            }
+          })();
         },
       },
     ]);
-  }, [baseTaskIds, dispatch, dismissSelectionFlow, hasSelection]);
+  }, [baseTaskIds, dispatch, dismissSelectionFlow, hasSelection, pathname]);
 
   const handleMove = useCallback(() => {
     if (!hasSelection) return;

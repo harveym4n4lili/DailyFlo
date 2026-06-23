@@ -1,28 +1,30 @@
 /**
- * Task Color Utilities
+ * Task & Habit Color Utilities
  * 
- * This file contains helper functions for working with task colors,
- * including getting task colors from the color palette system.
+ * Helper functions for resolving user-selected task/habit accent colors
+ * from the palette section in ColorPalette.ts (4 shades per color).
  */
 
-import { getTaskCategoryColor } from '@/constants/ColorPalette';
+import { getTaskHabitColor, TASK_HABIT_COLOR_OPTIONS, type TaskHabitColorName, type TaskHabitColorShade } from '@/constants/ColorPalette';
 import { TaskColor } from '@/types';
 
 /**
- * Gets the color value for a task using the color palette system
- * Defaults to blue if color is not found in the palette
- * 
- * @param color - Task color name (e.g., 'red', 'blue', 'green')
- * @param shade - Color shade to use (default: 500)
- * @returns Color hex value
+ * Gets the hex for a task or habit color id.
+ * Defaults to shade 500 (picker swatch) and blue if the id is unknown.
  */
-export function getTaskColorValue(color: string, shade: keyof ReturnType<typeof getTaskCategoryColor> = 500): string {
-  // use the color palette system for consistent task colors
-  // default to blue if color is not found in the palette
-  try {
-    return getTaskCategoryColor(color as TaskColor, shade);
-  } catch {
-    return getTaskCategoryColor('blue', shade);
+export function getTaskColorValue(
+  color: string,
+  shade: TaskHabitColorShade = 500,
+): string {
+  // resolve through palette helper — unknown ids fall back to blue
+  if ((TASK_HABIT_COLOR_OPTIONS as readonly string[]).includes(color)) {
+    return getTaskHabitColor(color as TaskHabitColorName, shade);
   }
+  return getTaskHabitColor('blue', shade);
+}
+
+/** habit card / list title — task & habit palette shade 500 */
+export function getTaskHabitTitleColor(color: string): string {
+  return getTaskColorValue(color, 500);
 }
 

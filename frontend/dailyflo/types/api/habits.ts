@@ -1,0 +1,149 @@
+/**
+ * habits API types — match GET/POST /habits/* camelCase responses from django.
+ */
+
+export type HabitTrackingType = 'binary' | 'numeric';
+
+export type HabitFrequencyType =
+  | 'daily'
+  | 'weekly'
+  | 'weekdays'
+  | 'weekends'
+  | 'custom'
+  | 'times_per_week';
+
+export type HabitColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'teal' | 'orange' | 'pink' | 'cyan';
+
+export interface HabitFrequencyConfig {
+  dayOfWeek?: number;
+  day_of_week?: number;
+  days?: number[];
+  targetCount?: number;
+  target_count?: number;
+}
+
+export interface Habit {
+  id: string;
+  title: string;
+  description?: string;
+  iconKey: string;
+  color: HabitColor;
+  trackingType: HabitTrackingType;
+  targetValue: number | null;
+  unitLabel: string;
+  frequencyType: HabitFrequencyType;
+  frequencyConfig: HabitFrequencyConfig;
+  reminderTime: string;
+  sortOrder: number;
+  isActive: boolean;
+  /** null = default Habits bucket; uuid = user list */
+  listId?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** GET /habits/ list item — habit record plus habit-card streak + heatmap fields */
+export interface HabitLibraryItem extends Habit {
+  currentStreak: number;
+  longestStreak: number;
+  heatmap: HabitHeatmapData;
+}
+
+export interface HabitTodayItem {
+  id: string;
+  title: string;
+  iconKey: string;
+  color: HabitColor;
+  trackingType: HabitTrackingType;
+  targetValue: number | null;
+  loggedValue: number;
+  unitLabel: string;
+  isCompleteToday: boolean;
+  currentStreak: number;
+  longestStreak: number;
+  frequencyType: HabitFrequencyType;
+  /** HH:MM local — used by habitReminderScheduler when habit is due today */
+  reminderTime: string;
+  listId?: string | null;
+  /** last 365 days — powers habit card heatmap on the habits tab */
+  heatmap: HabitHeatmapData;
+}
+
+export interface HabitsTodaySummary {
+  scheduledCount: number;
+  completedCount: number;
+  bestActiveStreak: number;
+}
+
+export interface HabitsTodayResponse {
+  date: string;
+  summary: HabitsTodaySummary;
+  habits: HabitTodayItem[];
+}
+
+export interface CreateHabitInput {
+  title: string;
+  description?: string;
+  iconKey?: string;
+  color?: HabitColor;
+  trackingType?: HabitTrackingType;
+  targetValue?: number | null;
+  unitLabel?: string;
+  frequencyType?: HabitFrequencyType;
+  frequencyConfig?: HabitFrequencyConfig;
+  reminderTime?: string;
+  /** null = default Habits bucket */
+  listId?: string | null;
+}
+
+export interface UpdateHabitInput {
+  title?: string;
+  description?: string;
+  iconKey?: string;
+  color?: HabitColor;
+  trackingType?: HabitTrackingType;
+  targetValue?: number | null;
+  unitLabel?: string;
+  frequencyType?: HabitFrequencyType;
+  frequencyConfig?: HabitFrequencyConfig;
+  reminderTime?: string;
+  isActive?: boolean;
+  listId?: string | null;
+}
+
+export interface HabitLogResponse {
+  id: string;
+  completionDate: string;
+  loggedValue: number;
+  isComplete: boolean;
+  isCompleteToday: boolean;
+  currentStreak: number;
+  longestStreak: number;
+  targetValue: number | null;
+  heatmap: HabitHeatmapData;
+}
+
+export interface HabitHeatmapData {
+  startDate: string;
+  days: number;
+  completedDates: string[];
+  /** iso date → 0–1 completion ratio; drives partial heatmap cell shades */
+  dayScores?: Record<string, number>;
+}
+
+export interface HabitTrendPoint {
+  date: string;
+  rolling7DayRate: number;
+}
+
+export interface HabitTrendData {
+  windowDays: number;
+  points: HabitTrendPoint[];
+}
+
+export interface HabitStatsResponse {
+  currentStreak: number;
+  longestStreak: number;
+  heatmap: HabitHeatmapData;
+  trend: HabitTrendData;
+}

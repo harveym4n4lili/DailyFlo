@@ -61,7 +61,8 @@ export interface UseDropdownArrowAnimationReturn {
  * ```
  */
 export function useDropdownArrowAnimation(
-  initialExpanded: boolean = false
+  initialExpanded: boolean = false,
+  durationMs: number = 100,
 ): UseDropdownArrowAnimationReturn {
   // animated value for arrow rotation (0 = collapsed/right, 1 = expanded/down)
   // matches the animation pattern used in ListCard's GroupHeader
@@ -83,7 +84,7 @@ export function useDropdownArrowAnimation(
   const toggle = (isExpanded: boolean) => {
     Animated.timing(arrowRotationValue, {
       toValue: isExpanded ? 1 : 0, // 1 = expanded/down, 0 = collapsed/right
-      duration: 200, // 200ms - linear easing for consistent dropdown arrow feel
+      duration: durationMs,
       easing: Easing.linear,
       useNativeDriver: true, // use native driver for better performance
     }).start();

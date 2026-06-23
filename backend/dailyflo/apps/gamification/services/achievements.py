@@ -8,10 +8,23 @@ from django.utils import timezone as django_tz
 
 from apps.gamification.models import AchievementDefinition, UserAchievement
 from apps.gamification.services.stats import _current_streak, _longest_streak, _week_start, effective_completion_date, get_user_timezone
+from apps.tasks.models import ActivityLog
 
 
-def _lifetime_completion_count(logs) -> int:
-    return logs.count() if hasattr(logs, 'count') else len(list(logs))
+def _count_logs(logs) -> int:
+    return logs.count() if hasattr(logs, 'count') else len(logs)
+
+
+def _logs_with_action(logs, action_type: str):
+    """filter activity logs by action_type — works on queryset or materialized list."""
+    if hasattr(logs, 'filter'):
+        return logs.filter(action_type=action_type)
+    return [log for log in logs if getattr(log, 'action_type', None) == action_type]
+
+
+def _lifetime_completion_count(logs, action_type: str = 'completed') -> int:
+    """count completion events — task achievements use 'completed'; habits use 'habit_completed'."""
+    return _count_logs(_logs_with_action(logs, action_type))
 
 
 def _criteria_met(criteria: dict, user, completion_dates: set, logs) -> bool:
@@ -29,13 +42,21 @@ def _criteria_met(criteria: dict, user, completion_dates: set, logs) -> bool:
     if ctype == 'completion_count':
         period = criteria.get('period', 'all_time')
         min_count = criteria.get('min', 1)
+        task_logs = _logs_with_action(logs, 'completed')
         if period == 'all_time':
-            return _lifetime_completion_count(logs) >= min_count
+            return _count_logs(task_logs) >= min_count
         if period == 'week':
             week_start = _week_start(today)
-            count = sum(1 for log in logs if effective_completion_date(log, user_tz) >= week_start)
+            count = sum(
+                1 for log in task_logs
+                if effective_completion_date(log, user_tz) >= week_start
+            )
             return count >= min_count
         return False
+
+    if ctype == 'habit_completion_count':
+        min_count = criteria.get('min', 1)
+        return _lifetime_completion_count(logs, 'habit_completed') >= min_count
 
     if ctype == 'perfect_week':
         week_start = _week_start(today)
@@ -97,10 +118,41 @@ def _progress_hint(criteria, user, completion_dates, logs, today, user_tz):
         return f'{min(current, target)}/{target} days'
     if criteria.get('type') == 'completion_count' and criteria.get('period') == 'all_time':
         target = criteria.get('min', 1)
-        current = _lifetime_completion_count(logs)
+        current = _lifetime_completion_count(logs, 'completed')
+        return f'{min(current, target)}/{target}'
+    if criteria.get('type') == 'habit_completion_count':
+        target = criteria.get('min', 1)
+        current = _lifetime_completion_count(logs, 'habit_completed')
         return f'{min(current, target)}/{target}'
     return None
 
 
 def unlocked_achievement_count(user) -> int:
     return UserAchievement.objects.filter(user=user).count()
+
+
+def reset_user_achievements_for_dev(user) -> dict:
+    """
+    dev-only helper — deletes unlock rows and completion activity so achievements can be re-earned.
+    also clears today's habit completion rows so the habits tab shows unchecked state.
+    """
+    from apps.habits.models import HabitCompletion
+    from apps.habits.services.habit_stats import user_today_from_prefs
+
+    deleted_unlocks, _ = UserAchievement.objects.filter(user=user).delete()
+    deleted_logs, _ = ActivityLog.objects.filter(
+        user=user,
+        action_type__in=['completed', 'habit_completed'],
+    ).delete()
+
+    today = user_today_from_prefs(user)
+    reset_completions = HabitCompletion.objects.filter(
+        habit__user=user,
+        completion_date=today,
+    ).update(logged_value=0, is_complete=False)
+
+    return {
+        'deletedUnlocks': deleted_unlocks,
+        'deletedLogs': deleted_logs,
+        'resetHabitCompletionsToday': reset_completions,
+    }

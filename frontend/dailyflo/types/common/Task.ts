@@ -8,7 +8,7 @@
 
 // Define the possible color choices for tasks
 // This matches the COLOR_CHOICES in the backend Task model
-export type TaskColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'teal' | 'orange';
+export type TaskColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'teal' | 'orange' | 'pink' | 'cyan';
 
 // Define the possible routine types for tasks
 // This matches the ROUTINE_TYPE_CHOICES in the backend Task model
@@ -30,7 +30,7 @@ export interface Subtask {
 export interface TaskReminder {
   id: string;           // Unique identifier for the reminder
   type: 'due_date' | 'custom'; // Type of reminder
-  scheduledTime: Date;  // When the reminder should fire
+  scheduledTime: string;  // When the reminder should fire — ISO string for Redux serialization
   isEnabled: boolean;   // Whether the reminder is active
 }
 

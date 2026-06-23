@@ -280,6 +280,15 @@ export default function BrowseLayout() {
           contentStyle: { backgroundColor: themeColors.background.primary() },
         }}
       />
+      <Stack.Screen
+        name="(modals)/display"
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+          gestureEnabled: false,
+          contentStyle: { backgroundColor: themeColors.background.primary() },
+        }}
+      />
       <Stack.Screen name="wake-time-select" options={timeSheetOptions} />
       <Stack.Screen name="sleep-time-select" options={timeSheetOptions} />
     </Stack>

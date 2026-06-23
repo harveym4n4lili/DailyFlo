@@ -55,20 +55,22 @@ export function CreateTaskDraftProvider({ children }: { children: ReactNode }) {
   const overdueRescheduleRef = useRef<((date: string) => void) | null>(null);
 
   const setDueDate = useCallback((date: string | undefined) => {
-    if (date && overdueRescheduleRef.current) {
+    // date-select "No Deadline" passes '' — treat as cleared (undefined), not an invalid API value
+    const normalized = date?.trim() ? date : undefined;
+    if (normalized && overdueRescheduleRef.current) {
       const cb = overdueRescheduleRef.current;
       overdueRescheduleRef.current = null;
-      cb(date);
+      cb(normalized);
     }
     setDraftState((prev) => {
-      if (!date) {
-        return { ...prev, dueDate: date, alerts: [] };
+      if (!normalized) {
+        return { ...prev, dueDate: undefined, alerts: [] };
       }
       const shouldSeedDefault =
         Boolean(prev.time?.trim()) && (prev.alerts?.length ?? 0) === 0;
       return {
         ...prev,
-        dueDate: date,
+        dueDate: normalized,
         alerts: shouldSeedDefault ? [...DEFAULT_NEW_TASK_ALERT_IDS] : prev.alerts,
       };
     });

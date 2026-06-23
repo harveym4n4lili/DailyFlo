@@ -20,7 +20,7 @@ import {
   type ListRenderItemInfo,
 } from 'react-native';
 
-import { useBrandColors } from '@/hooks/useColorPalette';
+import { useColorPalette, useBrandColors } from '@/hooks/useColorPalette';
 
 import { ONBOARDING_TASK_AGENDA_TIME_WHEEL_SPINNER_BAND_MIN_HEIGHT_PX } from '../constants/pagerLayout';
 import { ONBOARDING_SLIDES_TIME_WHEEL_ROW_LABEL_TEXT_STYLE } from '../constants/typography';
@@ -30,7 +30,7 @@ export type OnboardingQuestionnaireTimeWheelProps = {
   value: Date;
   /** parents store a full `Date`; only hour/minute from the picked slot are meaningful */
   onChange: (next: Date) => void;
-  /** plant / moss / sage — from slide `timeWheelBrandRamp`; wheel tint uses step **700** on that ramp */
+  /** plant / moss / sage / green / blue — from slide `timeWheelBrandRamp`; wheel tint uses step **700** on that ramp */
   brandRamp: OnboardingSlidesTimeWheelBrandRamp;
   accessibilityLabel?: string;
 };
@@ -211,7 +211,8 @@ export function OnboardingQuestionnaireTimeWheel({
   brandRamp,
   ...rest
 }: OnboardingQuestionnaireTimeWheelProps) {
-  const { getPlantBrandColor, getMossBrandColor, getSageBrandColor, getMarpleBrandColor } = useBrandColors();
+  const { getPlantBrandColor, getMossBrandColor, getSageBrandColor, getMarpleBrandColor, getTaskHabitColor } =
+    useColorPalette();
   const wheelLabelColor =
     brandRamp === 'plant'
       ? getPlantBrandColor(700)
@@ -219,7 +220,11 @@ export function OnboardingQuestionnaireTimeWheel({
         ? getMossBrandColor(700)
         : brandRamp === 'marple'
           ? getMarpleBrandColor(700)
-          : getSageBrandColor(700);
+          : brandRamp === 'green'
+            ? getTaskHabitColor('green', 700)
+            : brandRamp === 'blue'
+              ? getTaskHabitColor('blue', 700)
+              : getSageBrandColor(700);
 
   if (Platform.OS === 'web') {
     return <QuarterHourWebFallback wheelLabelColor={wheelLabelColor} {...rest} />;

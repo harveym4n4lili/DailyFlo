@@ -9,5 +9,10 @@ router.register(r'goals', views.UserGoalViewSet, basename='gamification-goal')
 urlpatterns = [
     path('summary/', views.GamificationSummaryView.as_view(), name='gamification-summary'),
     path('achievements/', views.GamificationAchievementsView.as_view(), name='gamification-achievements'),
+    path(
+        'achievements/dev-reset/',
+        views.GamificationAchievementsDevResetView.as_view(),
+        name='gamification-achievements-dev-reset',
+    ),
     path('', include(router.urls)),
 ]

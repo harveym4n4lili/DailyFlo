@@ -11,6 +11,7 @@ import {
   getMossBrandColor,
   getPlantBrandColor,
   getSageBrandColor,
+  getTaskHabitColor,
 } from '@/constants/ColorPalette';
 
 export type OnboardingSlidesThemeTextColorKey = keyof typeof ThemeColors.light.text;
@@ -24,7 +25,9 @@ export type OnboardingSlidesBrandStyleToken =
   | `plant:${OnboardingSlidesBrandColorShade}`
   | `sage:${OnboardingSlidesBrandColorShade}`
   | `marple:${OnboardingSlidesBrandColorShade}`
-  | `moss:${OnboardingSlidesBrandColorShade}`;
+  | `moss:${OnboardingSlidesBrandColorShade}`
+  | `green:${OnboardingSlidesBrandColorShade}`
+  | `blue:${OnboardingSlidesBrandColorShade}`;
 
 export type OnboardingSlidesBrandBackgroundToken = OnboardingSlidesBrandStyleToken;
 export type OnboardingSlidesBrandTextToken = OnboardingSlidesBrandStyleToken;
@@ -151,6 +154,14 @@ export const ONBOARDING_SLIDES_BRAND_COLORS = {
   moss: {
     accent: getMossBrandColor(500),
     soft: getMossBrandColor(200),
+  },
+  green: {
+    accent: getTaskHabitColor('green', 500),
+    soft: getTaskHabitColor('green', 100),
+  },
+  blue: {
+    accent: getTaskHabitColor('blue', 500),
+    soft: getTaskHabitColor('blue', 100),
   },
 } as const;
 

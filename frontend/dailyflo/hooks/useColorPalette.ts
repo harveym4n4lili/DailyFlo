@@ -18,10 +18,16 @@ import {
   MarpleBrandColors,
   MossBrandColors,
   SemanticColors,
+  SystemStatusColors,
+  SYSTEM_STATUS_COLOR_SCALE,
+  TaskAndHabitColors,
   TaskCategoryColors,
   PrimaryButtonColors,
   ThemeColors,
   getSemanticColor,
+  getSystemStatusColor,
+  getSystemStatusScaleColor,
+  getTaskHabitColor,
   getTaskCategoryColor,
   getBrandColor,
   getBrandPaletteColor,
@@ -34,6 +40,11 @@ import {
   type BrandColorShade,
   type BrandPaletteId,
   type SemanticColorName,
+  type SemanticColorShade,
+  type SystemStatusColorName,
+  type SystemStatusColorShade,
+  type TaskHabitColorName,
+  type TaskHabitColorShade,
   type TaskCategoryColorName,
   type ThemeColorCategory,
   type ThemeColorVariant,
@@ -57,13 +68,20 @@ export interface ColorPaletteReturn {
   marpleBrand: typeof MarpleBrandColors;
   mossBrand: typeof MossBrandColors;
   semantic: typeof SemanticColors;
+  /** red / orange / yellow / green — same ramps as task/habit picks; for stats & feedback */
+  systemStatus: typeof SystemStatusColors;
+  /** user-selectable task + habit accent ramps (4 shades each) */
+  taskHabit: typeof TaskAndHabitColors;
   taskCategory: typeof TaskCategoryColors;
   primaryButton: typeof PrimaryButtonColors.light | typeof PrimaryButtonColors.dark;
   themeColors: typeof ThemeColors.light | typeof ThemeColors.dark;
   
   // utility functions
-  getSemanticColor: (color: SemanticColorName, shade?: keyof typeof SemanticColors.success) => string;
-  getTaskCategoryColor: (color: TaskCategoryColorName, shade?: keyof typeof TaskCategoryColors.red) => string;
+  getSemanticColor: (color: SemanticColorName, shade?: SemanticColorShade) => string;
+  getSystemStatusColor: (color: SystemStatusColorName, shade?: SystemStatusColorShade) => string;
+  getSystemStatusScaleColor: (normalizedProgress: number, shade?: SystemStatusColorShade) => string;
+  getTaskHabitColor: (color: TaskHabitColorName, shade?: TaskHabitColorShade) => string;
+  getTaskCategoryColor: (color: TaskCategoryColorName, shade?: TaskHabitColorShade) => string;
   /** default product accent — **plant** ramp; use `getSageBrandColor` / `getMarpleBrandColor` / `getMossBrandColor` for other greens */
   getBrandColor: (shade?: BrandColorShade) => string;
   getBrandPaletteColor: (palette: BrandPaletteId, shade?: BrandColorShade) => string;
@@ -108,15 +126,26 @@ export function useColorPalette(): ColorPaletteReturn {
     marpleBrand: MarpleBrandColors,
     mossBrand: MossBrandColors,
     semantic: SemanticColors,
+    systemStatus: SystemStatusColors,
+    taskHabit: TaskAndHabitColors,
     taskCategory: TaskCategoryColors,
     primaryButton,
     themeColors,
     
     // utility functions with theme context
-    getSemanticColor: (color: SemanticColorName, shade = 500) => 
+    getSemanticColor: (color: SemanticColorName, shade: SemanticColorShade = 500) => 
       getSemanticColor(color, shade),
-    
-    getTaskCategoryColor: (color: TaskCategoryColorName, shade = 500) => 
+
+    getSystemStatusColor: (color: SystemStatusColorName, shade: SystemStatusColorShade = 500) =>
+      getSystemStatusColor(color, shade),
+
+    getSystemStatusScaleColor: (normalizedProgress: number, shade: SystemStatusColorShade = 500) =>
+      getSystemStatusScaleColor(normalizedProgress, shade),
+
+    getTaskHabitColor: (color: TaskHabitColorName, shade: TaskHabitColorShade = 500) =>
+      getTaskHabitColor(color, shade),
+
+    getTaskCategoryColor: (color: TaskCategoryColorName, shade: TaskHabitColorShade = 500) =>
       getTaskCategoryColor(color, shade),
 
     getBrandColor: (shade: BrandColorShade = 500) => getBrandColor(shade),
@@ -147,14 +176,38 @@ export function useSemanticColors() {
   const { getSemanticColor, withOpacity } = useColorPalette();
   
   return {
-    // direct access to common semantic colors
-    success: (shade: keyof typeof SemanticColors.success = 500) => getSemanticColor('success', shade),
-    error: (shade: keyof typeof SemanticColors.error = 500) => getSemanticColor('error', shade),
-    warning: (shade: keyof typeof SemanticColors.warning = 500) => getSemanticColor('warning', shade),
-    info: (shade: keyof typeof SemanticColors.info = 500) => getSemanticColor('info', shade),
+    // direct access to common semantic colors (red/orange/yellow/green via SystemStatusColors)
+    success: (shade: SemanticColorShade = 500) => getSemanticColor('success', shade),
+    error: (shade: SemanticColorShade = 500) => getSemanticColor('error', shade),
+    warning: (shade: SemanticColorShade = 500) => getSemanticColor('warning', shade),
+    caution: (shade: SemanticColorShade = 500) => getSemanticColor('caution', shade),
+    info: (shade: SemanticColorShade = 500) => getSemanticColor('info', shade),
     
     // utility functions
     getSemanticColor,
+    withOpacity,
+  };
+}
+
+/**
+ * useSystemStatusColors Hook
+ *
+ * Red / orange / yellow / green ramps shared with task/habit picks.
+ * Use for graded stats, warnings, and completion feedback.
+ */
+export function useSystemStatusColors() {
+  const { getSystemStatusColor, getSystemStatusScaleColor, withOpacity } = useColorPalette();
+
+  return {
+    red: (shade: SystemStatusColorShade = 500) => getSystemStatusColor('red', shade),
+    orange: (shade: SystemStatusColorShade = 500) => getSystemStatusColor('orange', shade),
+    yellow: (shade: SystemStatusColorShade = 500) => getSystemStatusColor('yellow', shade),
+    green: (shade: SystemStatusColorShade = 500) => getSystemStatusColor('green', shade),
+    /** 0–1 value → red / orange / yellow / green */
+    scale: (normalizedProgress: number, shade: SystemStatusColorShade = 500) =>
+      getSystemStatusScaleColor(normalizedProgress, shade),
+    getSystemStatusColor,
+    getSystemStatusScaleColor,
     withOpacity,
   };
 }
@@ -168,20 +221,23 @@ export function useSemanticColors() {
  * @returns Object with task color getter functions
  */
 export function useTaskColors() {
-  const { getTaskCategoryColor, withOpacity } = useColorPalette();
+  const { getTaskHabitColor, withOpacity } = useColorPalette();
   
   return {
     // direct access to common task colors
-    red: (shade: keyof typeof TaskCategoryColors.red = 500) => getTaskCategoryColor('red', shade),
-    blue: (shade: keyof typeof TaskCategoryColors.blue = 500) => getTaskCategoryColor('blue', shade),
-    green: (shade: keyof typeof TaskCategoryColors.green = 500) => getTaskCategoryColor('green', shade),
-    yellow: (shade: keyof typeof TaskCategoryColors.yellow = 500) => getTaskCategoryColor('yellow', shade),
-    purple: (shade: keyof typeof TaskCategoryColors.purple = 500) => getTaskCategoryColor('purple', shade),
-    teal: (shade: keyof typeof TaskCategoryColors.teal = 500) => getTaskCategoryColor('teal', shade),
-    orange: (shade: keyof typeof TaskCategoryColors.orange = 500) => getTaskCategoryColor('orange', shade),
+    red: (shade: TaskHabitColorShade = 500) => getTaskHabitColor('red', shade),
+    blue: (shade: TaskHabitColorShade = 500) => getTaskHabitColor('blue', shade),
+    green: (shade: TaskHabitColorShade = 500) => getTaskHabitColor('green', shade),
+    yellow: (shade: TaskHabitColorShade = 500) => getTaskHabitColor('yellow', shade),
+    purple: (shade: TaskHabitColorShade = 500) => getTaskHabitColor('purple', shade),
+    teal: (shade: TaskHabitColorShade = 500) => getTaskHabitColor('teal', shade),
+    orange: (shade: TaskHabitColorShade = 500) => getTaskHabitColor('orange', shade),
+    pink: (shade: TaskHabitColorShade = 500) => getTaskHabitColor('pink', shade),
+    cyan: (shade: TaskHabitColorShade = 500) => getTaskHabitColor('cyan', shade),
     
     // utility functions
-    getTaskCategoryColor,
+    getTaskHabitColor,
+    getTaskCategoryColor: getTaskHabitColor,
     withOpacity,
   };
 }

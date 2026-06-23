@@ -42,6 +42,8 @@ export interface DescriptionProps {
   minVisibleLines?: number;
   /** when false, hides the paragraph icon but keeps the same left gutter so grouped-list separators still line up */
   showIcon?: boolean;
+  /** optional icon tint — habit form uses background.tertiary() for a softer paragraph glyph */
+  iconColor?: string;
 }
 
 export const Description: React.FC<DescriptionProps> = ({
@@ -54,9 +56,11 @@ export const Description: React.FC<DescriptionProps> = ({
   useInitialMinHeight = true,
   minVisibleLines,
   showIcon = true,
+  iconColor,
 }) => {
   const [localDescription, setLocalDescription] = useState(description);
   const themeColors = useThemeColors();
+  const resolvedIconColor = iconColor ?? themeColors.text.primary();
 
   const handleDescriptionChange = (text: string) => {
     setLocalDescription(text);
@@ -76,8 +80,8 @@ export const Description: React.FC<DescriptionProps> = ({
               <SFSymbolIcon
                 name="doc.text.fill"
                 size={ICON_SIZE}
-                color={themeColors.text.primary()}
-                fallback={<ParagraphIcon size={ICON_SIZE} color={themeColors.text.primary()} />}
+                color={resolvedIconColor}
+                fallback={<ParagraphIcon size={ICON_SIZE} color={resolvedIconColor} />}
               />
             ) : null}
           </View>

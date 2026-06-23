@@ -99,7 +99,7 @@ export interface ListCardProps {
   silentWhenEmpty?: boolean;
 
   // optional list configuration
-  groupBy?: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'none'; // routine = one-time vs recurring (browse list detail); allDay = planner all-day bucket
+  groupBy?: 'priority' | 'dueDate' | 'color' | 'allDay' | 'routine' | 'listDetail' | 'none'; // listDetail = Today + one-time + recurring (browse list detail)
   /** titles that render collapsed until the user taps the header — planner seeds `ALL_DAY_PLANNER_INITIAL_COLLAPSED_TITLES`; remount with a day key resets per day */
   initialCollapsedGroupTitles?: readonly string[];
   sortBy?: 'none' | 'createdAt' | 'dueDate' | 'priority' | 'title'; // how to sort tasks
@@ -116,6 +116,8 @@ export interface ListCardProps {
   // header support
   headerTitle?: string; // title to display in header
   headerSubtitle?: string; // subtitle to display in header
+  /** optional block above task groups (e.g. TodayHabitsSection) */
+  prependListContent?: React.ReactNode;
   
   // padding support
   paddingTop?: number; // top padding for the list container
@@ -232,6 +234,7 @@ export default function ListCard({
   scrollEventThrottle = 16,
   headerTitle,
   headerSubtitle,
+  prependListContent,
   paddingTop,
   paddingHorizontal = Paddings.screenSmall,
   paddingBottom,
@@ -806,7 +809,7 @@ export default function ListCard({
   // render header component with optional big today header and dropdown button
   const renderHeader = () => {
     const hasStandardHeader = headerTitle || headerSubtitle || dropdownItems;
-    if (!bigTodayHeader && !hasStandardHeader) return null;
+    if (!bigTodayHeader && !hasStandardHeader && !prependListContent) return null;
 
     return (
       <View style={styles.listHeaderWrapper}>
@@ -818,6 +821,7 @@ export default function ListCard({
             }
           />
         ) : null}
+        {prependListContent ?? null}
         {/* standard header: title, subtitle, dropdown button */}
         {hasStandardHeader && (
           <View style={styles.headerContainer}>
