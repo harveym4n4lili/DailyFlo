@@ -34,6 +34,7 @@ def _serialize_today_item(habit, completion, today: date) -> dict:
         'longestStreak': streaks['longestStreak'],
         'frequencyType': habit.frequency_type,
         'reminderTime': habit.reminder_time or '',
+        'listId': str(habit.list_id) if habit.list_id else None,
         'heatmap': habit_heatmap(habit, today),
     }
 

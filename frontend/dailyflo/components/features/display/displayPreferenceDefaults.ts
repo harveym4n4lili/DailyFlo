@@ -23,14 +23,17 @@ const DEFAULT_PRIORITY_SUBLABEL = 'All';
 const DEFAULT_SHOW_ALL_DAY_TASKS = true;
 
 function getDefaultDateSortOption(context: DisplaySettingsContext): DisplayDateSortOption {
-  return context === 'today' ? DEFAULT_DISPLAY_DATE_SORT_OPTION_TODAY : DEFAULT_DISPLAY_DATE_SORT_OPTION_PLANNER;
+  if (context === 'today' || context === 'list') return DEFAULT_DISPLAY_DATE_SORT_OPTION_TODAY;
+  return DEFAULT_DISPLAY_DATE_SORT_OPTION_PLANNER;
 }
 
 /** full draft defaults for a tab — used on reset and when no saved prefs exist */
 export function buildDisplayDraftDefaults(context: DisplaySettingsContext) {
   // per-tab layout default — today list, planner timeline (overridden when user saves layoutView)
   const layoutView: DisplayLayoutView =
-    context === 'planner' ? DEFAULT_DISPLAY_LAYOUT_VIEW_PLANNER : DEFAULT_DISPLAY_LAYOUT_VIEW_TODAY;
+    context === 'planner'
+      ? DEFAULT_DISPLAY_LAYOUT_VIEW_PLANNER
+      : DEFAULT_DISPLAY_LAYOUT_VIEW_TODAY;
 
   return {
     layoutView,
@@ -84,5 +87,6 @@ export function getSavedTabDisplayPrefs(
 ): TabDisplayPreferences | undefined {
   if (context === 'today') return displayPreferences?.today;
   if (context === 'planner') return displayPreferences?.planner;
+  if (context === 'list') return displayPreferences?.list;
   return displayPreferences?.inbox;
 }

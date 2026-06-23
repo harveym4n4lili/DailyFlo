@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.tasks.models import Task
 from apps.tasks.serializers import TaskListSerializer
+from apps.habits.models import Habit
 from .models import List
 from .serializers import ListSerializer, ListCreateSerializer, ListUpdateSerializer
 
@@ -40,6 +41,7 @@ class ListViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         """soft delete list; point tasks at inbox (null list) so they still show in Inbox"""
         Task.objects.filter(list=instance, user=instance.user).update(list=None)
+        Habit.objects.filter(list=instance, user=instance.user).update(list=None)
         instance.soft_deleted = True
         instance.save(update_fields=['soft_deleted', 'updated_at'])
 

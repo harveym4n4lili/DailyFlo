@@ -37,11 +37,19 @@ type DayListSegmentChromeProps = {
   habitsIsToday: boolean;
   habitsLoading?: boolean;
   onOpenHabitDetail: (habitId: string) => void;
+  /** browse list detail: collapsible Today + One-time habit sections */
+  habitListViewSections?: {
+    today: HabitForCalendarDay[];
+    other: HabitForCalendarDay[];
+  };
+  habitsEmptyMessage?: string;
   /** planner: fixed pills above list */
   pillBarTopInset?: number;
   paddingTop?: number;
   /** today tab: scroll big title, sticky pills below it */
   useInboxTabHeader?: boolean;
+  /** browse list push: same sticky pill scroll pattern as today tab */
+  useBrowseStackHeader?: boolean;
   scrollYSharedValue?: SharedValue<number>;
   bigHeaderLabel?: string;
   children?: React.ReactNode | ((chrome: DayListSegmentChromeRenderProps) => React.ReactNode);
@@ -54,17 +62,21 @@ export function DayListSegmentChrome({
   habitsIsToday,
   habitsLoading = false,
   onOpenHabitDetail,
+  habitListViewSections,
+  habitsEmptyMessage,
   pillBarTopInset = 0,
   paddingTop = 16,
   useInboxTabHeader = false,
+  useBrowseStackHeader = false,
   scrollYSharedValue,
   bigHeaderLabel = 'Today',
   children,
 }: DayListSegmentChromeProps) {
   const insets = useSafeAreaInsets();
   const [segment, setSegment] = useState<DayListSegment>('tasks');
+  const useStickyScrollHeader = useInboxTabHeader || useBrowseStackHeader;
   const stickyPillChrome = useTodayStickyScrollPillCrossfade(
-    useInboxTabHeader ? scrollYSharedValue : undefined,
+    useStickyScrollHeader ? scrollYSharedValue : undefined,
   );
 
   useEffect(() => {
@@ -72,9 +84,9 @@ export function DayListSegmentChrome({
   }, [dayKey]);
 
   useEffect(() => {
-    if (!useInboxTabHeader || !scrollYSharedValue) return;
+    if (!useStickyScrollHeader || !scrollYSharedValue) return;
     scrollYSharedValue.value = 0;
-  }, [segment, useInboxTabHeader, scrollYSharedValue]);
+  }, [segment, useStickyScrollHeader, scrollYSharedValue]);
 
   const pills = useMemo(
     () => [
@@ -100,7 +112,7 @@ export function DayListSegmentChrome({
       scrollPillBarStyle={stickyPillChrome.scrollPillBarStyle}
       pillsStuck={stickyPillChrome.pillsStuck}
     >
-      <DaySegmentPillBar {...pillBarProps} embeddedInListHeader={useInboxTabHeader} />
+      <DaySegmentPillBar {...pillBarProps} embeddedInListHeader={useStickyScrollHeader} />
     </TodayScrollPillBarFade>
   );
 
@@ -116,7 +128,7 @@ export function DayListSegmentChrome({
     },
   });
 
-  if (useInboxTabHeader) {
+  if (useStickyScrollHeader) {
     return (
       <View style={styles.root}>
         <TodayStickyScrollPillOverlay
@@ -157,6 +169,8 @@ export function DayListSegmentChrome({
               onOpenDetail={onOpenHabitDetail}
               embeddedInParentScroll
               paddingHorizontal={0}
+              listViewSections={habitListViewSections}
+              emptyMessage={habitsEmptyMessage}
             />
           </Animated.ScrollView>
         ) : null}
@@ -197,6 +211,8 @@ export function DayListSegmentChrome({
                 isLoading={habitsLoading}
                 onOpenDetail={onOpenHabitDetail}
                 embeddedInParentScroll
+                listViewSections={habitListViewSections}
+                emptyMessage={habitsEmptyMessage}
               />
             </PlannerSegmentScroll>
           ) : null}

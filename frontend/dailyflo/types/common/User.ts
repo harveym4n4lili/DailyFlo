@@ -24,6 +24,7 @@ export interface UserDisplayPreferences {
   today?: TabDisplayPreferences;
   planner?: TabDisplayPreferences;
   inbox?: TabDisplayPreferences;
+  list?: TabDisplayPreferences;
 }
 
 /** navbar tab keys — must match app/(tabs)/ route folders (inbox on android uses browse/inbox href) */

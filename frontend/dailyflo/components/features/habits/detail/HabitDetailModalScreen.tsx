@@ -119,11 +119,11 @@ export default function HabitDetailModalScreen() {
       scheduleDays: draft.scheduleDays,
       reminderTime: draft.reminderTime,
       listId:
-        draft.pickedListId === undefined
-          ? undefined
-          : draft.pickedListId,
+        draft.pickedListId !== undefined
+          ? draft.pickedListId
+          : (detailHabit?.listId ?? null),
     }),
-    [localValues, draft, detailHabit?.color],
+    [localValues, draft, detailHabit?.color, detailHabit?.listId],
   );
 
   // auto-save everything except title/description (skip first run after hydrate)
@@ -136,7 +136,9 @@ export default function HabitDetailModalScreen() {
     if (!habitPickerDraftChanged(detailHabit, draft)) return;
 
     const effectiveColor = draft.pickedColor ?? detailHabit.color;
-    const draftKey = `${effectiveColor}|${draft.completionsPerDay}|${[...draft.scheduleDays].sort((a, b) => a - b).join(',')}|${draft.reminderTime.trim()}`;
+    const effectiveListId =
+      draft.pickedListId !== undefined ? draft.pickedListId : (detailHabit.listId ?? null);
+    const draftKey = `${effectiveColor}|${draft.completionsPerDay}|${[...draft.scheduleDays].sort((a, b) => a - b).join(',')}|${draft.reminderTime.trim()}|${effectiveListId ?? 'null'}`;
     if (prevAutoSaveDraftRef.current === draftKey) return;
     prevAutoSaveDraftRef.current = draftKey;
 
@@ -149,11 +151,15 @@ export default function HabitDetailModalScreen() {
             completionsPerDay: draft.completionsPerDay,
             scheduleDays: draft.scheduleDays,
             reminderTime: draft.reminderTime,
+            listId: effectiveListId,
           }),
         );
         // after server confirms color, drop draft override so we track detailHabit.color
         if (draft.pickedColor != null) {
           setDraft({ pickedColor: undefined });
+        }
+        if (draft.pickedListId !== undefined) {
+          setDraft({ pickedListId: undefined });
         }
       } catch (e) {
         console.error('HabitDetailModalScreen: auto-save failed', e);
@@ -167,6 +173,7 @@ export default function HabitDetailModalScreen() {
     draft.scheduleDays,
     draft.reminderTime,
     draft.pickedColor,
+    draft.pickedListId,
     updateHabit,
     setDraft,
   ]);

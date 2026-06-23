@@ -57,6 +57,10 @@ export function IosDashboardOverflowToolbar({ hidden = false }: IosDashboardOver
     }
     if (isInboxTab) {
       router.push('/(tabs)/inbox/display' as any);
+      return;
+    }
+    if (segments.includes('list')) {
+      router.push('/(tabs)/browse/display' as any);
     }
   }, [isInboxTab, router, segments]);
 

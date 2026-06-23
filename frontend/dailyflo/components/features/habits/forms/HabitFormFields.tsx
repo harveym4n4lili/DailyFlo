@@ -3,11 +3,13 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { ColorCirclePicker } from '@/components/ui/ColorCirclePicker';
-import { GroupedListHeader } from '@/components/ui/List/GroupedList';
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { GroupedListHeader, GroupedList, FormDetailButton } from '@/components/ui/List/GroupedList';
+import { SFSymbolIcon } from '@/components/ui/Icon';
+import { useThemeColors, useColorPalette } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 import type { HabitColor } from '@/types/api/habits';
@@ -33,6 +35,9 @@ type HabitFormFieldsProps = HabitFormFieldsState & {
   onColorChange: (color: HabitColor) => void;
   onCompletionsPerDayChange: (value: number) => void;
   onScheduleDaysChange: (days: number[]) => void;
+  /** list picker row — optional on create */
+  listRowValue?: string;
+  onListPress?: () => void;
   autoFocusTitle?: boolean;
   /** remounts description field after edit screen loads habit from API */
   descriptionInputKey?: string;
@@ -49,10 +54,14 @@ export function HabitFormFields({
   onColorChange,
   onCompletionsPerDayChange,
   onScheduleDaysChange,
+  listRowValue,
+  onListPress,
   autoFocusTitle = false,
   descriptionInputKey,
 }: HabitFormFieldsProps) {
   const themeColors = useThemeColors();
+  const { getMarpleBrandColor } = useColorPalette();
+  const groupedListIconColor = getMarpleBrandColor(500);
   const styles = useMemo(() => createStyles(), []);
 
   return (
@@ -80,6 +89,30 @@ export function HabitFormFields({
         scheduleDays={scheduleDays}
         onScheduleDaysChange={onScheduleDaysChange}
       />
+
+      {onListPress ? (
+        <>
+          <GroupedListHeader title="Organization" style={styles.sectionHeader} />
+          <GroupedList>
+            <FormDetailButton
+              iconComponent={
+                <SFSymbolIcon
+                  name="tray.fill"
+                  size={18}
+                  color={groupedListIconColor}
+                  fallback={
+                    <Ionicons name="file-tray" size={18} color={groupedListIconColor} />
+                  }
+                />
+              }
+              label="List"
+              value={listRowValue ?? 'Habits'}
+              onPress={onListPress}
+              showChevron
+            />
+          </GroupedList>
+        </>
+      ) : null}
 
       <GroupedListHeader title="Color" style={styles.sectionHeader} />
       <ColorCirclePicker<HabitColor>

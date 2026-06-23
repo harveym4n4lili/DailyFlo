@@ -16,6 +16,7 @@ export function shouldShowDisplaySortSection(
   context?: DisplaySettingsContext
 ): boolean {
   if (context === 'inbox') return true;
+  if (context === 'list') return true;
   if (layoutView === 'list') return true;
   return showAllDayTasks;
 }
