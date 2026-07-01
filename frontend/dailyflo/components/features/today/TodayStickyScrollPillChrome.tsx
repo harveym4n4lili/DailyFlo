@@ -20,6 +20,9 @@ import {
   todayListPillBarTop,
 } from '@/constants/todayScreenChrome';
 
+const PILL_FADE_START = TODAY_LIST_PILL_STICKY_SCROLL_THRESHOLD - 12;
+const PILL_FADE_END = TODAY_LIST_PILL_STICKY_SCROLL_THRESHOLD;
+
 export function useStickyPillBarPointerEvents(scrollYSharedValue?: SharedValue<number>) {
   const [pillsStuck, setPillsStuck] = useState(false);
 
@@ -39,48 +42,35 @@ export function useStickyPillBarPointerEvents(scrollYSharedValue?: SharedValue<n
 export function useTodayStickyScrollPillCrossfade(scrollYSharedValue?: SharedValue<number>) {
   const insets = useSafeAreaInsets();
   const pillsStuck = useStickyPillBarPointerEvents(scrollYSharedValue);
-  const fadeStart = TODAY_LIST_PILL_STICKY_SCROLL_THRESHOLD - 12;
-  const fadeEnd = TODAY_LIST_PILL_STICKY_SCROLL_THRESHOLD;
-
-  const scrollPillBarStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      scrollYSharedValue?.value ?? 0,
-      [fadeStart, fadeEnd],
-      [1, 0],
-      Extrapolation.CLAMP,
-    ),
-  }));
-
-  const stickyPillBarStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      scrollYSharedValue?.value ?? 0,
-      [fadeStart, fadeEnd],
-      [0, 1],
-      Extrapolation.CLAMP,
-    ),
-  }));
 
   return {
     pillsStuck,
-    scrollPillBarStyle,
-    stickyPillBarStyle,
     stickyPillBarTop: todayListPillBarTop(insets.top),
   };
 }
 
 type TodayStickyScrollPillOverlayProps = {
   top: number;
-  stickyPillBarStyle: ReturnType<typeof useAnimatedStyle>;
+  scrollYSharedValue?: SharedValue<number>;
   pillsStuck: boolean;
   children: React.ReactNode;
 };
 
 export function TodayStickyScrollPillOverlay({
   top,
-  stickyPillBarStyle,
+  scrollYSharedValue,
   pillsStuck,
   children,
 }: TodayStickyScrollPillOverlayProps) {
+  const stickyPillBarStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollYSharedValue?.value ?? 0,
+      [PILL_FADE_START, PILL_FADE_END],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
   return (
     <Animated.View
       style={[styles.stickyPillBar, { top }, stickyPillBarStyle]}
@@ -92,21 +82,27 @@ export function TodayStickyScrollPillOverlay({
 }
 
 type TodayScrollPillBarFadeProps = {
-  scrollPillBarStyle: ReturnType<typeof useAnimatedStyle>;
+  scrollYSharedValue?: SharedValue<number>;
   pillsStuck: boolean;
   children: React.ReactNode;
 };
 
 export function TodayScrollPillBarFade({
-  scrollPillBarStyle,
+  scrollYSharedValue,
   pillsStuck,
   children,
 }: TodayScrollPillBarFadeProps) {
+  const scrollPillBarStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollYSharedValue?.value ?? 0,
+      [PILL_FADE_START, PILL_FADE_END],
+      [1, 0],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
   return (
-    <Animated.View
-      style={scrollPillBarStyle}
-      pointerEvents={pillsStuck ? 'none' : 'auto'}
-    >
+    <Animated.View style={scrollPillBarStyle} pointerEvents={pillsStuck ? 'none' : 'auto'}>
       {children}
     </Animated.View>
   );

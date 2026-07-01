@@ -4,8 +4,11 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import AnimatedReanimated, { type AnimatedStyle } from 'react-native-reanimated';
+import { View, Text, StyleSheet } from 'react-native';
+import AnimatedReanimated, {
+  useAnimatedStyle,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,7 +25,8 @@ export const TAB_ROOT_TOP_SECTION_ANCHOR_HEIGHT = 64;
 
 export type TabRootTopSectionChromeProps = {
   miniHeaderLabel: string;
-  miniHeaderStyle: AnimatedStyle<ViewStyle>;
+  /** ui-thread opacity for the mini title — keep useAnimatedStyle inside this layer (not as a prop object) */
+  miniHeaderOpacity: SharedValue<number>;
   /** left slot — close button or 44pt spacer */
   leftSlot?: React.ReactNode;
   /** right slot — select all, dashboard actions, etc. */
@@ -31,13 +35,18 @@ export type TabRootTopSectionChromeProps = {
 
 export function TabRootTopSectionChrome({
   miniHeaderLabel,
-  miniHeaderStyle,
+  miniHeaderOpacity,
   leftSlot,
   rightSlot,
 }: TabRootTopSectionChromeProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
   const insets = useSafeAreaInsets();
+
+  // animated style must live on Animated.View here — passing the style object as a prop breaks in RN dev (react 19 prop diff)
+  const miniHeaderStyle = useAnimatedStyle(() => ({
+    opacity: miniHeaderOpacity.value,
+  }));
 
   const screenWash = themeColors.background.primary();
   const topBlurGradientColors = themeColors.isDark

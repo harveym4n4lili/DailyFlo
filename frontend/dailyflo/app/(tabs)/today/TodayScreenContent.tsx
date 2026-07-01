@@ -91,10 +91,6 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
     }
   );
 
-  const miniTodayHeaderStyle = useAnimatedStyle(() => ({
-    opacity: miniHeaderOpacity.value,
-  }));
-
   const { setDraft, registerOverdueReschedule, clearOverdueReschedule } = useCreateTaskDraft();
   const { selection, toggleItemSelection, exitSelectionMode, selectAllItems, clearSelection } = useUI();
 
@@ -599,7 +595,7 @@ export function TodayScreenContent({ mode }: TodayScreenContentProps) {
         {screenBackdrop}
         <TabRootTopSectionChrome
           miniHeaderLabel={miniHeaderLabel}
-          miniHeaderStyle={miniTodayHeaderStyle}
+          miniHeaderOpacity={miniHeaderOpacity}
           leftSlot={
             Platform.OS === 'android' ? (
               <AnimatedReanimated.View

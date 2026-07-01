@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Platform, StyleSheet } from 'react-native';
-import AnimatedReanimated from 'react-native-reanimated';
+import AnimatedReanimated, { useAnimatedStyle } from 'react-native-reanimated';
 
 import { FloatingActionButton } from '@/components/ui/Button';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
@@ -15,10 +15,19 @@ import { fabChromeZoneStyle } from './fabChromeZone';
 
 export function TabFabOverlayLayer() {
   const { registration } = useTabFabOverlay();
+  const fabOpacity = registration?.fabOpacity;
 
   const inactive = registration == null;
   const pointerBlocked = !!registration?.pointerEventsBlocked;
   const pointerEvents = inactive || pointerBlocked ? ('none' as const) : ('box-none' as const);
+
+  // opacity spring lives here — registration passes a SharedValue, not a useAnimatedStyle handle
+  const fabWrapperStyle = useAnimatedStyle(
+    () => ({
+      opacity: fabOpacity?.value ?? 1,
+    }),
+    [fabOpacity],
+  );
 
   return (
     <AnimatedReanimated.View
@@ -26,7 +35,7 @@ export function TabFabOverlayLayer() {
       style={[
         fabChromeZoneStyle,
         styles.aboveChrome,
-        registration?.wrapperStyle,
+        fabWrapperStyle,
         inactive ? styles.hidden : null,
       ]}
     >

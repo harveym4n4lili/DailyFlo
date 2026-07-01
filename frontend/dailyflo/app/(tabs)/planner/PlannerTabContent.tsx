@@ -292,8 +292,6 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
     fabOpacity.value = withTiming(hideFab ? 0 : 1, { duration: 200 });
   }, [selection.isSelectionMode, selection.selectionType, fabOpacity, mode]);
   const fabAnimatedStyle = useAnimatedStyle(() => ({ opacity: fabOpacity.value }));
-  const fabStyleRef = useRef(fabAnimatedStyle);
-  fabStyleRef.current = fabAnimatedStyle;
 
   const { setTabFabRegistration } = useTabFabOverlay();
   useFocusEffect(
@@ -305,7 +303,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
         },
         accessibilityLabel: 'Add new task',
         accessibilityHint: 'Double tap to create a new task',
-        wrapperStyle: fabStyleRef.current,
+        fabOpacity,
         pointerEventsBlocked: selection.isSelectionMode && selection.selectionType === 'tasks',
       });
       return () => setTabFabRegistration(null);
@@ -316,6 +314,7 @@ export function PlannerTabContent({ mode }: PlannerTabContentProps) {
       setTabFabRegistration,
       selection.isSelectionMode,
       selection.selectionType,
+      fabOpacity,
     ]),
   );
 

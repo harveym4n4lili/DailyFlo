@@ -4,7 +4,7 @@
 
 import React, { useCallback } from 'react';
 import { View, Platform } from 'react-native';
-import AnimatedReanimated, { useAnimatedStyle } from 'react-native-reanimated';
+import AnimatedReanimated from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 
 import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
@@ -16,7 +16,6 @@ import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 
 export default function HabitsScreen() {
   const router = useGuardedRouter();
-  const fabAnimatedStyle = useAnimatedStyle(() => ({ opacity: 1 }));
 
   const { setTabFabRegistration } = useTabFabOverlay();
   useFocusEffect(
@@ -26,10 +25,9 @@ export default function HabitsScreen() {
         onPress: () => router.push('/(tabs)/habits/create' as any),
         accessibilityLabel: 'Add new habit',
         accessibilityHint: 'Double tap to create a new habit',
-        wrapperStyle: fabAnimatedStyle,
       });
       return () => setTabFabRegistration(null);
-    }, [router, setTabFabRegistration, fabAnimatedStyle]),
+    }, [router, setTabFabRegistration]),
   );
 
   return (
@@ -38,7 +36,7 @@ export default function HabitsScreen() {
       <View style={{ flex: 1 }}>
         <HabitsScreenContent />
         {!USE_CUSTOM_LIQUID_TAB_BAR ? (
-          <AnimatedReanimated.View style={[fabAnimatedStyle, fabChromeZoneStyle]}>
+          <AnimatedReanimated.View style={fabChromeZoneStyle}>
             <FloatingActionButton
               onPress={() => router.push('/(tabs)/habits/create' as any)}
               accessibilityLabel="Add new habit"

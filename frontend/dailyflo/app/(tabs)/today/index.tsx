@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, Platform } from 'react-native';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
@@ -35,8 +35,6 @@ export default function TodayScreen() {
     fabOpacity.value = withTiming(androidInPlaceSelection ? 0 : 1, { duration: 400 });
   }, [androidInPlaceSelection, fabOpacity]);
   const fabAnimatedStyle = useAnimatedStyle(() => ({ opacity: fabOpacity.value }));
-  const fabStyleRef = useRef(fabAnimatedStyle);
-  fabStyleRef.current = fabAnimatedStyle;
 
   const { setTabFabRegistration } = useTabFabOverlay();
   useFocusEffect(
@@ -46,11 +44,11 @@ export default function TodayScreen() {
         onPress: () => pushQuickAddWithTodayDue(router),
         accessibilityLabel: 'Add new task',
         accessibilityHint: 'Double tap to create a new task',
-        wrapperStyle: fabStyleRef.current,
+        fabOpacity,
         pointerEventsBlocked: androidInPlaceSelection,
       });
       return () => setTabFabRegistration(null);
-    }, [router, setTabFabRegistration, androidInPlaceSelection]),
+    }, [router, setTabFabRegistration, androidInPlaceSelection, fabOpacity]),
   );
 
   useEffect(() => {

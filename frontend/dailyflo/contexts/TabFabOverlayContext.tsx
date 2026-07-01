@@ -4,15 +4,14 @@
  */
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
-import type { AnimatedStyle } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 
 export type TabFabRegistration = {
   onPress: () => void;
   accessibilityLabel: string;
   accessibilityHint: string;
-  /** optional reanimated opacity (e.g. hide FAB in selection mode) */
-  wrapperStyle?: StyleProp<AnimatedStyle<ViewStyle>>;
+  /** optional shared opacity (e.g. hide FAB in selection mode) — animated inside TabFabOverlayLayer */
+  fabOpacity?: SharedValue<number>;
   /** when true, the chrome zone ignores touches (e.g. FAB visually hidden) */
   pointerEventsBlocked?: boolean;
 };

@@ -108,10 +108,7 @@ export function DayListSegmentChrome({
   };
 
   const scrollPillBar = (
-    <TodayScrollPillBarFade
-      scrollPillBarStyle={stickyPillChrome.scrollPillBarStyle}
-      pillsStuck={stickyPillChrome.pillsStuck}
-    >
+    <TodayScrollPillBarFade scrollYSharedValue={scrollYSharedValue} pillsStuck={stickyPillChrome.pillsStuck}>
       <DaySegmentPillBar {...pillBarProps} embeddedInListHeader={useStickyScrollHeader} />
     </TodayScrollPillBarFade>
   );
@@ -133,7 +130,7 @@ export function DayListSegmentChrome({
       <View style={styles.root}>
         <TodayStickyScrollPillOverlay
           top={stickyPillChrome.stickyPillBarTop}
-          stickyPillBarStyle={stickyPillChrome.stickyPillBarStyle}
+          scrollYSharedValue={scrollYSharedValue}
           pillsStuck={stickyPillChrome.pillsStuck}
         >
           {stickyPillBar}

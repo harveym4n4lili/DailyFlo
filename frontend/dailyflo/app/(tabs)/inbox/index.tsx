@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, Platform } from 'react-native';
 import AnimatedReanimated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
@@ -33,8 +33,6 @@ export default function InboxTabScreen() {
     fabOpacity.value = withTiming(androidInPlaceSelection ? 0 : 1, { duration: 400 });
   }, [androidInPlaceSelection, fabOpacity]);
   const fabAnimatedStyle = useAnimatedStyle(() => ({ opacity: fabOpacity.value }));
-  const fabStyleRef = useRef(fabAnimatedStyle);
-  fabStyleRef.current = fabAnimatedStyle;
 
   // register FAB with the shared tab chrome layer (same pattern as today / planner)
   const { setTabFabRegistration } = useTabFabOverlay();
@@ -45,11 +43,11 @@ export default function InboxTabScreen() {
         onPress: () => pushQuickAddForInbox(router),
         accessibilityLabel: 'Add new task',
         accessibilityHint: 'Double tap to create a new task',
-        wrapperStyle: fabStyleRef.current,
+        fabOpacity,
         pointerEventsBlocked: taskSelectionActive,
       });
       return () => setTabFabRegistration(null);
-    }, [router, setTabFabRegistration, taskSelectionActive]),
+    }, [router, setTabFabRegistration, taskSelectionActive, fabOpacity]),
   );
 
   useEffect(() => {

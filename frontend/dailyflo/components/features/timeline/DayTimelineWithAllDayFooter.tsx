@@ -282,18 +282,11 @@ export function DayTimelineWithAllDayFooter({
 
   const scrollPills = useMemo(
     () => (
-      <TodayScrollPillBarFade
-        scrollPillBarStyle={stickyPillChrome.scrollPillBarStyle}
-        pillsStuck={stickyPillChrome.pillsStuck}
-      >
+      <TodayScrollPillBarFade scrollYSharedValue={scrollYSharedValue} pillsStuck={stickyPillChrome.pillsStuck}>
         {plannerPillBarScroll}
       </TodayScrollPillBarFade>
     ),
-    [
-      stickyPillChrome.scrollPillBarStyle,
-      stickyPillChrome.pillsStuck,
-      plannerPillBarScroll,
-    ],
+    [scrollYSharedValue, stickyPillChrome.pillsStuck, plannerPillBarScroll],
   );
 
   const todayScrollHeader = useMemo(
@@ -365,7 +358,7 @@ export function DayTimelineWithAllDayFooter({
       <View style={styles.todayStickyRoot}>
         <TodayStickyScrollPillOverlay
           top={stickyPillChrome.stickyPillBarTop}
-          stickyPillBarStyle={stickyPillChrome.stickyPillBarStyle}
+          scrollYSharedValue={scrollYSharedValue}
           pillsStuck={stickyPillChrome.pillsStuck}
         >
           {plannerPillBarSticky}
