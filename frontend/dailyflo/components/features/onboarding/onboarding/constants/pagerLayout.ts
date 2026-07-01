@@ -27,6 +27,13 @@ export const ONBOARDING_TASK_TITLE_SURFACE_RADIUS = Paddings.formDataPillRadius;
 /** hairline ring on suggestion chips only — same weight as quick-add pills (`QuickAddLabelOnlyPill`); task title row has no stroke */
 export const ONBOARDING_TASK_AGENDA_SURFACE_BORDER_WIDTH = 1.25;
 
+/** compact insets inside each sideways suggestion chip — tighter than the full task title row (`Paddings.card`) */
+export const ONBOARDING_TASK_AGENDA_SUGGESTION_CHIP_PADDING_VERTICAL = Paddings.formDataPillVertical;
+export const ONBOARDING_TASK_AGENDA_SUGGESTION_CHIP_PADDING_HORIZONTAL = Paddings.formDataPillHorizontal;
+export const ONBOARDING_TASK_AGENDA_SUGGESTION_CHIP_ICON_GAP = Paddings.formDataPillIconGap;
+/** sparkles column — slightly smaller than task-row checkbox so chips read as pills not cards */
+export const ONBOARDING_TASK_AGENDA_SUGGESTION_SPARKLES_SIZE = 18;
+
 /** ms — suggestion chip border + sparkles crossfade when a chip matches the live title (`OnboardingTaskAgendaSuggestionRow`) */
 export const ONBOARDING_TASK_AGENDA_SUGGESTION_SELECT_ANIM_MS = 260;
 
@@ -38,13 +45,13 @@ export const ONBOARDING_TASK_AGENDA_SUGGESTION_SELECT_ANIM_MS = 260;
 export const ONBOARDING_TASK_AGENDA_INNER_HORIZONTAL_PAD = Paddings.screen + Paddings.touchTargetSmall + 4;
 
 /** vertical gap between the suggestions section title (“Here are some suggestions:”) and the first chip row */
-export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_TITLE_CHIP_GAP = Paddings.screen + Paddings.touchTarget;
+export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_TITLE_CHIP_GAP = Paddings.formDataPillHorizontal;
 
-/** vertical gap between the two sideways chip rows — slightly tighter than title→row (`screen + touchTargetSmall` vs `screen + touchTarget`) */
-export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_INTER_ROW_GAP = Paddings.screen + Paddings.touchTargetSmall;
+/** vertical gap between the two sideways chip rows */
+export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_INTER_ROW_GAP = Paddings.touchTarget;
 
 /** horizontal gap between suggestion chips inside each sideways row */
-export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_ROW_GAP = Paddings.formDataPillRowGap;
+export const ONBOARDING_TASK_AGENDA_SUGGESTIONS_ROW_GAP = Paddings.formDataPillIconGap;
 
 /** vertical gap between the task title row surface and the suggestions / replace slot (wheel + duration share this slot) */
 export const ONBOARDING_TASK_AGENDA_TASK_TO_SUGGESTIONS_GAP = Paddings.screen + Paddings.touchTargetSmall;

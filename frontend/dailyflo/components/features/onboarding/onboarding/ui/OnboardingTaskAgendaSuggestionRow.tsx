@@ -1,6 +1,6 @@
 /**
- * suggestion chip — blend surface + sparkles + label; idle ring uses `border.secondary`, selected animates ring + sparkles to the slide continue color (`plant:500` on post-picker task steps), not global FAB fill.
- * `useSharedValue` + `withTiming` drive border `interpolateColor` and a two-layer sparkles crossfade.
+ * suggestion chip — blend surface + sparkles + label; idle ring uses `border.secondary`,
+ * selected animates ring + sparkles to the slide continue color (`plant:500` on post-picker task steps), not global FAB fill.
  */
 
 import * as Haptics from 'expo-haptics';
@@ -23,7 +23,7 @@ import {
   ONBOARDING_TASK_TITLE_SURFACE_RADIUS,
 } from '../constants/pagerLayout';
 import { ONBOARDING_SLIDES_TASK_AND_HABIT_FIELD_TITLE_TEXT_STYLE } from '../constants/typography';
-import { taskAgendaSuggestionChipLayoutStyles as C, TASK_AGENDA_ROW_ICON_SIZE } from './taskAgendaTitleRowLayout';
+import { taskAgendaSuggestionChipLayoutStyles as C, TASK_AGENDA_SUGGESTION_SPARKLES_SIZE } from './taskAgendaTitleRowLayout';
 
 export type OnboardingTaskAgendaSuggestionRowProps = {
   label: string;
@@ -31,8 +31,12 @@ export type OnboardingTaskAgendaSuggestionRowProps = {
   selected: boolean;
   onSelect: () => void;
   titleTextColor: string;
-  /** blended slide `continueButtonBackground` — selected border + sparkles (`plant:500` on post-picker task steps) */
+  /** selected border + sparkles accent — slide continue color (onboarding) or marple (ai chat) */
   selectedBrandColor: string;
+  /** idle sparkles color — defaults to selectedBrandColor so icons always use brand */
+  sparklesIdleColor?: string;
+  /** selected sparkles color — defaults to selectedBrandColor */
+  sparklesSelectedColor?: string;
 };
 
 export function OnboardingTaskAgendaSuggestionRow({
@@ -41,11 +45,13 @@ export function OnboardingTaskAgendaSuggestionRow({
   onSelect,
   titleTextColor,
   selectedBrandColor,
+  sparklesIdleColor,
+  sparklesSelectedColor,
 }: OnboardingTaskAgendaSuggestionRowProps) {
   const themeColors = useThemeColors();
-  // cache strings for worklets — border + slide brand come from JS; `selectedBrandColor` updates when questionnaire blend moves
   const borderSecondary = themeColors.border.secondary();
-  const sparklesIdle = themeColors.text.tertiary();
+  const sparklesIdle = sparklesIdleColor ?? selectedBrandColor;
+  const sparklesSelected = sparklesSelectedColor ?? selectedBrandColor;
 
   const progress = useSharedValue(selected ? 1 : 0);
   useEffect(() => {
@@ -99,10 +105,10 @@ export function OnboardingTaskAgendaSuggestionRow({
             <View style={[C.checkboxColumn, styles.sparklesColumn]} accessibilityElementsHidden>
               <View style={styles.sparklesStack}>
                 <Animated.View style={[styles.sparklesLayer, sparklesUnselectedLayerStyle]}>
-                  <SparklesIcon size={TASK_AGENDA_ROW_ICON_SIZE} color={sparklesIdle} />
+                  <SparklesIcon size={TASK_AGENDA_SUGGESTION_SPARKLES_SIZE} color={sparklesIdle} />
                 </Animated.View>
                 <Animated.View style={[styles.sparklesLayer, sparklesSelectedLayerStyle]}>
-                  <SparklesIcon size={TASK_AGENDA_ROW_ICON_SIZE} color={selectedBrandColor} />
+                  <SparklesIcon size={TASK_AGENDA_SUGGESTION_SPARKLES_SIZE} color={sparklesSelected} />
                 </Animated.View>
               </View>
             </View>
@@ -139,11 +145,11 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   sparklesColumn: {
-    minHeight: TASK_AGENDA_ROW_ICON_SIZE,
+    minHeight: TASK_AGENDA_SUGGESTION_SPARKLES_SIZE,
   },
   sparklesStack: {
-    width: TASK_AGENDA_ROW_ICON_SIZE,
-    height: TASK_AGENDA_ROW_ICON_SIZE,
+    width: TASK_AGENDA_SUGGESTION_SPARKLES_SIZE,
+    height: TASK_AGENDA_SUGGESTION_SPARKLES_SIZE,
     position: 'relative',
   },
   sparklesLayer: {

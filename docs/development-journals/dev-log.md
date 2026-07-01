@@ -1,343 +1,769 @@
 ## [18/06/2025] - [Wednesday]
 
 ### Today's Goals
+
 - [x] Begin Documentation Folders/Files
 - [x] Complete Requirements Planning
 - [ ] Complete Architectural and Technical Planning
+
 ### What I Learned
+
 - Learned how to start documentation professionally.
+
 ### Notes
+
 - No Notes
 
 ---
+
 ## [19/06/2025] - [Thursday]
 
 ### Today's Goals
+
 - [x] Complete model conceptual design doc
 - [x] Complete endpoint design doc
 - [x] Complete authentication flow design
 - [x] Initialise Django backend, in seperate branch
 - [x] Initialise React Native, Expo frontend, in seperate branch
 - [x] Merged both setup branches to main branch
+
+
+
 ### What I Accomplished
+
 - Practice in planning and design practices
+
+
+
 ### What I Learned
+
 - After research, gained further understanding on authentication workflows with JWT
+
+
+
 ### Challenges & Solutions
+
 - Came across merge conflict from both branches containing their own .gitignore files, solved by using git web editor to edit and append both files together.
+
+
+
 ### Tomorrow's Plan
+
 - Implement Models
+
+
+
 ### Notes
+
 - No Notes
+
 ---
+
+
+
 ## [20/06/2025] - [Friday]
 
+
+
 ### Today's Goals
-- [ ] Implement some django models
-- [ ] Prepare endpoints for authentication
+
+- [x] Implement some django models
+- [x] Prepare endpoints for authentication
+
+
 
 ### What I Learned
+
 - Came across a new library and backend archirecture in PyDantic, which is commonly used in modern 2025 practice for django.
+
+
+
 ### Challenges & Solutions
+
 - Wasn't able to meet todays goals
 - More time was spent on researching more about PyDantic, and deciding between archirectures.
+
+
+
 ### Tomorrow's Plan
+
 - Complete today's goals tommorow.
+
+
+
 ### Notes
+
 - No Notes
+
 ---
+
+
+
 ## [21/06/2025] - [Saturday]
 
+
+
 ### Today's Goals
-- [X] Implement some django models
-- [X] Write basic model serializers 
+
+- [x] Implement some django models
+- [x] Write basic model serializers 
 - [ ] Begin writing API endpoints 
 
+
+
 ### What I Learned
+
 - Relearned serializer method writing, from learning about serializer vs modelSerializers and its meta class, to extensions and data validation methods.
 
+
+
 ### Challenges & Solutions
+
 - Had problems with references within backend which includes:
-    - installed app references had to be changed as I had created a new apps folder and moved all apps into that folder
-    - manage.py referring to wrong dailyfo folder for main settings which was renamed to config
+  - installed app references had to be changed as I had created a new apps folder and moved all apps into that folder
+  - manage.py referring to wrong dailyfo folder for main settings which was renamed to config
 - Problems appeared when trying to make migrations, kept saying modules couldn't be found.
-- Solved by ensuring manage.py refers to correct settings.py parent folder, and ensuring installed apps dict contains correct reference to apps dependent on structure, ensuring settings variables contain correct reference to settings parent folders where necessary. 
+- Solved by ensuring manage.py refers to correct settings.py parent folder, and ensuring installed apps dict contains correct reference to apps dependent on structure, ensuring settings variables contain correct reference to settings parent folders where necessary.
+
+
+
 ### Tomorrow's Plan
+
 - Complete frontend setup
 - Merge both branches again and delete to prepare for feature branching
 
+
+
 ### Notes
+
 - No Notes
+
 ---
+
+
+
 ## [22/06/2025] - [Sunday]
 
+
+
 ### Today's Goals/Accomplishments
-- [X] Written basic CRUD API views and endpoints for tasks
-- [X] Implement JWT login endpoints
-- [X] Prepare general URL endpoints 
+
+- [x] Written basic CRUD API views and endpoints for tasks
+- [x] Implement JWT login endpoints
+- [x] Prepare general URL endpoints 
+
+
 
 ### What I Learned
+
 - Somewhat learned view writing, learned different types of view writing e.g FBV, CBV, generics, viewsets
 - Research on JWT was conducted, learned about what it is, pros and cons, how to implement it to project and use built in methods for token obtaining.
-- Learned how to use curl for API endpoint behaviour testing 
+- Learned how to use curl for API endpoint behaviour testing
+
+
+
 ### Challenges & Solutions
+
 - CURL formatting caused problems, I just had to open a gitbash terminal in the correct dir to bypass format problems.
+
+
+
 ### Tomorrow's Plan
+
 - Implement CRUD for recurring tasks.
 - Implement soft delete for task and recurring task
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [23/06/2025] - [Monday]
 
+
+
 ### Today's Goals
-- [X] Write CRUD API views for reucrring tasks model
-- [X] Implement soft delete views for task and recurring task
-- [X] Conduct basic curl testing for user login, registration
+
+- [x] Write CRUD API views for reucrring tasks model
+- [x] Implement soft delete views for task and recurring task
+- [x] Conduct basic curl testing for user login, registration
+
+
 
 ### What I Accomplished
+
 - gained significant practice in basic curl testing for endpoint behaviours.
+
+
+
 ### Tomorrow's Plan
+
 - Design wireframes for phone display
 - Completely design userflow throughout app
 - Research on possible frontend stacks/refresh on react native
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [26/06/2025] - [Thursday]
 
+
+
 ### Today's Goals
-- [X] Start Wireframe planning
+
+- [x] Start Wireframe planning
+
+
 
 ### What I Learned
+
 - Gained insight in modern practice wireframe planning
-- More extensive, complete wireframe planning on could help increase workflow and development, especially on frontend. 
+- More extensive, complete wireframe planning on could help increase workflow and development, especially on frontend.
+
+
+
 ### Tomorrow's Plan
+
 - Complete wireframe plan
+
+
+
 ### Notes
+
 - Considering extending, including task categories
 - renaming recurring tasks to routines
 - bottom nav bar: 3/5 buttons complete, considering a page with grouped tasks view, e.g project/task-list, and controlled categories
 - 
+
 ---
+
+
+
 ## [30/06/2025] - [Monday]
 
+
+
 ### Today's Goals
-- [X] Write a wireframe design doc for client-side dailyflo app
-- [X] Plan out user flow throughout app
+
+- [x] Write a wireframe design doc for client-side dailyflo app
+- [x] Plan out user flow throughout app
+
+
 
 ### What I Accomplished
+
 - Gained more extensive practice on planning various user flows, helped expanded my view on UX planning as a whole, from responsive planning to state planning.
+
+
+
 ### Tomorrow's Plan
+
 - Continue Refresh on react native and research on expo
 - Continue research on styling stacks
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [08/07/2025] - [Tuesday]
 
+
+
 ### Today's Goals
-- [X] Continue refresh on react native and expo (notion notes)
+
+- [x] Continue refresh on react native and expo (notion notes)
+
+
 
 ### What I learned
+
 - Gained refreshing insight on react's hook, prop state management system and other fundamentals
 - Gained refreshing insight on implementing navigation, and project structure react native expo
+
+
+
 ### Future Plan
+
 - Go over data forms and responsive, enhanced UI in react native expo
 - Research styling stacks, inspiration for global elements
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [09/07/2025] - [Wednesday]
 
+
+
 ### Today's Goals
-- [X] Went over data forms, responsive UI, device features and deployment for react native expo
+
+- [x] Went over data forms, responsive UI, device features and deployment for react native expo
 - [ ] Research more on potential frontend frameworks, styling and animation
 - [ ] Begin to plan frontend development such as file structure
 
+
+
 ### What I learned
+
 - Gained insight on how to deploy an app on the app store
 - Learned more ways on how to make a responsive UI design
 - Gained refreshing insight on more APIs used to access device features through app
+
+
+
 ### Future Plan
+
 - Continue finishing full frontend structure designing
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [15/07/2025] - [Tuesday]
 
+
+
 ### Today's Goals
-- [X] Begin to plan frontend development such as file structure
-- [X] Prepare technical design docs
+
+- [x] Begin to plan frontend development such as file structure
+- [x] Prepare technical design docs
+
+
+
 ### Challenges & Solutions
+
 - I haven't actually created my own wireframes for the project, making design docs where deciding global design elements and other UX parts was difficult without designs.
+
+
+
 ### Future Plan
+
 - Learn how to use figma, start and complete wireframe designs
 - Continue finishing full frontend structure designing
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [11/08/2025] - [Monday]
 
-### Today's Goals
-- [X] Fill in/write in design system doc
-- [X] Continue Figma designs
-### Future Plan
-- Learn how to structure typography in a modular way on figma
-- Continue finishing full frontend structure designing
-### Notes
-- No notes
----
-## [12/08/2025] - [Tuesday]
+
 
 ### Today's Goals
-- [X] Filled in some token design for design system doc
-- [X] Continue Figma designs
+
+- [x] Fill in/write in design system doc
+- [x] Continue Figma designs
+
+
+
 ### Future Plan
+
+- Learn how to structure typography in a modular way on figma
+- Continue finishing full frontend structure designing
+
+
+
+### Notes
+
+- No notes
+
+---
+
+
+
+## [12/08/2025] - [Tuesday]
+
+
+
+### Today's Goals
+
+- [x] Filled in some token design for design system doc
+- [x] Continue Figma designs
+
+
+
+### Future Plan
+
 - Structure color palettes in modular way
 - Begin to design task creation and core screens for figma design
 - Continue finishing full frontend structure designing
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [13/08/2025] - [Wednesday]
 
+
+
 ### Today's Goals
-- [X] Added some colors to primary palette
-- [X] Continue Figma designs, saved colors and typography as variables on figma
-- [X] Begun core screen design
+
+- [x] Added some colors to primary palette
+- [x] Continue Figma designs, saved colors and typography as variables on figma
+- [x] Begun core screen design
+
+
+
 ### Future Plan
+
 - Begin to design task creation and finish core screens for figma design
 - Continue finishing full frontend structure designing
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [14/08/2025] - [Thursday]
 
+
+
 ### Today's Goals
-- [X] Completed Primary Palette
-- [X] Finish daily home view core screen design
+
+- [x] Completed Primary Palette
+- [x] Finish daily home view core screen design
+
+
+
 ### What I learned
+
 - The first draft will not always be perfect, its better to work on it a small amount everyday.
+
+
+
 ### Future Plan
+
 - Begin to design task creation modal/screen
 - Design the bottom navbar
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [16/08/2025] - [Saturday]
 
+
+
 ### Today's Goals
-- [X] Finished main navbar design
+
+- [x] Finished main navbar design
+
+
+
 ### Future Plan
+
 - Begin to design task creation modal/screen
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [18/08/2025] - [Monday]
 
+
+
 ### Today's Goals
-- [X] Reworked Today's task screen to a Main Day Planner Screen
+
+- [x] Reworked Today's task screen to a Main Day Planner Screen
+
+
+
 ### Future Plan
+
 - Begin to design task creation modal/screen
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [19/08/2025] - [Tuesday]
 
+
+
 ### Today's Goals
-- [X] Begun design on task creation modal screen
+
+- [x] Begun design on task creation modal screen
+
+
+
 ### Future Plan
+
 - Finish modal task creation screen, keep note of any model changes needed
 - Begin to plan folder creation modal
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [21/08/2025] - [Thursday]
 
+
+
 ### Today's Goals
-- [X] Finished task modal creation screen
+
+- [x] Finished task modal creation screen
+
+
+
 ### Future Plan
+
 - make clear note of any model changes needed
 - Begin to plan folder creation modal
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [05/09/2025] - [Friday]
 
+
+
 ### Today's Goals
-- [X] Fully Finished task modal creation screen
+
+- [x] Fully Finished task modal creation screen
+
+
+
 ### Future Plan
+
 - make clear note of any model changes needed
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [06/09/2025] - [Saturday]
 
+
+
 ### Today's Goals
-- [X] Finished task detailed view modal
+
+- [x] Finished task detailed view modal
+
+
+
 ### Future Plan
+
 - make clear note of any model changes needed
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [07/09/2025] - [Sunday]
 
+
+
 ### Today's Goals
-- [X] Begun work on list view screen
+
+- [x] Begun work on list view screen
+
+
+
 ### Future Plan
+
 - make clear note of any model changes needed
+
+
+
 ### Notes
+
 - No notes
+
 ---
+
+
+
 ## [08/09/2025] - [Monday]
 
-### Today's Goals
-- [X] Continued work on list view screen
-### Challenges
-- Found difficulty designing the list screen, with UI desicions based on ease of use, and usefulness.
-### Future Plan
-- make clear note of any model changes needed
-### Notes
-- Need to solve: 
-    - color indicator on each list card
-    - content to put on each list card
-    - styling of text in each list card
-    - how to handle tasks view in browse
-    - finalise layout of filter button and potential view style button
----
-## [09/09/2025] - [Tuesday]
+
 
 ### Today's Goals
-- [X] Finished list view screen
-- [X] Finished list detail view screen
-- [X] Finished inbox, and today's task screens
+
+- [x] Continued work on list view screen
+
+
+
+### Challenges
+
+- Found difficulty designing the list screen, with UI desicions based on ease of use, and usefulness.
+
+
+
 ### Future Plan
+
+- make clear note of any model changes needed
+
+
+
+### Notes
+
+- Need to solve: 
+  - color indicator on each list card
+  - content to put on each list card
+  - styling of text in each list card
+  - how to handle tasks view in browse
+  - finalise layout of filter button and potential view style button
+
+---
+
+
+
+## [09/09/2025] - [Tuesday]
+
+
+
+### Today's Goals
+
+- [x] Finished list view screen
+- [x] Finished list detail view screen
+- [x] Finished inbox, and today's task screens
+
+
+
+### Future Plan
+
 - make clear note of any model changes needed
 - begin to design settings screen
 - begin to design rescedule/date modal
 - begin to design completed screen
+
+
+
 ### Notes
+
 - almost done with full wireframe designing, consider dark mode
 - begin to refresh on react native concepts, plan on components and pages to be built
 - this leads to documentation update, referring to file-architecture and design-system
+
 ---
+
+
+
 ## [10/09/2025] - [Wednesday]
 
-### Today's Goals
-- [X] Finished Day select modal
-- [X] Finished task completion screen
-- [X] Finished Settings screen
-### Future Plan
-- begin to plan frontend components and integration with backend
-- finish documentation with frontend related docs
-### Notes
-- no notes
----
-## [11/09/2025] - [Thursday]
+
 
 ### Today's Goals
-- [X] Update Documentation according to wireframe designs
+
+- [x] Finished Day select modal
+- [x] Finished task completion screen
+- [x] Finished Settings screen
+
+
+
+### Future Plan
+
+- begin to plan frontend components and integration with backend
+- finish documentation with frontend related docs
+
+
+
+### Notes
+
+- no notes
+
+---
+
+
+
+## [11/09/2025] - [Thursday]
+
+
+
+### Today's Goals
+
+- [x] Update Documentation according to wireframe designs
+
 Files affected:
 design-system.md - include wireframe details
 wireframes.md - include wireframe details
@@ -346,668 +772,1298 @@ requirements.md - Add new functional requirements
 Enhance database/models.md - Add new fields and relationships
 Expand api/endpoints.md - Add new API endpoints
 Update authentication.md - Add social auth flows
+
 ### Future Plan
+
 - begin to plan task decomposition, plan next steps
+
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [12/09/2025] - [Friday]
 
+
+
 ### Today's Goals
-- [X] Updated whole backend with new models for new wireframe designs
+
+- [x] Updated whole backend with new models for new wireframe designs
+
 Updated Task app, models, serializers, views and urls
 Updated List app, models, serializers, views and urls
 Updated User app, models, serializers, views and urls
+
 ### Future Plan
+
 - Begin to plan first prototype, what frontend components need to be implemented first.
+
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [14/09/2025] - [Sunday]
 
+
+
 ### Today's Goals
-- [X] Attempted to refactor frontend into javascript.
+
+- [x] Attempted to refactor frontend into javascript.
+
+
+
 ### Challenges & Solutions
+
 - Proved to be very difficult, alot of files had to be changed and it was hard to get frontend running, so decided to stick with typescript.
+
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [15/09/2025] - [Monday]
 
+
+
 ### Today's Goals
-- [X] Prepared Main Navbar for App
-- [X] Added frontend type definitions fro Task, List, User
-- [X] Implemented Redux state management
+
+- [x] Prepared Main Navbar for App
+- [x] Added frontend type definitions fro Task, List, User
+- [x] Implemented Redux state management
+
+
 
 ### Notes
+
 - Plan and prepare service layer
+
 ---
+
+
+
 ## [16/09/2025] - [Tuesday]
 
+
+
 ### Today's Goals
-- [X] Implemented most of the API service layer
-- [X] Implemented most relevant slices to be used
-- [X] Create Mockup data to test UI before connecting components to backend
+
+- [x] Implemented most of the API service layer
+- [x] Implemented most relevant slices to be used
+- [x] Create Mockup data to test UI before connecting components to backend
+
+
 
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [17/09/2025] - [Wednesday]
 
+
+
 ### Today's Goals
-- [X] Implemented Screen Layout Components
-- [X] Refactored Today Screen to include the new components
-- [X] Designed a new color palette for dark mode
+
+- [x] Implemented Screen Layout Components
+- [x] Refactored Today Screen to include the new components
+- [x] Designed a new color palette for dark mode
+
+
 
 ### Notes
+
 - Begin to plan how to implement constant color palettes to be used with components and UI
 - Plan and research how typography can be implemented
 - Consider components that dynamically choose which color to use dependant on light/dark mode
+
 ---
+
+
+
 ## [18/09/2025] - [Thursday]
 
+
+
 ### Today's Goals
-- [X] Wrote a color palette constant to be used
+
+- [x] Wrote a color palette constant to be used
+
+
 
 ### Notes
+
 - Begin to plan color system and hook usage for color palette
 - Consider What needs to be refactored to use new color system
+
 ---
+
+
+
 ## [19/09/2025] - [Friday]
 
+
+
 ### Today's Goals
-- [X] Wrote a hook to use the color palette constant
-- [X] Refactored app files and components to use the new color system
-- [X] removed template color components and hooks
+
+- [x] Wrote a hook to use the color palette constant
+- [x] Refactored app files and components to use the new color system
+- [x] removed template color components and hooks
+
+
 
 ### Plans For Future
+
 - Fix the status bar issue
 - Add Mock Data to test task card placeholders
 
+
+
 ### Notes
+
 - consider changing and experimenting ui colors 
 - Plan how to change nacbar color
+
 ---
+
+
+
 ## [20/09/2025] - [Saturday]
 
+
+
 ### Today's Goals
-- [X] Refactored the navbar to include color hooks
+
+- [x] Refactored the navbar to include color hooks
+
+
 
 ### Plans For Future
+
 - Begin to plan how to implement typography system
 
+
+
 ### Notes
+
 - consider styling changes to be made
+
 ---
+
+
+
 ## [23/09/2025] - [Tuesday]
 
+
+
 ### Today's Goals
-- [X] Implemented a typography constants file
-- [X] Implemented satoshi font assets
-- [X] Wrote typography hook file
-- [X] Implemented new typography system in app
+
+- [x] Implemented a typography constants file
+- [x] Implemented satoshi font assets
+- [x] Wrote typography hook file
+- [x] Implemented new typography system in app
+
+
 
 ### Plans For Future
+
 - Begin to plan how to implement tasks, how they are displayed and interactions
 
+
+
 ### Notes
+
 - consider swiping gestures
+
 ---
+
+
+
 ## [24/09/2025] - [Wednesday]
 
+
+
 ### Today's Goals
-- [X] Created Listcard and taskcard components
-- [X] Included Collapsible group headers
-- [X] Included delete, complete and edit task interactions
-- [X] Included swipe gestures with appropriate styling
+
+- [x] Created Listcard and taskcard components
+- [x] Included Collapsible group headers
+- [x] Included delete, complete and edit task interactions
+- [x] Included swipe gestures with appropriate styling
+
+
 
 ### Plans For Future
+
 - Improve styling of task cards
 
+
+
 ### Notes
+
 - consider animations
+
 ---
+
+
+
 ## [25/09/2025] - [Thursday]
 
+
+
 ### Today's Goals
-- [X] Styling changes to Today Screen Header
+
+- [x] Styling changes to Today Screen Header
+
+
 
 ### Plans For Future
+
 - Improve styling of task cards
 
+
+
 ### Notes
+
 - consider animations
+
 ---
+
+
+
 ## [26/09/2025] - [Friday]
 
+
+
 ### Today's Goals
-- [X] Added smooth animations to group expansion of task cards
-- [X] Resolved Virtualized list nesting
+
+- [x] Added smooth animations to group expansion of task cards
+- [x] Resolved Virtualized list nesting
+
+
 
 ### Plans For Future
+
 - Plant to implement modal components and FAB for task creation and view
 
+
+
 ### Notes
+
 - consider animations
 
 ---
+
+
+
 ## [30/09/2025] - [Thursday]
 
+
+
 ### Today's Goals
-- [X] Prepared a basic FAB component
+
+- [x] Prepared a basic FAB component
+
+
 
 ### Plans For Future
+
 - Improve styling of FAB
 - prepare modal components
 
+
+
 ### Notes
+
 - consider animations
+
 ---
+
+
+
 ## [01/10/2025] - [Wednesday]
 
+
+
 ### Today's Goals
-- [X] Styled FAB
-- [X] Added ghost pulse animation to FAB
-- [X] Prepared basic modal backdrop/container components
+
+- [x] Styled FAB
+- [x] Added ghost pulse animation to FAB
+- [x] Prepared basic modal backdrop/container components
+
+
 
 ### Plans For Future
+
 - Improved modal screens
 
+
+
 ### Notes
+
 - No Notes
+
 ---
+
+
+
 ## [02/10/2025] - [Thursday]
 
+
+
 ### Today's Goals
-- [X] Improved and implemented base modal screen to app
+
+- [x] Improved and implemented base modal screen to app
+
+
 
 ### Plans For Future
+
 - Consider modal screen for task view and task creation
 - plan to implement variants of modal screens
 
+
+
 ### Notes
+
 - No Notes
+
 ---
+
+
+
 ## [03/10/2025] - [Friday]
 
+
+
 ### Today's Goals
-- [X] Refactored Modal screen to have variants
-- [X] Implemented this new modal screen to task detail and task create
+
+- [x] Refactored Modal screen to have variants
+- [x] Implemented this new modal screen to task detail and task create
+
+
 
 ### Plans For Future
+
 - Plan to implement task form, and modal styling
+
+
+
 ### Notes
+
 - No Notes
+
 ---
+
+
+
 ## [06/10/2025] - [Monday]
 
+
+
 ### Today's Goals
-- [X] Created a task form component prototype
-- [X] Begun to style header section of create modal
+
+- [x] Created a task form component prototype
+- [x] Begun to style header section of create modal
+
 
 
 ### Plans For Future
+
 - Finish taskform creation and styling
 - Plan how to test task creation and edit
 - Consider styling and implementing task detail modal
 
+
+
 ### Notes
+
 - No Notes
+
 ---
+
+
+
 ## [07/10/2025] - [Tuesday]
 
+
+
 ### Today's Goals
-- [X] Finished styling header task creation modal
-- [X] Prepared a date picker UI button
-- [X] Implemented a task creation modal component, with first step component
-- [X] Implemented new modal to app and FAB
+
+- [x] Finished styling header task creation modal
+- [x] Prepared a date picker UI button
+- [x] Implemented a task creation modal component, with first step component
+- [x] Implemented new modal to app and FAB
+
 
 
 ### Plans For Future
+
 - Finish taskform creation and styling
 - Consider styling and implementing task detail modal
 - Plan how to design date pick modal
 
+
+
 ### Notes
+
 - No Notes
+
 ---
+
+
+
 ## [08/10/2025] - [Wednesday]
 
+
+
 ### Today's Goals
-- [X] Implementing date picker modal and components
-- [X] Introduced new modal ehader component to be reused
-- [X] Implemented quick date options in date picker modal
+
+- [x] Implementing date picker modal and components
+- [x] Introduced new modal ehader component to be reused
+- [x] Implemented quick date options in date picker modal
+
 
 
 ### Plans For Future
+
 - Finish date picker modal and styling
 - Plan how to implement calendar day view for select
 
+
+
 ### Notes
+
 - No Notes
+
 ---
+
+
+
 ## [09/10/2025] - [Thursday]
 
+
+
 ### Today's Goals
-- [X] Finished date picker modal
-- [X] Introduced new calendar view component for date picker modal
-- [X] Fully styled calendar and quick date options
-- [X] Added task repeat option, no functionality yet
+
+- [x] Finished date picker modal
+- [x] Introduced new calendar view component for date picker modal
+- [x] Fully styled calendar and quick date options
+- [x] Added task repeat option, no functionality yet
+
 
 
 ### Plans For Future
+
 - Plan next implementation of task creation basic info
 - Plan how to implement repeating task selection
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
 ---
+
+
+
 ## [10/10/2025] - [Friday]
 
+
+
 ### Today's Goals
-- [X] Styled task creation modal topsection
-- [X] Added a color pallete icon that opens a color picker mdoal
-- [X] Designed my own Draggable Modal bringing better UX
-- [X] Added inverted colors to palette
+
+- [x] Styled task creation modal topsection
+- [x] Added a color pallete icon that opens a color picker mdoal
+- [x] Designed my own Draggable Modal bringing better UX
+- [x] Added inverted colors to palette
+
 
 
 ### Plans For Future
+
 - Plan next implementation of task creation basic info
 - Plan how to implement repeating task selection
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
 ---
+
+
+
 ## [12/10/2025] - [Sunday]
 
+
+
 ### Today's Goals
-- [X] Added icon, time and duration fields to task model
-- [X] Craeted a task icon and color select modal
-- [X] Added a sticky header prop to draggable modal
+
+- [x] Added icon, time and duration fields to task model
+- [x] Craeted a task icon and color select modal
+- [x] Added a sticky header prop to draggable modal
+
+
 
 ### Plans For Future
+
 - Plan to implement next form buttons
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
 ---
+
+
+
 ## [13/10/2025] - [Monday]
 
+
+
 ### Today's Goals
-- [X] Added alert and duration buttons to the task creation modal
+
+- [x] Added alert and duration buttons to the task creation modal
+
+
 
 ### Plans For Future
+
 - Plan to implement next form modals
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
 ---
+
+
+
 ## [14/10/2025] - [Tuesday]
 
+
+
 ### Today's Goals
-- [X] Implemented a GroupedList Button Component to be reused
-- [X] Refactored the task creation modal buttons to use the new component
-- [X] Begun designing task time duration modal and implemented react native time wheel picker
+
+- [x] Implemented a GroupedList Button Component to be reused
+- [x] Refactored the task creation modal buttons to use the new component
+- [x] Begun designing task time duration modal and implemented react native time wheel picker
+
+
 
 ### Plans For Future
+
 - Plan to implement next form modals
 - Consider Animations
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
 ---
+
+
+
 ## [15/10/2025] - [Wednesday]
 
+
+
 ### Today's Goals
-- [X] Added action buttons to Draggable Modal
-- [X] Refactored all current form modals to use new action buttons
-- [X] Restructured current form buttons to include dynamic displays for saved options
-- [X] Implemented an icon pressable display
-- [X] Added highlight animations for form button tap and saves
+
+- [x] Added action buttons to Draggable Modal
+- [x] Refactored all current form modals to use new action buttons
+- [x] Restructured current form buttons to include dynamic displays for saved options
+- [x] Implemented an icon pressable display
+- [x] Added highlight animations for form button tap and saves
+
+
 
 ### Plans For Future
+
 - Plan to implement alert selection modal
 - Plan to implement description and sub tasks
 - Turn form buttons into reusable components for modularity, keeping animations
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement better time picker or style my own
 - Implement better duration slider
 - Add relevant haptic feedback to buttons
 - Change task color palette to be more aesthetic
+
 ---
+
+
+
 ## [17/10/2025] - [Friday]
 
+
+
 ### Today's Goals
-- [X] Implemented new form button components
-- [X] Refactored form buttons to use new components
-- [X] Begun implementing alert modal
+
+- [x] Implemented new form button components
+- [x] Refactored form buttons to use new components
+- [x] Begun implementing alert modal
+
+
 
 ### Plans For Future
+
 - Plan to implement description and sub tasks
 - Plan to implement primary create button
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement custom task creation modal structure23
 - Implement better time picker style
 - Implement better duration slider style
 - Add relevant haptic feedback to buttons
 - Change task color palette to be more aesthetic
+
 ---
+
+
+
 ## [19/10/2025] - [Sunday]
 
+
+
 ### Today's Goals
-- [X] Implemented TaskDescriptionComponent
-- [X] Refactored task creation modal to include TaskDescription
+
+- [x] Implemented TaskDescriptionComponent
+- [x] Refactored task creation modal to include TaskDescription
+
+
 
 ### Plans For Future
+
 - Plan to implement primary create button
 - consider auto scroll to keep content avoiding keyboard
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement custom task creation modal structure23
 - Implement better time picker style
 - Implement better duration slider style
 - Add relevant haptic feedback to buttons
 - Change task color palette to be more aesthetic
+
 ---
+
+
+
 ## [20/10/2025] - [Monday]
 
+
+
 ### Today's Goals
-- [X] Implemented a new keyboard layout modal
-- [X] Fied Modal backdrop issues
-- [X] seerated subtasks from Task Description as its own component
-- [X] Begun new task creation modal refactoring
+
+- [x] Implemented a new keyboard layout modal
+- [x] Fied Modal backdrop issues
+- [x] seerated subtasks from Task Description as its own component
+- [x] Begun new task creation modal refactoring
+
+
 
 ### Plans For Future
+
 - Fix form picker buttons not opening modals
 - Fix slide animations for other modals
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement custom task creation modal structure
 - Implement better time picker style
 - Implement better duration slider style
 - Add relevant haptic feedback to buttons
 - Change task color palette to be more aesthetic
+
 ---
+
+
+
 ## [21/10/2025] - [Tuesday]
 
+
+
 ### Today's Goals
-- [X] Conducted archirectural restructuring such as top section container
-- [X] Changed taskBasicInfo to taskCreationContent
-- [X] Styling Changes
+
+- [x] Conducted archirectural restructuring such as top section container
+- [x] Changed taskBasicInfo to taskCreationContent
+- [x] Styling Changes
+
+
 
 ### Plans For Future
+
 - Continue to improve form picker button and modal UX
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement custom task creation modal structure
 - Implement better time picker style
 - Implement better duration slider style
 - Add relevant haptic feedback to buttons
 - Change task color palette to be more aesthetic
+
 ---
+
+
+
 ## [22/10/2025] - [Wednesday]
 
+
+
 ### Today's Goals
-- [X] Created new util methods for formpicker button functionality
-- [X] Begun to implement a dynamic message feature on the form picker buttons
+
+- [x] Created new util methods for formpicker button functionality
+- [x] Begun to implement a dynamic message feature on the form picker buttons
+
+
 
 ### Plans For Future
+
 - Fix smoothness, and add a seamless feel to transitioning
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement custom task creation modal structure
 - Implement better time picker style
 - Implement better duration slider style
 - Add relevant haptic feedback to buttons
 - Change task color palette to be more aesthetic
+
 ---
+
+
+
 ## [23/10/2025] - [Thursday]
 
+
+
 ### Today's Goals
-- [X] Begun to implement basic transitioning between task creation modal and form picker modals
+
+- [x] Begun to implement basic transitioning between task creation modal and form picker modals
+
+
 
 ### Plans For Future
+
 - Aim for more seamless transitioning
 - Find alternative to stacked modals, as expo ios does not allow this.
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement custom task creation modal structure
 - Implement better time picker style
 - Implement better duration slider style
 - Add relevant haptic feedback to buttons
 - Change task color palette to be more aesthetic
+
 ---
+
+
+
 ## [13/11/2025] - [Thursday]
 
+
+
 ### Today's Goals
-- [X] Transformed draggable modals (form picker modals) to be absolute views
-- [X] Implemented create task button functionality
+
+- [x] Transformed draggable modals (form picker modals) to be absolute views
+- [x] Implemented create task button functionality
+
+
 
 ### Plans For Future
+
 - Begin to address refining points
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement custom task creation modal structure
 - Implement better time picker style
 - Implement better duration slider style
 - Add relevant haptic feedback to buttons
 - Change task color palette to be more aesthetic
+
 ---
+
+
+
 ## [14/11/2025] - [Friday]
 
+
+
 ### Today's Goals
-- [X] Styling changes
+
+- [x] Styling changes
+
+
 
 ### Plans For Future
+
 - Begin to check and restructure component hierarchy, especially with task creation modal, task card components
 
+
+
 ### Notes
+
 - After task creation is fully implemented, check how current structure follows the planned file architecture
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement custom task creation modal structure
 - Implement better time picker style
 - Implement better duration slider style
 - Add relevant haptic feedback to buttons
 - Change task color palette to be more aesthetic
+
 ---
+
+
+
 ## [15/11/2025] - [Saturday]
 
+
+
 ### Today's Goals
-- [X] Restructed Taskcard, Listcard, task creation modal component architecture
+
+- [x] Restructed Taskcard, Listcard, task creation modal component architecture
+
+
 
 ### Plans For Future
+
 - Consider fulfilling refine plans
 - Plan how to implement task view
 
+
+
 ### Notes
+
 - No notes
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement custom task creation modal structure
 - Implement better time picker style
 - Implement better duration slider style
 - Add relevant haptic feedback to buttons
 - Change task color palette to be more aesthetic
+
 ---
+
+
+
 ## [16/11/2025] - [Sunday]
 
+
+
 ### Today's Goals
-- [X] Added haptic feed back
-- [X] Styling changes to task creation modal
+
+- [x] Added haptic feed back
+- [x] Styling changes to task creation modal
+
+
 
 ### Plans For Future
+
 - Plan how to implement task view
 
+
+
 ### Notes
+
 - Consider file structure after task view implementation
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement better time picker style
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
+
 ---
+
+
+
 ## [18/11/2025] - [Tuesday]
 
+
+
 ### Today's Goals
-- [X] Planned Implemenation on task view screen
-- [X] Also planned file architecture
+
+- [x] Planned Implemenation on task view screen
+- [x] Also planned file architecture
+
+
 
 ### Plans For Future
+
 - Consider refining responsivenes for description input, box expansion
 
+
+
 ### Notes
+
 - consider implementing own text input component
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement better time picker style
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
+
 ---
+
+
+
 ## [25/11/2025] - [Wednesday]
 
+
+
 ### Today's Goals
-- [X] Implemented my own ios version of a text input box
+
+- [x] Implemented my own ios version of a text input box
+
+
 
 ### Plans For Future
+
 - Plan to implement task detail view
 - Find a way to preserve keyboard modal current styling, but remove max height to allow for full description expansion
 
+
+
 ### Notes
+
 - no notes
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement better time picker style
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
+
 ---
+
+
+
 ## [04/12/2025] - [Thursday]
 
+
+
 ### Today's Goals
-- [X] remove height constraint for infinite description expansion
-- [X] added auto scroll
-- [X] set conditional scroll in task creation modal
+
+- [x] remove height constraint for infinite description expansion
+- [x] added auto scroll
+- [x] set conditional scroll in task creation modal
+
+
 
 ### Plans For Future
+
 - Plan to implement task detail view
 
+
+
 ### Notes
+
 - no notes
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement better time picker style
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
 - Improve text input component
+
 ---
+
+
+
 ## [08/12/2025] - [Monday]
 
+
+
 ### Today's Goals
-- [X] Added conditional IOS styling to modal
-- [X] Added inter-content scroll lock for conditional, full modal dragging (for form picker modals)
-- [X] Decomposed keyboard modal to fullscreen modal and keyboard anchored container for modularity (preparation for task detail view reusable components)
+
+- [x] Added conditional IOS styling to modal
+- [x] Added inter-content scroll lock for conditional, full modal dragging (for form picker modals)
+- [x] Decomposed keyboard modal to fullscreen modal and keyboard anchored container for modularity (preparation for task detail view reusable components)
+
+
 
 ### Plans For Future
+
 - Plan to implement task detail view
 
+
+
 ### Notes
+
 - consider keyboard anchored section in task detail to be initially hidden
 - consider primary buttons and styling
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement better time picker style
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
 - Improve text input component
+
 ---
+
+
+
 ## [09/12/2025] - [Tuesday]
 
+
+
 ### Today's Goals
-- [X] Added conditional IOS styling to modal buttons
-- [X] begun to implement task detail view
+
+- [x] Added conditional IOS styling to modal buttons
+- [x] begun to implement task detail view
+
+
 
 ### Plans For Future
+
 - Plan functional buttons for detail view
 - seperate task save button and task create button, consider opacity styling
 - re-style subtask in task creation modal
 - also implement subtask creation
 
+
+
 ### Notes
+
 - no notes
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement better time picker style
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
 - Improve text input component
+
 ---
+
+
+
 ## [10/12/2025] - [Wednesday]
+
+
+
 ### Today's Goals
-- [X] Re-designed task view to draggable modal
-- [X] Created some new key components
-- [X] Modularised a few other components
-- [X] Implemented a subtask section solution
+
+- [x] Re-designed task view to draggable modal
+- [x] Created some new key components
+- [x] Modularised a few other components
+- [x] Implemented a subtask section solution
+
+
 
 ### Plans For Future
+
 - Plan functional buttons for detail view
 - seperate task save button and task create button, consider opacity styling
 - Implement subtask functionality
 - ensure clear, reusabke component structure for subtask
-- Fix scrolling issue with subtasks 
+- Fix scrolling issue with subtasks
+
+
 
 ### Notes
+
 - no notes
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement better time picker style
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
 - Improve text input component
+
 ---
+
+
+
 ## [11/12/2025] - [Thursday]
+
+
+
 ### Today's Goals
-- [X] Researched expo-go and custom native code limitations
-- [X] Researched development build process, apple dev program enrolment
-- [X] Completed functionality fo rtask update
-- [X] Completed further modularisation
+
+- [x] Researched expo-go and custom native code limitations
+- [x] Researched development build process, apple dev program enrolment
+- [x] Completed functionality fo rtask update
+- [x] Completed further modularisation
+
+
 
 ### Plans For Future
+
 - Plan functional buttons for detail view
 - Implement a title, desc and icon edit full screen modal for task view
 - Consider implementing task list association and editing for task create and view
 
+
+
 ### Notes
+
 - no notes
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement better time picker style
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
 - Improve text input component
 - Fix scrolling issue with subtasks
+
 ---
+
+
+
 ## [12/12/2025] - [Friday]
+
+
+
 ### Today's Goals
-- [X] Implemented non-functional focus task button component
-- [X] Implemented task + desc edit mode in task view
-- [X] merged basic task management branch to main
+
+- [x] Implemented non-functional focus task button component
+- [x] Implemented task + desc edit mode in task view
+- [x] merged basic task management branch to main
+
+
 
 ### Plans For Future
+
 - Learn how to prepare django backend for api integration testing
 - get better understanding of async thunk, redux slice state
 - Learn and record how to test api integration
 
+
+
 ### Notes
+
 - no notes
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement better time picker style
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
@@ -1015,23 +2071,41 @@ Updated User app, models, serializers, views and urls
 - Fix scrolling issue with subtasks 
 - general haptic feedback
 - fix auto scroll in subtask section of task view, create
+
 ---
+
+
+
 ## [14/12/2025] - [Sunday]
+
+
+
 ### Today's Goals
-- [X] Noted how to prepare backend for react native expo integration testing
-- [X] Installed CORS headers, updated backend settings for integration testing preparation
-- [X] refactor token API client to use redux store for token management and auth
-- [X] refactored fetchTasks async thunk with Django API
+
+- [x] Noted how to prepare backend for react native expo integration testing
+- [x] Installed CORS headers, updated backend settings for integration testing preparation
+- [x] refactor token API client to use redux store for token management and auth
+- [x] refactored fetchTasks async thunk with Django API
+
+
 
 ### Plans For Future
+
 - get better understanding of async thunk, redux slice state
 - Learn and record how to test api integration
 - note how to bypass temporarily bypass auth (token checks) for local testing
 - note how to manually set tokens to bypass auth for local testing
 
+
+
 ### Notes
+
 - no notes
+
+
+
 ### TODO POSSIBLE REFINING
+
 - Implement better time picker style
 - Implement better duration slider style
 - Change task color palette to be more aesthetic
@@ -1039,912 +2113,1829 @@ Updated User app, models, serializers, views and urls
 - Fix scrolling issue with subtasks 
 - general haptic feedback
 - fix auto scroll in subtask section of task view, create
+
 ---
+
+
+
 ## [15/12/2025] - [Monday]
+
+
+
 ### Today's Goals
-- [X] Fully integrated task APIs, for fetch, create, update and delete
+
+- [x] Fully integrated task APIs, for fetch, create, update and delete
+
+
 
 ### Plans For Future
+
 - get better understanding of async thunk, redux slice state
 - Learn and record how to test api integration
 - plan to implement UI loading states and completion toasts
 - plan to implement focus feature
 - plan to implement user onboard
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [16/12/2025] - [Tuesday]
+
+
+
 ### Today's Goals
-- [X] Implemented retry logic for api fetch
-- [X] merged task api integration branch with main
-- [X] prepared onboarding and auth plans
+
+- [x] Implemented retry logic for api fetch
+- [x] merged task api integration branch with main
+- [x] prepared onboarding and auth plans
+
+
 
 ### Plans For Future
+
 - get better understanding of async thunk, redux slice state
 - Learn and record how to test api integration
 - plan to implement UI loading states and completion toasts
 - plan to implement focus feature
 - plan to implement user onboard
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [17/12/2025] - [Wednesday]
+
+
+
 ### Today's Goals
-- [X] Implemented retry logic for api fetch
-- [X] merged task api integration branch with main
-- [X] started new auth-onboarding branch
-- [X] created implementation and api integration plans for onboarding and auth
- -[X] started implementation of onboarding screen UI
+
+- [x] Implemented retry logic for api fetch
+- [x] merged task api integration branch with main
+- [x] started new auth-onboarding branch
+- [x] created implementation and api integration plans for onboarding and auth
+  [X] started implementation of onboarding screen UI
+
+
 
 ### Plans For Future
+
 - get better understanding of async thunk, redux slice state
 - Learn and record how to test api integration
 - plan to implement UI loading states and completion toasts
 - plan to implement focus feature
 - plan to implement user onboard
 
+
+
 ### Notes
+
 - update backlog for onboarding, including action section secondary functionlaity
 - permission functionality
+
 ---
+
+
+
 ## [18/12/2025] - [Thursday]
+
+
+
 ### Today's Goals
-- [X] Implemented retry logic for api fetch
-- [X] merged task api integration branch with main
-- [X] started new auth-onboarding branch
-- [X] created implementation and api integration plans for onboarding and auth
- -[X] started implementation of onboarding screen UI
+
+- [x] Implemented retry logic for api fetch
+- [x] merged task api integration branch with main
+- [x] started new auth-onboarding branch
+- [x] created implementation and api integration plans for onboarding and auth
+  [X] started implementation of onboarding screen UI
+
+
 
 ### Plans For Future
+
 - get better understanding of async thunk, redux slice state
 - Learn and record how to test api integration
 - plan to implement UI loading states and completion toasts
 - plan to implement focus feature
 - plan to implement user onboard
 
+
+
 ### Notes
+
 - update backlog for onboarding, including action section secondary functionlaity
 - permission functionality
+
 ---
+
+
+
 ## [20/12/2025] - [Thursday]
+
+
+
 ### Today's Goals
-- [X] Implemented registration and sign in modal, for email auth
-- [X] Implemented mockup authentication for UX testing
-- [X] Completed onboarding navigation flow and screens
-- [X] Updated API client to use secure store for token management
-- [X] Integrated API auths for login, registraiton and logout
-- [X] Implemented an auth check status feature
-- [X] Implemented user scoped task data
+
+- [x] Implemented registration and sign in modal, for email auth
+- [x] Implemented mockup authentication for UX testing
+- [x] Completed onboarding navigation flow and screens
+- [x] Updated API client to use secure store for token management
+- [x] Integrated API auths for login, registraiton and logout
+- [x] Implemented an auth check status feature
+- [x] Implemented user scoped task data
+
+
 
 ### Plans For Future
+
 - get better understanding of async thunk, redux slice state
 - do a deep run manual test, and ensure backlog is COMPLETELY up to date
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [28/12/2025] - [Sunday]
+
+
+
 ### Today's Goals
-- [X] Begun full revision of frontend structure
+
+- [x] Begun full revision of frontend structure
+
+
 
 ### Plans For Future
+
 - get better understanding of async thunk, redux slice state
 - do a deep run manual integration test, and ensure backlog is COMPLETELY up to date
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [03/01/2026] - [Monday]
+
+
+
 ### Today's Goals
-- [X] Further learning on types and TypeScript
+
+- [x] Further learning on types and TypeScript
+
+
 
 ### Plans For Future
+
 - get better understanding of async thunk, redux slice state
 - do a deep run manual integration test, and ensure backlog is COMPLETELY up to date
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [11/01/2026] - [Sunday]
+
+
+
 ### Today's Goals
-- [X] Started calendar planner screen, in a new branch
-- [X] Implemented a weekly view scroll feature
-- [X] Implemnted a new month view modal
-- [X] Modularised animations
+
+- [x] Started calendar planner screen, in a new branch
+- [x] Implemented a weekly view scroll feature
+- [x] Implemnted a new month view modal
+- [x] Modularised animations
+
+
 
 ### Plans For Future
+
 - Plan how to implement task card views in the planner page
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [12/01/2026] - [Monday]
+
+
+
 ### Today's Goals
-- [X] Started basic timeline that displays tasks
-- [X] Styled timeline task cards
-- [X] Added date sensitive task creation modal
-- [X] Functioning FAB
+
+- [x] Started basic timeline that displays tasks
+- [x] Styled timeline task cards
+- [x] Added date sensitive task creation modal
+- [x] Functioning FAB
+
+
 
 ### Plans For Future
+
 - Implement set heights for timeline connectors between tasks.
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [13/01/2026] - [Tuesday]
+
+
+
 ### Today's Goals
-- [X] Styled timeline labels and time labels for tasks
-- [X] Implemented a constant spacing feature between tasks for UX
-- [X] Tasks are draggable for time adjustments
+
+- [x] Styled timeline labels and time labels for tasks
+- [x] Implemented a constant spacing feature between tasks for UX
+- [x] Tasks are draggable for time adjustments
+
+
 
 ### Plans For Future
+
 - Improve constant spacing consistency between tasks with duration, tasks without duration
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [18/01/2026] - [Sunday]
+
+
+
 ### Today's Goals
-- [X] Fixed constant spacing inconsistency [SOLUTION: set all task card heights equally for now]
-- [X] Ensured consistent timeline, timeline item styling and spacing between states: initial load, task update and task drag n drop
+
+- [x] Fixed constant spacing inconsistency [SOLUTION: set all task card heights equally for now]
+- [x] Ensured consistent timeline, timeline item styling and spacing between states: initial load, task update and task drag n drop
+
+
 
 ### Plans For Future
+
 - Work towards a solution for varying heights but keeping constant spacing
 - plan styling for overlapping tasks
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [19/01/2026] - [Monday]
+
+
+
 ### Today's Goals
-- [X] Fixed constant spacing inconsistency completely []
-- [X] Constant spacing remains for different task card heights
-- [X] added better subtask styling
-- [X] restyled task content styling and added checkbox
+
+- [x] Fixed constant spacing inconsistency completely []
+- [x] Constant spacing remains for different task card heights
+- [x] added better subtask styling
+- [x] restyled task content styling and added checkbox
+
+
 
 ### Plans For Future
+
 - Add functionality to checkbox
 - plan styling for overlapping tasks
 - Add functionality to subtask button
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [23/01/2026] - [Friday]
+
+
+
 ### Today's Goals
-- [X] Implemented smooth drag
-- [X] implemnted drag overlay
-- [X] Re designed drag to be hold-drag 
+
+- [x] Implemented smooth drag
+- [x] implemnted drag overlay
+- [x] Re designed drag to be hold-drag 
+
+
 
 ### Plans For Future
+
 - Restyle drag overlay
 - Implement overlapping tasks
 
+
+
 ### Notes
+
 ---
+
+
+
 ## [25/01/2026] - [Sunday]
+
+
+
 ### Today's Goals
-- [X] Started first ios dev build
+
+- [x] Started first ios dev build
+
+
 
 ### Plans For Future
+
 - Restyle drag overlay
 - Implement overlapping tasks
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [26/01/2026] - [Monday]
+
+
+
 ### Today's Goals
-- [X] Implemnted proper drag functionality to overlapping tasks
-- [X] Refined overlappnig task card detection in more cases
-- [X] Added subtask functionality and expansion to overlapping tasks
- 
+
+- [x] Implemnted proper drag functionality to overlapping tasks
+- [x] Refined overlappnig task card detection in more cases
+- [x] Added subtask functionality and expansion to overlapping tasks
+
+
+
 ### Plans For Future
+
 - Restyle drag overlay
 - Implement overlapping tasks
 
+
+
 ### Notes
+
 - no notes
+
+
+
 ## [28/01/2026] - [Saturday]
+
+
+
 ### Today's Goals
-- [X] Attempted liquid glass refactor on FAB
+
+- [x] Attempted liquid glass refactor on FAB
+
 ---
+
+
+
 ## [29/01/2026] - [Sunday]
+
+
+
 ### Today's Goals
-- [X] Refactored clsoe buttons and form picker buttons to liquid glass
-- [X] Implemented custom icons using SVG
+
+- [x] Refactored clsoe buttons and form picker buttons to liquid glass
+- [x] Implemented custom icons using SVG
+
 ---
+
+
+
 ## [02/02/2026] - [Monday]
+
+
+
 ### Today's Goals
-- [X] Implemented test modals in liquid glass
-- [X] Attempted scree nstack implementation
+
+- [x] Implemented test modals in liquid glass
+- [x] Attempted scree nstack implementation
+
 ---
+
+
+
 ## [04/02/2026] - [Wednesday]
+
+
+
 ### Today's Goals
-- [X] Downgraded to expo SDK 54
-- [X] Re-implemented task full screen modal
+
+- [x] Downgraded to expo SDK 54
+- [x] Re-implemented task full screen modal
+
 ---
+
+
+
 ## [05/02/2026] - [Thursday]
+
+
+
 ### Today's Goals
-- [X] Made components for task screen
+
+- [x] Made components for task screen
+
 ---
+
+
+
 ## [07/02/2026] - [Saturday]
+
+
+
 ### Today's Goals
-- [X] Refined subtask section in task screen
-- [X] Added save button to new task modal component
+
+- [x] Refined subtask section in task screen
+- [x] Added save button to new task modal component
+
 ---
+
+
+
 ## [08/02/2026] - [Sunday]
+
+
+
 ### Today's Goals
-- [X] Brought form picker mdoals to stack screen implementation
-- [X] Overhauled task card and started today screen UI overhaul
+
+- [x] Brought form picker mdoals to stack screen implementation
+- [x] Overhauled task card and started today screen UI overhaul
+
 ---
+
+
+
 ## [09/02/2026] - [Monday]
+
+
+
 ### Today's Goals
-- [X] Further refinement and refactor on timeline screen UI
-- [X] Fixed loading jank, swipe flash and removed subtask expansion
+
+- [x] Further refinement and refactor on timeline screen UI
+- [x] Fixed loading jank, swipe flash and removed subtask expansion
+
 ---
+
+
+
 ## [11/02/2026] - [Wednesday]
+
+
+
 ### Today's Goals
-- [X] Further refinement and refactor on timeline screen UI
-- [X] Fixed loading jank, swipe flash and removed subtask expansion
-- [X] Added freetime segment messsages feature
+
+- [x] Further refinement and refactor on timeline screen UI
+- [x] Fixed loading jank, swipe flash and removed subtask expansion
+- [x] Added freetime segment messsages feature
+
 ---
+
+
+
 ## [12/02/2026] - [Thursday]
+
+
+
 ### Today's Goals
-- [X] Implemented recurring tasks with CRUD
+
+- [x] Implemented recurring tasks with CRUD
+
 ---
+
+
+
 ## [14/02/2026] - [Saturday]
+
+
+
 ### Today's Goals
-- [X] Wired task screen to be opened for "create" and "view".
-- [X] Started Designed task screen for "view" mode
+
+- [x] Wired task screen to be opened for "create" and "view".
+- [x] Started Designed task screen for "view" mode
+
 ---
+
+
+
 ## [15/02/2026] - [Sunday]
+
+
+
 ### Today's Goals
-- [X] Implement task sceren "view" save button
-- [X] Added reccurence display
+
+- [x] Implement task sceren "view" save button
+- [x] Added reccurence display
+
 ---
+
+
+
 ## [17/02/2026] - [Tuesday]
+
+
+
 ### Today's Goals
-- [X] Implement task sceren "view" save button
-- [X] Added reccurence display
+
+- [x] Implement task sceren "view" save button
+- [x] Added reccurence display
+
 ---
+
+
+
 ## [18/02/2026] - [Wednesday]
+
+
+
 ### Today's Goals
-- [X] Refactored font UI to apple's SF font
-- [X] Styled overlapping tasks in timeline
+
+- [x] Refactored font UI to apple's SF font
+- [x] Styled overlapping tasks in timeline
+
+
 
 ### Plans For Future
+
 - Add non-timed task display in planner screen
 - Add animated checkboxes
+
 ---
+
+
+
 ## [20/02/2026] - [Friday]
+
+
+
 ### Today's Goals
-- [X] Researched lottie implementation 
-- [X] Began lottie implenetation
+
+- [x] Researched lottie implementation 
+- [x] Began lottie implenetation
+
+
 
 ### Plans For Future
+
 - plan how to implement particles to checkbox toggle
+
 ---
+
+
+
 ## [21/02/2026] - [Saturday]
+
+
+
 ### Today's Goals
-- [X] Implemented lottie file particles overlay
-- [X] Also added opacity fill animation to checkbox
+
+- [x] Implemented lottie file particles overlay
+- [x] Also added opacity fill animation to checkbox
+
+
 
 ### Plans For Future
+
 - plan how to improve performance
+
 ---
+
+
+
 ## [24/02/2026] - [Tuesday]
+
+
+
 ### Today's Goals
-- [X] Implemented lottie file particles overlay
-- [X] Also added opacity fill animation to checkbox
+
+- [x] Implemented lottie file particles overlay
+- [x] Also added opacity fill animation to checkbox
+
+
 
 ### Plans For Future
+
 - plan how to improve performance of checkbox
+
 ---
+
+
+
 ## [04/02/2026] - [Wednesday]
+
+
+
 ### Today's Goals
-- [X] Refactored checkbox to be simple scale animation, removed lottie.
-- [X] Added animated strikethrough to task cards
-- [X] Improved UI performance using optimistic UI, linear transitions and checkbox sync registry
+
+- [x] Refactored checkbox to be simple scale animation, removed lottie.
+- [x] Added animated strikethrough to task cards
+- [x] Improved UI performance using optimistic UI, linear transitions and checkbox sync registry
+
+
 
 ### Plans For Future
+
 - improve performance of timeline load
 - improve weekly nav performance
+
 ---
+
+
+
 ## [05/02/2026] - [Thursday]
+
+
+
 ### Today's Goals
-- [X] Implemented instant timeline + listcard laout load registry for faster loading performane
-- [X] Improved weekly nav performance
-- [X] added animated strikethrough for itmeline items
-- [X] Change checkbox to have tap animation instead of reactive press and hold animation
-- [X] Added liquid glass modal screen for monthly nav
+
+- [x] Implemented instant timeline + listcard laout load registry for faster loading performane
+- [x] Improved weekly nav performance
+- [x] added animated strikethrough for itmeline items
+- [x] Change checkbox to have tap animation instead of reactive press and hold animation
+- [x] Added liquid glass modal screen for monthly nav
+
+
 
 ### Plans For Future
+
 - plan to implement context button functionality, such as acitvity log, and task select.
 - plan to implement browse page.
+
 ---
+
+
+
 ## [06/03/2026] - [Friday]
+
+
+
 ### Today's Goals
-- [X] Implemneted select task UI
-- [X] Implemneted task sleection mode UI transitions
-- [X] Implemented selection mode action button functionality and conditional UI
-- [X] Attempted performance optimizations for today screen
+
+- [x] Implemneted select task UI
+- [x] Implemneted task sleection mode UI transitions
+- [x] Implemented selection mode action button functionality and conditional UI
+- [x] Attempted performance optimizations for today screen
+
+
 
 ### Plans For Future
+
 - plan to implement activity log.
 - plan to implement browse page.
 - Optimize Today screen scroll performance
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [07/03/2026] - [Saturday]
+
+
+
 ### Today's Goals
-- [X] Prepared Activity Log stack screen
+
+- [x] Prepared Activity Log stack screen
+
+
 
 ### Plans For Future
+
 - plan to implement activity log filter context menu
 - plan ui for activity log
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [08/03/2026] - [Sunday]
+
+
+
 ### Today's Goals
-- [X] Implemented acitvity log model, serializer, apis
-- [X] Implemented types and redux store states for acitivty logs
-- [X] Implemented activity log UI
+
+- [x] Implemented acitvity log model, serializer, apis
+- [x] Implemented types and redux store states for acitivty logs
+- [x] Implemented activity log UI
+
+
 
 ### Plans For Future
+
 - plan to implement browse page.
 - Optimize Today screen scroll performance
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [09/03/2026] - [Monday]
+
+
+
 ### Today's Goals
-- [X] Built and tested a standalone preview build
+
+- [x] Built and tested a standalone preview build
+
+
 
 ### Plans For Future
+
 - plan to implement browse page.
 
+
+
 ### Notes
+
 - today screen taskcard completion needs to be slower: slower linear transition.
 - strikethrough needs to be at a constant speed rather than same time animation for all text sizes
 - style close button with SF close, and add close button and remove checkbox UI in task screen create.
+
 ---
+
+
+
 ## [11/03/2026] - [Tuesday]
+
+
+
 ### Today's Goals
-- [X] Upgraded strikethrough animation, and lienar transition control
-- [X] Begun to implement browse page
-- [X] Designed some custom icons for navbar and other buttons
-- [X] Update task screen create UI.
- 
+
+- [x] Upgraded strikethrough animation, and lienar transition control
+- [x] Begun to implement browse page
+- [x] Designed some custom icons for navbar and other buttons
+- [x] Update task screen create UI.
+
+
+
 ### Plans For Future
+
 - plan to implement browse page.
 - Fix the task updating with the taskview/create subtask check and main checkbox check
 
+
+
 ### Notes
+
 - let AI tab replace the settings tab
 - plan to improve activity log performance by fetching up to 2 weeks worth of tasks.
+
 ---
+
+
+
 ## [13/03/2026] - [Friday]
+
+
+
 ### Today's Goals
-- [X] Styling Changes
- 
+
+- [x] Styling Changes
+
+
+
 ### Plans For Future
+
 - plan to implement browse page.
 - Fix the task updating with the taskview/create subtask check and main checkbox check
 
+
+
 ### Notes
+
 - let AI tab replace the settings tab
 - plan to improve activity log performance by fetching up to 2 weeks worth of tasks.
+
 ---
+
+
+
 ## [14/03/2026] - [Saturday]
+
+
+
 ### Today's Goals
-- [X] UI Research for planning
- 
+
+- [x] UI Research for planning
+
+
+
 ### Plans For Future
+
 - plan to implement browse page.
 - Fix the task updating with the taskview/create subtask check and main checkbox check
 
+
+
 ### Notes
+
 - plan to improve activity log performance by fetching up to 2 weeks worth of tasks.
+
 ---
+
+
+
 ## [17/03/2026] - [Tuesday]
+
+
+
 ### Today's Goals
-- [X] Designed lists grouped list in browse
- 
+
+- [x] Designed lists grouped list in browse
+
+
+
 ### Plans For Future
+
 - plan to implement browse page.
 - Fix the task updating with the taskview/create subtask check and main checkbox check
 
+
+
 ### Notes
+
 - plan to move search bar at top as its own tab
+
 ---
+
+
+
 ## [18/03/2026] - [Wednesday]
 
+
+
 ### Today's Goals
+
 - [x] I redesigned the settings screen and wired browse as a proper stack so I could nest screens cleanly.
 - [x] I polished the browse search bar (static label, primary text and icon, blended background).
 - [x] I moved Settings off the bottom tab into Browse, added the AI tab as a placeholder, patched the stack so dark-mode pushes don’t flash white, and brought MainBackButton in line with the glass styling.
 - [x] I updated the dev logbook.
 
+
+
 ### Plans For Future
+
 - plan to implement browse page buttons
 - Fix the task updating with the taskview/create subtask check and main checkbox check
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [19/03/2026] - [Thursday]
 
+
+
 ### Today's Goals
+
 - [x] Laid out the browse sub-routes and stack structure so the next screens could plug in without rework.
 
+
+
 ### Plans For Future
+
 - plan to implement browse page buttons
 - plan to implement full list crud functionality.
 - Fix the task updating with the taskview/create subtask check and main checkbox check
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [22/03/2026] - [Sunday]
 
+
+
 ### Today's Goals
+
 - [x] List detail screen with ListCard (including routines), opened Manage Lists and New List as full-screen modals
 - [x] added the list-select sheet with the tray label for where a task goes, in task create
 
+
+
 ### Plans For Future
+
 - plan to implement inbox and completed screens
 - finish list update functionality, with drag reorder.
 - rewire to not use mock data
 - reimplement search
 - Fix the task updating with the taskview/create subtask check and main checkbox check
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [23/03/2026] - [Monday]
 
+
+
 ### Today's Goals
+
 - [x] Implented Manage Lists with drag reorder synced through Redux, hooked list CRUD to the Django API
 - [x] wired Inbox and Completed to real data
 - [x] implemented the docked search animation with chips, chrome lift UI, and reset when search opens or closes.
 
+
+
 ### Plans For Future
+
 - improve search bar UX
 - Fix the task updating with the taskview/create subtask check and main checkbox check
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [25/03/2026] - [Wednesday]
 
+
+
 ### Today's Goals
+
 - [x] refactored browse list scroll mounted during search
 - [x] restyled the search bar so the layout didn’t jump.
 
+
+
 ### Plans For Future
+
 - add search filters
 - Fix the task updating with the taskview/create subtask check and main checkbox check
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [27/03/2026] - [Friday]
 
+
+
 ### Today's Goals
+
 - [x] I broadened browse search with the filter chips
 - [x] unified Top/Recent results, added description matches, and tightened list/leaf presentation on task cards.
 
+
+
 ### Plans For Future
+
 - Fix the task updating with the taskview/create subtask check and main checkbox check
 
+
+
 ### Notes
+
 - no notes
+
 ---
+
+
+
 ## [29/03/2026] - [Sunday]
 
+
+
 ### Today's Goals
+
 - [x] I pushed the search overlay down so it doesn’t sit over the first grouped row, recalculated padding, and adjusted the top chrome so taps behave correctly through the fade.
 - [x] Fixed task update with checkbox in task screens
 - [x] ensured devlog docs were up to date.
 
+
+
 ### Plans For Future
+
 - GO THROUGH A MVP-REALIGNEMNT, AND STRATETGIC REVIEW WITH NEW FEATURES
 
+
+
 ### Notes
+
 - should go over AI scope (make my own LLM or pay for API), theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [30/03/2026] - [Monday]
 
+
+
 ### Today's Goals
+
 - [x] Planned LLM integration
-- [X] begun redux research
+- [x] begun redux research
+
+
 
 ### Plans For Future
+
 - GO THROUGH A MVP-REALIGNEMNT, AND STRATETGIC REVIEW WITH NEW FEATURES
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [01/04/2026] - [Wednesday]
 
+
+
 ### Today's Goals
+
 - [x] continued REDUX research
 
+
+
 ### Plans For Future
+
 - GO THROUGH A MVP-REALIGNEMNT, AND STRATETGIC REVIEW WITH NEW FEATURES
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [02/04/2026] - [Thursday]
 
+
+
 ### Today's Goals
+
 - [x] implemented simple controls for AI tab
 
+
+
 ### Plans For Future
+
 - Go through new UI overhaul
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [03/04/2026] - [Friday]
 
+
+
 ### Today's Goals
+
 - [x] Begun UI overhaul
 
+
+
 ### Plans For Future
+
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [05/04/2026] - [Sunday]
 
+
+
 ### Today's Goals
+
 - [x] Upgraded Color palettes
 - [x] Improved taskcard styling
-- [X] Begun research into possible usage for expo native liquid glass elements
+- [x] Begun research into possible usage for expo native liquid glass elements
+
+
 
 ### Plans For Future
+
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [07/04/2026] - [Tuesday]
 
+
+
 ### Today's Goals
+
 - [x] Upgraded deps and codebase to use SDK 55
 - [x] attempted to fix minimize behaviours for the native tab
 
+
+
 ### Plans For Future
+
 - consider palettes and UI reconstruction
 - consider stack toolbar implementation and reconstruction of the action context menu and close/save buttons.
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [08/04/2026] - [Wednesday]
 
+
+
 ### Today's Goals
+
 - [x] got liquid tab minimize-on-scroll behaviour working more reliably
 
+
+
 ### Plans For Future
+
 - keep iterating custom liquid tab chrome and native stack headers
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [09/04/2026] - [Thursday]
 
+
+
 ### Today's Goals
+
 - [x] positioned the FAB from the screen safe-bottom edge instead of reserving space for the native tab bar
 - [x] aligned FAB margins with Paddings.screenSmall
 
+
+
 ### Plans For Future
+
 - keep iterating custom liquid tab chrome and native stack headers
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [10/04/2026] - [Friday]
 
+
+
 ### Today's Goals
+
 - [x] created a custom navbar and extracted bottom tab chrome into a reusable tabBarChrome module (layout constants, FAB metrics context, feature flag for the liquid bar)
 - [x] refined liquid tab bar spacing, typography, and dark-mode unselected colors
 - [x] replaced Today’s slot layout with a single-screen Stack to fix the empty navigator error under NativeTabs
 
+
+
 ### Plans For Future
+
 - keep iterating custom liquid tab chrome and native stack headers
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [11/04/2026] - [Saturday]
 
+
+
 ### Today's Goals
+
 - [x] updated the devlog and forward planning notes
 
+
+
 ### Plans For Future
+
 - ship liquid-glass bottom chrome and overlay FAB layer
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [13/04/2026] - [Monday]
 
+
+
 ### Today's Goals
+
 - [x] added liquid-glass bottom chrome with full-width gradient fade, stable overlay stack, and a tab-level FAB layer on Today/Planner/Browse so the FAB stays above the fade
 
+
+
 ### Plans For Future
+
 - harden sheets and task edit against RNScreens layout edge cases
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [14/04/2026] - [Tuesday]
 
+
+
 ### Today's Goals
+
 - [x] fixed task detail formSheet so content shows (removed duplicate route, suppressed tab chrome over sheets, inner Stack for /task, hardened task edit layout for RNScreens)
 
+
+
 ### Plans For Future
+
 - adopt native stack toolbars more broadly and stabilize tab chrome across modals
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [15/04/2026] - [Wednesday]
 
+
+
 ### Today's Goals
+
 - [x] stabilized liquid tab chrome and FAB (always mount chrome stack, keep overlay FAB in tree, correct selected tab through planner month-select and root modals)
 - [x] adopted native iOS Stack.Toolbar across main flows with slimmer selection chrome
 - [x] polished planner week strip (nav-bar month title, padding, FAB-aligned selected day)
 
+
+
 ### Plans For Future
+
 - refine task edit sheet chrome and recurrence controls
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [16/04/2026] - [Thursday]
 
+
+
 ### Today's Goals
+
 - [x] refocused task edit sheet on in-content chrome (hid native stack header, reusable ActionContextMenu with glass circle / Android dropdown, tighter sheet and ellipsis styling)
 - [x] fixed task recurrence pills (open on tap with native menu, usable before due date, larger tap targets on Android)
 - [x] added header chrome scale constants, resized iOS dashboard toolbar glyphs (custom Image + SwiftUI menu, Ellipses.png overflow)
 - [x] fixed fetch races and planner local-calendar day handling so Today and Planner stay consistent on first open
 - [x] refactored Browse stack so iOS uses native Stack.Toolbar for back and modal actions while Android keeps glass header buttons
 
+
+
 ### Plans For Future
+
 - ship route-based multi-select and bulk actions on iOS
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [17/04/2026] - [Friday]
 
+
+
 ### Today's Goals
+
 - [x] implemented route-based iOS task selection (pushed stack screens, Redux lifecycle, browse/planner shared bodies, bottom-bar dismiss, optional fade transitions, TaskCard detail links)
 - [x] added iOS native bottom selection toolbar with shared bulk actions, liquid tab chrome sync with selection/date flow, and dimmed actions when nothing is selected
 - [x] replaced select-all toolbar icons with text and a toolbar-safe button variant
 - [x] unified planner/today/browse selection toolbars (four icon actions; dropped extra planner cancel/count row)
 - [x] small spacing passes on selection chrome
 
+
+
 ### Plans For Future
+
 - guard navigation against duplicate pushes and keep polishing selection UX
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [18/04/2026] - [Saturday]
 
+
+
 ### Today's Goals
+
 - [x] added app-wide navigation deduping (`useGuardedRouter`) so rapid double taps on the same route no longer open duplicate stack screens
 
+
+
 ### Plans For Future
+
 - align remaining browse modals with native stack presentation
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [19/04/2026] - [Sunday]
 
+
+
 ### Today's Goals
+
 - [x] aligned Browse modal headers (New List + Settings) with native iOS stack titles and shared heading-4 styling
 - [x] matched scroll/blur insets to list-create
 - [x] minor repo hygiene (`.gitignore`, dev-log)
 
+
+
 ### Plans For Future
+
 - ship full-screen quick-add flow from the FAB
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
+
 ---
+
+
+
 ## [20/04/2026] - [Monday]
 
+
+
 ### Today's Goals
+
 - [x] added full-screen transparent task quick-add modal with keyboard-anchored liquid-glass composer (backdrop + glass panel) and wired the Today tab FAB to the new route
 - [x] polished quick-add open/close transitions
 
+
+
 ### Plans For Future
+
 - iterate quick-add UX (validation, list routing, dismiss gestures)
 - consider palettes and UI reconstruction
 
+
+
 ### Notes
+
 - Decided with paid LLM integration for app, need to decide which LLM model and pricing
 - need to go over theme and UI revamp (nature), gamification scope (go through user achievements)
 
 TODO:
+
 - Fix new list header -
 - restyle create screen
 - restyle search bar
 
 ---
 
+
+
 ## [06/05/2026] - [Wednesday]
 
+
+
 ### Today's Goals
-- [x] Shipped onboarding **questionnaire** (`app/(onboarding)/slides`) polish aligned with introductory patterns: primary background on the carousel body, questionnaire skip wired through shared tokens (`ONBOARDING_SLIDES_*` mirroring `INTRO_SKIP_*`) and `resolveOnboardingSlidesTextColor`.
+
+- [x] Shipped onboarding **questionnaire** (`app/(onboarding)/slides`) polish aligned with introductory patterns: primary background on the carousel body, questionnaire skip wired through shared tokens (`ONBOARDING_SLIDES_`* mirroring `INTRO_SKIP_*`) and `resolveOnboardingSlidesTextColor`.
 - [x] Kept questionnaire **Skip** out of Liquid Glass-heavy `headerRight` by embedding it in the **custom stack header row** beside back chevron + progress (same rationale as introductory header comments).
-- [x] Unblocked **fractional header progress**: progress bar stops relying on restarted long `Animated.timing` pulses; **`widthAnim.setValue`** tracks scroll fractions; scroll bridge uses **`useNativeDriver: false`** so throttle listeners fire during drags (not only on momentum end).
+- [x] Unblocked **fractional header progress**: progress bar stops relying on restarted long `Animated.timing` pulses; `widthAnim.setValue` tracks scroll fractions; scroll bridge uses `useNativeDriver: false` so throttle listeners fire during drags (not only on momentum end).
 - [x] Replaced questionnaire copy layer with **four setup slides**: get-started planning welcome, wake time, sleep time, task vs habit (titles + captions + matching `PAGE_SLIDE_UI` rows).
-- [x] Upgraded onboarding progress **pill fill** to **`expo-linear-gradient`**-driven glow via `onboardingSlidesProgressGlow.ts` (stopped horizontal “sheen”; **bottom→top** luminance stacking so light reads upward through the clipped capsule).
+- [x] Upgraded onboarding progress **pill fill** to `expo-linear-gradient`-driven glow via `onboardingSlidesProgressGlow.ts` (stopped horizontal “sheen”; **bottom→top** luminance stacking so light reads upward through the clipped capsule).
+
+
 
 ### Plans For Future
+
 - Wire **wake / sleep time** slides to real controls (pickers / presets), validation, and **persist** onboarding answers (`AsyncStorage` short-term vs profile API contract).
 - Flesh slide 4 (**task vs habit**) into branching UX (routing, sensible defaults into task create / recurring patterns).
 - Revisit **Liquid Glass**: keep skipping `headerRight` for plain-text onboarding actions; optionally extract a reusable “stack header caption row” if more questionnaire steps borrow the same chrome.
 - **Quick-add** iterations from April (validation, list routing, dismiss gestures) plus outstanding TODO (**new-list header**, create screen restyle, **search bar** restyle).
 - Broader backlog unchanged: MVP realignment/strategic review themes, palette/UI reconstruction, AI model choice, gamification/theme revamp aspirations.
 
+
+
 ### Notes
+
 - Retro: **Daily dev-log bullets were not typed between ~21/04/2026 and 05/05/2026** in this journal; assumptions from **20/04/2026** plans carried until this catch-up unless implemented elsewhere—verify merge history if year-end accounting matters.
-- New helpers under `components/features/onboarding/onboarding/` include **`onboardingSlidesThemeResolvers.ts`** (`resolveOnboardingSlidesTextColor`) and **`ui/onboardingSlidesProgressGlow.ts`** (`onboardingProgressGlowStops`); Expo lint still reports unrelated repo-wide errors unrelated to onboarding work (see tooling pass when churn allows).
+- New helpers under `components/features/onboarding/onboarding/` include `onboardingSlidesThemeResolvers.ts` (`resolveOnboardingSlidesTextColor`) and `ui/onboardingSlidesProgressGlow.ts` (`onboardingProgressGlowStops`); Expo lint still reports unrelated repo-wide errors unrelated to onboarding work (see tooling pass when churn allows).
 
 ---
+
+
+
 ## [07/05/2026] - [Thursday]
 
+
+
 ### Today's Goals
+
 - [x] I shipped the post-intro **questionnaire** route with blended slide UI, glass continue CTA, early native header mount, body offset under the transparent header, tighter headline/caption spacing, secondary back affordances, and the supporting routes/docs.
 - [x] I refactored onboarding **constants** into split modules (text, slide UI tokens, typography, top section, pager layout) for intro + post-intro while keeping the public barrel API stable.
 - [x] I unified onboarding typography/spacing, simplified intro/questionnaire constants, and reverted the slides progress bar to a **solid** fill where that made more sense.
 - [x] I refined slides **progress bar motion** with Reanimated step animations, dropped unused scroll wiring, and simplified onboarding barrel exports.
 
+
+
 ### Plans For Future
+
 - Keep hardening questionnaire steps (pickers, validation, persistence contract) and wire wake/sleep into real profile data.
 - Quick-add / browse polish from the April TODO list (new-list header, create screen, search bar).
 - Broader backlog: MVP realignment, palette/UI reconstruction, AI model choice, gamification/theme ideas.
 
+
+
 ### Notes
+
 - Git also shows a housekeeping commit that day touching the logbook metadata—treat commits as source of truth if this day’s wording drifts.
 
 ---
+
+
+
 ## [12/05/2026] - [Tuesday]
 
+
+
 ### Today's Goals
+
 - [x] I replaced the multi-slide **intro carousel** with a single **auth landing** (“DailyFlo” + Continue → questionnaire slides), renamed the feature area from introductory → **auth**, and deleted obsolete intro-only UI.
 - [x] I expanded the questionnaire with **habit vs task** branch slides, next-step choice cards, safer headline crossfade, and a Finish Setup CTA.
 - [x] I improved onboarding flows with **native time pickers**, shared layout tokens, custom back chrome, and headline layout that sizes from content instead of fixed headline constants.
 
+
+
 ### Plans For Future
+
 - Land real sign-in rows and session handoff onto the auth landing (email + social), not just Continue → slides.
 - Finish wiring questionnaire answers through to task/habit defaults and backend profile fields.
 
+
+
 ### Notes
+
 - no notes
 
 ---
+
+
+
 ## [13/05/2026] - [Wednesday]
 
+
+
 ### Today's Goals
+
 - [x] I added onboarding **task-branch** debug overlays, flushed footer spacing, and a keyboard-gated ScrollView while experimenting with questionnaire layout.
 - [x] I built the **“what’s on the agenda?”** body with a Today-style title row, local questionnaire state, caption copy, tighter horizontal shell padding, and an updated pencil icon.
 
+
+
 ### Plans For Future
+
 - Continue the agenda step: chips, keyboard pinning, validation, and motion.
 
+
+
 ### Notes
+
 - no notes
 
 ---
+
+
+
 ## [14/05/2026] - [Thursday]
 
+
+
 ### Today's Goals
+
 - [x] I improved the task-agenda step with **suggestion chips**, body crossfade, layout tokens, and continue validation while reusing shared pill/icon pieces.
 - [x] I tuned **keyboard layout** for that slide: pinned the scroll region to the keyboard top, removed debug chrome, and aligned footer shell math with shared layout constants.
 - [x] I implemented a smooth, **keyboard-reactive** task agenda slide transition.
 
+
+
 ### Plans For Future
+
 - Merge agenda UX with WOTA/AWT strips and branded duration controls (next commits).
 
+
+
 ### Notes
+
 - no notes
 
 ---
+
+
+
 ## [16/05/2026] - [Saturday]
 
+
+
 ### Today's Goals
+
 - [x] I introduced the **Marple** botanical ramp and refactored post-intro questionnaire theming around scoped slide color tokens, resolvers, optional header skip, and updated palette hooks + core slide chrome rows.
 - [x] I onboarded **task agenda** across WOTA and AWT with a shared body layer, native time wheel, and layout tokens tuned for the replace-slot crossfade and spinner position.
 - [x] I folded the **“for how long?”** step into the shared strip and shipped a branded **duration pill slider** with tuned motion and haptics.
 
+
+
 ### Plans For Future
+
 - Persist questionnaire + wire duration/habit answers into task create and Django preferences.
 - Keep iterating liquid glass + stack header edge cases.
 
+
+
 ### Notes
+
 - no notes
 
 ---
+
+
+
 ## [17/05/2026] - [Sunday]
 
+
+
 ### Today's Goals
+
 - [x] I refreshed the auth landing with a **Satoshi** wordmark, font loading, tighter icon-to-title spacing, corrected onboarding stack screen names, and supporting assets/docs.
 - [x] I polished the onboarding **finish-step planner preview** and shared timeline gap/free-time logic with the main planner.
 - [x] I **persisted questionnaire answers** to AsyncStorage on finish, added habit goal + frequency steps, and exposed storage keys/types for downstream wiring.
 - [x] I enhanced **duration UI** with a blend rail + secondary trail, a “Custom duration?” pill aligned to the slider, layout tokens, and read-only titles on time/duration steps so the keyboard stays closed.
 
+
+
 ### Plans For Future
+
 - Replace AsyncStorage patches with authoritative profile PATCH when contract is settled.
 - Ship social/email auth on the landing screen.
 
+
+
 ### Notes
+
 - no notes
 
 ---
+
+
+
 ## [18/05/2026] - [Monday]
 
+
+
 ### Today's Goals
+
 - [x] I shipped **native Google Sign-In** for onboarding, hardened the social auth client + Django token verification, created the **first onboarding task** on finish, exited onboarding to **Today** correctly, and wrote implementation logs.
 - [x] I added the **auth landing footer** with liquid-glass social rows, centered slogan, multicolor Google mark, and a dev-only skip link while removing the old continue FAB from the auth route.
 - [x] I refactored onboarding auth **constants** to mirror questionnaire layout (slide UI, text, typography) and centralized questionnaire typography + picker chrome colors in shared modules.
 
+
+
 ### Plans For Future
+
 - Add Apple parity and email path; tighten security review around token storage and questionnaire navigation guards.
 
+
+
 ### Notes
+
 - no notes
 
 ---
+
+
+
 ## [19/05/2026] - [Tuesday]
 
+
+
 ### Today's Goals
+
 - [x] I unified **marple accent** across chrome and planners, polished browse/settings **quick-add** UX, hardened **cold-start auth** navigation, and broke the **API client ↔ auth slice** import cycle so onboarding stopped crashing after a brief auth flash.
 - [x] I wired **Settings logout** through Redux cleanup and expo-router’s global routing queue so the auth landing shows without reload, captured the design in tech docs, and made the Settings close button resilient when there is no back target.
 - [x] I smoothed **cold-start return** for logged-in users (skip redundant hop to Today, prefetch tasks/lists after auth hydration, treat the gap as loading so Today doesn’t flash empty).
@@ -1952,17 +3943,29 @@ TODO:
 - [x] I updated the **planner all-day footer** to mirror Today row styling, show recurrence rows, remove the dashed TaskCard separator override, and start each day’s bucket collapsed until expanded.
 - [x] I added **ListCard silentWhenEmpty** and wired the planner all-day footer to pass an empty array when there’s nothing incomplete so the empty copy hides but timeline inset stays right.
 
+
+
 ### Plans For Future
+
 - Keep hardening selection mode, quick-add validation, and browse modals.
 - Profile PATCH contract for more onboarding fields (beyond wake/sleep).
 
+
+
 ### Notes
+
 - no notes
 
 ---
+
+
+
 ## [20/05/2026] - [Wednesday]
 
+
+
 ### Today's Goals
+
 - [x] I **restyled timer select** screens and fixed the **small constant spaces** sub-message bug.
 - [x] I added a **conditional skip** on onboarding for returning users so repeat opens don’t force the full funnel when it isn’t needed.
 - [x] I **prolonged refresh token** lifetime on the backend (JWT comment + behavior) so DailyFlo sessions last longer in line with product expectations.
@@ -1970,338 +3973,593 @@ TODO:
 - [x] I aligned Apple and Google onboarding with the same **~30-day session** story: shared social completion helper, provider-agnostic refresh docs, and backend JWT lifetime notes for all auth methods.
 - [x] I added **onboarding email auth** (SwiftUI Menu on iOS + DropdownList chooser on Android, login/register formSheets) and fixed **Redux serializable payloads** for patch-onboarding profile sync.
 
+
+
 ### Plans For Future
+
 - Polish email sheet UX (close button, marple CTAs, register validation copy) and double-check navigation to slides only after real JWT success.
 - Timer/settings passes if any regressions show up on device.
 
+
+
 ### Notes
+
 - no notes
 
 ---
+
+
+
 ## [21/05/2026] - [Thursday]
 
+
+
 ### Today's Goals
+
 - [x] I streamlined **email register/login** UX (form shell + glass fields, email+password only signup, optional names on Django, clearer `registerUser` DRF error formatting), made **post-auth navigation** pop the sheet then push slides on the settled stack, and showed **signed-in email** under logout in browse settings.
 
+
+
 ### Plans For Future
+
 - Strip **console.log** of full auth responses before production builds; keep security review for any other slides entry points.
 - Same longer-term backlog as spring notes (MVP realignment, nature UI palette pass, AI provider choice, gamification).
 
+
+
 ### Notes
-- Verified email paths only advance to **`/(onboarding)/slides`** after `loginUser` / `registerUser` thunks **fulfill** (tokens stored + user resolved); dev-only skip link on auth landing still bypasses auth by design.
+
+- Verified email paths only advance to `/(onboarding)/slides` after `loginUser` / `registerUser` thunks **fulfill** (tokens stored + user resolved); dev-only skip link on auth landing still bypasses auth by design.
 
 ---
+
+
+
 ## [23/05/2026] - [Saturday]
 
+
+
 ### Today's Goals
+
 - [x] I unified the **task picker stack sheets** (date, time/duration, alerts) with shared liquid-glass chrome — `alertSheetChrome` insets, **Select Date** / **Time** / **Alerts** headings, and top-right **MainCloseButton** on each screen.
-- [x] I refactored **Alert select** into a saved-alerts grouped list (marple 18px icons, trash delete, empty state, **Add Alert** pill) and added the **`/alert-offset-select`** sheet with an onboarding-style offset spinner in a GroupedList, marple **Add** CTA, and close button.
-- [x] I replaced legacy **time/duration** UX on the time select sheet with the onboarding **time wheel** (GroupedList + **No time** pill) and **`TaskDurationSlider`** glass rail (**No duration** pill); duration heading is a step smaller with tighter top spacing.
+- [x] I refactored **Alert select** into a saved-alerts grouped list (marple 18px icons, trash delete, empty state, **Add Alert** pill) and added the `/alert-offset-select` sheet with an onboarding-style offset spinner in a GroupedList, marple **Add** CTA, and close button.
+- [x] I replaced legacy **time/duration** UX on the time select sheet with the onboarding **time wheel** (GroupedList + **No time** pill) and `TaskDurationSlider` glass rail (**No duration** pill); duration heading is a step smaller with tighter top spacing.
 - [x] I moved **quick date options** into a GroupedList on date select (18px marple icons, wrapper cell padding only), added **Select Date** header + close, shared sheet spacing, and a **second full-screen detent** (`0.8` + `1`) on the date sheet.
 - [x] I extended **alert scheduling** for dynamic `before-{n}` ids, explicit empty reminders = no alerts, and stripping **end-of-task** alert when duration is cleared (draft + reminder helpers + `taskReminderAlerts`).
 - [x] I standardised **grouped list icon size to 18px** across browse, settings, and `FormDetailButton` so picker rows match alert rows.
 
+
+
 ### Plans For Future
+
 - Manual QA on device for **local OS reminders** (dev client, not Expo Go) — confirm default 15-min fire, custom offsets, and cancel/reschedule on edit/logout.
 - Consider the same dual-detent treatment on other picker sheets if date select feels better at full height.
 - Same longer-term backlog as spring notes (MVP realignment, nature UI palette pass, AI provider choice, gamification).
 
+
+
 ### Notes
+
 - Picker sheets now share one visual language with onboarding (spinners, glass duration slider, GroupedList surfaces) — good base before I revisit the April TODO (**new-list header**, create screen restyle, **search bar**).
-- `CalendarView` takes **`contentInsetHandledByParent`** on date select so horizontal padding isn’t doubled against `ALERT_SHEET_HORIZONTAL_INSET`.
+- `CalendarView` takes `contentInsetHandledByParent` on date select so horizontal padding isn’t doubled against `ALERT_SHEET_HORIZONTAL_INSET`.
 
 ---
+
+
+
 ## [23/05/2026] - [Saturday] (continued)
 
+
+
 ### Today's Goals
+
 - [x] I added **notification tap → deep link** — `NotificationResponseHandler` opens `/task/[taskId]` (with `occurrenceDate` when recurring) or planner for wind-down reminders.
 - [x] I implemented **recurring task reminder scheduling** — `resolveTaskReminderSchedulingTarget` schedules the next eligible occurrence only (skips completed dates and recurrence exceptions).
-- [x] I updated **`notification-implementation.md`** to reflect shipped Phase 1.1, 1.2, 1.3, wind-down, and recurring scheduling.
+- [x] I updated `notification-implementation.md` to reflect shipped Phase 1.1, 1.2, 1.3, wind-down, and recurring scheduling.
+
+
 
 ### Plans For Future
+
 - Manual QA on device (dev client) — timed task, custom alerts, recurring next occurrence after complete, wind-down copy, tap-to-open.
 - Day-rollover background resync for recurring reminders (optional AppState listener).
 - Phase 3 push tokens when ready.
 
+
+
 ### Notes
+
 - Recurring reminders resync on task fetch and after `updateTask` (including per-occurrence completion); overnight rollover relies on next app open / fetch until background hook is added.
 
 ---
+
+
+
 ## [24/05/2026] - [Sunday]
 
+
+
 ### Today's Goals
+
 - [x] I **persisted onboarding questionnaire answers** (habit/task branch) to Django profile preferences on finish, not just AsyncStorage, so setup data survives sign-in and device changes.
 - [x] I added a **post-onboarding notifications step** that requests native OS permission, syncs notification preferences to Django, and routes users to **Today** after setup completes.
 - [x] I wired the **EAS file secret** into app config so iOS builds can resolve `GoogleService-Info.plist` when the plist is not checked into git.
 
+
+
 ### Plans For Future
+
 - Manual QA on device for the notifications onboarding step (grant/deny paths, profile sync, landing tab after finish).
 - Keep hardening EAS/build secrets workflow for other env-specific assets.
 
+
+
 ### Notes
+
 - Questionnaire data now has a real backend home — good base before I lean harder into habit vs task branching defaults.
 
 ---
+
+
+
 ## [25/05/2026] - [Monday]
 
+
+
 ### Today's Goals
+
 - [x] I shipped **Phase 1 local task reminders** — schedule OS notifications from saved alert ids, wire CRUD/logout resync, persist alerts from quick-add/create, and default new timed tasks to **15-min before**.
 - [x] I unified the **task picker stack sheets** with onboarding controls, grouped-list chrome, shared sheet spacing, custom alert offsets, and notification scheduling updates (building on the 23/05 picker pass).
-- [x] I updated **`.gitignore`** and merged latest **main** so the notification branch stayed aligned with upstream.
+- [x] I updated `.gitignore` and merged latest **main** so the notification branch stayed aligned with upstream.
+
+
 
 ### Plans For Future
+
 - Manual QA on a **dev client** (not Expo Go) — confirm default 15-min fire, custom offsets, cancel/reschedule on edit, and logout cleanup.
 - Same longer-term backlog as spring notes (MVP realignment, nature UI palette pass, AI provider choice, gamification).
 
+
+
 ### Notes
+
 - Default new-task alert behaviour assumes a schedulable task — I revisited this later when inbox/dateless flows showed the wrong pill state.
 
 ---
+
+
+
 ## [26/05/2026] - [Tuesday]
 
+
+
 ### Today's Goals
+
 - [x] I **updated the dev logbook** to catch up through 23/05/2026 (notification deep-link + recurring scheduling entries).
 
+
+
 ### Plans For Future
+
 - Continue notification branch QA and merge follow-ups from PR #23.
 - Display settings and navbar customization were next in the pipeline.
 
+
+
 ### Notes
+
 - Light documentation day — commits were mostly journal catch-up rather than feature code.
 
 ---
+
+
+
 ## [27/05/2026] - [Wednesday]
 
+
+
 ### Today's Goals
+
 - [x] I merged **push notifications** (PR #23) and landed **wind-down reminders** — default 5-minute before sleep with per-day scheduling and custom notification copy on the planner anchor.
 - [x] I changed settings **wake/sleep spinners** from 15-minute to **5-minute** intervals with aligned snap logic.
-- [x] I added **notification tap deep-linking** and **recurring next-occurrence reminder scheduling** (`resolveTaskReminderSchedulingTarget`), and updated **`notification-implementation.md`** for shipped Phase 1.1–1.3 + wind-down + recurring.
+- [x] I added **notification tap deep-linking** and **recurring next-occurrence reminder scheduling** (`resolveTaskReminderSchedulingTarget`), and updated `notification-implementation.md` for shipped Phase 1.1–1.3 + wind-down + recurring.
 - [x] I shipped the **Today and Planner Display settings** modal — layout/sort grouped lists, navigation from the dashboard toolbar, shared grouped-list styling tokens, nested stack with draft state, Sort/Filter sections, picker sub-screens, marple apply toolbar on iOS, and hid the Date filter on Today (already today-scoped).
 - [x] I added a **planner-only All-day tasks toggle** to Display settings Layout (default on, tracked in shared display draft).
 - [x] I fixed **Manage Lists** iOS header placement and removed the unused **Tags** browse screen.
 
+
+
 ### Plans For Future
+
 - Wire display prefs through to list/timeline rendering on Today and Planner (next commits).
 - Day-rollover background resync for recurring reminders (optional AppState listener).
 - Phase 3 push tokens when ready.
 
+
+
 ### Notes
+
 - Big merge day — notifications + display settings foundation landed together; docs updated so I don’t lose track of what’s actually shipped vs planned.
 
 ---
+
+
+
 ## [28/05/2026] - [Thursday]
 
+
+
 ### Today's Goals
+
 - [x] I added the **List view / Timeline view layout picker** to Display settings with draft state, placeholder previews, and spacing between the selector and toggles grouped list.
 - [x] I wired **per-account display preferences** for Today and Planner — layout-aware modal sections, sort/completed/all-day list wiring, and animated section show/hide.
 - [x] I wired **Today list/timeline layout switching** with a shared day timeline panel and preserved the big Today scroll header plus **topSection mini title** on timeline view.
 
+
+
 ### Plans For Future
+
 - Polish planner list layout when the all-day footer is hidden (spacing/timeline inset).
 - Keep iterating cold-start tab behaviour so display prefs and navbar order feel stable on first open.
 
+
+
 ### Notes
+
 - Display prefs are now authoritative in Redux + profile — UI finally reflects what users save in settings.
 
 ---
+
+
+
 ## [29/05/2026] - [Friday]
 
+
+
 ### Today's Goals
+
 - [x] I added **navbar customization** — Navigation settings screen, **Inbox tab** support, and **account-persisted tab order** stored per user.
 - [x] I built the **browse settings stack** with navigation tab bar editing, native iOS toolbar transitions, and **auto-save on leave**.
 - [x] I fixed **primary-tab cold start** so the app opens on the user’s **first navbar tab** without a Today flash, while keeping tab switching and screen content stable after cold start.
 - [x] I added **planner list layout** and timeline spacing when the **all-day footer is hidden**.
 
+
+
 ### Plans For Future
+
 - Harden cold start after onboarding/auth (next day’s commits).
 - Manual pass on navigation settings UX (add/remove tabs, ghosted options, Tab Bar sub-screen).
 
+
+
 ### Notes
+
 - Per-user tab order was the key fix for multi-account devices — global AsyncStorage alone was leaking order between accounts.
 
 ---
+
+
+
 ## [30/05/2026] - [Saturday]
 
+
+
 ### Today's Goals
+
 - [x] I unified **marple chrome** across the tab bar, FAB, quick-add, and onboarding, and polished **planner calendar header** styling (split date labels, softer unselected tab tints).
 - [x] I fixed **primary-tab cold start after onboarding and auth** — isolated per-user navbar order, blocked tab navigation until the onboarding funnel completes, and resolved the first tab switch bouncing back to the primary navbar tab after onboarding.
 - [x] I scoped **browse search history per account** (recent searches + recently viewed) so history no longer leaks across signed-in users on one device.
 - [x] I gated **task alerts** behind a due **day + start time** — no save/schedule for dateless tasks, ghosted alert-select UI with helper copy, corrected inbox quick-add showing “1 Alert” when alerts shouldn’t apply yet, and default 15-min only seeds after both day and time are set.
 
+
+
 ### Plans For Future
+
 - Manual QA: switch accounts and confirm browse search history stays separate; inbox quick-add alert pill stays neutral until date + time exist.
 - Consider one-time migration from legacy global browse search keys (optional).
 - Same longer-term backlog (MVP realignment, nature UI palette pass, AI provider choice, gamification).
 
+
+
 ### Notes
+
 - `useAppSelector` had to come from `@/store`, not `@/store/hooks` — caught that when opening browse search after the account-scoping change.
 - Alert helper subtext on the select screen uses primary body copy with **day** and **time** highlighted in marple brand color.
 
 ---
+
+
+
 ## [30/05/2026] - [Saturday] (continued)
 
+
+
 ### Today's Goals
+
 - [x] I fixed **recurring task planner expansion** (anchor due dates for legacy recurring tasks) and kept **inbox quick-add date/time in sync** with a per-open `sessionKey` so picker remounts do not wipe draft state — alert-select only enables after both day and time exist.
 - [x] I aligned **inbox task rows** with planner all-day styling by enabling list + recurrence meta tags on the shared ListCard preset.
 - [x] I shipped **Inbox tab Today-parity toolbars** — iOS display modal + selection route, per-tab inbox display prefs (backend + Redux), `ListCard`-owned scroll/top-section on tab-root, session cache for select push, and hid the list/timeline view picker in inbox Display settings (list-only UI for now).
 - [x] I cleared **activity logs from Redux on logout** so completed/activity screens do not briefly show the previous account’s entries.
 - [x] I restyled **browse home** — replaced the Inbox row with the signed-in user’s **first + last name** + profile icon (still opens browse inbox tasks), removed the **Completed** row, and removed the **bell** from the browse top toolbar (settings only on the right; search stays **icon-only** on the left).
 
+
+
 ### Plans For Future
+
 - **Browse gamification dashboard** — plan a dashboard surface in Browse (progress, streaks, and rewards; scope TBD before build).
 - **Browse lists view redesign** — rethink the My Lists section on the browse home screen (layout, hierarchy, and interaction vs current pills).
 - Manual QA: inbox selection mode header alignment on device; inbox display modal saves without 400; switch accounts and confirm activity log + completed data stay isolated.
 - Wire inbox timeline layout pref when a timeline UI exists (preference saves today but list always renders).
 - Same longer-term backlog (MVP realignment, nature UI palette pass, AI provider choice).
 
+
+
 ### Notes
+
 - Inbox display modal needed `(modals)/display` route group + backend `inbox` key in display_preferences PATCH — flat `display/` routes opened as push, not modal.
 - Browse search toolbar: tried icon + “Search” label on home — reverted to icon-only; full search field still appears on the pushed search screen.
 
 ---
+
+
+
 ## [01/06/2026] - [Monday]
 
+
+
 ### Today's Goals
+
 - [x] I removed the **browse alerts bell** from iOS and Android top chrome so only search (iOS left) and settings remain.
 - [x] I added centralized **planner week selector chrome**, polished the iOS month header and week swipe UX, matched timeline card radius to onboarding buttons, and updated tab bar tints.
 - [x] I added a live **“now” time label** on today’s timeline, retuned gutter label colors, and hid the clock after wind-down.
 - [x] I restyled the **planner timeline/list panel** as a top-rounded liquid glass sheet on the new root canvas, with a hairline border and transparent timeline surface.
 
+
+
 ### Plans For Future
+
 - Keep iterating planner timeline layout (rail/content split was next).
 - Browse gamification dashboard was still on the roadmap from late May.
 
+
+
 ### Notes
+
 - no notes
 
 ---
+
+
+
 ## [02/06/2026] - [Tuesday]
 
+
+
 ### Today's Goals
+
 - [x] I refactored the **planner timeline** into a shared rail-and-content layout with solid line masking, drag-only column fades, and consistent completed/sort icons across selection, display settings, and activity log.
 
+
+
 ### Plans For Future
+
 - Replace the all-day chevron footer with a cleaner timeline ↔ all-day switch.
 - Start building browse gamification surfaces.
 
+
+
 ### Notes
+
 - no notes
 
 ---
+
+
+
 ## [03/06/2026] - [Wednesday]
 
+
+
 ### Today's Goals
+
 - [x] I replaced the **planner all-day chevron footer** with a quick-add-style liquid glass pill bar that switches between full-screen timeline and all-day task views, with matched scroll insets and alignment fixes on iOS.
 - [x] I shipped **browse gamification** — progress board on the browse home dashboard, goals create/list flows, achievements screen, productivity hub, Redux + API wiring, and supporting routes on the browse stack.
 - [x] I added a **gamification manual QA checklist** for implemented UI and persistence verification.
 
+
+
 ### Plans For Future
+
 - Polish gamification UX (progress bar, achievements filter, icons, productivity chrome).
 - Align settings/gamification grouped-list spacing with display modal rows.
 
+
+
 ### Notes
+
 - Gamification scope from the May strategic review is now partially real in the app — good base before habits work.
 
 ---
+
+
+
 ## [04/06/2026] - [Thursday]
 
+
+
 ### Today's Goals
+
 - [x] I polished **browse gamification UX** — native liquid-glass achievements filter (`LiquidGlassSegmentedPicker`), marple **500→600** progress bar gradient, horizontal gold gradient new-best medal, `body-large` count typography, marple achievement icons, and outline **trophy** toolbar icon.
 - [x] I aligned **browse gamification and settings surfaces** with `background.primary()`, fixed **productivity** top chrome/scroll insets to match achievements, introduced **root vs child** `GroupedList` row padding (settings + dashboard use root), and copied the **display settings marple Switch** pattern for the new-list **Favorited** toggle.
 
+
+
 ### Plans For Future
-- Implement habits feature per [`habits-implementation.md`](../technical-design/habits/plan/habits-implementation.md) (tab shell shipped; tracking + graphs + gamification in phases).
+
+- Implement habits feature per `[habits-implementation.md](../technical-design/habits/plan/habits-implementation.md)` (tab shell shipped; tracking + graphs + gamification in phases).
 - Manual QA pass on gamification checklist (device + persistence).
 - Wire productivity hub `GroupedList` to root padding if rows still feel tight vs settings.
 
+
+
 ### Notes
+
 - Favorited on new list is a native `Switch`, not a segmented control — matches display completed-tasks / all-day toggles.
 - Productivity screen still uses child grouped-list padding; only the browse progress card uses root today.
 
 ---
+
+
+
 ## [07/06/2026] - [Sunday]
 
+
+
 ### Today's Goals
+
 - [x] I merged **gamification** into main (**PR #24**) after the browse progress board, goals, achievements, and productivity hub shipped earlier in the week.
 - [x] I added a standalone **Habits tab** shell — `app/(tabs)/habits/` route, placeholder `HabitsScreenContent`, and registered **Habits** as an addable navbar option in Navigation settings (`navigationTabRegistry`, NativeTabs trigger, per-user tab order validation).
 
+
+
 ### Plans For Future
-- Implement habits feature per [`habits-implementation.md`](../technical-design/habits/plan/habits-implementation.md) Phase 1 (backend + today list + onboarding import).
+
+- Implement habits feature per `[habits-implementation.md](../technical-design/habits/plan/habits-implementation.md)` Phase 1 (backend + today list + onboarding import).
 - Manual QA on gamification checklist after merge.
 
+
+
 ### Notes
+
 - Habits tab uses `router.navigate` and Android inbox href fallback via `resolveNavTabHref()` so the fifth tab slot does not break routing.
 
 ---
+
+
+
 ## [12/06/2026] - [Friday]
 
+
+
 ### Today's Goals
+
 - [x] I shipped **Habits Phase 1 MVP** — Django `habits` app (`Habit`, `HabitCompletion`, schedule + streak services), CRUD + `GET /habits/today/` + log endpoints, `ActivityLog` `habit_completed` sync for global streaks.
-- [x] I wired the frontend **`habitsSlice`**, `services/api/habits.ts`, `useHabits()`, **Habits tab today list**, FAB create route, **`HabitListItem`** (binary toggle + numeric +1), and **`TodayHabitsSection`** on the Today tab.
+- [x] I wired the frontend `habitsSlice`, `services/api/habits.ts`, `useHabits()`, **Habits tab today list**, FAB create route, `HabitListItem` (binary toggle + numeric +1), and `TodayHabitsSection` on the Today tab.
 - [x] I migrated **onboarding habit branch** to `POST /habits/` instead of creating a recurring onboarding task.
 
+
+
 ### Plans For Future
+
 - Phase 2 — habit detail screen with heatmap + trend chart.
 - Manual device pass on habits today list, streaks, and Today section parity.
 
+
+
 ### Notes
+
 - `clearHabits` on logout keeps habit state isolated per account like tasks and gamification.
 
 ---
+
+
+
 ## [13/06/2026] - [Saturday]
 
+
+
 ### Today's Goals
-- [x] I shipped **Habits Phase 2** — real `GET /habits/{id}/stats/` (heatmap + 30-day rolling trend), **`HabitDetailScreenContent`**, **`HabitHeatmap`**, **`HabitTrendChart`**, edit/delete from detail, and **`HabitEditScreen`**.
+
+- [x] I shipped **Habits Phase 2** — real `GET /habits/{id}/stats/` (heatmap + 30-day rolling trend), `HabitDetailScreenContent`, `HabitHeatmap`, `HabitTrendChart`, edit/delete from detail, and `HabitEditScreen`.
 - [x] I reorganised habits UI into **FIRE-style folders** (`tab/`, `list/`, `detail/`, `forms/`, `today/`) with thin route re-exports under `app/(tabs)/habits/`.
 - [x] I fixed a **Metro bundling error** on the Today tab by narrowing `TodayHabitsSection` imports so chart code does not load through the habits barrel.
 
+
+
 ### Plans For Future
+
 - Phase 3 gamification polish (`first_habit_completion`, tab summary, unlock banner).
 - Update habits manual QA checklist for detail + graphs.
 
+
+
 ### Notes
+
 - Detail route imports `HabitDetailScreenContent` directly — avoids eager loading of `HabitTrendChart` on tabs that only need the today list.
 
 ---
+
+
+
 ## [14/06/2026] - [Sunday]
 
+
+
 ### Today's Goals
+
 - [x] I added the **habits manual testing guide** and aligned QA docs with Phase 1–2 coverage (`docs/testing/habits-manual-testing.md`, updates to implementation plan checklist).
 
+
+
 ### Plans For Future
+
 - Ship Phase 3 habits gamification hooks.
 - Run manual QA on device for habits Phases 1–2.
 
+
+
 ### Notes
+
 - Documentation day ahead of Phase 3 — good checkpoint before achievement + reminder work.
 
 ---
+
+
+
 ## [15/06/2026] - [Monday]
 
+
+
 ### Today's Goals
-- [x] I shipped **Habits Phase 3** — `first_habit_completion` achievement fixture + `habit_completion_count` evaluator, **`AchievementUnlockBanner`** on first habit complete, and task-only completion counts for task achievements.
+
+- [x] I shipped **Habits Phase 3** — `first_habit_completion` achievement fixture + `habit_completion_count` evaluator, `AchievementUnlockBanner` on first habit complete, and task-only completion counts for task achievements.
 - [x] I merged **habits Phase 3** via **PR #25** (`cursor/habits-phase-3-gamification-3846`).
-- [x] I completed **Habits Phase 1.5 and Phase 4** — **custom days** picker on create/edit forms, **`habitReminderScheduler`** (local OS notifications when habit is due today), reminder field on forms, `reminderTime` on today's API payload, logout cancel sweep.
-- [x] I reorganised **phased manual testing docs** for all habit phases (1, 1.5, 2, 3, 4) and added **`habits-verification-log.md`**.
-- [x] I added **`git-commit-message-format.md`** and linked it from **`log-templates.md`** so commit messages follow the project template.
+- [x] I completed **Habits Phase 1.5 and Phase 4** — **custom days** picker on create/edit forms, `habitReminderScheduler` (local OS notifications when habit is due today), reminder field on forms, `reminderTime` on today's API payload, logout cancel sweep.
+- [x] I reorganised **phased manual testing docs** for all habit phases (1, 1.5, 2, 3, 4) and added `habits-verification-log.md`.
+- [x] I added `git-commit-message-format.md` and linked it from `log-templates.md` so commit messages follow the project template.
+
+
 
 ### Plans For Future
+
 - **Device QA** for Phase 4 reminders (Tests 23–25 in habits manual testing guide).
 - v1.1 backlog: onboarding-habit task migration script, stronger daily rollover reminder resync.
 - v2: quit habits, `linked_habit` goals, planner integration, more habit achievements.
 
+
+
 ### Notes
+
 - Habits v1 plan (Phases 1–4) is code-complete — only Phase 4 notification fire on device remains unchecked in the implementation plan.
 - Reminder scheduling mirrors task reminders: same permission gates, `cancelAllHabitReminders` on logout, resync on `fetchHabitsToday`.
 
 ---
+
+
+
 ## [16/06/2026] - [Tuesday]
 
+
+
 ### Today's Goals
+
 - [x] I aligned **habits create/edit/detail UI** with browse stack patterns (shared form shell, grouped sections, productivity-style top spacing).
 - [x] I replaced the legacy **AchievementUnlockBanner** with a global **achievement unlock toast** — task + habit triggers, dev reset tooling, touch-through overlay, and tunable animation constants.
 
+
+
 ### Plans For Future
+
 - **Style habit creation** — polish create modal shell, form fields, and grouped sections beyond the browse-stack architecture pass.
 - **Style habit detail screen** — refine detail header, stats/charts sections, and manage actions chrome.
 - **Style habit list screen** — polish Habits tab today list, empty states, and list row presentation.
@@ -2310,10 +4568,14 @@ TODO:
 - v1.1 backlog: onboarding-habit task migration script, stronger daily rollover reminder resync.
 - v2: quit habits, `linked_habit` goals, planner integration, more habit achievements.
 
+
+
 ### Notes
-- Commits: **`475a820`** — habits UI ( `HabitFormModalShell`, `HabitFormFields`, `habitFormChrome`, detail blur header + `insets.top + 64` scroll padding, habits tab spacing).
-- Commits: **`2bcff7c`** — achievement toast (`components/ui/Toast/*`, `achievementUnlockDetection.ts`, `POST /gamification/achievements/dev-reset/`, removed `AchievementUnlockBanner.tsx`).
+
+- Commits: `475a820` — habits UI ( `HabitFormModalShell`, `HabitFormFields`, `habitFormChrome`, detail blur header + `insets.top + 64` scroll padding, habits tab spacing).
+- Commits: `2bcff7c` — achievement toast (`components/ui/Toast/*`, `achievementUnlockDetection.ts`, `POST /gamification/achievements/dev-reset/`, removed `AchievementUnlockBanner.tsx`).
 - Toast animation tuning lives in `achievementUnlockToastTypes.ts` (enter spring, opacity/translate ms, auto-dismiss).
-- Toast styling: neutral **`primary[100]`** fill + **`border.secondary()`** outline on `AchievementToastCard`.
+- Toast styling: neutral `primary[100]` fill + `border.secondary()` outline on `AchievementToastCard`.
 
 ---
+

@@ -7,6 +7,12 @@ import { StyleSheet } from 'react-native';
 
 import { CHECKBOX_SIZE_DEFAULT } from '@/components/ui/Button';
 import { Paddings } from '@/constants/Paddings';
+import {
+  ONBOARDING_TASK_AGENDA_SUGGESTION_CHIP_ICON_GAP,
+  ONBOARDING_TASK_AGENDA_SUGGESTION_CHIP_PADDING_HORIZONTAL,
+  ONBOARDING_TASK_AGENDA_SUGGESTION_CHIP_PADDING_VERTICAL,
+  ONBOARDING_TASK_AGENDA_SUGGESTION_SPARKLES_SIZE,
+} from '../constants/pagerLayout';
 
 /** horizontal space reserved left of title row — mirrors `checkboxColumn` (box + gap before title) */
 export const TASK_AGENDA_TITLE_ROW_CHECKBOX_GAP_WIDTH = CHECKBOX_SIZE_DEFAULT + 12;
@@ -81,7 +87,10 @@ export const taskAgendaTitleRowLayoutStyles = StyleSheet.create({
   },
 });
 
-/** compact suggestion “chips”: same padding + icon column (sparkles) + title; icon column width matches the task row checkbox for alignment; width follows label (horizontal `ScrollView` row). */
+/** suggestion chips use a smaller sparkles column than the full task title row checkbox */
+export const TASK_AGENDA_SUGGESTION_SPARKLES_SIZE = ONBOARDING_TASK_AGENDA_SUGGESTION_SPARKLES_SIZE;
+
+/** compact suggestion “chips”: tighter padding + icon column (sparkles) + title; width follows label (horizontal `ScrollView` row). */
 export const taskAgendaSuggestionChipLayoutStyles = StyleSheet.create({
   root: {
     alignSelf: 'flex-start',
@@ -93,19 +102,18 @@ export const taskAgendaSuggestionChipLayoutStyles = StyleSheet.create({
     overflow: 'hidden',
   },
   surfaceInner: {
-    paddingVertical: Paddings.card,
-    paddingHorizontal: Paddings.card,
+    paddingVertical: ONBOARDING_TASK_AGENDA_SUGGESTION_CHIP_PADDING_VERTICAL,
+    paddingHorizontal: ONBOARDING_TASK_AGENDA_SUGGESTION_CHIP_PADDING_HORIZONTAL,
     alignSelf: 'flex-start',
   },
   topBand: {
     flexDirection: 'row',
-    // stretch so sparkles column + title column share one height; each column centers its content (matches full task row band)
     alignItems: 'stretch',
     alignSelf: 'flex-start',
   },
   checkboxColumn: {
-    width: CHECKBOX_SIZE_DEFAULT,
-    marginRight: 12,
+    width: ONBOARDING_TASK_AGENDA_SUGGESTION_SPARKLES_SIZE,
+    marginRight: ONBOARDING_TASK_AGENDA_SUGGESTION_CHIP_ICON_GAP,
     flexShrink: 0,
     justifyContent: 'center',
     alignItems: 'center',

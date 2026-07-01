@@ -24,7 +24,7 @@ import { ScreenHeaderActions } from '@/components/ui';
 import { FloatingActionButton } from '@/components/ui/Button';
 import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
 import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
-import { ChatContainer, AiMessageList } from '@/components/features/ai';
+import { ChatContainer, ChatComposerSuggestions, AiMessageList } from '@/components/features/ai';
 import { useAnimatedKeyboardInset, useKeyboardHeight } from '@/components/layout/ScreenLayout';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
@@ -83,22 +83,26 @@ export default function AITabScreen() {
   const keyboardHeight = useKeyboardHeight();
   const restingComposerBottom = bottomPaddingAboveTabBar;
 
+  const composerGap = Paddings.tabBarInputGap;
+
   const composerAnchorStyle = useAnimatedStyle(() => {
     const kb = keyboardInsetAnimated.value;
-    // keyboard open: sit just above the keyboard (tab bar is covered — drop the tab-bar inset).
-    // keyboard closed: sit above the native tab bar with the usual gap.
+    // follow the keyboard while it is open, but never sit below the tab-bar resting inset —
+    // without the clamp, kb→0 would drop the composer onto the navbar then snap back up
     return {
-      bottom: kb > 0 ? kb + Paddings.tabBarInputGap : restingComposerBottom,
+      bottom: Math.max(kb + composerGap, restingComposerBottom),
     };
-  }, [restingComposerBottom]);
+  }, [restingComposerBottom, composerGap]);
 
   const handleComposerLayout = useCallback((event: LayoutChangeEvent) => {
     const nextHeight = event.nativeEvent.layout.height;
     setComposerHeight((prev) => (prev === nextHeight ? prev : nextHeight));
   }, []);
 
-  const composerBottomInset =
-    keyboardHeight > 0 ? keyboardHeight + Paddings.tabBarInputGap : restingComposerBottom;
+  const composerBottomInset = Math.max(
+    keyboardHeight + Paddings.tabBarInputGap,
+    restingComposerBottom,
+  );
 
   // list needs enough bottom padding to scroll past the absolutely positioned composer
   const messageListBottomInset =
@@ -116,6 +120,12 @@ export default function AITabScreen() {
     clearError();
     void sendMessage(trimmed);
   }, [prompt, isLoading, sendMessage, clearError]);
+
+  // tapping a suggestion autofills the chat prompt with its description line (not the pill title)
+  const handlePickSuggestion = useCallback((description: string) => {
+    setPrompt(description);
+    clearError();
+  }, [clearError]);
 
   // register FAB with shared tab chrome when the liquid navbar owns the button (same as inbox / today)
   const { setTabFabRegistration } = useTabFabOverlay();
@@ -162,57 +172,65 @@ export default function AITabScreen() {
           safeAreaBottom={false}
           paddingVertical={0}
         >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <View style={styles.screenRoot}>
-              <View style={styles.inner}>
-                <Text style={styles.title}>AI</Text>
-                {!hasMessages ? (
-                  <Text style={styles.hint}>
-                    Ask DailyFlo to create, update, or delete tasks. You will review each suggestion
-                    before it is applied.
-                  </Text>
-                ) : null}
+          <View style={styles.screenRoot}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View style={styles.dismissTapArea}>
+                <View style={styles.inner}>
+                  <Text style={styles.title}>AI</Text>
+                  {!hasMessages ? (
+                    <Text style={styles.hint}>
+                      Ask DailyFlo to create, update, or delete tasks. You will review each suggestion
+                      before it is applied.
+                    </Text>
+                  ) : null}
 
-                {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
+                  {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
 
-                {isLoading && !hasMessages ? (
-                  <View style={styles.loadingRow}>
-                    <ActivityIndicator color={themeColors.text.secondary()} />
-                  </View>
-                ) : null}
+                  {isLoading && !hasMessages ? (
+                    <View style={styles.loadingRow}>
+                      <ActivityIndicator color={themeColors.text.secondary()} />
+                    </View>
+                  ) : null}
 
-                {hasMessages ? (
-                  <AiMessageList
-                    messages={messages}
-                    tasks={tasks}
-                    getProposalPayload={getProposalPayload}
-                    getProposalStatus={getProposalStatus}
-                    getProposalError={getProposalError}
-                    onUpdateProposalPayload={updateProposalPayload}
-                    onConfirmProposal={confirmProposal}
-                    onDismissProposal={dismissProposal}
-                    listBottomInset={messageListBottomInset}
-                  />
-                ) : (
-                  <View style={styles.spacer} />
-                )}
+                  {hasMessages ? (
+                    <AiMessageList
+                      messages={messages}
+                      tasks={tasks}
+                      getProposalPayload={getProposalPayload}
+                      getProposalStatus={getProposalStatus}
+                      getProposalError={getProposalError}
+                      onUpdateProposalPayload={updateProposalPayload}
+                      onConfirmProposal={confirmProposal}
+                      onDismissProposal={dismissProposal}
+                      listBottomInset={messageListBottomInset}
+                    />
+                  ) : (
+                    <View style={styles.spacer} />
+                  )}
+                </View>
               </View>
+            </TouchableWithoutFeedback>
 
-              {/* absolute bottom anchor — same pattern as TaskQuickAddOverlay, without double tab-bar offset */}
-              <Animated.View
-                style={[styles.composerAnchor, composerAnchorStyle]}
-                onLayout={handleComposerLayout}
-                pointerEvents="box-none"
-              >
-                <ChatContainer
-                  value={prompt}
-                  onChangeText={setPrompt}
-                  onSend={handleSend}
-                  isLoading={isLoading}
-                />
-              </Animated.View>
-            </View>
-          </TouchableWithoutFeedback>
+            {/* suggestions + composer move together above the keyboard / tab bar */}
+            <Animated.View
+              style={[styles.composerAnchor, composerAnchorStyle]}
+              onLayout={handleComposerLayout}
+              pointerEvents="box-none"
+            >
+              <ChatComposerSuggestions
+                activePrompt={prompt}
+                isComposerExpanded={prompt.length > 0 && keyboardHeight > 0}
+                onPickSuggestion={handlePickSuggestion}
+              />
+              <ChatContainer
+                value={prompt}
+                onChangeText={setPrompt}
+                onSend={handleSend}
+                isLoading={isLoading}
+                isKeyboardVisible={keyboardHeight > 0}
+              />
+            </Animated.View>
+          </View>
         </ScreenContainer>
         {!USE_CUSTOM_LIQUID_TAB_BAR ? (
           <Animated.View style={fabChromeZoneStyle}>
@@ -266,6 +284,9 @@ const createStyles = (
     screenRoot: {
       flex: 1,
       position: 'relative',
+    },
+    dismissTapArea: {
+      flex: 1,
     },
     inner: {
       flex: 1,

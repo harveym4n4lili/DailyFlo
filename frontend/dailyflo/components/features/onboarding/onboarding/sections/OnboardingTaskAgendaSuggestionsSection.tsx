@@ -74,6 +74,9 @@ export function OnboardingTaskAgendaSuggestionsSection({
   const rowTitleColor = brandChrome?.taskTitleInputColor ?? themeColors.text.primary();
   // selected chip accent follows slide continue FAB (`plant:500` on task-branch steps); fallback if section ever mounts without chrome
   const selectedBrandColor = brandChrome?.selectedSlideBrandColor ?? themeColors.primaryButton.fill();
+  const sparklesIdleColor = selectedBrandColor;
+  const sparklesSelectedColor =
+    brandChrome?.selectedSlideBrandIconColor ?? selectedBrandColor;
   const [firstRowLabels, secondRowLabels] = useMemo(
     () => splitSuggestionLabels(suggestionLabels),
     [suggestionLabels],
@@ -102,6 +105,8 @@ export function OnboardingTaskAgendaSuggestionsSection({
                 onSelect={() => onPickSuggestion(label)}
                 titleTextColor={rowTitleColor}
                 selectedBrandColor={selectedBrandColor}
+                sparklesIdleColor={sparklesIdleColor}
+                sparklesSelectedColor={sparklesSelectedColor}
               />
             ))}
           </ScrollView>
@@ -123,6 +128,8 @@ export function OnboardingTaskAgendaSuggestionsSection({
                 onSelect={() => onPickSuggestion(label)}
                 titleTextColor={rowTitleColor}
                 selectedBrandColor={selectedBrandColor}
+                sparklesIdleColor={sparklesIdleColor}
+                sparklesSelectedColor={sparklesSelectedColor}
               />
             ))}
           </ScrollView>

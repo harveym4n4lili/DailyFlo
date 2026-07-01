@@ -16,6 +16,25 @@ export const PROGRESS_BOARD_GLASS_BORDER_WIDTH = 0.7;
 export const PROGRESS_BOARD_GLASS_VEIL_OPACITY = 0.35;
 export const PROGRESS_BOARD_GLASS_TINT_OPACITY = 0.72;
 
+/** veil + tint + border — shared by progress board, ai ChatContainer, and chat suggestion chips */
+export function getLiquidGlassShellLayers(themeColors: {
+  background: { primary: () => string };
+  border: { secondary: () => string };
+  withOpacity: (color: string, opacity: number) => string;
+}) {
+  return {
+    veil: themeColors.withOpacity(
+      themeColors.background.primary(),
+      PROGRESS_BOARD_GLASS_VEIL_OPACITY,
+    ),
+    tint: themeColors.withOpacity(
+      themeColors.background.primary(),
+      PROGRESS_BOARD_GLASS_TINT_OPACITY,
+    ),
+    border: themeColors.border.secondary(),
+  };
+}
+
 /** marple ramp for progress fill — 500 → 600 */
 export const PROGRESS_BOARD_PROGRESS_GRADIENT_START_SHADE: BrandColorShade = 500;
 export const PROGRESS_BOARD_PROGRESS_GRADIENT_END_SHADE: BrandColorShade = 600;

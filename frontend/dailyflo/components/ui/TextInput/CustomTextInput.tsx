@@ -73,6 +73,8 @@ export interface CustomTextInputProps {
    * used by task Description so the notes area shows ~5 lines before the user types.
    */
   minimumLineCount?: number;
+  /** when true, focuses the hidden input once on mount — used when expanding the ai composer on keyboard open */
+  autoFocus?: boolean;
 }
 
 /**
@@ -96,6 +98,7 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   onBlur: onBlurProp,
   compactInitialHeight = false,
   minimumLineCount,
+  autoFocus = false,
 }) => {
   // get current color scheme (light/dark mode)
   const colorScheme = useColorScheme() || 'dark';
@@ -147,7 +150,16 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   useEffect(() => {
     setLocalText(value);
   }, [value]);
-  
+
+  // ai chat composer: focus when switching from collapsed inline field to expanded multiline
+  useEffect(() => {
+    if (!autoFocus || !editable) return;
+    const id = requestAnimationFrame(() => {
+      hiddenInputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [autoFocus, editable]);
+
   // cursor blinking animation - iOS style
   useEffect(() => {
     let blinkAnimation: Animated.CompositeAnimation;

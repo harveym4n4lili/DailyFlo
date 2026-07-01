@@ -1,24 +1,39 @@
 /**
- * AI chat container — liquid glass shell split into two stacked sections:
- * message text field on top, bottom utility row (send button + room for more actions).
+ * AI chat container — liquid glass shell with a fixed utility row (attach + send/mic).
+ * collapsed: text section height 0 — preview sits inline between attach and send.
+ * expanded: multiline text grows above the utility row when there is input and the keyboard is open.
  */
 
-import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, StyleSheet, Platform, Pressable, Text, type LayoutChangeEvent } from 'react-native';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import GlassView from 'expo-glass-effect/build/GlassView';
 import { CustomTextInput } from '@/components/ui/TextInput';
 import { ChatAttachMenu } from './ChatAttachMenu';
 import { ChatSendMicButton } from './ChatSendMicButton';
 import { useThemeColors, useColorPalette } from '@/hooks/useColorPalette';
-import { getChatSendButtonColors } from './chatComposerUiTokens';
+import {
+  getChatSendButtonColors,
+  CHAT_COMPOSER_LAYOUT_TRANSITION_MS,
+  CHAT_COMPOSER_LAYOUT_EASING,
+  CHAT_COMPOSER_SHELL_BORDER_WIDTH,
+  CHAT_COMPOSER_SHELL_RADIUS,
+  getChatComposerShellBorderColor,
+  CHAT_COMPOSER_COLLAPSED_TEXT_HEIGHT_ESTIMATE,
+  CHAT_COMPOSER_EXPANDED_TEXT_HEIGHT_ESTIMATE,
+} from './chatComposerUiTokens';
+import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
 import {
-  PROGRESS_BOARD_GLASS_BORDER_WIDTH,
   PROGRESS_BOARD_GLASS_TINT_OPACITY,
   PROGRESS_BOARD_GLASS_VEIL_OPACITY,
 } from '@/components/features/gamification/browse/progressBoardUiTokens';
 
-// empty chat field shows 3 lines of height — compactInitialHeight avoids Description's extra notes padding
 const CHAT_INPUT_MIN_VISIBLE_LINES = 3;
 
 export interface ChatContainerProps {
@@ -26,6 +41,8 @@ export interface ChatContainerProps {
   onChangeText: (text: string) => void;
   onSend: () => void;
   isLoading?: boolean;
+  /** false when the keyboard hides — collapses the text section even if text remains */
+  isKeyboardVisible?: boolean;
 }
 
 export function ChatContainer({
@@ -33,17 +50,75 @@ export function ChatContainer({
   onChangeText,
   onSend,
   isLoading = false,
+  isKeyboardVisible = false,
 }: ChatContainerProps) {
   const themeColors = useThemeColors();
   const colors = useColorPalette();
   const trimmed = value.trim();
   const hasText = trimmed.length > 0;
 
-  // marple caret while typing — matches send button fill
+  // text section expands only when typing and the keyboard is open
+  const isTextExpanded = value.length > 0 && isKeyboardVisible;
+
+  const [pendingFocus, setPendingFocus] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
+  const expandedTextHeightSv = useSharedValue(CHAT_COMPOSER_EXPANDED_TEXT_HEIGHT_ESTIMATE);
+  const expandProgress = useSharedValue(0);
+
+  useEffect(() => {
+    expandProgress.value = withTiming(isTextExpanded ? 1 : 0, {
+      duration: CHAT_COMPOSER_LAYOUT_TRANSITION_MS,
+      easing: CHAT_COMPOSER_LAYOUT_EASING,
+    });
+  }, [isTextExpanded, expandProgress]);
+
+  const handleComposerFocus = useCallback(() => {
+    setIsInputFocused(true);
+    setPendingFocus(false);
+  }, []);
+
+  const handleComposerBlur = useCallback(() => {
+    setIsInputFocused(false);
+    setPendingFocus(false);
+  }, []);
+
+  const handleExpandedTextLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      if (!isTextExpanded) return;
+      expandedTextHeightSv.value = event.nativeEvent.layout.height;
+    },
+    [isTextExpanded, expandedTextHeightSv],
+  );
+
+  const handleExpandComposer = () => {
+    if (isLoading || isTextExpanded) return;
+    setPendingFocus(true);
+  };
+
+  const animatedTextSectionStyle = useAnimatedStyle(() => ({
+    height: interpolate(
+      expandProgress.value,
+      [0, 1],
+      [CHAT_COMPOSER_COLLAPSED_TEXT_HEIGHT_ESTIMATE, expandedTextHeightSv.value],
+    ),
+    overflow: 'hidden' as const,
+  }));
+
+  const expandedTextLayerStyle = useAnimatedStyle(() => ({
+    opacity: expandProgress.value,
+  }));
+
+  const inlinePreviewStyle = useAnimatedStyle(() => ({
+    opacity: 1 - expandProgress.value,
+  }));
+
+  // route touches to the multiline input while the keyboard is opening — before expansion kicks in
+  const showMultilineInput = isTextExpanded || pendingFocus || isInputFocused;
+
   const marpleFill = getChatSendButtonColors(colors).fill;
-  // liquid glass shell — veil + inset hairline border live inside the glass (not wrapping it)
-  const shellRadius = Paddings.continueButtonRadius;
-  const innerRadius = Math.max(shellRadius - PROGRESS_BOARD_GLASS_BORDER_WIDTH, 0);
+  const shellRadius = CHAT_COMPOSER_SHELL_RADIUS;
+  const innerRadius = Math.max(shellRadius - CHAT_COMPOSER_SHELL_BORDER_WIDTH, 0);
   const cornerStyle = {
     borderRadius: shellRadius,
     ...(Platform.OS === 'ios' ? { borderCurve: 'continuous' as const } : null),
@@ -61,48 +136,84 @@ export function ChatContainer({
     PROGRESS_BOARD_GLASS_TINT_OPACITY,
   );
 
-  const content = (
-    <>
-      <CustomTextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder="Message…"
-        editable={!isLoading}
-        maxLength={8000}
-        multiline
-        // compact mode drops CustomTextInput's extra 24pt notes padding so the utility row sits tight under the text
-        compactInitialHeight
-        minimumLineCount={CHAT_INPUT_MIN_VISIBLE_LINES}
-        cursorColor={marpleFill}
-        containerStyle={styles.textInputContainer}
-        inputStyle={styles.chatInputPadding}
-      />
-
-      <View style={styles.bottomRow}>
-        <ChatAttachMenu disabled={isLoading} />
-
-        <ChatSendMicButton hasText={hasText} isLoading={isLoading} onSend={onSend} />
-      </View>
-    </>
+  const inlinePreview = (
+    <Pressable
+      style={styles.inlinePreviewTap}
+      onPress={handleExpandComposer}
+      disabled={isLoading || isTextExpanded || isInputFocused}
+      accessibilityRole="button"
+      accessibilityLabel="AI message"
+      accessibilityHint="Tap to type a message for the AI assistant"
+    >
+      <Text
+        numberOfLines={1}
+        ellipsizeMode="tail"
+        style={[
+          styles.inlinePreviewText,
+          {
+            color: hasText ? themeColors.text.primary() : themeColors.text.tertiary(),
+          },
+        ]}
+      >
+        {hasText ? value.replace(/\n/g, ' ') : 'Message…'}
+      </Text>
+    </Pressable>
   );
 
   const inner = (
     <View style={[styles.innerClip, innerCornerStyle]}>
-      {/* solid veil + hairline ring sit on top of the blur, under the text/buttons */}
       <View style={[styles.glassVeil, { backgroundColor: glassVeil }]} pointerEvents="none" />
       <View
         style={[
           styles.innerBorderRing,
           innerCornerStyle,
-          { borderColor: themeColors.border.secondary() },
+          { borderColor: getChatComposerShellBorderColor(themeColors) },
         ]}
         pointerEvents="none"
       />
-      <View style={styles.contentColumn}>{content}</View>
+
+      {/* grows upward from 0 — multiline input only lives here when expanded */}
+      <Animated.View style={animatedTextSectionStyle}>
+        <Animated.View
+          style={[styles.textLayer, expandedTextLayerStyle]}
+          pointerEvents={showMultilineInput ? 'box-none' : 'none'}
+        >
+          <View style={styles.expandedTextColumn} onLayout={handleExpandedTextLayout}>
+            <CustomTextInput
+              value={value}
+              onChangeText={onChangeText}
+              placeholder="Message…"
+              editable={!isLoading}
+              maxLength={8000}
+              multiline
+              autoFocus={pendingFocus}
+              onFocus={handleComposerFocus}
+              onBlur={handleComposerBlur}
+              compactInitialHeight
+              minimumLineCount={CHAT_INPUT_MIN_VISIBLE_LINES}
+              cursorColor={marpleFill}
+              containerStyle={styles.textInputContainer}
+              inputStyle={styles.chatInputPadding}
+            />
+          </View>
+        </Animated.View>
+      </Animated.View>
+
+      {/* fixed row — collapsed preview sits between attach and send */}
+      <View style={styles.utilityRow}>
+        <ChatAttachMenu disabled={isLoading} />
+        <Animated.View
+          style={[styles.inlinePreviewSlot, inlinePreviewStyle]}
+          pointerEvents={showMultilineInput ? 'none' : 'box-none'}
+        >
+          {inlinePreview}
+        </Animated.View>
+        <ChatSendMicButton hasText={hasText} isLoading={isLoading} onSend={onSend} />
+      </View>
     </View>
   );
 
-  const shell = Platform.OS === 'ios' ? (
+  const shellBody = Platform.OS === 'ios' ? (
     <GlassView
       style={[styles.glassShell, cornerStyle]}
       glassEffectStyle="regular"
@@ -112,34 +223,31 @@ export function ChatContainer({
       {inner}
     </GlassView>
   ) : (
-    <View
-      style={[
-        styles.glassShell,
-        cornerStyle,
-        { backgroundColor: themeColors.background.primary() },
-      ]}
-    >
+    <View style={[styles.glassShell, cornerStyle]}>
       {inner}
     </View>
   );
 
   return (
     <View style={styles.outerMargin}>
-      {/* bleed slot — interactive glass draws past layout bounds; negative margin keeps screen position unchanged */}
-      <View style={styles.glassBleedSlot}>{shell}</View>
+      <View style={styles.glassBleedSlot}>{shellBody}</View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   outerMargin: {
-    // bottom spacing is owned by the ai screen's keyboard anchor — not this component
     overflow: 'visible',
+    zIndex: 0,
   },
-  // room for isInteractive glass halo without shifting layout (same pattern as ContinueButton / QuickAddLabelOnlyPill)
+  // bleed sideways + bottom only — top bleed painted over suggestions above the composer
   glassBleedSlot: {
-    margin: -Paddings.liquidGlassBleed,
-    padding: Paddings.liquidGlassBleed,
+    marginTop: 0,
+    marginBottom: -Paddings.liquidGlassBleed,
+    marginHorizontal: -Paddings.liquidGlassBleed,
+    paddingTop: 0,
+    paddingBottom: Paddings.liquidGlassBleed,
+    paddingHorizontal: Paddings.liquidGlassBleed,
     overflow: 'visible',
   },
   glassShell: {
@@ -147,46 +255,57 @@ const styles = StyleSheet.create({
   },
   innerClip: {
     position: 'relative',
-    // do not clip — isInteractive glass expansion paints outside the rounded rect
     overflow: 'visible',
   },
   glassVeil: {
     ...StyleSheet.absoluteFillObject,
   },
-  // hairline inset ring — drawn inside the glass panel (ProgressBoard outerBorder moved inward)
   innerBorderRing: {
     ...StyleSheet.absoluteFillObject,
-    borderWidth: PROGRESS_BOARD_GLASS_BORDER_WIDTH,
+    borderWidth: CHAT_COMPOSER_SHELL_BORDER_WIDTH,
   },
-  // inner column — padding for text field + utility row
-  contentColumn: {
-    flexDirection: 'column',
-    gap: 0,
+  textLayer: {
+    ...StyleSheet.absoluteFillObject,
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  expandedTextColumn: {
     paddingLeft: Paddings.groupedListContentHorizontal,
     paddingTop: Paddings.groupedListChildContentVertical,
-    overflow: 'visible',
+    paddingBottom: Paddings.formDataPillHorizontal,
   },
   textInputContainer: {
     alignSelf: 'stretch',
     minWidth: 0,
   },
-  // same zero-padding override as task Description — shell column already owns horizontal inset
   chatInputPadding: {
     paddingTop: Paddings.none,
     paddingBottom: Paddings.none,
     paddingLeft: Paddings.none,
     paddingRight: Paddings.groupedListContentHorizontal,
   },
-  // bottom utility row — bleed past contentColumn left inset so attach/send share the same corner inset (formDataPillHorizontal)
-  bottomRow: {
+  utilityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginLeft: -Paddings.groupedListContentHorizontal,
-    paddingTop: Paddings.formDataPillHorizontal,
+    paddingVertical: Paddings.formDataPillHorizontal,
     paddingLeft: Paddings.formDataPillHorizontal,
     paddingRight: Paddings.formDataPillHorizontal,
-    paddingBottom: Paddings.formDataPillHorizontal,
+    gap: Paddings.formDataPillHorizontal,
     overflow: 'visible',
+  },
+  inlinePreviewSlot: {
+    flex: 1,
+    minWidth: 0,
+  },
+  inlinePreviewTap: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'center',
+    minHeight: 20,
+  },
+  inlinePreviewText: {
+    ...getTextStyle('body-large'),
+    lineHeight: 20,
   },
 });

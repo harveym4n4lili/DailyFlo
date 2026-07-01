@@ -1,4 +1,7 @@
 export { ChatContainer } from './ChatContainer';
+export { ChatComposerSuggestions } from './ChatComposerSuggestions';
+export { ChatSuggestionChip } from './ChatSuggestionChip';
+export { AI_CHAT_SUGGESTIONS, type AiChatSuggestion } from './aiChatSuggestionTokens';
 export { ChatAttachMenu } from './ChatAttachMenu';
 export { ChatSendMicButton } from './ChatSendMicButton';
 export { AiMessageBubble } from './AiMessageBubble';

@@ -1,18 +1,11 @@
 /**
- * chat composer attach control — primary[50] chip with brand marple + icon.
+ * chat composer attach control — solid primary[50] circle with brand marple + icon.
  * ios: native swift-ui Menu dropdown; android: DropdownList modal anchored bottom-left.
  */
 
 import React, { useState } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  DynamicColorIOS,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import GlassView from 'expo-glass-effect/build/GlassView';
 import { Host, Menu, Button } from '@expo/ui/swift-ui';
 import { DropdownList } from '@/components/ui/List';
 import { useColorPalette, useThemeColors } from '@/hooks/useColorPalette';
@@ -32,10 +25,6 @@ export function ChatAttachMenu({ disabled = false }: ChatAttachMenuProps) {
   const buttonSize = CHAT_UTILITY_BUTTON_SIZE;
   const buttonRadius = buttonSize / 2;
   const { background: attachButtonBackground, icon: brandIconColor } = getChatAttachChipColors(colors);
-  const glassTint =
-    Platform.OS === 'ios'
-      ? DynamicColorIOS({ light: attachButtonBackground, dark: attachButtonBackground })
-      : attachButtonBackground;
   const triggerOpacity = disabled ? 0.4 : 1;
 
   // placeholder — menu item closes the dropdown; image attach wired later
@@ -49,70 +38,49 @@ export function ChatAttachMenu({ disabled = false }: ChatAttachMenuProps) {
     width: buttonSize,
     height: buttonSize,
     borderRadius: buttonRadius,
+    backgroundColor: attachButtonBackground,
+    borderColor: themeColors.border.secondary(),
     opacity: triggerOpacity,
   };
 
+  const attachTrigger = (
+    <View style={[styles.circleButton, circleStyle]}>{plusIcon}</View>
+  );
+
   if (Platform.OS === 'ios') {
     // menu label is visuals only — Menu owns the tap target (same pattern as ActionContextMenu)
-    const menuLabel = (
-      <GlassView
-        style={[styles.glassSurface, circleStyle]}
-        glassEffectStyle="clear"
-        tintColor={glassTint as any}
-        isInteractive
-      >
-        <View style={[styles.glassSurfaceInner, { borderRadius: buttonRadius }]}>{plusIcon}</View>
-      </GlassView>
-    );
-
     return (
-      <View style={styles.glassBleedSlot}>
-        <Host
-          matchContents={false}
-          style={{
-            width: buttonSize,
-            height: buttonSize,
-            overflow: 'visible',
-          }}
-        >
-          <Menu label={menuLabel}>
-            <Button
-              label="Add image"
-              systemImage="photo"
-              onPress={handleAddImage}
-            />
-          </Menu>
-        </Host>
-      </View>
+      <Host
+        matchContents={false}
+        style={{
+          width: buttonSize,
+          height: buttonSize,
+        }}
+      >
+        <Menu label={attachTrigger}>
+          <Button label="Add image" systemImage="photo" onPress={handleAddImage} />
+        </Menu>
+      </Host>
     );
   }
 
-  // android/web: solid primary circle opens DropdownList above the bottom-left trigger
+  // android/web: solid circle opens DropdownList above the bottom-left trigger
   return (
     <>
-      <View style={styles.glassBleedSlot}>
-        <TouchableOpacity
-          style={[
-            styles.androidFallback,
-            circleStyle,
-            {
-              backgroundColor: attachButtonBackground,
-              borderColor: themeColors.border.secondary(),
-            },
-          ]}
-          onPress={() => {
-            if (disabled) return;
-            setAndroidMenuVisible(true);
-          }}
-          activeOpacity={0.85}
-          disabled={disabled}
-          accessibilityRole="button"
-          accessibilityLabel="Add attachment"
-          accessibilityHint="Opens menu to add an image"
-        >
-          {plusIcon}
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        style={[styles.circleButton, circleStyle]}
+        onPress={() => {
+          if (disabled) return;
+          setAndroidMenuVisible(true);
+        }}
+        activeOpacity={0.85}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel="Add attachment"
+        accessibilityHint="Opens menu to add an image"
+      >
+        {plusIcon}
+      </TouchableOpacity>
       <DropdownList
         visible={androidMenuVisible}
         onClose={() => setAndroidMenuVisible(false)}
@@ -132,23 +100,7 @@ export function ChatAttachMenu({ disabled = false }: ChatAttachMenuProps) {
 }
 
 const styles = StyleSheet.create({
-  glassBleedSlot: {
-    margin: -Paddings.liquidGlassBleed,
-    padding: Paddings.liquidGlassBleed,
-    overflow: 'visible',
-  },
-  glassSurface: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'visible',
-  },
-  glassSurfaceInner: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  androidFallback: {
+  circleButton: {
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: StyleSheet.hairlineWidth,
