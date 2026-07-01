@@ -1,4 +1,6 @@
-export { AiChatComposer } from './AiChatComposer';
+export { ChatContainer } from './ChatContainer';
+export { ChatAttachMenu } from './ChatAttachMenu';
+export { ChatSendMicButton } from './ChatSendMicButton';
 export { AiMessageBubble } from './AiMessageBubble';
 export { AiMessageList } from './AiMessageList';
 export { AiProposalCard } from './AiProposalCard';

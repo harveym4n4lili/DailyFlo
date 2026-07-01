@@ -27,6 +27,8 @@ export interface AiMessageListProps {
   onConfirmProposal: (messageId: string, proposal: TaskProposal) => void;
   onDismissProposal: (messageId: string, proposalId: string) => void;
   tasks: Task[];
+  /** extra scroll padding so the last message clears the anchored composer */
+  listBottomInset?: number;
 }
 
 function buildListItems(messages: AiChatMessage[]): ListItem[] {
@@ -51,6 +53,7 @@ export function AiMessageList({
   onConfirmProposal,
   onDismissProposal,
   tasks,
+  listBottomInset = Paddings.groupedListIconTextSpacing,
 }: AiMessageListProps) {
   const listRef = useRef<FlatList<ListItem>>(null);
   const items = buildListItems(messages);
@@ -117,7 +120,7 @@ export function AiMessageList({
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       style={styles.list}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: listBottomInset }]}
       keyboardShouldPersistTaps="handled"
       onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
     />
@@ -128,7 +131,5 @@ const styles = StyleSheet.create({
   list: {
     flex: 1,
   },
-  content: {
-    paddingBottom: Paddings.groupedListIconTextSpacing,
-  },
+  content: {},
 });

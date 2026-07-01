@@ -22,6 +22,8 @@ import {
   StyleSheet,
   TextInput as RNTextInput,
   Animated,
+  Platform,
+  type ColorValue,
 } from 'react-native';
 import { useColorScheme } from 'react-native';
 
@@ -49,6 +51,8 @@ export interface CustomTextInputProps {
   maxLength?: number;
   /** Task color for styling the cursor */
   taskColor?: TaskColor;
+  /** optional caret/selection override — when set, used instead of the default white stylus */
+  cursorColor?: ColorValue;
   /** Whether this is a multiline input */
   multiline?: boolean;
   /** Custom style for the container */
@@ -84,6 +88,7 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   editable = true,
   maxLength = 500,
   taskColor = 'blue',
+  cursorColor,
   multiline = true,
   containerStyle,
   inputStyle,
@@ -249,8 +254,8 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   
   // get theme colors
   const colors = ThemeColors[colorScheme];
-  // use white for cursor/stylus - matches iOS-style caret
-  const stylusColor = 'white';
+  // default white stylus; callers (e.g. ai chat) can pass brand cursorColor for caret + selection tint
+  const stylusColor = cursorColor ?? 'white';
   
   // safely split text into lines for rendering first
   // ensure localText is always a string to prevent undefined errors
@@ -301,7 +306,14 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   const cursorLeftPosition = measuredTextWidth;
   
   return (
-    <View style={[styles.container, containerStyle]}>
+    <View
+      style={[
+        styles.container,
+        // ios: parent tint can drive uitextview caret when selectionColor alone stays system blue
+        cursorColor && Platform.OS === 'ios' ? ({ tintColor: cursorColor } as object) : null,
+        containerStyle,
+      ]}
+    >
       {/* Hidden text measurement component */}
       {/* this measures the exact width of text before cursor for accurate positioning */}
       <Text
