@@ -106,6 +106,19 @@ export const CHAT_COMPOSER_COLLAPSED_HEIGHT_ESTIMATE = CHAT_COMPOSER_UTILITY_ROW
 /** gap between composer top and the ai screen header content area */
 export const CHAT_COMPOSER_HEADER_GAP = 8;
 
+/** gap between submitted prompt shell bottom and assistant response shell top */
+export const CHAT_SESSION_RESPONSE_GAP = CHAT_COMPOSER_HEADER_GAP;
+
+/** assistant response shell — tighter bottom-left corner vs the composer shell */
+export const CHAT_ASSISTANT_RESPONSE_SHELL_BOTTOM_LEFT_RADIUS = 4;
+
+/** padding inside read-only text blocks — matches ChatContainer submittedTextLayer / expandedTextColumn */
+export const CHAT_COMPOSER_TEXT_BLOCK_PADDING = {
+  horizontal: Paddings.groupedListContentHorizontal,
+  top: Paddings.groupedListChildContentVertical,
+  bottom: Paddings.formDataPillHorizontal,
+} as const;
+
 /** vertical padding inside the expanded text column (matches ChatContainer expandedTextColumn) */
 export const CHAT_COMPOSER_EXPANDED_TEXT_COLUMN_PADDING =
   Paddings.groupedListChildContentVertical + Paddings.formDataPillHorizontal;

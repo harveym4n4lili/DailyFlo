@@ -1,5 +1,6 @@
 export { AiEmptyStateIntro } from './AiEmptyStateIntro';
 export { AiEmptyStateIntroBackground } from './AiEmptyStateIntroBackground';
+export { AiAssistantResponseShell } from './AiAssistantResponseShell';
 export { ChatContainer } from './ChatContainer';
 export { ChatComposerSuggestions } from './ChatComposerSuggestions';
 export { ChatSuggestionChip } from './ChatSuggestionChip';

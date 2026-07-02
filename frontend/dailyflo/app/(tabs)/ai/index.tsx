@@ -12,8 +12,9 @@ import {
   Platform,
   Keyboard,
   TouchableWithoutFeedback,
-  ActivityIndicator,
+  ScrollView,
   useWindowDimensions,
+  type LayoutChangeEvent,
 } from 'react-native';
 import Animated, {
   interpolate,
@@ -36,6 +37,7 @@ import {
   ChatComposerSuggestions,
   AiEmptyStateIntro,
   AiEmptyStateIntroBackground,
+  AiAssistantResponseShell,
   pickRandomAiGreeting,
   pickRandomAiHint,
 } from '@/components/features/ai';
@@ -48,6 +50,8 @@ import {
   CHAT_SESSION_ANCHOR_HORIZONTAL_INSET,
   CHAT_COMPOSER_COLLAPSED_HEIGHT_ESTIMATE,
   CHAT_COMPOSER_HEADER_GAP,
+  CHAT_SUBMITTED_SHELL_HEIGHT_ESTIMATE,
+  CHAT_SESSION_RESPONSE_GAP,
 } from '@/components/features/ai/chatComposerUiTokens';
 import { useKeyboardHeight } from '@/components/layout/ScreenLayout';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
@@ -86,6 +90,7 @@ export default function AITabScreen() {
   const { modals, closeModal } = useUI();
 
   const {
+    messages,
     isLoading,
     error,
     sendMessage,
@@ -109,6 +114,8 @@ export default function AITabScreen() {
   // radial blur stays mounted for the visit once shown; skip re-fade on back
   const [introBackgroundMounted, setIntroBackgroundMounted] = useState(false);
   const [introBackgroundHasAnimated, setIntroBackgroundHasAnimated] = useState(false);
+  // window Y of the bottom edge of the slid-up composer — positions response below it
+  const [sessionComposerBottom, setSessionComposerBottom] = useState(0);
 
   const composerAnchorRef = useRef<View>(null);
   // 0 = greeting position, 1 = submitted shell at header
@@ -150,6 +157,43 @@ export default function AITabScreen() {
 
   const isPromptPhase = screenPhase === 'prompt';
   const isKeyboardOpen = keyboardHeight > 0;
+  const isSessionVisible = isSessionMode || isSessionTransitioning;
+
+  const latestAssistantReply = useMemo(
+    () => [...messages].reverse().find((message) => message.role === 'assistant')?.content ?? '',
+    [messages],
+  );
+
+  const fallbackResponsePaddingTop =
+    sessionTargetTop + CHAT_SUBMITTED_SHELL_HEIGHT_ESTIMATE + CHAT_SESSION_RESPONSE_GAP;
+  const sessionResponsePaddingTop =
+    sessionComposerBottom > 0
+      ? sessionComposerBottom + CHAT_SESSION_RESPONSE_GAP
+      : fallbackResponsePaddingTop;
+
+  const measureSessionComposerBottom = useCallback(() => {
+    if (!isSessionVisible) return;
+    composerAnchorRef.current?.measureInWindow((_x, y, _width, height) => {
+      setSessionComposerBottom(y + height);
+    });
+  }, [isSessionVisible]);
+
+  const handleComposerAnchorLayout = useCallback(
+    (_event: LayoutChangeEvent) => {
+      measureSessionComposerBottom();
+    },
+    [measureSessionComposerBottom],
+  );
+
+  useEffect(() => {
+    if (!isSessionVisible) {
+      setSessionComposerBottom(0);
+      return undefined;
+    }
+    measureSessionComposerBottom();
+    const measureId = setTimeout(measureSessionComposerBottom, CHAT_SESSION_TRANSITION_MS);
+    return () => clearTimeout(measureId);
+  }, [isSessionVisible, isSessionMode, submittedPrompt, measureSessionComposerBottom]);
 
   const keyboardHeightRef = useRef(keyboardHeight);
   keyboardHeightRef.current = keyboardHeight;
@@ -448,35 +492,53 @@ export default function AITabScreen() {
             ) : null}
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
               <View style={styles.dismissTapArea}>
-                <View style={styles.inner}>
-                  {emptyIntroOnScreen && greeting && hint ? (
-                    <AiEmptyStateIntro
-                      key={`${introRunKey}-${greeting}-${hint}`}
-                      greeting={greeting}
-                      hint={hint}
-                      visible={isPromptPhase}
-                      onFadeOutComplete={handleIntroFadeOutComplete}
-                      greetingStyle={styles.greeting}
-                      hintStyle={styles.hint}
-                    />
-                  ) : null}
+                {isSessionVisible ? (
+                  <ScrollView
+                    style={styles.sessionScroll}
+                    contentContainerStyle={[
+                      styles.sessionScrollContent,
+                      {
+                        paddingTop: sessionResponsePaddingTop,
+                        paddingBottom: restingComposerBottom + Paddings.groupedListIconTextSpacing,
+                      },
+                    ]}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                  >
+                    {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
+                    {isLoading || latestAssistantReply ? (
+                      <AiAssistantResponseShell
+                        content={latestAssistantReply}
+                        isLoading={isLoading}
+                      />
+                    ) : null}
+                  </ScrollView>
+                ) : (
+                  <View style={styles.inner}>
+                    {emptyIntroOnScreen && greeting && hint ? (
+                      <AiEmptyStateIntro
+                        key={`${introRunKey}-${greeting}-${hint}`}
+                        greeting={greeting}
+                        hint={hint}
+                        visible={isPromptPhase}
+                        onFadeOutComplete={handleIntroFadeOutComplete}
+                        greetingStyle={styles.greeting}
+                        hintStyle={styles.hint}
+                      />
+                    ) : null}
 
-                  {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
+                    {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
 
-                  {isLoading && screenPhase === 'session' ? (
-                    <View style={styles.loadingRow}>
-                      <ActivityIndicator color={themeColors.text.secondary()} />
-                    </View>
-                  ) : null}
-
-                  <View style={styles.spacer} />
-                </View>
+                    <View style={styles.spacer} />
+                  </View>
+                )}
               </View>
             </TouchableWithoutFeedback>
 
             <Animated.View
               ref={composerAnchorRef}
               style={[styles.composerAnchor, composerPositionStyle]}
+              onLayout={handleComposerAnchorLayout}
               pointerEvents="box-none"
             >
               <ChatComposerSuggestions
@@ -563,8 +625,14 @@ const createStyles = (
     },
     inner: {
       flex: 1,
-      paddingTop: insets.top + TOP_SECTION_ROW_HEIGHT + 8,
+      paddingTop: insets.top + TOP_SECTION_ROW_HEIGHT + CHAT_COMPOSER_HEADER_GAP,
       paddingHorizontal: Paddings.screen,
+    },
+    sessionScroll: {
+      flex: 1,
+    },
+    sessionScrollContent: {
+      paddingHorizontal: CHAT_SESSION_ANCHOR_HORIZONTAL_INSET,
     },
     composerAnchor: {
       position: 'absolute',
@@ -584,14 +652,10 @@ const createStyles = (
       ...typography.getTextStyle('body-medium'),
       color: themeColors.text.primary(),
       marginTop: 8,
+      marginBottom: 8,
       padding: 10,
       borderRadius: 10,
       backgroundColor: themeColors.background.primarySecondaryBlend(),
-    },
-    loadingRow: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     spacer: {
       flex: 1,
