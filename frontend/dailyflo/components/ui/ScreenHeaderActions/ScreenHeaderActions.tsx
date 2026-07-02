@@ -3,6 +3,7 @@
  * variant determines which icons are shown:
  * - dashboard: dashboard icon only (ios overflow lives in Stack.Toolbar via IosDashboardOverflowToolbar)
  * - browse: settings icon only
+ * - activity-log: activity log icon only (ai tab on android)
  */
 
 import React from 'react';
@@ -12,7 +13,7 @@ import { HeaderIconButton } from './HeaderIconButton';
 import { GearIcon, DashboardIcon, SFSymbolIcon } from '@/components/ui/Icon';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
-export type ScreenHeaderActionsVariant = 'dashboard' | 'browse';
+export type ScreenHeaderActionsVariant = 'dashboard' | 'browse' | 'activity-log';
 
 export interface ScreenHeaderActionsProps {
   /** which icon set to show: dashboard (Today/Planner) or browse */
@@ -23,6 +24,8 @@ export interface ScreenHeaderActionsProps {
   onAchievementsPress?: () => void;
   /** for browse variant: called when settings (cog) icon is tapped */
   onSettingsPress?: () => void;
+  /** for activity-log variant: opens the activity log screen */
+  onActivityLogPress?: () => void;
   /** optional container style */
   style?: ViewStyle;
   /** tint for icons: "primary" or "elevated" */
@@ -38,6 +41,7 @@ export function ScreenHeaderActions({
   onDashboardPress,
   onAchievementsPress,
   onSettingsPress,
+  onActivityLogPress,
   style,
   tint = 'primary',
 }: ScreenHeaderActionsProps) {
@@ -64,6 +68,14 @@ export function ScreenHeaderActions({
           noWrapper
         />
       </View>
+    ) : variant === 'activity-log' ? (
+      <HeaderIconButton
+        icon="time-outline"
+        onPress={onActivityLogPress}
+        tint={tint}
+        accessibilityLabel="Activity log"
+        noWrapper
+      />
     ) : (
       <HeaderIconButton
         iconComponent={<DashboardIcon size={24} color={themeColors.text.primary()} />}

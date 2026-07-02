@@ -22,13 +22,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/index';
 import { ScreenHeaderActions } from '@/components/ui';
 import { FloatingActionButton } from '@/components/ui/Button';
-import { IosDashboardOverflowToolbar } from '@/components/navigation/IosDashboardOverflowToolbar';
+import { IosAiStackToolbar } from '@/components/navigation/IosAiStackToolbar';
 import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
-import { ChatContainer, ChatComposerSuggestions, AiMessageList } from '@/components/features/ai';
+import {
+  ChatContainer,
+  ChatComposerSuggestions,
+  AiMessageList,
+  AiEmptyStateIntro,
+  AiEmptyStateIntroBackground,
+  pickRandomAiGreeting,
+  pickRandomAiHint,
+} from '@/components/features/ai';
 import { useAnimatedKeyboardInset, useKeyboardHeight } from '@/components/layout/ScreenLayout';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
-import { useThemeColors } from '@/hooks/useColorPalette';
+import { useThemeColors, useBrandColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useAiAssistant } from '@/hooks/useAiAssistant';
 import { useTasks, useUI } from '@/store/hooks';
@@ -54,6 +62,7 @@ export default function AITabScreen() {
       : tabBarHeight + insets.bottom + Paddings.tabBarInputGap;
 
   const themeColors = useThemeColors();
+  const { getMarpleBrandColor } = useBrandColors();
   const typography = useTypography();
   const { tasks } = useTasks();
   const { modals, closeModal } = useUI();
@@ -74,6 +83,9 @@ export default function AITabScreen() {
   } = useAiAssistant();
 
   const [prompt, setPrompt] = useState('');
+  // random empty-state copy — refreshed each time this tab gains focus
+  const [greeting, setGreeting] = useState('');
+  const [hint, setHint] = useState('');
   // measured composer height — used so the message list clears the anchored input bar
   const [composerHeight, setComposerHeight] = useState(0);
 
@@ -109,8 +121,8 @@ export default function AITabScreen() {
     composerHeight + composerBottomInset + Paddings.groupedListIconTextSpacing;
 
   const styles = useMemo(
-    () => createStyles(themeColors, typography, insets),
-    [themeColors, typography, insets],
+    () => createStyles(themeColors, typography, insets, getMarpleBrandColor(500)),
+    [themeColors, typography, insets, getMarpleBrandColor],
   );
 
   const handleSend = useCallback(() => {
@@ -131,6 +143,10 @@ export default function AITabScreen() {
   const { setTabFabRegistration } = useTabFabOverlay();
   useFocusEffect(
     useCallback(() => {
+      // pick fresh greeting + hint whenever the user lands on this tab
+      setGreeting(pickRandomAiGreeting());
+      setHint(pickRandomAiHint());
+
       if (!USE_CUSTOM_LIQUID_TAB_BAR) return undefined;
       setTabFabRegistration({
         onPress: () => pushQuickAddFromAiTab(router),
@@ -149,9 +165,13 @@ export default function AITabScreen() {
     }
   }, [modals.createTask, closeModal, router]);
 
+  const openActivityLog = useCallback(() => {
+    router.push('/activity-log' as any);
+  }, [router]);
+
   return (
     <>
-      <IosDashboardOverflowToolbar />
+      <IosAiStackToolbar />
       <View style={{ flex: 1 }}>
         <View
           style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ROW_HEIGHT }]}
@@ -160,7 +180,12 @@ export default function AITabScreen() {
           <View style={styles.topSectionRow} pointerEvents="box-none">
             <View style={styles.topSectionCloseButton} pointerEvents="none" />
             {Platform.OS === 'android' ? (
-              <ScreenHeaderActions variant="dashboard" style={styles.topSectionContextButton} tint="primary" />
+              <ScreenHeaderActions
+                variant="activity-log"
+                onActivityLogPress={openActivityLog}
+                style={styles.topSectionContextButton}
+                tint="primary"
+              />
             ) : null}
           </View>
         </View>
@@ -173,15 +198,20 @@ export default function AITabScreen() {
           paddingVertical={0}
         >
           <View style={styles.screenRoot}>
+            {!hasMessages && greeting && hint ? (
+              <AiEmptyStateIntroBackground key={`${greeting}-${hint}-bg`} />
+            ) : null}
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
               <View style={styles.dismissTapArea}>
                 <View style={styles.inner}>
-                  <Text style={styles.title}>AI</Text>
-                  {!hasMessages ? (
-                    <Text style={styles.hint}>
-                      Ask DailyFlo to create, update, or delete tasks. You will review each suggestion
-                      before it is applied.
-                    </Text>
+                  {!hasMessages && greeting && hint ? (
+                    <AiEmptyStateIntro
+                      key={`${greeting}-${hint}`}
+                      greeting={greeting}
+                      hint={hint}
+                      greetingStyle={styles.greeting}
+                      hintStyle={styles.hint}
+                    />
                   ) : null}
 
                   {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
@@ -250,6 +280,7 @@ const createStyles = (
   themeColors: ReturnType<typeof useThemeColors>,
   typography: ReturnType<typeof useTypography>,
   insets: ReturnType<typeof useSafeAreaInsets>,
+  greetingColor: string,
 ) =>
   StyleSheet.create({
     topSectionAnchor: {
@@ -287,6 +318,7 @@ const createStyles = (
     },
     dismissTapArea: {
       flex: 1,
+      zIndex: 1,
     },
     inner: {
       flex: 1,
@@ -301,13 +333,13 @@ const createStyles = (
       zIndex: 2,
       overflow: 'visible',
     },
-    title: {
-      ...typography.getTextStyle('heading-2'),
-      color: themeColors.text.primary(),
+    greeting: {
+      ...typography.getTextStyle('heading-1'),
+      color: greetingColor,
     },
     hint: {
-      ...typography.getTextStyle('body-medium'),
-      color: themeColors.text.secondary(),
+      ...typography.getTextStyle('heading-2'),
+      color: themeColors.text.primary(),
       marginTop: 8,
     },
     errorBanner: {
