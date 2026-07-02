@@ -26,6 +26,8 @@ import {
   getChatComposerShellBorderColor,
   CHAT_COMPOSER_COLLAPSED_TEXT_HEIGHT_ESTIMATE,
   CHAT_COMPOSER_EXPANDED_TEXT_HEIGHT_ESTIMATE,
+  CHAT_INPUT_MIN_VISIBLE_LINES,
+  getChatComposerExpandedTextInputMaxHeight,
 } from './chatComposerUiTokens';
 import { getTextStyle } from '@/constants/Typography';
 import { Paddings } from '@/constants/Paddings';
@@ -34,8 +36,6 @@ import {
   PROGRESS_BOARD_GLASS_VEIL_OPACITY,
 } from '@/components/features/gamification/browse/progressBoardUiTokens';
 
-const CHAT_INPUT_MIN_VISIBLE_LINES = 3;
-
 export interface ChatContainerProps {
   value: string;
   onChangeText: (text: string) => void;
@@ -43,6 +43,8 @@ export interface ChatContainerProps {
   isLoading?: boolean;
   /** false when the keyboard hides — collapses the text section even if text remains */
   isKeyboardVisible?: boolean;
+  /** max height for the expanding text section — derived from screen layout on the ai tab */
+  maxExpandedTextSectionHeight?: number;
 }
 
 export function ChatContainer({
@@ -51,6 +53,7 @@ export function ChatContainer({
   onSend,
   isLoading = false,
   isKeyboardVisible = false,
+  maxExpandedTextSectionHeight,
 }: ChatContainerProps) {
   const themeColors = useThemeColors();
   const colors = useColorPalette();
@@ -73,6 +76,14 @@ export function ChatContainer({
     });
   }, [isTextExpanded, expandProgress]);
 
+  // keyboard / rotation can shrink the allowed text section — clamp animated height
+  useEffect(() => {
+    if (!isTextExpanded || maxExpandedTextSectionHeight == null) return;
+    if (expandedTextHeightSv.value > maxExpandedTextSectionHeight) {
+      expandedTextHeightSv.value = maxExpandedTextSectionHeight;
+    }
+  }, [isTextExpanded, maxExpandedTextSectionHeight, expandedTextHeightSv]);
+
   const handleComposerFocus = useCallback(() => {
     setIsInputFocused(true);
     setPendingFocus(false);
@@ -86,10 +97,20 @@ export function ChatContainer({
   const handleExpandedTextLayout = useCallback(
     (event: LayoutChangeEvent) => {
       if (!isTextExpanded) return;
-      expandedTextHeightSv.value = event.nativeEvent.layout.height;
+      const naturalHeight = event.nativeEvent.layout.height;
+      const cappedHeight =
+        maxExpandedTextSectionHeight != null
+          ? Math.min(naturalHeight, maxExpandedTextSectionHeight)
+          : naturalHeight;
+      expandedTextHeightSv.value = cappedHeight;
     },
-    [isTextExpanded, expandedTextHeightSv],
+    [isTextExpanded, expandedTextHeightSv, maxExpandedTextSectionHeight],
   );
+
+  const expandedTextInputMaxHeight =
+    maxExpandedTextSectionHeight != null
+      ? getChatComposerExpandedTextInputMaxHeight(maxExpandedTextSectionHeight)
+      : undefined;
 
   const handleExpandComposer = () => {
     if (isLoading || isTextExpanded) return;
@@ -178,7 +199,16 @@ export function ChatContainer({
           style={[styles.textLayer, expandedTextLayerStyle]}
           pointerEvents={showMultilineInput ? 'box-none' : 'none'}
         >
-          <View style={styles.expandedTextColumn} onLayout={handleExpandedTextLayout}>
+          <View
+            style={[
+              styles.expandedTextColumn,
+              maxExpandedTextSectionHeight != null && {
+                maxHeight: maxExpandedTextSectionHeight,
+                overflow: 'hidden',
+              },
+            ]}
+            onLayout={handleExpandedTextLayout}
+          >
             <CustomTextInput
               value={value}
               onChangeText={onChangeText}
@@ -191,6 +221,7 @@ export function ChatContainer({
               onBlur={handleComposerBlur}
               compactInitialHeight
               minimumLineCount={CHAT_INPUT_MIN_VISIBLE_LINES}
+              maxVisibleHeight={expandedTextInputMaxHeight}
               cursorColor={marpleFill}
               containerStyle={styles.textInputContainer}
               inputStyle={styles.chatInputPadding}

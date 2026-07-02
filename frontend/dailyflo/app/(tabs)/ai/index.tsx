@@ -13,6 +13,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   ActivityIndicator,
+  useWindowDimensions,
   type LayoutChangeEvent,
 } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
@@ -22,29 +23,34 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/index';
 import { ScreenHeaderActions } from '@/components/ui';
 import { FloatingActionButton } from '@/components/ui/Button';
+import { MainBackButton } from '@/components/ui/Button';
 import { IosAiStackToolbar } from '@/components/navigation/IosAiStackToolbar';
 import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
 import {
   ChatContainer,
   ChatComposerSuggestions,
-  AiMessageList,
   AiEmptyStateIntro,
   AiEmptyStateIntroBackground,
+  AiSubmittedPromptShell,
   pickRandomAiGreeting,
   pickRandomAiHint,
 } from '@/components/features/ai';
+import { AI_EMPTY_STATE_GREETING_FADE_MS } from '@/components/features/ai/aiEmptyStateIntroTokens';
+import { getChatComposerMaxExpandedTextSectionHeight } from '@/components/features/ai/chatComposerUiTokens';
 import { useAnimatedKeyboardInset, useKeyboardHeight } from '@/components/layout/ScreenLayout';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors, useBrandColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useAiAssistant } from '@/hooks/useAiAssistant';
-import { useTasks, useUI } from '@/store/hooks';
+import { useUI } from '@/store/hooks';
 import { Paddings } from '@/constants/Paddings';
 import { buildTaskQuickAddRouteParams } from '@/utils/taskQuickAddRouteParams';
 
 const TAB_BAR_HEIGHT_FALLBACK = Platform.select({ ios: 49, android: 56, default: 49 });
 const TOP_SECTION_ROW_HEIGHT = 48;
+
+type AiScreenPhase = 'prompt' | 'session';
 
 /** opens task quick-add with no preset due date — same as inbox FAB */
 function pushQuickAddFromAiTab(router: ReturnType<typeof useGuardedRouter>) {
@@ -54,6 +60,7 @@ function pushQuickAddFromAiTab(router: ReturnType<typeof useGuardedRouter>) {
 export default function AITabScreen() {
   const router = useGuardedRouter();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const tabBarHeightFromNav = useContext(BottomTabBarHeightContext);
   const tabBarHeight = tabBarHeightFromNav ?? TAB_BAR_HEIGHT_FALLBACK;
   const bottomPaddingAboveTabBar =
@@ -64,28 +71,29 @@ export default function AITabScreen() {
   const themeColors = useThemeColors();
   const { getMarpleBrandColor } = useBrandColors();
   const typography = useTypography();
-  const { tasks } = useTasks();
   const { modals, closeModal } = useUI();
 
   const {
-    messages,
     isLoading,
     error,
-    hasMessages,
     sendMessage,
-    getProposalPayload,
-    updateProposalPayload,
-    confirmProposal,
-    dismissProposal,
-    getProposalStatus,
-    getProposalError,
     clearError,
+    resetSession,
   } = useAiAssistant();
 
+  const [screenPhase, setScreenPhase] = useState<AiScreenPhase>('prompt');
+  const [submittedPrompt, setSubmittedPrompt] = useState('');
   const [prompt, setPrompt] = useState('');
-  // random empty-state copy — refreshed each time this tab gains focus
+  // random empty-state copy — refreshed on tab focus and when returning to prompt
   const [greeting, setGreeting] = useState('');
   const [hint, setHint] = useState('');
+  // bump key so greeting + hint intro replay after back-to-prompt
+  const [introRunKey, setIntroRunKey] = useState(0);
+  // keep intro mounted while greeting + hint fade out after send
+  const [emptyIntroOnScreen, setEmptyIntroOnScreen] = useState(false);
+  // radial blur stays mounted for the visit once shown; skip re-fade on back
+  const [introBackgroundMounted, setIntroBackgroundMounted] = useState(false);
+  const [introBackgroundHasAnimated, setIntroBackgroundHasAnimated] = useState(false);
   // measured composer height — used so the message list clears the anchored input bar
   const [composerHeight, setComposerHeight] = useState(0);
 
@@ -116,18 +124,47 @@ export default function AITabScreen() {
     restingComposerBottom,
   );
 
-  // list needs enough bottom padding to scroll past the absolutely positioned composer
-  const messageListBottomInset =
-    composerHeight + composerBottomInset + Paddings.groupedListIconTextSpacing;
+  // y-offset where main content starts — composer must not grow above this line
+  const aiHeaderBottomY = insets.top + TOP_SECTION_ROW_HEIGHT + 8;
+
+  const maxExpandedTextSectionHeight = useMemo(
+    () =>
+      getChatComposerMaxExpandedTextSectionHeight({
+        windowHeight,
+        headerBottomY: aiHeaderBottomY,
+        composerBottomInset,
+      }),
+    [windowHeight, aiHeaderBottomY, composerBottomInset],
+  );
 
   const styles = useMemo(
     () => createStyles(themeColors, typography, insets, getMarpleBrandColor(500)),
     [themeColors, typography, insets, getMarpleBrandColor],
   );
 
+  const isPromptPhase = screenPhase === 'prompt';
+
+  const refreshIntroCopy = useCallback(() => {
+    setGreeting(pickRandomAiGreeting());
+    setHint(pickRandomAiHint());
+  }, []);
+
+  const handleBackToPrompt = useCallback(() => {
+    resetSession();
+    setScreenPhase('prompt');
+    setPrompt('');
+    setSubmittedPrompt('');
+    refreshIntroCopy();
+    setEmptyIntroOnScreen(true);
+    setIntroRunKey((key) => key + 1);
+    clearError();
+  }, [resetSession, refreshIntroCopy, clearError]);
+
   const handleSend = useCallback(() => {
     const trimmed = prompt.trim();
     if (!trimmed || isLoading) return;
+    setSubmittedPrompt(trimmed);
+    setScreenPhase('session');
     setPrompt('');
     clearError();
     void sendMessage(trimmed);
@@ -139,13 +176,36 @@ export default function AITabScreen() {
     clearError();
   }, [clearError]);
 
+  // show intro on prompt phase; hide after shared fade-out when entering session
+  useEffect(() => {
+    if (greeting && hint && isPromptPhase) {
+      setEmptyIntroOnScreen(true);
+    }
+  }, [greeting, hint, isPromptPhase]);
+
+  // mark radial blur enter animation as done so back-to-prompt does not re-fade it
+  useEffect(() => {
+    if (!introBackgroundMounted || introBackgroundHasAnimated) return undefined;
+    const timerId = setTimeout(
+      () => setIntroBackgroundHasAnimated(true),
+      AI_EMPTY_STATE_GREETING_FADE_MS,
+    );
+    return () => clearTimeout(timerId);
+  }, [introBackgroundMounted, introBackgroundHasAnimated]);
+
+  const handleIntroFadeOutComplete = useCallback(() => {
+    setEmptyIntroOnScreen(false);
+  }, []);
+
   // register FAB with shared tab chrome when the liquid navbar owns the button (same as inbox / today)
   const { setTabFabRegistration } = useTabFabOverlay();
   useFocusEffect(
     useCallback(() => {
-      // pick fresh greeting + hint whenever the user lands on this tab
-      setGreeting(pickRandomAiGreeting());
-      setHint(pickRandomAiHint());
+      refreshIntroCopy();
+      setScreenPhase('prompt');
+      setEmptyIntroOnScreen(true);
+      setIntroBackgroundMounted(true);
+      setIntroRunKey((key) => key + 1);
 
       if (!USE_CUSTOM_LIQUID_TAB_BAR) return undefined;
       setTabFabRegistration({
@@ -153,8 +213,18 @@ export default function AITabScreen() {
         accessibilityLabel: 'Add new task',
         accessibilityHint: 'Double tap to create a new task',
       });
-      return () => setTabFabRegistration(null);
-    }, [router, setTabFabRegistration]),
+      return () => {
+        setTabFabRegistration(null);
+        resetSession();
+        setScreenPhase('prompt');
+        setPrompt('');
+        setSubmittedPrompt('');
+        setEmptyIntroOnScreen(false);
+        setIntroBackgroundMounted(false);
+        setIntroBackgroundHasAnimated(false);
+        setIntroRunKey(0);
+      };
+    }, [router, setTabFabRegistration, refreshIntroCopy, resetSession]),
   );
 
   // legacy createTask modal flag still routes to quick-add on this tab
@@ -171,14 +241,21 @@ export default function AITabScreen() {
 
   return (
     <>
-      <IosAiStackToolbar />
+      <IosAiStackToolbar
+        showBack={screenPhase === 'session'}
+        onBackPress={handleBackToPrompt}
+      />
       <View style={{ flex: 1 }}>
         <View
           style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ROW_HEIGHT }]}
           pointerEvents="box-none"
         >
           <View style={styles.topSectionRow} pointerEvents="box-none">
-            <View style={styles.topSectionCloseButton} pointerEvents="none" />
+            {screenPhase === 'session' && Platform.OS === 'android' ? (
+              <MainBackButton onPress={handleBackToPrompt} top={0} left={0} />
+            ) : (
+              <View style={styles.topSectionCloseButton} pointerEvents="none" />
+            )}
             {Platform.OS === 'android' ? (
               <ScreenHeaderActions
                 variant="activity-log"
@@ -198,17 +275,25 @@ export default function AITabScreen() {
           paddingVertical={0}
         >
           <View style={styles.screenRoot}>
-            {!hasMessages && greeting && hint ? (
-              <AiEmptyStateIntroBackground key={`${greeting}-${hint}-bg`} />
+            {introBackgroundMounted ? (
+              <AiEmptyStateIntroBackground skipEnterAnimation={introBackgroundHasAnimated} />
             ) : null}
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
               <View style={styles.dismissTapArea}>
                 <View style={styles.inner}>
-                  {!hasMessages && greeting && hint ? (
+                  {screenPhase === 'session' && submittedPrompt ? (
+                    <View style={styles.submittedPromptWrap}>
+                      <AiSubmittedPromptShell text={submittedPrompt} />
+                    </View>
+                  ) : null}
+
+                  {emptyIntroOnScreen && greeting && hint ? (
                     <AiEmptyStateIntro
-                      key={`${greeting}-${hint}`}
+                      key={`${introRunKey}-${greeting}-${hint}`}
                       greeting={greeting}
                       hint={hint}
+                      visible={isPromptPhase}
+                      onFadeOutComplete={handleIntroFadeOutComplete}
                       greetingStyle={styles.greeting}
                       hintStyle={styles.hint}
                     />
@@ -216,50 +301,38 @@ export default function AITabScreen() {
 
                   {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
 
-                  {isLoading && !hasMessages ? (
+                  {isLoading && screenPhase === 'session' ? (
                     <View style={styles.loadingRow}>
                       <ActivityIndicator color={themeColors.text.secondary()} />
                     </View>
                   ) : null}
 
-                  {hasMessages ? (
-                    <AiMessageList
-                      messages={messages}
-                      tasks={tasks}
-                      getProposalPayload={getProposalPayload}
-                      getProposalStatus={getProposalStatus}
-                      getProposalError={getProposalError}
-                      onUpdateProposalPayload={updateProposalPayload}
-                      onConfirmProposal={confirmProposal}
-                      onDismissProposal={dismissProposal}
-                      listBottomInset={messageListBottomInset}
-                    />
-                  ) : (
-                    <View style={styles.spacer} />
-                  )}
+                  <View style={styles.spacer} />
                 </View>
               </View>
             </TouchableWithoutFeedback>
 
-            {/* suggestions + composer move together above the keyboard / tab bar */}
-            <Animated.View
-              style={[styles.composerAnchor, composerAnchorStyle]}
-              onLayout={handleComposerLayout}
-              pointerEvents="box-none"
-            >
-              <ChatComposerSuggestions
-                activePrompt={prompt}
-                isComposerExpanded={prompt.length > 0 && keyboardHeight > 0}
-                onPickSuggestion={handlePickSuggestion}
-              />
-              <ChatContainer
-                value={prompt}
-                onChangeText={setPrompt}
-                onSend={handleSend}
-                isLoading={isLoading}
-                isKeyboardVisible={keyboardHeight > 0}
-              />
-            </Animated.View>
+            {isPromptPhase ? (
+              <Animated.View
+                style={[styles.composerAnchor, composerAnchorStyle]}
+                onLayout={handleComposerLayout}
+                pointerEvents="box-none"
+              >
+                <ChatComposerSuggestions
+                  activePrompt={prompt}
+                  isComposerExpanded={prompt.length > 0 && keyboardHeight > 0}
+                  onPickSuggestion={handlePickSuggestion}
+                />
+                <ChatContainer
+                  value={prompt}
+                  onChangeText={setPrompt}
+                  onSend={handleSend}
+                  isLoading={isLoading}
+                  isKeyboardVisible={keyboardHeight > 0}
+                  maxExpandedTextSectionHeight={maxExpandedTextSectionHeight}
+                />
+              </Animated.View>
+            ) : null}
           </View>
         </ScreenContainer>
         {!USE_CUSTOM_LIQUID_TAB_BAR ? (
@@ -357,5 +430,8 @@ const createStyles = (
     },
     spacer: {
       flex: 1,
+    },
+    submittedPromptWrap: {
+      marginBottom: Paddings.groupedListIconTextSpacing,
     },
   });

@@ -24,7 +24,14 @@ const INTRO_BLOBS: ReadonlyArray<{
   { cx: 0.82, cy: 0.1, rxPct: 0.44, ryPct: 0.28, opacity: 0.12 },
 ];
 
-export function AiEmptyStateIntroBackground() {
+type AiEmptyStateIntroBackgroundProps = {
+  /** skip fade-in when the blur was already shown this visit (e.g. returning from session via back) */
+  skipEnterAnimation?: boolean;
+};
+
+export function AiEmptyStateIntroBackground({
+  skipEnterAnimation = false,
+}: AiEmptyStateIntroBackgroundProps) {
   const { width, height } = useWindowDimensions();
   const themeColors = useThemeColors();
   const { getMarpleBrandColor } = useBrandColors();
@@ -35,7 +42,7 @@ export function AiEmptyStateIntroBackground() {
 
   return (
     <Animated.View
-      entering={FadeIn.duration(AI_EMPTY_STATE_GREETING_FADE_MS)}
+      entering={skipEnterAnimation ? undefined : FadeIn.duration(AI_EMPTY_STATE_GREETING_FADE_MS)}
       style={styles.root}
       pointerEvents="none"
     >

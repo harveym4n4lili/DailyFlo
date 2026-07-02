@@ -75,6 +75,11 @@ export interface CustomTextInputProps {
   minimumLineCount?: number;
   /** when true, focuses the hidden input once on mount — used when expanding the ai composer on keyboard open */
   autoFocus?: boolean;
+  /**
+   * caps visible height — when content exceeds this, the field scrolls internally (ai chat composer).
+   * task description leaves this unset so the parent screen scroll view handles growth.
+   */
+  maxVisibleHeight?: number;
 }
 
 /**
@@ -99,6 +104,7 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   compactInitialHeight = false,
   minimumLineCount,
   autoFocus = false,
+  maxVisibleHeight,
 }) => {
   // get current color scheme (light/dark mode)
   const colorScheme = useColorScheme() || 'dark';
@@ -289,15 +295,11 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   const effectiveLineCount =
     minimumLineCount != null ? Math.max(linesCount, minimumLineCount) : linesCount;
   const contentHeight = Math.max(effectiveLineCount * lineHeight + paddingVertical, minHeight);
-  
-  // removed maxHeight constraint to allow infinite expansion
-  // the parent ScrollView in TaskCreationContent will handle scrolling
-  // this allows the description input to expand as much as needed
-  const maxHeight = undefined; // no max height - allow infinite expansion
-  
-  // use content height directly without max height constraint
-  // content can expand infinitely, parent ScrollView handles scrolling
-  const finalHeight = contentHeight;
+
+  const isInternallyScrollable =
+    maxVisibleHeight != null && contentHeight > maxVisibleHeight;
+  const finalHeight =
+    maxVisibleHeight != null ? Math.min(contentHeight, maxVisibleHeight) : contentHeight;
   
   // calculate cursor line and position within line for multiline support
   const textBeforeCursor = safeText.substring(0, cursorPosition);
@@ -316,6 +318,14 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
   
   // use measured width when available, fallback to approximation
   const cursorLeftPosition = measuredTextWidth;
+
+  // keep the caret in view when the ai composer scrolls internally
+  useEffect(() => {
+    if (!isInternallyScrollable || maxVisibleHeight == null) return;
+    const cursorTop = cursorLine * lineHeight;
+    const scrollTarget = Math.max(0, cursorTop - maxVisibleHeight + lineHeight * 2);
+    scrollViewRef.current?.scrollTo({ y: scrollTarget, animated: false });
+  }, [cursorPosition, cursorLine, isInternallyScrollable, maxVisibleHeight, lineHeight]);
   
   return (
     <View
@@ -382,12 +392,8 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
         style={[
           styles.visibleTextArea,
           {
-            // border removed - no border around description input
-            // always allow natural expansion - no height constraints
-            // parent ScrollView in TaskCreationContent handles scrolling
-            minHeight: minHeight, // minimum height for empty content
-            flexShrink: 0, // prevent shrinking to allow expansion
-            // use content height to size the container naturally
+            minHeight: minHeight,
+            flexShrink: isInternallyScrollable ? 1 : 0,
             height: finalHeight,
           },
           inputStyle,
@@ -395,12 +401,12 @@ export const CustomTextInput: React.FC<CustomTextInputProps> = ({
       >
         <ScrollView
           ref={scrollViewRef}
-          // disable internal scrolling since parent ScrollView handles it
-          // this allows the text area to expand naturally without internal scroll constraints
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={false}
-          style={styles.textScrollView}
-          contentContainerStyle={styles.scrollContentExpanded}
+          showsVerticalScrollIndicator={isInternallyScrollable}
+          scrollEnabled={isInternallyScrollable}
+          style={[styles.textScrollView, isInternallyScrollable && { height: finalHeight }]}
+          contentContainerStyle={
+            isInternallyScrollable ? styles.scrollContent : styles.scrollContentExpanded
+          }
           keyboardShouldPersistTaps="always"
           keyboardDismissMode="none"
         >

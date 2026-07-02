@@ -1,3 +1,4 @@
+export { AiSubmittedPromptShell } from './AiSubmittedPromptShell';
 export { AiEmptyStateIntro } from './AiEmptyStateIntro';
 export { AiEmptyStateIntroBackground } from './AiEmptyStateIntroBackground';
 export { ChatContainer } from './ChatContainer';

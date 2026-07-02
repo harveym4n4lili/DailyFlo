@@ -214,6 +214,16 @@ export function useAiAssistant() {
 
   const clearError = useCallback(() => setError(null), []);
 
+  /** wipe chat + proposal state — used when leaving the ai tab or tapping back to prompt */
+  const resetSession = useCallback(() => {
+    setMessages([]);
+    setIsLoading(false);
+    setError(null);
+    setEditedPayloads({});
+    setProposalStatuses({});
+    setProposalErrors({});
+  }, []);
+
   const hasMessages = messages.length > 0;
 
   return useMemo(
@@ -223,6 +233,7 @@ export function useAiAssistant() {
       error,
       hasMessages,
       sendMessage,
+      resetSession,
       getProposalPayload,
       updateProposalPayload,
       confirmProposal,
@@ -230,6 +241,7 @@ export function useAiAssistant() {
       getProposalStatus,
       getProposalError,
       clearError,
+      resetSession,
     }),
     [
       messages,
@@ -237,6 +249,7 @@ export function useAiAssistant() {
       error,
       hasMessages,
       sendMessage,
+      resetSession,
       getProposalPayload,
       updateProposalPayload,
       confirmProposal,

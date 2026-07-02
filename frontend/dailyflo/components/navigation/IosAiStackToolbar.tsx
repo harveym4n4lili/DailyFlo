@@ -1,6 +1,5 @@
 /**
- * ios ai tab only: single native Stack.Toolbar button (activity log).
- * replaces IosDashboardOverflowToolbar here — display settings and select tasks do not apply to chat.
+ * ios ai tab toolbar — activity log on the right; optional back on the left in session mode.
  */
 
 import React from 'react';
@@ -10,7 +9,12 @@ import { Stack } from 'expo-router';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors } from '@/hooks/useColorPalette';
 
-export function IosAiStackToolbar() {
+export type IosAiStackToolbarProps = {
+  showBack?: boolean;
+  onBackPress?: () => void;
+};
+
+export function IosAiStackToolbar({ showBack = false, onBackPress }: IosAiStackToolbarProps) {
   const router = useGuardedRouter();
   const themeColors = useThemeColors();
   const toolbarTint = themeColors.text.primary();
@@ -20,13 +24,25 @@ export function IosAiStackToolbar() {
   }
 
   return (
-    <Stack.Toolbar placement="right">
-      <Stack.Toolbar.Button
-        icon="clock.arrow.circlepath"
-        onPress={() => router.push('/activity-log' as any)}
-        accessibilityLabel="Activity log"
-        tintColor={toolbarTint}
-      />
-    </Stack.Toolbar>
+    <>
+      {showBack ? (
+        <Stack.Toolbar placement="left">
+          <Stack.Toolbar.Button
+            icon="chevron.left"
+            onPress={onBackPress}
+            accessibilityLabel="Back to prompt"
+            tintColor={toolbarTint}
+          />
+        </Stack.Toolbar>
+      ) : null}
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon="clock.arrow.circlepath"
+          onPress={() => router.push('/activity-log' as any)}
+          accessibilityLabel="Activity log"
+          tintColor={toolbarTint}
+        />
+      </Stack.Toolbar>
+    </>
   );
 }

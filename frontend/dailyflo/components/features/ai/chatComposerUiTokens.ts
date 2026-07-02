@@ -60,14 +60,59 @@ export const CHAT_COMPOSER_UTILITY_ROW_HEIGHT_ESTIMATE =
 /** collapsed text section is height 0 — preview lives inline in the utility row */
 export const CHAT_COMPOSER_COLLAPSED_TEXT_HEIGHT_ESTIMATE = 0;
 
+/** min visible lines for ai chat multiline input — shared with ChatContainer */
+export const CHAT_INPUT_MIN_VISIBLE_LINES = 3;
+
+/** body-large line height inside the ai chat composer text area */
+export const CHAT_COMPOSER_TEXT_LINE_HEIGHT = 20;
+
+/** min text block height — matches CustomTextInput minimumLineCount in ChatContainer */
+export const CHAT_COMPOSER_MIN_TEXT_CONTENT_HEIGHT =
+  CHAT_INPUT_MIN_VISIBLE_LINES * CHAT_COMPOSER_TEXT_LINE_HEIGHT;
+
 /** expanded text area — top inset + 3 lines + gap above utility row */
 export const CHAT_COMPOSER_EXPANDED_TEXT_HEIGHT_ESTIMATE =
   Paddings.groupedListChildContentVertical +
-  20 * 3 +
+  CHAT_COMPOSER_MIN_TEXT_CONTENT_HEIGHT +
   Paddings.formDataPillHorizontal;
 
 /** whole shell fallback for layout until onLayout runs */
 export const CHAT_COMPOSER_COLLAPSED_HEIGHT_ESTIMATE = CHAT_COMPOSER_UTILITY_ROW_HEIGHT_ESTIMATE;
+
+/** gap between composer top and the ai screen header content area */
+export const CHAT_COMPOSER_HEADER_GAP = 8;
+
+/** vertical padding inside the expanded text column (matches ChatContainer expandedTextColumn) */
+export const CHAT_COMPOSER_EXPANDED_TEXT_COLUMN_PADDING =
+  Paddings.groupedListChildContentVertical + Paddings.formDataPillHorizontal;
+
+/**
+ * max height for the expanding text section — stops the composer growing past the ai header.
+ * `headerBottomY` = safe area + toolbar row + screen content padding top.
+ */
+export function getChatComposerMaxExpandedTextSectionHeight(opts: {
+  windowHeight: number;
+  headerBottomY: number;
+  composerBottomInset: number;
+  headerGap?: number;
+}): number {
+  const gap = opts.headerGap ?? CHAT_COMPOSER_HEADER_GAP;
+  const availableShell =
+    opts.windowHeight - opts.headerBottomY - opts.composerBottomInset - gap;
+  const textSection = availableShell - CHAT_COMPOSER_UTILITY_ROW_HEIGHT_ESTIMATE;
+  // cap growth at the space below the ai header; keep a small floor for tiny keyboards
+  return Math.max(56, textSection);
+}
+
+/** input max height inside the expanded column — excludes column padding */
+export function getChatComposerExpandedTextInputMaxHeight(
+  maxExpandedTextSectionHeight: number,
+): number {
+  return Math.max(
+    20,
+    maxExpandedTextSectionHeight - CHAT_COMPOSER_EXPANDED_TEXT_COLUMN_PADDING,
+  );
+}
 
 export const CHAT_COMPOSER_EXPANDED_HEIGHT_ESTIMATE =
   CHAT_COMPOSER_EXPANDED_TEXT_HEIGHT_ESTIMATE + CHAT_COMPOSER_UTILITY_ROW_HEIGHT_ESTIMATE;
