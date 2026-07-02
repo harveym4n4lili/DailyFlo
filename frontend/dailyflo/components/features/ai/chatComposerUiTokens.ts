@@ -50,6 +50,18 @@ export function getChatSendButtonColors(colors: ColorPaletteReturn) {
 /** collapsed ↔ expanded text-section morph — shared by ChatContainer + suggestions */
 export const CHAT_COMPOSER_LAYOUT_TRANSITION_MS = 480;
 
+/** prompt → session slide + morph — same timing as composer layout transitions */
+export const CHAT_SESSION_TRANSITION_MS = CHAT_COMPOSER_LAYOUT_TRANSITION_MS;
+
+/** horizontal inset while the composer is bottom-anchored */
+export const CHAT_COMPOSER_ANCHOR_HORIZONTAL_INSET = Paddings.groupedListHeaderContentGap;
+
+/** horizontal inset when the submitted shell sits under the ai header */
+export const CHAT_SESSION_ANCHOR_HORIZONTAL_INSET = Paddings.screen;
+
+/** heading-4 line box for the submitted prompt label */
+export const CHAT_SUBMITTED_LABEL_HEIGHT_ESTIMATE = 20;
+
 /** suggestions scale when the composer text section is expanded (1 = full size) */
 export const CHAT_SUGGESTIONS_HIDDEN_SCALE = 0.94;
 
@@ -69,6 +81,18 @@ export const CHAT_COMPOSER_TEXT_LINE_HEIGHT = 20;
 /** min text block height — matches CustomTextInput minimumLineCount in ChatContainer */
 export const CHAT_COMPOSER_MIN_TEXT_CONTENT_HEIGHT =
   CHAT_INPUT_MIN_VISIBLE_LINES * CHAT_COMPOSER_TEXT_LINE_HEIGHT;
+
+/** read-only submitted block — label + padding + min text lines (no utility row) */
+export const CHAT_SUBMITTED_SHELL_CONTENT_HEIGHT =
+  Paddings.groupedListChildContentVertical +
+  CHAT_SUBMITTED_LABEL_HEIGHT_ESTIMATE +
+  Paddings.formDataPillHorizontal +
+  CHAT_COMPOSER_MIN_TEXT_CONTENT_HEIGHT +
+  Paddings.formDataPillHorizontal;
+
+/** full submitted shell height incl. outer brand border */
+export const CHAT_SUBMITTED_SHELL_HEIGHT_ESTIMATE =
+  CHAT_SUBMITTED_SHELL_CONTENT_HEIGHT + CHAT_COMPOSER_SHELL_BORDER_WIDTH * 2;
 
 /** expanded text area — top inset + 3 lines + gap above utility row */
 export const CHAT_COMPOSER_EXPANDED_TEXT_HEIGHT_ESTIMATE =

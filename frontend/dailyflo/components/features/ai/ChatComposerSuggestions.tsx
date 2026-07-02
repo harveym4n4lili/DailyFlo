@@ -14,9 +14,12 @@ import {
 } from 'react-native';
 import Animated, {
   interpolate,
+  runOnJS,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { ONBOARDING_SLIDES_TASK_AGENDA_SUGGESTIONS_SECTION_TITLE_TEXT_STYLE } from '@/components/features/onboarding/onboarding/constants/typography';
 import {
@@ -46,6 +49,12 @@ export interface ChatComposerSuggestionsProps {
   activePrompt: string;
   /** true when ChatContainer text section is expanded (text + keyboard open) */
   isComposerExpanded: boolean;
+  /** 0 = prompt phase, 1 = session — fades suggestions out during slide-up morph */
+  sessionProgress?: SharedValue<number>;
+  /** true when session morph finished — collapses suggestion slot */
+  isSessionMode?: boolean;
+  /** true while sliding back to greeting — uncollapse slot so pills fade in with sessionProgress */
+  isSessionReturningToGreeting?: boolean;
   /** called with the suggestion description when the user taps a pill */
   onPickSuggestion: (description: string) => void;
   suggestions?: readonly AiChatSuggestion[];
@@ -58,6 +67,9 @@ function promptsMatch(a: string, b: string): boolean {
 export function ChatComposerSuggestions({
   activePrompt,
   isComposerExpanded,
+  sessionProgress,
+  isSessionMode = false,
+  isSessionReturningToGreeting = false,
   onPickSuggestion,
   suggestions = AI_CHAT_SUGGESTIONS,
 }: ChatComposerSuggestionsProps) {
@@ -70,7 +82,6 @@ export function ChatComposerSuggestions({
 
   // 0 = visible (composer minimized), 1 = hidden (composer expanded)
   const hideProgress = useSharedValue(isComposerExpanded ? 1 : 0);
-  // after fade finishes, collapse layout height so the composer can grow upward
   const [slotCollapsed, setSlotCollapsed] = useState(isComposerExpanded);
 
   useEffect(() => {
@@ -90,32 +101,57 @@ export function ChatComposerSuggestions({
     setSlotCollapsed(false);
   }, [isComposerExpanded, hideProgress]);
 
-  const animatedSectionStyle = useAnimatedStyle(() => ({
-    opacity: 1 - hideProgress.value,
-    marginBottom: interpolate(
-      hideProgress.value,
-      [0, 1],
-      [CHAT_SUGGESTIONS_TO_COMPOSER_GAP, 0],
-    ),
-    transform: [
-      {
-        scale: interpolate(
-          hideProgress.value,
-          [0, 1],
-          [1, CHAT_SUGGESTIONS_HIDDEN_SCALE],
-        ),
-      },
-    ],
-  }));
+  // back slide — expand slot immediately so opacity can fade in with sessionProgress (not flash at end)
+  useEffect(() => {
+    if (isSessionReturningToGreeting) {
+      setSlotCollapsed(false);
+    }
+  }, [isSessionReturningToGreeting]);
+
+  useAnimatedReaction(
+    () => sessionProgress?.value ?? 0,
+    (session, previous) => {
+      if (session > 0.99 && (previous ?? 0) <= 0.99) {
+        runOnJS(setSlotCollapsed)(true);
+      }
+    },
+    [sessionProgress],
+  );
+
+  const animatedSectionStyle = useAnimatedStyle(() => {
+    const sessionHide = sessionProgress?.value ?? 0;
+    const composerHide = hideProgress.value;
+    const combinedHide = Math.max(composerHide, sessionHide);
+    return {
+      opacity: 1 - combinedHide,
+      marginBottom: interpolate(
+        combinedHide,
+        [0, 1],
+        [CHAT_SUGGESTIONS_TO_COMPOSER_GAP, 0],
+      ),
+      transform: [
+        {
+          scale: interpolate(
+            combinedHide,
+            [0, 1],
+            [1, CHAT_SUGGESTIONS_HIDDEN_SCALE],
+          ),
+        },
+      ],
+    };
+  });
+
+  const isInteractionBlocked =
+    isComposerExpanded || (isSessionMode && !isSessionReturningToGreeting);
 
   return (
     <Animated.View
       style={[
         styles.sectionRoot,
         animatedSectionStyle,
-        slotCollapsed && styles.sectionCollapsed,
+        slotCollapsed && !isSessionReturningToGreeting && styles.sectionCollapsed,
       ]}
-      pointerEvents={isComposerExpanded ? 'none' : 'box-none'}
+      pointerEvents={isInteractionBlocked ? 'none' : 'box-none'}
       accessibilityRole="none"
       accessibilityLabel="Suggested prompts"
     >

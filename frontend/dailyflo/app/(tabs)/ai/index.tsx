@@ -4,7 +4,7 @@
  * Chat with the LLM assistant; proposals require Confirm before Redux task CRUD runs.
  */
 
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -14,9 +14,14 @@ import {
   TouchableWithoutFeedback,
   ActivityIndicator,
   useWindowDimensions,
-  type LayoutChangeEvent,
 } from 'react-native';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import Animated, {
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,13 +36,20 @@ import {
   ChatComposerSuggestions,
   AiEmptyStateIntro,
   AiEmptyStateIntroBackground,
-  AiSubmittedPromptShell,
   pickRandomAiGreeting,
   pickRandomAiHint,
 } from '@/components/features/ai';
 import { AI_EMPTY_STATE_GREETING_FADE_MS } from '@/components/features/ai/aiEmptyStateIntroTokens';
-import { getChatComposerMaxExpandedTextSectionHeight } from '@/components/features/ai/chatComposerUiTokens';
-import { useAnimatedKeyboardInset, useKeyboardHeight } from '@/components/layout/ScreenLayout';
+import {
+  getChatComposerMaxExpandedTextSectionHeight,
+  CHAT_COMPOSER_LAYOUT_EASING,
+  CHAT_SESSION_TRANSITION_MS,
+  CHAT_COMPOSER_ANCHOR_HORIZONTAL_INSET,
+  CHAT_SESSION_ANCHOR_HORIZONTAL_INSET,
+  CHAT_COMPOSER_COLLAPSED_HEIGHT_ESTIMATE,
+  CHAT_COMPOSER_HEADER_GAP,
+} from '@/components/features/ai/chatComposerUiTokens';
+import { useKeyboardHeight } from '@/components/layout/ScreenLayout';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors, useBrandColors } from '@/hooks/useColorPalette';
@@ -82,6 +94,9 @@ export default function AITabScreen() {
   } = useAiAssistant();
 
   const [screenPhase, setScreenPhase] = useState<AiScreenPhase>('prompt');
+  const [isSessionMode, setIsSessionMode] = useState(false);
+  const [isSessionTransitioning, setIsSessionTransitioning] = useState(false);
+  const [isSessionReturningToGreeting, setIsSessionReturningToGreeting] = useState(false);
   const [submittedPrompt, setSubmittedPrompt] = useState('');
   const [prompt, setPrompt] = useState('');
   // random empty-state copy — refreshed on tab focus and when returning to prompt
@@ -94,38 +109,29 @@ export default function AITabScreen() {
   // radial blur stays mounted for the visit once shown; skip re-fade on back
   const [introBackgroundMounted, setIntroBackgroundMounted] = useState(false);
   const [introBackgroundHasAnimated, setIntroBackgroundHasAnimated] = useState(false);
-  // measured composer height — used so the message list clears the anchored input bar
-  const [composerHeight, setComposerHeight] = useState(0);
 
-  // ui-thread inset for the composer anchor — tracks the keyboard smoothly (reanimated)
-  const keyboardInsetAnimated = useAnimatedKeyboardInset();
-  // js-thread height for list padding — layoutanimation keeps scroll inset in sync with keyboard
+  const composerAnchorRef = useRef<View>(null);
+  // 0 = greeting position, 1 = submitted shell at header
+  const sessionProgress = useSharedValue(0);
+  // translateY offset captured on send — negative moves the composer up toward the header
+  const sessionSlideOffset = useSharedValue(0);
+  // bottom inset frozen for the duration of the slide so keyboard dismiss does not drift the path
+  const sessionAnchorBottom = useSharedValue(0);
+
   const keyboardHeight = useKeyboardHeight();
+  // mirror js keyboard height on the ui thread for smooth bottom anchoring
+  const keyboardHeightSv = useSharedValue(0);
   const restingComposerBottom = bottomPaddingAboveTabBar;
-
   const composerGap = Paddings.tabBarInputGap;
 
-  const composerAnchorStyle = useAnimatedStyle(() => {
-    const kb = keyboardInsetAnimated.value;
-    // follow the keyboard while it is open, but never sit below the tab-bar resting inset —
-    // without the clamp, kb→0 would drop the composer onto the navbar then snap back up
-    return {
-      bottom: Math.max(kb + composerGap, restingComposerBottom),
-    };
-  }, [restingComposerBottom, composerGap]);
-
-  const handleComposerLayout = useCallback((event: LayoutChangeEvent) => {
-    const nextHeight = event.nativeEvent.layout.height;
-    setComposerHeight((prev) => (prev === nextHeight ? prev : nextHeight));
-  }, []);
+  const sessionTargetTop = insets.top + TOP_SECTION_ROW_HEIGHT + 8;
 
   const composerBottomInset = Math.max(
     keyboardHeight + Paddings.tabBarInputGap,
     restingComposerBottom,
   );
 
-  // y-offset where main content starts — composer must not grow above this line
-  const aiHeaderBottomY = insets.top + TOP_SECTION_ROW_HEIGHT + 8;
+  const aiHeaderBottomY = insets.top + TOP_SECTION_ROW_HEIGHT + CHAT_COMPOSER_HEADER_GAP;
 
   const maxExpandedTextSectionHeight = useMemo(
     () =>
@@ -143,15 +149,53 @@ export default function AITabScreen() {
   );
 
   const isPromptPhase = screenPhase === 'prompt';
+  const isKeyboardOpen = keyboardHeight > 0;
+
+  const keyboardHeightRef = useRef(keyboardHeight);
+  keyboardHeightRef.current = keyboardHeight;
+
+  useEffect(() => {
+    keyboardHeightSv.value = withTiming(keyboardHeight, {
+      duration: 250,
+      easing: CHAT_COMPOSER_LAYOUT_EASING,
+    });
+  }, [keyboardHeight, keyboardHeightSv]);
+
+  const composerPositionStyle = useAnimatedStyle(() => {
+    const progress = sessionProgress.value;
+    const liveBottom = Math.max(keyboardHeightSv.value + composerGap, restingComposerBottom);
+    const bottom = progress > 0 ? sessionAnchorBottom.value : liveBottom;
+    const horizontalInset = interpolate(
+      progress,
+      [0, 1],
+      [CHAT_COMPOSER_ANCHOR_HORIZONTAL_INSET, CHAT_SESSION_ANCHOR_HORIZONTAL_INSET],
+    );
+    const translateY = interpolate(progress, [0, 1], [0, sessionSlideOffset.value]);
+
+    return {
+      bottom,
+      left: horizontalInset,
+      right: horizontalInset,
+      transform: [{ translateY }],
+    };
+  }, [restingComposerBottom, composerGap]);
 
   const refreshIntroCopy = useCallback(() => {
     setGreeting(pickRandomAiGreeting());
     setHint(pickRandomAiHint());
   }, []);
 
-  const handleBackToPrompt = useCallback(() => {
+  const finishSessionTransition = useCallback(() => {
+    setIsSessionTransitioning(false);
+    setIsSessionMode(true);
+  }, []);
+
+  const finishBackToPrompt = useCallback(() => {
     resetSession();
     setScreenPhase('prompt');
+    setIsSessionMode(false);
+    setIsSessionTransitioning(false);
+    setIsSessionReturningToGreeting(false);
     setPrompt('');
     setSubmittedPrompt('');
     refreshIntroCopy();
@@ -160,30 +204,132 @@ export default function AITabScreen() {
     clearError();
   }, [resetSession, refreshIntroCopy, clearError]);
 
+  const startSessionSlide = useCallback(
+    (measuredTop: number) => {
+      sessionAnchorBottom.value = Math.max(
+        keyboardHeightRef.current + composerGap,
+        restingComposerBottom,
+      );
+      sessionSlideOffset.value = sessionTargetTop - measuredTop;
+      sessionProgress.value = withTiming(
+        1,
+        {
+          duration: CHAT_SESSION_TRANSITION_MS,
+          easing: CHAT_COMPOSER_LAYOUT_EASING,
+        },
+        (finished) => {
+          if (finished) {
+            runOnJS(finishSessionTransition)();
+          }
+        },
+      );
+    },
+    [
+      sessionSlideOffset,
+      sessionAnchorBottom,
+      sessionTargetTop,
+      sessionProgress,
+      finishSessionTransition,
+      composerGap,
+      restingComposerBottom,
+    ],
+  );
+
+  const handleBackToPrompt = useCallback(() => {
+    if (sessionProgress.value <= 0) {
+      finishBackToPrompt();
+      return;
+    }
+
+    Keyboard.dismiss();
+    setIsSessionMode(false);
+    setIsSessionReturningToGreeting(true);
+    setIsSessionTransitioning(true);
+
+    const startBackSlide = (currentTop: number) => {
+      const restingBaseTop =
+        windowHeight - restingComposerBottom - CHAT_COMPOSER_COLLAPSED_HEIGHT_ESTIMATE;
+      sessionAnchorBottom.value = restingComposerBottom;
+      sessionSlideOffset.value = currentTop - restingBaseTop;
+
+      sessionProgress.value = withTiming(
+        0,
+        {
+          duration: CHAT_SESSION_TRANSITION_MS,
+          easing: CHAT_COMPOSER_LAYOUT_EASING,
+        },
+        (finished) => {
+          if (finished) {
+            runOnJS(finishBackToPrompt)();
+          }
+        },
+      );
+    };
+
+    if (composerAnchorRef.current) {
+      composerAnchorRef.current.measureInWindow((_x, y) => {
+        startBackSlide(y);
+      });
+    } else {
+      startBackSlide(sessionTargetTop);
+    }
+  }, [
+    sessionProgress,
+    sessionAnchorBottom,
+    sessionSlideOffset,
+    finishBackToPrompt,
+    windowHeight,
+    restingComposerBottom,
+    sessionTargetTop,
+  ]);
+
   const handleSend = useCallback(() => {
     const trimmed = prompt.trim();
     if (!trimmed || isLoading) return;
+
     setSubmittedPrompt(trimmed);
-    setScreenPhase('session');
     setPrompt('');
+    setScreenPhase('session');
+    setIsSessionTransitioning(true);
     clearError();
     void sendMessage(trimmed);
-  }, [prompt, isLoading, sendMessage, clearError]);
+    Keyboard.dismiss();
 
-  // tapping a suggestion autofills the chat prompt with its description line (not the pill title)
+    const fallbackTop =
+      windowHeight -
+      Math.max(keyboardHeight + composerGap, restingComposerBottom) -
+      CHAT_COMPOSER_COLLAPSED_HEIGHT_ESTIMATE;
+
+    if (composerAnchorRef.current) {
+      composerAnchorRef.current.measureInWindow((_x, y) => {
+        startSessionSlide(y);
+      });
+    } else {
+      startSessionSlide(fallbackTop);
+    }
+  }, [
+    prompt,
+    isLoading,
+    sendMessage,
+    clearError,
+    startSessionSlide,
+    windowHeight,
+    keyboardHeight,
+    composerGap,
+    restingComposerBottom,
+  ]);
+
   const handlePickSuggestion = useCallback((description: string) => {
     setPrompt(description);
     clearError();
   }, [clearError]);
 
-  // show intro on prompt phase; hide after shared fade-out when entering session
   useEffect(() => {
     if (greeting && hint && isPromptPhase) {
       setEmptyIntroOnScreen(true);
     }
   }, [greeting, hint, isPromptPhase]);
 
-  // mark radial blur enter animation as done so back-to-prompt does not re-fade it
   useEffect(() => {
     if (!introBackgroundMounted || introBackgroundHasAnimated) return undefined;
     const timerId = setTimeout(
@@ -197,17 +343,43 @@ export default function AITabScreen() {
     setEmptyIntroOnScreen(false);
   }, []);
 
-  // register FAB with shared tab chrome when the liquid navbar owns the button (same as inbox / today)
+  const resetLocalSessionState = useCallback(() => {
+    sessionProgress.value = 0;
+    sessionSlideOffset.value = 0;
+    sessionAnchorBottom.value = 0;
+    setScreenPhase('prompt');
+    setIsSessionMode(false);
+    setIsSessionTransitioning(false);
+    setIsSessionReturningToGreeting(false);
+    setPrompt('');
+    setSubmittedPrompt('');
+    setEmptyIntroOnScreen(false);
+    setIntroBackgroundMounted(false);
+    setIntroBackgroundHasAnimated(false);
+    setIntroRunKey(0);
+  }, [sessionProgress, sessionSlideOffset, sessionAnchorBottom]);
+
   const { setTabFabRegistration } = useTabFabOverlay();
   useFocusEffect(
     useCallback(() => {
       refreshIntroCopy();
       setScreenPhase('prompt');
+      setIsSessionMode(false);
+      setIsSessionTransitioning(false);
+      setIsSessionReturningToGreeting(false);
       setEmptyIntroOnScreen(true);
       setIntroBackgroundMounted(true);
       setIntroRunKey((key) => key + 1);
+      sessionProgress.value = 0;
+      sessionSlideOffset.value = 0;
+      sessionAnchorBottom.value = 0;
 
-      if (!USE_CUSTOM_LIQUID_TAB_BAR) return undefined;
+      if (!USE_CUSTOM_LIQUID_TAB_BAR) {
+        return () => {
+          resetSession();
+          resetLocalSessionState();
+        };
+      }
       setTabFabRegistration({
         onPress: () => pushQuickAddFromAiTab(router),
         accessibilityLabel: 'Add new task',
@@ -216,18 +388,11 @@ export default function AITabScreen() {
       return () => {
         setTabFabRegistration(null);
         resetSession();
-        setScreenPhase('prompt');
-        setPrompt('');
-        setSubmittedPrompt('');
-        setEmptyIntroOnScreen(false);
-        setIntroBackgroundMounted(false);
-        setIntroBackgroundHasAnimated(false);
-        setIntroRunKey(0);
+        resetLocalSessionState();
       };
-    }, [router, setTabFabRegistration, refreshIntroCopy, resetSession]),
+    }, [router, setTabFabRegistration, refreshIntroCopy, resetSession, resetLocalSessionState]),
   );
 
-  // legacy createTask modal flag still routes to quick-add on this tab
   useEffect(() => {
     if (modals.createTask) {
       closeModal('createTask');
@@ -238,6 +403,9 @@ export default function AITabScreen() {
   const openActivityLog = useCallback(() => {
     router.push('/activity-log' as any);
   }, [router]);
+
+  const isComposerExpanded =
+    prompt.length > 0 && isKeyboardOpen && !isSessionMode && !isSessionTransitioning;
 
   return (
     <>
@@ -281,12 +449,6 @@ export default function AITabScreen() {
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
               <View style={styles.dismissTapArea}>
                 <View style={styles.inner}>
-                  {screenPhase === 'session' && submittedPrompt ? (
-                    <View style={styles.submittedPromptWrap}>
-                      <AiSubmittedPromptShell text={submittedPrompt} />
-                    </View>
-                  ) : null}
-
                   {emptyIntroOnScreen && greeting && hint ? (
                     <AiEmptyStateIntro
                       key={`${introRunKey}-${greeting}-${hint}`}
@@ -312,27 +474,33 @@ export default function AITabScreen() {
               </View>
             </TouchableWithoutFeedback>
 
-            {isPromptPhase ? (
-              <Animated.View
-                style={[styles.composerAnchor, composerAnchorStyle]}
-                onLayout={handleComposerLayout}
-                pointerEvents="box-none"
-              >
-                <ChatComposerSuggestions
-                  activePrompt={prompt}
-                  isComposerExpanded={prompt.length > 0 && keyboardHeight > 0}
-                  onPickSuggestion={handlePickSuggestion}
-                />
-                <ChatContainer
-                  value={prompt}
-                  onChangeText={setPrompt}
-                  onSend={handleSend}
-                  isLoading={isLoading}
-                  isKeyboardVisible={keyboardHeight > 0}
-                  maxExpandedTextSectionHeight={maxExpandedTextSectionHeight}
-                />
-              </Animated.View>
-            ) : null}
+            <Animated.View
+              ref={composerAnchorRef}
+              style={[styles.composerAnchor, composerPositionStyle]}
+              pointerEvents="box-none"
+            >
+              <ChatComposerSuggestions
+                activePrompt={prompt}
+                isComposerExpanded={isComposerExpanded}
+                sessionProgress={sessionProgress}
+                isSessionMode={isSessionMode && !isSessionReturningToGreeting}
+                isSessionReturningToGreeting={isSessionReturningToGreeting}
+                onPickSuggestion={handlePickSuggestion}
+              />
+              <ChatContainer
+                value={prompt}
+                onChangeText={setPrompt}
+                onSend={handleSend}
+                isLoading={isLoading}
+                isKeyboardVisible={isKeyboardOpen}
+                isSessionTransitioning={isSessionTransitioning}
+                isSessionReturningToGreeting={isSessionReturningToGreeting}
+                maxExpandedTextSectionHeight={maxExpandedTextSectionHeight}
+                sessionProgress={sessionProgress}
+                submittedText={submittedPrompt}
+                isSessionMode={isSessionMode}
+              />
+            </Animated.View>
           </View>
         </ScreenContainer>
         {!USE_CUSTOM_LIQUID_TAB_BAR ? (
@@ -400,9 +568,6 @@ const createStyles = (
     },
     composerAnchor: {
       position: 'absolute',
-      // groupedListHeaderContentGap (10) = half of Paddings.screen — tighter outer inset for the floating composer
-      left: Paddings.groupedListHeaderContentGap,
-      right: Paddings.groupedListHeaderContentGap,
       zIndex: 2,
       overflow: 'visible',
     },
@@ -430,8 +595,5 @@ const createStyles = (
     },
     spacer: {
       flex: 1,
-    },
-    submittedPromptWrap: {
-      marginBottom: Paddings.groupedListIconTextSpacing,
     },
   });
