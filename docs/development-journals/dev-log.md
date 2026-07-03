@@ -4579,3 +4579,264 @@ TODO:
 
 ---
 
+
+
+## [18/06/2026] - [Wednesday]
+
+
+
+### Today's Goals
+
+- [x] I polished **habit create/edit forms** — description field, weekday picker, section helper text, and reordered fields so create/edit matches the browse-stack form shell from the 16/06 pass.
+- [x] I replaced **binary/numeric habit tracking** with a **completions-per-day stepper** that maps to the existing habit tracking API without backend changes.
+- [x] I redesigned **task and habit color palettes** — nine wheel-ordered options, rebuilt the animated `ColorCirclePicker` on habit forms, and tightened description UI spacing.
+- [x] I fixed **iPad habit create reliability**, refreshed the habits list after `POST /habits/`, and unblocked **EAS iOS pod install** for the habits branch.
+
+
+
+### Plans For Future
+
+- **Style habit list screen** — board cards, heatmaps, and increment ring UX on the Habits tab.
+- **Style habit detail screen** — formSheet modal + inline editing once list polish lands.
+- **Device QA** for Phase 4 habit reminders (Tests 23–25 in habits manual testing guide).
+- Manual pass on achievement toast after dev reset.
+
+
+
+### Notes
+
+- Commits: `6362f75` — habit forms (description, weekday picker, iPad create fix, list refresh after POST, EAS pod install).
+- Commits: `fa51f56` — completions-per-day stepper replacing binary/numeric toggles.
+- Commits: `72f734a` — nine-option color palettes, `ColorCirclePicker`, habit form field reorder + section helper copy.
+
+---
+
+
+
+## [19/06/2026] - [Thursday]
+
+
+
+### Today's Goals
+
+- [x] I shipped **gamification-style habit board cards** — synced heatmaps, numeric reset flow, and palette-aligned ring colors on the Habits tab.
+- [x] I aligned the **Habits tab layout** with browse patterns and hydrated the **achievement catalog before unlock detection** so first-completion toasts fire reliably.
+- [x] I fixed **inbox show-completed filtering** so completed tasks stay hidden when the display pref is off.
+
+
+
+### Plans For Future
+
+- Polish habit board ring animations and multi-tier heatmap tiers.
+- Habit detail formSheet modal + browse search integration.
+- Device QA for habit board tap-to-increment and achievement unlock on complete.
+
+
+
+### Notes
+
+- Commits: `1728908` — `HabitBoardCard`, heatmap sync, numeric reset, habits tab browse layout, inbox completed filter, achievement catalog hydration.
+
+---
+
+
+
+## [20/06/2026] - [Friday]
+
+
+
+### Today's Goals
+
+- [x] I polished **habit board cards** — multi-tier heatmaps, shared increment ring flow, tunable board ring tokens, and palette-aligned ring colors (300 icon, 500 arc, 500@60% track).
+
+
+
+### Plans For Future
+
+- iOS-native increment ring animations and optimistic tap-to-increment.
+- Dual-layout `HabitCard` on the habits tab (board + simplified list variant).
+- Habit detail screen as a root-level formSheet modal.
+
+
+
+### Notes
+
+- Commits: `2a9bb4c` — board ring tokens, multi-tier heatmaps, shared increment ring flow, palette-aligned arc/track colors.
+
+---
+
+
+
+## [21/06/2026] - [Saturday]
+
+
+
+### Today's Goals
+
+- [x] I made the **habit increment ring** update UI instantly on tap with background API sync, and removed the habits tab Today summary header that duplicated Today-tab content.
+- [x] I added **iOS-native habit increment ring animations** — complete-state UI, animated title strikethrough, and auth session bootstrap fixes so protected fetches wait for a single token refresh.
+- [x] I stored **task reminder `scheduledTime` as ISO strings** so Redux `serializableCheck` no longer warns on unrelated actions.
+- [x] I added a **habits tab summary dashboard** with system-status color coding for graded stats.
+- [x] I fixed the visible **hairline gap** between habit progress ring fill and track stroke on complete rings.
+- [x] I replaced `HabitBoardCard` with a **dual-layout `HabitCard`** — enriched `GET /habits/` for an All habits section, section collapse, variant toggles, fade transitions, and bottom scroll clearance.
+- [x] I synced **habit card expand/collapse** so footer height, body content, toggle row, and ring fade animate together on a shared 160ms linear curve.
+- [x] I animated the **simplified habit card progress bar** with the same spring fill and increment pulse as the progress ring by sharing animation runners between both components.
+
+
+
+### Plans For Future
+
+- Habit detail formSheet modal with task-detail-style layout and stack pickers.
+- Add habits to browse search with filter chip and habit-specific result rows.
+- Device QA on habit card expand/collapse and ring tap feedback.
+
+
+
+### Notes
+
+- Commits: `190df14` — optimistic increment ring UI + removed habits tab Today summary header.
+- Commits: `6b2d70b` — iOS ring animations, complete strikethrough, auth token refresh gate for protected fetches.
+- Commits: `eb2ac57` — task reminder `scheduledTime` ISO serialization for Redux.
+- Commits: `3ed22c2` — habits tab summary dashboard with graded stat color coding.
+- Commits: `ad1c52a` — progress ring fill/track hairline gap fix.
+- Commits: `31118a3` — dual-layout `HabitCard`, All habits section, collapse/variant/fade polish.
+- Commits: `d7c835e` — shared 160ms expand/collapse sync across footer, body, toggle, ring fade.
+- Commits: `0e8cbe7` — simplified card progress bar shares spring/pulse runners with progress ring.
+
+---
+
+
+
+## [22/06/2026] - [Sunday]
+
+
+
+### Today's Goals
+
+- [x] I set up the **habit detail screen** as a root-level **formSheet modal** with task-detail-style layout, navigation, and inline editing.
+- [x] I added **habit detail stack pickers** — task-style Save for title/description and auto-save for all other fields.
+- [x] I added **habits to browse search** — filter chip, Top section, description matches, and habit-specific result rows.
+
+
+
+### Plans For Future
+
+- Unify Today and planner day views; integrate habits into browse list detail.
+- Merge habits feature branch and start AI assistant backend work.
+- Device QA on habit detail formSheet dismiss/save and browse search habit rows.
+
+
+
+### Notes
+
+- Commits: `e4b1f2d` — habit detail formSheet modal shell + task-detail layout parity.
+- Commits: `9da26f3` — stack pickers, Save vs auto-save field split on habit detail.
+- Commits: `9a4e96a` — browse search habits filter, Top section, description match, habit result rows.
+
+---
+
+
+
+## [23/06/2026] - [Monday]
+
+
+
+### Today's Goals
+
+- [x] I unified **Today and planner day views** — sticky segment pills, inbox-style headers, habits-on-calendar support, and consistent timeline spacing and wake/sleep styling.
+- [x] I fixed **inbox select mode** so bulk actions exit selection and the task list stays in sync after delete.
+- [x] I integrated **habits into browse list detail** — Today/One-time list sections, list assignment on habits, list display settings, and fixed clearing a task deadline from task detail.
+- [x] I restyled the **list-select sheet** with search, browse-style rows showing task and habit counts, and wired the quick-add list pill to open it.
+- [x] I merged **habits v1** into main via **PR #26** (`feat/habits`).
+- [x] I prepared **LLM integration docs** and shipped the **DailyFlo AI task assistant** end-to-end — Gemini backend proxy, confirm-first proposal UI, schedule-aware context, and setup docs.
+
+
+
+### Plans For Future
+
+- Build the **AI tab composer UI** — liquid-glass chat shell, keyboard anchoring, suggestions, and session flow.
+- Wire confirm-first proposals in the AI session view once composer UX lands.
+- Device QA across unified Today/planner, list-select sheet, and habit-in-list assignment.
+
+
+
+### Notes
+
+- Commits: `8845190` — Today/planner unify, sticky pills, habits on calendar, timeline spacing.
+- Commits: `194e967` — inbox select mode exit + list sync after bulk delete.
+- Commits: `feb759a` — habits in browse list detail, list assignment, display settings, task deadline clear fix.
+- Commits: `0e6968a` — list-select sheet search + browse-style rows + quick-add list pill.
+- Commits: `0893bde` — merge PR #26 (`feat/habits`).
+- Commits: `ea80737` — LLM integration docs.
+- Commits: `158a834` — AI task assistant backend (`useAiAssistant`, Gemini proxy, proposal confirm flow, schedule context).
+- Habits v1 (Phases 1–4 + board/list/detail/search) is now on main — good checkpoint before AI tab UI.
+
+---
+
+
+
+## [01/07/2026] - [Wednesday]
+
+
+
+### Today's Goals
+
+- [x] I fixed **Reanimated dev crashes** by passing `SharedValue`s instead of `useAnimatedStyle` handles as React props.
+- [x] I replaced the **AI tab composer** with a liquid-glass `ChatContainer` — smooth keyboard anchoring, attach menu, animated mic/send utility button, tab FAB, and brand caret styling.
+- [x] I added **AI chat composer suggestions** — liquid-glass styling, dashed pill borders, and expand/collapse animations synced to the keyboard.
+- [x] I updated **package-lock.json** after the AI tab dependency changes.
+
+
+
+### Plans For Future
+
+- Polish the **AI tab empty state** — branded intro copy, greeting/hint prompts, activity-log toolbar.
+- **Prompt/session two-phase flow** — submitted prompt shell, composer morph, session back navigation.
+- Flat assistant response panel below the submitted prompt in session view.
+
+
+
+### Notes
+
+- Commits: `e8613ba` — package-lock update.
+- Commits: `6bf7577` — Reanimated SharedValue prop fix (stops dev crash when animated styles cross component boundaries).
+- Commits: `8ba78d4` — liquid-glass `ChatContainer`, keyboard anchor, attach menu, mic/send button, tab FAB, caret styling.
+- Commits: `8ca1675` — `ChatComposerSuggestions`, dashed pills, keyboard-synced expand/collapse.
+
+---
+
+
+
+## [02/07/2026] - [Thursday]
+
+
+
+### Today's Goals
+
+- [x] I polished the **AI tab empty state** — branded animated intro copy, blurred radial background glow, random greeting/hint prompts, and a single activity-log toolbar.
+- [x] I added the **AI tab prompt/session two-phase flow** — submitted prompt shell, composer height caps, intro fade-out, and platform-specific session back navigation.
+- [x] I animated the **AI tab composer** through a single `ChatContainer` that slides between greeting and session while morphing into the submitted prompt shell — bottom anchor + `translateY` slide, minimize during back, suggestion pills fade with `sessionProgress`.
+- [x] I added a **flat assistant response panel** below the submitted prompt in session view — `primarySecondaryBlend` background, 4px bottom-left radius, no liquid glass, loading “Thinking…” state, and fade-in reply text.
+
+
+
+### Plans For Future
+
+- Wire **confirm-first proposal UI** in the AI session view (backend already returns proposals; session shell hides them for now).
+- Multi-turn **message history** below the latest assistant reply.
+- Device QA on AI session keyboard sync — send → back → tap composer again should keep composer above keyboard.
+- **Device QA** for Phase 4 habit reminders (Tests 23–25) now that habits v1 is merged.
+
+
+
+### Notes
+
+- Commits: `3d1dfd3` — AI empty state intro, radial glow, random prompts, activity-log toolbar.
+- Commits: `a01a832` — prompt/session two-phase flow, submitted prompt shell, composer height caps, session back nav.
+- Commits: `8ab944f` — single `ChatContainer` greeting↔session slide + morph (`sessionProgress`, `translateY`, `isSessionReturningToGreeting`, suggestion fade).
+- Commits: `099215f` — `AiAssistantResponseShell` (flat panel, loading state, fade-in text, `chatComposerUiTokens` response gap + text block padding).
+- Session animation uses frozen `sessionAnchorBottom` + `sessionSlideOffset` — keyboard props are not tied to screen phase anymore.
+- Response panel scrolls below composer via `sessionComposerBottom` from `measureInWindow` / `onLayout`.
+
+---
+
