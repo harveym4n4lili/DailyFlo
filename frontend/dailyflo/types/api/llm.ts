@@ -80,4 +80,4 @@ export interface AiChatMessage {
   proposalStatuses?: Record<string, 'pending' | 'confirmed' | 'dismissed' | 'failed'>;
 }
 
-export type ProposalStatus = 'pending' | 'confirming' | 'confirmed' | 'failed' | 'dismissed';
+export type ProposalStatus = 'pending' | 'confirming' | 'confirmed' | 'failed' | 'dismissed' | 'undoing';

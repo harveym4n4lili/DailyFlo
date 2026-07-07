@@ -30,6 +30,7 @@ import {
   CHAT_COMPOSER_LAYOUT_EASING,
   getChatComposerShellBorderColor,
   CHAT_ASSISTANT_RESPONSE_SHELL_BOTTOM_LEFT_RADIUS,
+  CHAT_SESSION_PROPOSAL_BADGE_HALF_HEIGHT_ESTIMATE,
 } from './chatComposerUiTokens';
 import {
   PROGRESS_BOARD_GLASS_TINT_OPACITY,
@@ -103,6 +104,8 @@ export function AiAssistantResponseShell({
       StyleSheet.create({
         outer: {
           overflow: 'visible',
+          // badge headroom matches proposal cards so composer → reply spacing aligns with reply → proposals
+          marginTop: CHAT_SESSION_PROPOSAL_BADGE_HALF_HEIGHT_ESTIMATE,
         },
         glassShell: {
           overflow: 'hidden',

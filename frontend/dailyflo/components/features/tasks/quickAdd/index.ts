@@ -2,7 +2,7 @@ export { QuickAddGlassPanel } from './QuickAddGlassPanel';
 export type { QuickAddGlassPanelProps } from './QuickAddGlassPanel';
 export { QuickAddIconPill, QUICK_ADD_ICON_PILL_ICON_SIZE } from './QuickAddIconPill';
 export type { QuickAddIconPillProps } from './QuickAddIconPill';
-export { QuickAddLabelOnlyPill, QuickAddPillChrome } from './QuickAddLabelOnlyPill';
+export { QuickAddLabelOnlyPill, QuickAddPillChrome, QUICK_ADD_PILL_LABEL_TEXT_STYLE } from './QuickAddLabelOnlyPill';
 export type { QuickAddLabelOnlyPillProps, QuickAddPillChromeProps } from './QuickAddLabelOnlyPill';
 export { QuickAddModalBackdrop } from './QuickAddModalBackdrop';
 export type { QuickAddModalBackdropProps } from './QuickAddModalBackdrop';

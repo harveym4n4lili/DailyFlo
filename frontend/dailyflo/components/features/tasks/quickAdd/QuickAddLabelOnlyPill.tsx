@@ -6,10 +6,16 @@ import GlassView from 'expo-glass-effect/build/GlassView';
 
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
-import { getTextStyle } from '@/constants/Typography';
+import { FontWeight, getTypographyStyle } from '@/constants/Typography';
 
 /** matches TaskQuickAddForm `QUICK_ADD_PILL_BORDER_WIDTH` so onboarding chips line up visually with quick add */
 export const QUICK_ADD_PILL_BORDER_WIDTH = 1.25;
+
+/** body-large regular + Inter — shared by quick-add icon/label pills (incl. Accept All / Start new) */
+export const QUICK_ADD_PILL_LABEL_TEXT_STYLE = {
+  ...getTypographyStyle('body-large', Platform.OS as 'ios' | 'android' | 'web'),
+  fontWeight: FontWeight.regular,
+};
 
 export type QuickAddPillChromeProps = {
   children: React.ReactNode;
@@ -175,7 +181,7 @@ export function QuickAddLabelOnlyPill({
         style={[
           pillStyles.label,
           fullWidth ? pillStyles.fullWidthLabel : undefined,
-          getTextStyle('body-large'),
+          QUICK_ADD_PILL_LABEL_TEXT_STYLE,
           { color: textColor },
         ]}
         numberOfLines={1}

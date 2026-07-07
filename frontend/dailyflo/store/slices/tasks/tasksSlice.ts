@@ -1107,6 +1107,18 @@ const tasksSlice = createSlice({
         }
       }
     },
+
+    // insert or replace a task immediately (e.g. undo ai delete proposal)
+    optimisticUpsertTask: (state, action: PayloadAction<Task>) => {
+      const task = action.payload;
+      const taskIndex = state.tasks.findIndex((entry) => entry.id === task.id);
+      if (taskIndex === -1) {
+        state.tasks.push(task);
+      } else {
+        state.tasks[taskIndex] = task;
+      }
+      state.filteredTasks = applyFilters(state.tasks, state.filters);
+    },
   },
   
   /**
@@ -1375,6 +1387,7 @@ export const {
   setEditingTaskId,
   setPagination,
   optimisticUpdateTask,
+  optimisticUpsertTask,
   clearTasks,
 } = tasksSlice.actions;
 

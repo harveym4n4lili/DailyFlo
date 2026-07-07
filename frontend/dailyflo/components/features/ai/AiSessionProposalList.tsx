@@ -2,10 +2,10 @@
  * session view proposal stack — same vertical gap as between reply and first proposal.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import type { Task } from '@/types';
-import type { TaskProposal, ProposalStatus } from '@/types/api/llm';
+import type { TaskProposal, TaskProposalPayload, ProposalStatus } from '@/types/api/llm';
 import { CHAT_SESSION_RESPONSE_GAP } from './chatComposerUiTokens';
 import { AiSessionProposalCard } from './AiSessionProposalCard';
 
@@ -15,6 +15,16 @@ export interface AiSessionProposalListProps {
   tasks: Task[];
   messageId: string;
   getProposalStatus: (messageId: string, proposalId: string) => ProposalStatus;
+  getProposalPayload: (messageId: string, proposal: TaskProposal) => TaskProposalPayload;
+  getProposalError?: (messageId: string, proposalId: string) => string | undefined;
+  /** apply one proposal — dispatches create/update/delete via useAiAssistant */
+  onConfirmProposal: (proposal: TaskProposal) => void;
+  /** hide proposal without changing tasks */
+  onDismissProposal: (proposalId: string) => void;
+  /** reverse a confirmed proposal */
+  onUndoProposal: (proposal: TaskProposal) => void;
+  /** disables per-card pills while Accept All runs */
+  isConfirmingAll?: boolean;
 }
 
 export function AiSessionProposalList({
@@ -22,8 +32,23 @@ export function AiSessionProposalList({
   tasks,
   messageId,
   getProposalStatus,
+  getProposalPayload,
+  getProposalError,
+  onConfirmProposal,
+  onDismissProposal,
+  onUndoProposal,
+  isConfirmingAll = false,
 }: AiSessionProposalListProps) {
   const [expandedProposalId, setExpandedProposalId] = useState<string | null>(null);
+
+  // dismissed proposals are removed from the stack — user chose not to apply them
+  const visibleProposals = useMemo(
+    () =>
+      proposals.filter(
+        (proposal) => getProposalStatus(messageId, proposal.id) !== 'dismissed',
+      ),
+    [proposals, messageId, getProposalStatus],
+  );
 
   const resolveExistingTask = useCallback(
     (proposal: TaskProposal) => {
@@ -41,21 +66,48 @@ export function AiSessionProposalList({
     setExpandedProposalId((current) => (current === proposalId ? null : proposalId));
   }, []);
 
-  if (proposals.length === 0) {
+  const handleAccept = useCallback(
+    (proposal: TaskProposal) => {
+      onConfirmProposal(proposal);
+    },
+    [onConfirmProposal],
+  );
+
+  const handleDiscard = useCallback(
+    (proposalId: string) => {
+      onDismissProposal(proposalId);
+      setExpandedProposalId((current) => (current === proposalId ? null : current));
+    },
+    [onDismissProposal],
+  );
+
+  const handleUndo = useCallback(
+    (proposal: TaskProposal) => {
+      onUndoProposal(proposal);
+    },
+    [onUndoProposal],
+  );
+
+  if (visibleProposals.length === 0) {
     return null;
   }
 
   return (
     <View style={styles.list}>
-      {proposals.map((proposal) => (
+      {visibleProposals.map((proposal) => (
         <AiSessionProposalCard
           key={proposal.id}
           proposal={proposal}
-          payload={proposal.payload}
+          payload={getProposalPayload(messageId, proposal)}
           existingTask={resolveExistingTask(proposal)}
           proposalStatus={getProposalStatus(messageId, proposal.id)}
+          proposalError={getProposalError?.(messageId, proposal.id)}
+          actionsDisabled={isConfirmingAll}
           isExpanded={expandedProposalId === proposal.id}
           onToggleExpand={() => handleToggleExpand(proposal.id)}
+          onAccept={() => handleAccept(proposal)}
+          onDiscard={() => handleDiscard(proposal.id)}
+          onUndo={() => handleUndo(proposal)}
         />
       ))}
     </View>
@@ -64,7 +116,6 @@ export function AiSessionProposalList({
 
 const styles = StyleSheet.create({
   list: {
-    marginTop: CHAT_SESSION_RESPONSE_GAP,
     gap: CHAT_SESSION_RESPONSE_GAP,
   },
 });

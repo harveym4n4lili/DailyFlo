@@ -14,7 +14,7 @@ import {
 } from '@/components/features/tasks/quickAdd/QuickAddIconPill';
 import { SFSymbolIcon } from '@/components/ui/Icon';
 import { useColorPalette } from '@/hooks/useColorPalette';
-import { CHAT_SESSION_RESPONSE_GAP, getChatSendButtonColors } from './chatComposerUiTokens';
+import { getChatSendButtonColors } from './chatComposerUiTokens';
 
 export type AiSessionProposalFooterMode = 'acceptAll' | 'startNew';
 
@@ -111,7 +111,6 @@ const styles = StyleSheet.create({
   root: {
     width: '100%',
     alignSelf: 'stretch',
-    marginTop: CHAT_SESSION_RESPONSE_GAP,
     position: 'relative',
   },
   pillSlot: {

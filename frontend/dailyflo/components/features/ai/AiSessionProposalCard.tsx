@@ -12,6 +12,8 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 import Animated, {
+  FadeIn,
+  FadeOut,
   interpolate,
   interpolateColor,
   useAnimatedStyle,
@@ -37,6 +39,8 @@ import {
   CHAT_COMPOSER_SHELL_RADIUS,
   CHAT_COMPOSER_LAYOUT_EASING,
   CHAT_COMPOSER_LAYOUT_TRANSITION_MS,
+  PROPOSAL_UI_MODE_TRANSITION_MS,
+  CHAT_SESSION_PROPOSAL_BADGE_HALF_HEIGHT_ESTIMATE,
 } from './chatComposerUiTokens';
 import { buildDisplayTaskFromProposal } from './proposalTaskDisplay';
 
@@ -45,9 +49,13 @@ const PROPOSAL_ACTIONS_SECTION_HEIGHT_ESTIMATE =
   Paddings.formDataPillHorizontal * 2 + 48;
 
 /** proposal type chip sits half above the card — measured on layout; estimate until first measure */
-export const PROPOSAL_TYPE_BADGE_HALF_HEIGHT_ESTIMATE = 15;
+export const PROPOSAL_TYPE_BADGE_HALF_HEIGHT_ESTIMATE =
+  CHAT_SESSION_PROPOSAL_BADGE_HALF_HEIGHT_ESTIMATE;
 
 const PROPOSAL_TYPE_BADGE_ICON_SIZE = 14;
+
+const proposalModeFadeIn = FadeIn.duration(PROPOSAL_UI_MODE_TRANSITION_MS);
+const proposalModeFadeOut = FadeOut.duration(PROPOSAL_UI_MODE_TRANSITION_MS);
 
 const PROPOSAL_TYPE_LABELS: Record<ProposalType, string> = {
   create: 'Create',
@@ -55,14 +63,19 @@ const PROPOSAL_TYPE_LABELS: Record<ProposalType, string> = {
   delete: 'Delete',
 };
 
-/** create = system yellow, update = system orange, delete = brand marple — indicator label text only */
+const PROPOSAL_TYPE_CONFIRMED_LABELS: Record<ProposalType, string> = {
+  create: 'Created',
+  update: 'Updated',
+  delete: 'Deleted',
+};
+
+/** create + delete = brand marple, update = system orange — indicator label/border/icon */
 function getProposalTypeIndicatorColor(
   type: ProposalType,
-  deleteColor: string,
+  brandColor: string,
   theme: 'light' | 'dark',
 ): string {
-  if (type === 'delete') return deleteColor;
-  if (type === 'create') return theme === 'dark' ? '#FFD60A' : '#FFCC00';
+  if (type === 'create' || type === 'delete') return brandColor;
   return theme === 'dark' ? '#FF9F0A' : '#FF9500';
 }
 
@@ -72,8 +85,17 @@ export interface AiSessionProposalCardProps {
   /** existing task from redux — used for update/delete previews */
   existingTask?: Task;
   proposalStatus: ProposalStatus;
+  proposalError?: string;
+  /** true while Accept All is running — disables per-card actions */
+  actionsDisabled?: boolean;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  /** apply proposal via redux (create/update/delete) */
+  onAccept: () => void;
+  /** remove proposal from session without touching tasks */
+  onDiscard: () => void;
+  /** reverse a confirmed create/update/delete */
+  onUndo: () => void;
 }
 
 export function AiSessionProposalCard({
@@ -81,8 +103,13 @@ export function AiSessionProposalCard({
   payload,
   existingTask,
   proposalStatus,
+  proposalError,
+  actionsDisabled = false,
   isExpanded,
   onToggleExpand,
+  onAccept,
+  onDiscard,
+  onUndo,
 }: AiSessionProposalCardProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -95,25 +122,30 @@ export function AiSessionProposalCard({
     [proposal.type, brandBorderColor, theme],
   );
   const isProposalConfirmed = proposalStatus === 'confirmed';
+  const isProposalActionable = proposalStatus === 'pending' || proposalStatus === 'failed';
+  const isProposalAccepted = isProposalConfirmed;
+  const showActionPills = isProposalActionable || isProposalAccepted;
+  const arePendingActionsDisabled = actionsDisabled || !isProposalActionable;
+  const areUndoActionsDisabled = actionsDisabled;
+  const actionPillsMode = isProposalActionable ? 'pending' : 'accepted';
+  const typeBadgeMode = isProposalAccepted ? 'accepted' : 'pending';
   // same default chip icon/label color as TaskQuickAddForm empty pills
   const pillIconColor = themeColors.interactive.active();
   const proposalTypeLabel = PROPOSAL_TYPE_LABELS[proposal.type];
 
-  const typeBadgeLeadingIcon = useMemo(() => {
-    if (isProposalConfirmed) {
-      return (
-        <SFSymbolIcon
-          name="checkmark"
-          size={PROPOSAL_TYPE_BADGE_ICON_SIZE}
-          color={typeLabelColor}
-          fallback={
-            <Ionicons name="checkmark" size={PROPOSAL_TYPE_BADGE_ICON_SIZE} color={typeLabelColor} />
-          }
-        />
-      );
-    }
-    return <SparklesIcon size={PROPOSAL_TYPE_BADGE_ICON_SIZE} color={typeLabelColor} />;
-  }, [isProposalConfirmed, typeLabelColor]);
+  const typeBadgeLeadingIcon =
+    typeBadgeMode === 'accepted' ? (
+      <SFSymbolIcon
+        name="checkmark"
+        size={PROPOSAL_TYPE_BADGE_ICON_SIZE}
+        color={typeLabelColor}
+        fallback={
+          <Ionicons name="checkmark" size={PROPOSAL_TYPE_BADGE_ICON_SIZE} color={typeLabelColor} />
+        }
+      />
+    ) : (
+      <SparklesIcon size={PROPOSAL_TYPE_BADGE_ICON_SIZE} color={typeLabelColor} />
+    );
 
   const expandProgress = useSharedValue(isExpanded ? 1 : 0);
   const actionsHeightSv = useSharedValue(PROPOSAL_ACTIONS_SECTION_HEIGHT_ESTIMATE);
@@ -128,6 +160,11 @@ export function AiSessionProposalCard({
       easing: CHAT_COMPOSER_LAYOUT_EASING,
     });
   }, [isExpanded, expandProgress]);
+
+  // remeasure when pending vs accepted pill rows swap
+  useEffect(() => {
+    setActionsMeasured(false);
+  }, [actionPillsMode]);
 
   const displayTask = useMemo(
     () => buildDisplayTaskFromProposal(proposal, payload, existingTask),
@@ -192,9 +229,10 @@ export function AiSessionProposalCard({
           right: Paddings.groupedListContentHorizontal,
           zIndex: 2,
         },
-        typeBadgeText: {
-          ...typography.getTextStyle('body-small'),
-          fontWeight: '600',
+        typeBadgeInner: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: Paddings.formDataPillIconGap,
         },
         actionsMeasure: {
           position: 'absolute',
@@ -213,66 +251,119 @@ export function AiSessionProposalCard({
           alignItems: 'center',
           gap: Paddings.formDataPillRowGap,
         },
+        errorText: {
+          ...typography.getTextStyle('body-small'),
+          color: themeColors.text.primary(),
+          marginBottom: Paddings.formDataPillRowGap,
+        },
+        typeBadgeText: {
+          ...typography.getTextStyle('body-small'),
+          fontWeight: '600',
+        },
       }),
     [themeColors, typography],
   );
 
-  const acceptPillIcon = useMemo(
-    () => (
-      <SFSymbolIcon
-        name="checkmark.circle.fill"
-        size={QUICK_ADD_ICON_PILL_ICON_SIZE}
-        color={pillIconColor}
-        fallback={
-          <Ionicons name="checkmark-circle" size={QUICK_ADD_ICON_PILL_ICON_SIZE} color={pillIconColor} />
-        }
-      />
-    ),
-    [pillIconColor],
+  const pendingActionPills = (
+    <>
+      {proposalError ? <Text style={styles.errorText}>{proposalError}</Text> : null}
+      <View style={styles.actionsRow}>
+        <QuickAddIconPill
+          icon={
+            <SFSymbolIcon
+              name="checkmark.circle.fill"
+              size={QUICK_ADD_ICON_PILL_ICON_SIZE}
+              color={pillIconColor}
+              fallback={
+                <Ionicons
+                  name="checkmark-circle"
+                  size={QUICK_ADD_ICON_PILL_ICON_SIZE}
+                  color={pillIconColor}
+                />
+              }
+            />
+          }
+          label="Accept"
+          onPress={onAccept}
+          accessibilityLabel="Accept proposal"
+          textColor={pillIconColor}
+          disabled={arePendingActionsDisabled}
+        />
+        <QuickAddIconPill
+          icon={
+            <SFSymbolIcon
+              name="pencil"
+              size={QUICK_ADD_ICON_PILL_ICON_SIZE}
+              color={pillIconColor}
+              fallback={
+                <PencilFillIcon size={QUICK_ADD_ICON_PILL_ICON_SIZE} color={pillIconColor} />
+              }
+            />
+          }
+          label="Edit"
+          onPress={() => {}}
+          accessibilityLabel="Edit proposal task"
+          textColor={pillIconColor}
+          disabled={arePendingActionsDisabled}
+        />
+        <QuickAddIconPill
+          icon={
+            <SFSymbolIcon
+              name="trash.fill"
+              size={QUICK_ADD_ICON_PILL_ICON_SIZE}
+              color={pillIconColor}
+              fallback={
+                <TrashIcon size={QUICK_ADD_ICON_PILL_ICON_SIZE} color={pillIconColor} />
+              }
+            />
+          }
+          label="Discard"
+          onPress={onDiscard}
+          accessibilityLabel="Discard proposal"
+          textColor={pillIconColor}
+          disabled={arePendingActionsDisabled}
+        />
+      </View>
+    </>
+  );
+
+  const acceptedActionPills = (
+    <>
+      {proposalError ? <Text style={styles.errorText}>{proposalError}</Text> : null}
+      <View style={styles.actionsRow}>
+        <QuickAddIconPill
+          icon={
+            <SFSymbolIcon
+              name="arrow.uturn.backward"
+              size={QUICK_ADD_ICON_PILL_ICON_SIZE}
+              color={pillIconColor}
+              fallback={
+                <Ionicons
+                  name="arrow-undo"
+                  size={QUICK_ADD_ICON_PILL_ICON_SIZE}
+                  color={pillIconColor}
+                />
+              }
+            />
+          }
+          label="Undo"
+          onPress={onUndo}
+          accessibilityLabel="Undo applied proposal"
+          textColor={pillIconColor}
+          disabled={areUndoActionsDisabled}
+        />
+      </View>
+    </>
   );
 
   const actionPills = (
-    <View style={styles.actionsRow}>
-      <QuickAddIconPill
-        icon={acceptPillIcon}
-        label="Accept"
-        onPress={() => {}}
-        accessibilityLabel="Accept proposal"
-        textColor={pillIconColor}
-      />
-      <QuickAddIconPill
-        icon={
-          <SFSymbolIcon
-            name="pencil"
-            size={QUICK_ADD_ICON_PILL_ICON_SIZE}
-            color={pillIconColor}
-            fallback={
-              <PencilFillIcon size={QUICK_ADD_ICON_PILL_ICON_SIZE} color={pillIconColor} />
-            }
-          />
-        }
-        label="Edit"
-        onPress={() => {}}
-        accessibilityLabel="Edit proposal task"
-        textColor={pillIconColor}
-      />
-      <QuickAddIconPill
-        icon={
-          <SFSymbolIcon
-            name="trash.fill"
-            size={QUICK_ADD_ICON_PILL_ICON_SIZE}
-            color={pillIconColor}
-            fallback={
-              <TrashIcon size={QUICK_ADD_ICON_PILL_ICON_SIZE} color={pillIconColor} />
-            }
-          />
-        }
-        label="Discard"
-        onPress={() => {}}
-        accessibilityLabel="Discard proposal"
-        textColor={pillIconColor}
-      />
-    </View>
+    <Animated.View
+      key={actionPillsMode}
+      entering={proposalModeFadeIn}
+      exiting={proposalModeFadeOut}
+    >
+      {actionPillsMode === 'pending' ? pendingActionPills : acceptedActionPills}
+    </Animated.View>
   );
 
   return (
@@ -291,16 +382,25 @@ export function AiSessionProposalCard({
           borderColor={typeLabelColor}
           innerBackgroundColor={themeColors.background.primary()}
         >
-          {typeBadgeLeadingIcon}
-          <Text
-            style={[
-              getTextStyle('body-small'),
-              styles.typeBadgeText,
-              { color: typeLabelColor },
-            ]}
+          <Animated.View
+            key={typeBadgeMode}
+            entering={proposalModeFadeIn}
+            exiting={proposalModeFadeOut}
+            style={styles.typeBadgeInner}
           >
-            {proposalTypeLabel}
-          </Text>
+            {typeBadgeLeadingIcon}
+            <Text
+              style={[
+                getTextStyle('body-small'),
+                styles.typeBadgeText,
+                { color: typeLabelColor },
+              ]}
+            >
+              {typeBadgeMode === 'accepted'
+                ? PROPOSAL_TYPE_CONFIRMED_LABELS[proposal.type]
+                : proposalTypeLabel}
+            </Text>
+          </Animated.View>
         </QuickAddPillChrome>
       </View>
       <View style={styles.shellContentClip}>
@@ -322,21 +422,23 @@ export function AiSessionProposalCard({
               showMetadata
               showIndicators
               showListRecurrenceRow
-              titleStrikethrough={proposal.type === 'delete'}
+              titleStrikethrough={proposal.type === 'delete' && !isProposalAccepted}
             />
           </View>
         </Pressable>
 
         {/* measure pill row once so height animation matches real layout */}
-        {!actionsMeasured ? (
+        {showActionPills && !actionsMeasured ? (
           <View style={styles.actionsMeasure} onLayout={handleActionsLayout}>
             <View style={styles.actionsSection}>{actionPills}</View>
           </View>
         ) : null}
 
-        <Animated.View style={animatedActionsSlotStyle} pointerEvents={isExpanded ? 'auto' : 'none'}>
-          {actionsMeasured ? <View style={styles.actionsSection}>{actionPills}</View> : null}
-        </Animated.View>
+        {showActionPills ? (
+          <Animated.View style={animatedActionsSlotStyle} pointerEvents={isExpanded ? 'auto' : 'none'}>
+            {actionsMeasured ? <View style={styles.actionsSection}>{actionPills}</View> : null}
+          </Animated.View>
+        ) : null}
       </View>
     </Animated.View>
   );

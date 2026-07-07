@@ -7,8 +7,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { Paddings } from '@/constants/Paddings';
-import { getTextStyle } from '@/constants/Typography';
-import { QUICK_ADD_PILL_BORDER_WIDTH } from './QuickAddLabelOnlyPill';
+import { QUICK_ADD_PILL_BORDER_WIDTH, QUICK_ADD_PILL_LABEL_TEXT_STYLE } from './QuickAddLabelOnlyPill';
 
 const PILL_ICON_SIZE = Paddings.groupedListIconSize;
 
@@ -69,7 +68,10 @@ function QuickAddIconPillChrome({
       )}
       <View style={pillStyles.inner}>
         <View style={pillStyles.iconSlot}>{icon}</View>
-        <Text style={[pillStyles.label, getTextStyle('body-large'), { color: textColor }]} numberOfLines={1}>
+        <Text
+          style={[pillStyles.label, QUICK_ADD_PILL_LABEL_TEXT_STYLE, { color: textColor }]}
+          numberOfLines={1}
+        >
           {label}
         </Text>
       </View>

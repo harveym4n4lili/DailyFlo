@@ -118,6 +118,19 @@ export const CHAT_COMPOSER_HEADER_GAP = 8;
 export const CHAT_SESSION_RESPONSE_GAP =
   Paddings.groupedListIconTextSpacing + Paddings.touchTargetSmall;
 
+/** proposal type badge straddles the card top — reserve half its height in the stack */
+export const CHAT_SESSION_PROPOSAL_BADGE_HALF_HEIGHT_ESTIMATE = 15;
+
+/** vertical step between session blocks (response ↔ proposals ↔ accept pill) */
+export const CHAT_SESSION_BLOCK_SPACING =
+  CHAT_SESSION_RESPONSE_GAP + CHAT_SESSION_PROPOSAL_BADGE_HALF_HEIGHT_ESTIMATE;
+
+/** cross-fade when proposal indicator / action pills swap modes */
+export const PROPOSAL_UI_MODE_TRANSITION_MS = 220;
+
+/** session reply + proposals fade out on back-to-greeting — faster than composer slide */
+export const CHAT_SESSION_CONTENT_EXIT_FADE_MS = 160;
+
 /** assistant response shell — tighter bottom-left corner vs the composer shell */
 export const CHAT_ASSISTANT_RESPONSE_SHELL_BOTTOM_LEFT_RADIUS = 4;
 

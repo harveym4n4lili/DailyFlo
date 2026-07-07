@@ -14,8 +14,6 @@ import {
 } from 'react-native';
 import Animated, {
   interpolate,
-  runOnJS,
-  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -53,6 +51,8 @@ export interface ChatComposerSuggestionsProps {
   sessionProgress?: SharedValue<number>;
   /** true when session morph finished — collapses suggestion slot */
   isSessionMode?: boolean;
+  /** true while greeting ↔ session slide is running — keeps slot collapsed during send */
+  isSessionTransitioning?: boolean;
   /** true while sliding back to greeting — uncollapse slot so pills fade in with sessionProgress */
   isSessionReturningToGreeting?: boolean;
   /** called with the suggestion description when the user taps a pill */
@@ -69,6 +69,7 @@ export function ChatComposerSuggestions({
   isComposerExpanded,
   sessionProgress,
   isSessionMode = false,
+  isSessionTransitioning = false,
   isSessionReturningToGreeting = false,
   onPickSuggestion,
   suggestions = AI_CHAT_SUGGESTIONS,
@@ -82,13 +83,31 @@ export function ChatComposerSuggestions({
 
   // 0 = visible (composer minimized), 1 = hidden (composer expanded)
   const hideProgress = useSharedValue(isComposerExpanded ? 1 : 0);
-  const [slotCollapsed, setSlotCollapsed] = useState(isComposerExpanded);
+  const [slotCollapsed, setSlotCollapsed] = useState(
+    isComposerExpanded || isSessionMode || isSessionTransitioning,
+  );
+
+  // greeting / prompt — slot open; session or expanded composer — slot closes after fade
+  const shouldExpandSlot =
+    isSessionReturningToGreeting ||
+    (!isSessionMode && !isSessionTransitioning && !isComposerExpanded);
 
   useEffect(() => {
     hideProgress.value = withTiming(isComposerExpanded ? 1 : 0, {
       duration: CHAT_COMPOSER_LAYOUT_TRANSITION_MS,
       easing: CHAT_COMPOSER_LAYOUT_EASING,
     });
+  }, [isComposerExpanded, hideProgress]);
+
+  useEffect(() => {
+    if (shouldExpandSlot) {
+      setSlotCollapsed(false);
+      // tab blur/focus or back-to-greeting can land here with hideProgress still at 1 — snap visible
+      if (!isComposerExpanded) {
+        hideProgress.value = 0;
+      }
+      return;
+    }
 
     if (isComposerExpanded) {
       const id = setTimeout(
@@ -98,25 +117,8 @@ export function ChatComposerSuggestions({
       return () => clearTimeout(id);
     }
 
-    setSlotCollapsed(false);
-  }, [isComposerExpanded, hideProgress]);
-
-  // back slide — expand slot immediately so opacity can fade in with sessionProgress (not flash at end)
-  useEffect(() => {
-    if (isSessionReturningToGreeting) {
-      setSlotCollapsed(false);
-    }
-  }, [isSessionReturningToGreeting]);
-
-  useAnimatedReaction(
-    () => sessionProgress?.value ?? 0,
-    (session, previous) => {
-      if (session > 0.99 && (previous ?? 0) <= 0.99) {
-        runOnJS(setSlotCollapsed)(true);
-      }
-    },
-    [sessionProgress],
-  );
+    setSlotCollapsed(true);
+  }, [shouldExpandSlot, isComposerExpanded, hideProgress]);
 
   const animatedSectionStyle = useAnimatedStyle(() => {
     const sessionHide = sessionProgress?.value ?? 0;

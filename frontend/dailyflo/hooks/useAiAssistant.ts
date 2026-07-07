@@ -6,12 +6,21 @@
  * 2. updateProposalPayload → local edits before confirm (no API yet)
  * 3. confirmProposal → dispatch existing Redux task thunks (create/update/delete)
  * 4. dismissProposal → hide proposal without touching tasks
+ * 5. undoProposal → reverse a confirmed create/update/delete
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import llmApiService, { mapLlmErrorToUserMessage } from '@/services/api/llm';
-import { useAppDispatch } from '@/store';
-import { createTask, deleteTask, updateTask } from '@/store/slices/tasks/tasksSlice';
+import tasksApiService from '@/services/api/tasks';
+import store, { useAppDispatch } from '@/store';
+import {
+  createTask,
+  deleteTask,
+  fetchTasks,
+  optimisticUpdateTask,
+  optimisticUpsertTask,
+  updateTask,
+} from '@/store/slices/tasks/tasksSlice';
 import type {
   AiChatMessage,
   CreateProposalPayload,
@@ -21,7 +30,7 @@ import type {
   TaskProposalPayload,
   UpdateProposalPayload,
 } from '@/types/api/llm';
-import type { CreateTaskInput } from '@/types/common/Task';
+import type { CreateTaskInput, Task } from '@/types/common/Task';
 
 /** build a stable key for proposal UI state maps */
 function proposalKey(messageId: string, proposalId: string): string {
@@ -64,6 +73,43 @@ function isProposalActionable(status: ProposalStatus): boolean {
   return status === 'pending' || status === 'failed';
 }
 
+/** snapshot stored after confirm so Undo can reverse the redux change */
+type ProposalUndoRecord =
+  | { kind: 'create'; createdTaskId: string }
+  | { kind: 'update'; taskId: string; previousTask: Task }
+  | { kind: 'delete'; taskId: string; previousTask: Task };
+
+function buildReverseUpdateFields(
+  previousTask: Task,
+  appliedUpdates: UpdateProposalPayload['updates'],
+): UpdateProposalPayload['updates'] {
+  const reverseUpdates: UpdateProposalPayload['updates'] = {};
+  for (const field of Object.keys(appliedUpdates ?? {}) as Array<
+    keyof UpdateProposalPayload['updates']
+  >) {
+    reverseUpdates[field] = previousTask[field] as never;
+  }
+  return reverseUpdates;
+}
+
+function cloneTaskSnapshot(task: Task): Task {
+  return {
+    ...task,
+    metadata: {
+      ...task.metadata,
+      subtasks: [...(task.metadata.subtasks ?? [])],
+      reminders: [...(task.metadata.reminders ?? [])],
+      tags: task.metadata.tags ? [...task.metadata.tags] : undefined,
+      recurrence_completions: task.metadata.recurrence_completions
+        ? [...task.metadata.recurrence_completions]
+        : undefined,
+      recurrence_exceptions: task.metadata.recurrence_exceptions
+        ? [...task.metadata.recurrence_exceptions]
+        : undefined,
+    },
+  };
+}
+
 export function useAiAssistant() {
   const dispatch = useAppDispatch();
 
@@ -78,10 +124,16 @@ export function useAiAssistant() {
   const [proposalStatuses, setProposalStatuses] = useState<Record<string, ProposalStatus>>({});
   const [proposalErrors, setProposalErrors] = useState<Record<string, string>>({});
   const [isConfirmingAll, setIsConfirmingAll] = useState(false);
+  // saved after confirm — powers per-proposal Undo
+  const [proposalUndoRecords, setProposalUndoRecords] = useState<Record<string, ProposalUndoRecord>>({});
 
   // ref stays in sync so confirmAll can read fresh status mid-async loop
   const proposalStatusesRef = useRef(proposalStatuses);
   proposalStatusesRef.current = proposalStatuses;
+  const proposalUndoRecordsRef = useRef(proposalUndoRecords);
+  proposalUndoRecordsRef.current = proposalUndoRecords;
+  // tracks in-flight create so undo during api can cancel the new task
+  const createInFlightRef = useRef<Record<string, Promise<string>>>({});
 
   const getProposalPayload = useCallback(
     (messageId: string, proposal: TaskProposal): TaskProposalPayload => {
@@ -136,26 +188,28 @@ export function useAiAssistant() {
       delete updated[key];
       return updated;
     });
+    const nextUndoRecords = { ...proposalUndoRecordsRef.current };
+    delete nextUndoRecords[key];
+    proposalUndoRecordsRef.current = nextUndoRecords;
+    setProposalUndoRecords(nextUndoRecords);
   }, []);
 
   const confirmProposal = useCallback(
-    async (messageId: string, proposal: TaskProposal) => {
+    (messageId: string, proposal: TaskProposal) => {
       const key = proposalKey(messageId, proposal.id);
       const status = proposalStatusesRef.current[key] ?? 'pending';
-      if (status === 'confirming' || status === 'confirmed' || status === 'dismissed') {
+      if (status === 'confirmed' || status === 'dismissed') {
         return;
       }
 
       const payload = editedPayloads[key] ?? proposal.payload;
-
-      const nextConfirming = { ...proposalStatusesRef.current, [key]: 'confirming' as const };
-      proposalStatusesRef.current = nextConfirming;
-      setProposalStatuses(nextConfirming);
       setProposalErrors((prev) => {
         const next = { ...prev };
         delete next[key];
         return next;
       });
+
+      let undoRecord: ProposalUndoRecord | undefined;
 
       try {
         if (proposal.type === 'create') {
@@ -163,21 +217,41 @@ export function useAiAssistant() {
           if (!createPayload.title?.trim()) {
             throw new Error('Title is required.');
           }
-          // reuse the same createTask thunk as TaskQuickAddForm
-          await dispatch(createTask(toCreateTaskInput(createPayload))).unwrap();
         } else if (proposal.type === 'update') {
           const updatePayload = payload as UpdateProposalPayload;
-          await dispatch(
-            updateTask({ id: updatePayload.taskId, updates: updatePayload.updates })
-          ).unwrap();
+          const existingTask = store
+            .getState()
+            .tasks.tasks.find((task) => task.id === updatePayload.taskId);
+          if (!existingTask) {
+            throw new Error('Task not found.');
+          }
+          undoRecord = {
+            kind: 'update',
+            taskId: updatePayload.taskId,
+            previousTask: cloneTaskSnapshot(existingTask),
+          };
+          // updateTask.pending applies changes immediately in redux
+          dispatch(updateTask({ id: updatePayload.taskId, updates: updatePayload.updates }));
         } else {
           const deletePayload = payload as DeleteProposalPayload;
-          await dispatch(deleteTask(deletePayload.taskId)).unwrap();
+          const existingTask = store
+            .getState()
+            .tasks.tasks.find((task) => task.id === deletePayload.taskId);
+          if (!existingTask) {
+            throw new Error('Task not found.');
+          }
+          undoRecord = {
+            kind: 'delete',
+            taskId: deletePayload.taskId,
+            previousTask: cloneTaskSnapshot(existingTask),
+          };
+          dispatch(
+            optimisticUpdateTask({
+              id: deletePayload.taskId,
+              updates: { softDeleted: true },
+            }),
+          );
         }
-
-        const nextConfirmed = { ...proposalStatusesRef.current, [key]: 'confirmed' as const };
-        proposalStatusesRef.current = nextConfirmed;
-        setProposalStatuses(nextConfirmed);
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : 'Could not apply this change. Try again.';
@@ -185,9 +259,88 @@ export function useAiAssistant() {
         proposalStatusesRef.current = nextFailed;
         setProposalStatuses(nextFailed);
         setProposalErrors((prev) => ({ ...prev, [key]: message }));
+        return;
       }
+
+      if (undoRecord) {
+        const nextUndo = { ...proposalUndoRecordsRef.current, [key]: undoRecord };
+        proposalUndoRecordsRef.current = nextUndo;
+        setProposalUndoRecords(nextUndo);
+      }
+
+      // confirmed immediately — indicator/pill cross-fades without waiting on api
+      const nextConfirmed = { ...proposalStatusesRef.current, [key]: 'confirmed' as const };
+      proposalStatusesRef.current = nextConfirmed;
+      setProposalStatuses(nextConfirmed);
+
+      void (async () => {
+        try {
+          if (proposal.type === 'create') {
+            const createPayload = payload as CreateProposalPayload;
+            const createPromise = dispatch(createTask(toCreateTaskInput(createPayload)))
+              .unwrap()
+              .then((createdTask) => {
+                if (proposalStatusesRef.current[key] === 'pending') {
+                  void dispatch(deleteTask(createdTask.id));
+                  return createdTask.id;
+                }
+                const createUndo: ProposalUndoRecord = {
+                  kind: 'create',
+                  createdTaskId: createdTask.id,
+                };
+                const nextUndo = { ...proposalUndoRecordsRef.current, [key]: createUndo };
+                proposalUndoRecordsRef.current = nextUndo;
+                setProposalUndoRecords(nextUndo);
+                return createdTask.id;
+              })
+              .finally(() => {
+                delete createInFlightRef.current[key];
+              });
+            createInFlightRef.current[key] = createPromise;
+            await createPromise;
+          } else if (proposal.type === 'update') {
+            const updatePayload = payload as UpdateProposalPayload;
+            await dispatch(
+              updateTask({ id: updatePayload.taskId, updates: updatePayload.updates }),
+            ).unwrap();
+          } else {
+            const deletePayload = payload as DeleteProposalPayload;
+            await dispatch(deleteTask(deletePayload.taskId)).unwrap();
+          }
+        } catch (err: unknown) {
+          const message =
+            err instanceof Error ? err.message : 'Could not apply this change. Try again.';
+
+          if (proposal.type === 'update' && undoRecord?.kind === 'update') {
+            const updatePayload = payload as UpdateProposalPayload;
+            dispatch(
+              optimisticUpdateTask({
+                id: undoRecord.taskId,
+                updates: buildReverseUpdateFields(
+                  undoRecord.previousTask,
+                  updatePayload.updates ?? {},
+                ),
+              }),
+            );
+          } else if (proposal.type === 'delete' && undoRecord?.kind === 'delete') {
+            dispatch(optimisticUpsertTask(undoRecord.previousTask));
+          } else if (proposal.type === 'create') {
+            delete createInFlightRef.current[key];
+          }
+
+          const nextFailed = { ...proposalStatusesRef.current, [key]: 'failed' as const };
+          proposalStatusesRef.current = nextFailed;
+          setProposalStatuses(nextFailed);
+          setProposalErrors((prev) => ({ ...prev, [key]: message }));
+
+          const nextUndoRecords = { ...proposalUndoRecordsRef.current };
+          delete nextUndoRecords[key];
+          proposalUndoRecordsRef.current = nextUndoRecords;
+          setProposalUndoRecords(nextUndoRecords);
+        }
+      })();
     },
-    [dispatch, editedPayloads]
+    [dispatch, editedPayloads],
   );
 
   const confirmAllProposals = useCallback(
@@ -207,13 +360,122 @@ export function useAiAssistant() {
             ),
           );
           if (pending.length === 0) break;
-          await confirmProposal(messageId, pending[0]);
+          confirmProposal(messageId, pending[0]);
         }
       } finally {
         setIsConfirmingAll(false);
       }
     },
     [confirmProposal, isConfirmingAll, messages],
+  );
+
+  const undoProposal = useCallback(
+    (messageId: string, proposal: TaskProposal) => {
+      const key = proposalKey(messageId, proposal.id);
+      const status = proposalStatusesRef.current[key] ?? 'pending';
+      if (status !== 'confirmed') {
+        return;
+      }
+
+      const undoRecord = proposalUndoRecordsRef.current[key];
+      const updatePayload = (editedPayloads[key] ?? proposal.payload) as UpdateProposalPayload;
+
+      // pending immediately — indicator/pill cross-fades without waiting on api
+      const nextPending = { ...proposalStatusesRef.current, [key]: 'pending' as const };
+      proposalStatusesRef.current = nextPending;
+      setProposalStatuses(nextPending);
+      setProposalErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+
+      const nextUndoRecords = { ...proposalUndoRecordsRef.current };
+      delete nextUndoRecords[key];
+      proposalUndoRecordsRef.current = nextUndoRecords;
+      setProposalUndoRecords(nextUndoRecords);
+
+      if (proposal.type === 'update' && undoRecord?.kind === 'update') {
+        dispatch(
+          updateTask({
+            id: undoRecord.taskId,
+            updates: buildReverseUpdateFields(
+              undoRecord.previousTask,
+              updatePayload.updates ?? {},
+            ),
+          }),
+        );
+      } else if (proposal.type === 'delete' && undoRecord?.kind === 'delete') {
+        dispatch(optimisticUpsertTask({ ...undoRecord.previousTask, softDeleted: false }));
+      }
+
+      void (async () => {
+        try {
+          if (proposal.type === 'create') {
+            let createdTaskId =
+              undoRecord?.kind === 'create' ? undoRecord.createdTaskId : undefined;
+            if (!createdTaskId) {
+              const inFlight = createInFlightRef.current[key];
+              if (inFlight) {
+                createdTaskId = await inFlight;
+              }
+            }
+            if (!createdTaskId) {
+              throw new Error('Could not undo this change. Try again.');
+            }
+            dispatch(
+              optimisticUpdateTask({
+                id: createdTaskId,
+                updates: { softDeleted: true },
+              }),
+            );
+            await dispatch(deleteTask(createdTaskId)).unwrap();
+          } else if (proposal.type === 'update' && undoRecord?.kind === 'update') {
+            await dispatch(
+              updateTask({
+                id: undoRecord.taskId,
+                updates: buildReverseUpdateFields(
+                  undoRecord.previousTask,
+                  updatePayload.updates ?? {},
+                ),
+              }),
+            ).unwrap();
+          } else if (proposal.type === 'delete' && undoRecord?.kind === 'delete') {
+            await tasksApiService.restoreTask(undoRecord.taskId);
+            await dispatch(fetchTasks()).unwrap();
+          }
+        } catch (err: unknown) {
+          const message =
+            err instanceof Error ? err.message : 'Could not undo this change. Try again.';
+
+          if (proposal.type === 'update' && undoRecord?.kind === 'update') {
+            dispatch(
+              updateTask({ id: undoRecord.taskId, updates: updatePayload.updates ?? {} }),
+            );
+          } else if (proposal.type === 'delete' && undoRecord?.kind === 'delete') {
+            dispatch(
+              optimisticUpdateTask({
+                id: undoRecord.taskId,
+                updates: { softDeleted: true },
+              }),
+            );
+          }
+
+          const nextConfirmed = { ...proposalStatusesRef.current, [key]: 'confirmed' as const };
+          proposalStatusesRef.current = nextConfirmed;
+          setProposalStatuses(nextConfirmed);
+
+          if (undoRecord) {
+            const restoredUndo = { ...proposalUndoRecordsRef.current, [key]: undoRecord };
+            proposalUndoRecordsRef.current = restoredUndo;
+            setProposalUndoRecords(restoredUndo);
+          }
+
+          setProposalErrors((prev) => ({ ...prev, [key]: message }));
+        }
+      })();
+    },
+    [dispatch, editedPayloads],
   );
 
   const sendMessage = useCallback(
@@ -280,6 +542,9 @@ export function useAiAssistant() {
     setProposalStatuses({});
     proposalStatusesRef.current = {};
     setProposalErrors({});
+    setProposalUndoRecords({});
+    proposalUndoRecordsRef.current = {};
+    createInFlightRef.current = {};
     setIsConfirmingAll(false);
   }, []);
 
@@ -299,6 +564,7 @@ export function useAiAssistant() {
       confirmProposal,
       confirmAllProposals,
       dismissProposal,
+      undoProposal,
       getProposalStatus,
       getProposalError,
       getPendingProposals,
@@ -317,6 +583,7 @@ export function useAiAssistant() {
       confirmProposal,
       confirmAllProposals,
       dismissProposal,
+      undoProposal,
       getProposalStatus,
       getProposalError,
       getPendingProposals,

@@ -54,6 +54,8 @@ import {
   CHAT_COMPOSER_HEADER_GAP,
   CHAT_SUBMITTED_SHELL_HEIGHT_ESTIMATE,
   CHAT_SESSION_RESPONSE_GAP,
+  CHAT_SESSION_CONTENT_EXIT_FADE_MS,
+  CHAT_SESSION_BLOCK_SPACING,
 } from '@/components/features/ai/chatComposerUiTokens';
 import { useKeyboardHeight } from '@/components/layout/ScreenLayout';
 import { useTabFabOverlay } from '@/contexts/TabFabOverlayContext';
@@ -99,8 +101,13 @@ export default function AITabScreen() {
     sendMessage,
     clearError,
     resetSession,
+    confirmProposal,
     confirmAllProposals,
+    dismissProposal,
+    undoProposal,
+    getProposalPayload,
     getProposalStatus,
+    getProposalError,
     isConfirmingAll,
   } = useAiAssistant();
 
@@ -122,10 +129,18 @@ export default function AITabScreen() {
   const [introBackgroundHasAnimated, setIntroBackgroundHasAnimated] = useState(false);
   // window Y of the bottom edge of the slid-up composer — positions response below it
   const [sessionComposerBottom, setSessionComposerBottom] = useState(0);
+  // frozen when sliding back — stops reply/proposals chasing the composer down
+  const [frozenSessionContentPaddingTop, setFrozenSessionContentPaddingTop] = useState<
+    number | null
+  >(null);
+  // unmount reply/proposals after exit fade so they cannot flash when session tears down
+  const [isSessionBodyVisible, setIsSessionBodyVisible] = useState(true);
 
   const composerAnchorRef = useRef<View>(null);
   // 0 = greeting position, 1 = submitted shell at header
   const sessionProgress = useSharedValue(0);
+  // fades reply + proposals quickly on back-to-greeting
+  const sessionContentOpacity = useSharedValue(1);
   // translateY offset captured on send — negative moves the composer up toward the header
   const sessionSlideOffset = useSharedValue(0);
   // bottom inset frozen for the duration of the slide so keyboard dismiss does not drift the path
@@ -185,16 +200,21 @@ export default function AITabScreen() {
   const fallbackResponsePaddingTop =
     sessionTargetTop + CHAT_SUBMITTED_SHELL_HEIGHT_ESTIMATE + CHAT_SESSION_RESPONSE_GAP;
   const sessionResponsePaddingTop =
-    sessionComposerBottom > 0
+    frozenSessionContentPaddingTop ??
+    (sessionComposerBottom > 0
       ? sessionComposerBottom + CHAT_SESSION_RESPONSE_GAP
-      : fallbackResponsePaddingTop;
+      : fallbackResponsePaddingTop);
+
+  const sessionContentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: sessionContentOpacity.value,
+  }));
 
   const measureSessionComposerBottom = useCallback(() => {
-    if (!isSessionVisible) return;
+    if (!isSessionVisible || isSessionReturningToGreeting) return;
     composerAnchorRef.current?.measureInWindow((_x, y, _width, height) => {
       setSessionComposerBottom(y + height);
     });
-  }, [isSessionVisible]);
+  }, [isSessionVisible, isSessionReturningToGreeting]);
 
   const handleComposerAnchorLayout = useCallback(
     (_event: LayoutChangeEvent) => {
@@ -258,6 +278,8 @@ export default function AITabScreen() {
     setIsSessionMode(false);
     setIsSessionTransitioning(false);
     setIsSessionReturningToGreeting(false);
+    setFrozenSessionContentPaddingTop(null);
+    setIsSessionBodyVisible(true);
     setPrompt('');
     setSubmittedPrompt('');
     refreshIntroCopy();
@@ -297,6 +319,10 @@ export default function AITabScreen() {
     ],
   );
 
+  const hideSessionBodyAfterExitFade = useCallback(() => {
+    setIsSessionBodyVisible(false);
+  }, []);
+
   const handleBackToPrompt = useCallback(() => {
     if (sessionProgress.value <= 0) {
       finishBackToPrompt();
@@ -307,6 +333,25 @@ export default function AITabScreen() {
     setIsSessionMode(false);
     setIsSessionReturningToGreeting(true);
     setIsSessionTransitioning(true);
+
+    // lock scroll inset + fade session body — composer slides alone back to greeting
+    setFrozenSessionContentPaddingTop(
+      sessionComposerBottom > 0
+        ? sessionComposerBottom + CHAT_SESSION_RESPONSE_GAP
+        : fallbackResponsePaddingTop,
+    );
+    sessionContentOpacity.value = withTiming(
+      0,
+      {
+        duration: CHAT_SESSION_CONTENT_EXIT_FADE_MS,
+        easing: CHAT_COMPOSER_LAYOUT_EASING,
+      },
+      (finished) => {
+        if (finished) {
+          runOnJS(hideSessionBodyAfterExitFade)();
+        }
+      },
+    );
 
     const startBackSlide = (currentTop: number) => {
       const restingBaseTop =
@@ -343,7 +388,35 @@ export default function AITabScreen() {
     windowHeight,
     restingComposerBottom,
     sessionTargetTop,
+    sessionComposerBottom,
+    fallbackResponsePaddingTop,
+    sessionContentOpacity,
+    hideSessionBodyAfterExitFade,
   ]);
+
+  const handleConfirmProposal = useCallback(
+    (proposal: (typeof latestAssistantProposals)[number]) => {
+      if (!latestAssistantMessage) return;
+      void confirmProposal(latestAssistantMessage.id, proposal);
+    },
+    [latestAssistantMessage, confirmProposal],
+  );
+
+  const handleDismissProposal = useCallback(
+    (proposalId: string) => {
+      if (!latestAssistantMessage) return;
+      dismissProposal(latestAssistantMessage.id, proposalId);
+    },
+    [latestAssistantMessage, dismissProposal],
+  );
+
+  const handleUndoProposal = useCallback(
+    (proposal: (typeof latestAssistantProposals)[number]) => {
+      if (!latestAssistantMessage) return;
+      void undoProposal(latestAssistantMessage.id, proposal);
+    },
+    [latestAssistantMessage, undoProposal],
+  );
 
   const handleFooterPress = useCallback(() => {
     if (!latestAssistantMessage) return;
@@ -362,6 +435,8 @@ export default function AITabScreen() {
     setPrompt('');
     setScreenPhase('session');
     setIsSessionTransitioning(true);
+    setIsSessionBodyVisible(true);
+    sessionContentOpacity.value = 1;
     clearError();
     void sendMessage(trimmed);
     Keyboard.dismiss();
@@ -388,6 +463,7 @@ export default function AITabScreen() {
     keyboardHeight,
     composerGap,
     restingComposerBottom,
+    sessionContentOpacity,
   ]);
 
   const handlePickSuggestion = useCallback((description: string) => {
@@ -428,7 +504,10 @@ export default function AITabScreen() {
     setIntroBackgroundMounted(false);
     setIntroBackgroundHasAnimated(false);
     setIntroRunKey(0);
-  }, [sessionProgress, sessionSlideOffset, sessionAnchorBottom]);
+    setFrozenSessionContentPaddingTop(null);
+    setIsSessionBodyVisible(true);
+    sessionContentOpacity.value = 1;
+  }, [sessionProgress, sessionSlideOffset, sessionAnchorBottom, sessionContentOpacity]);
 
   const { setTabFabRegistration } = useTabFabOverlay();
   useFocusEffect(
@@ -519,7 +598,7 @@ export default function AITabScreen() {
             ) : null}
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
               <View style={styles.dismissTapArea}>
-                {isSessionVisible ? (
+                {isSessionVisible && isSessionBodyVisible ? (
                   <ScrollView
                     style={styles.sessionScroll}
                     contentContainerStyle={[
@@ -531,30 +610,42 @@ export default function AITabScreen() {
                     ]}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
+                    pointerEvents={isSessionReturningToGreeting ? 'none' : 'auto'}
                   >
-                    {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
-                    {isLoading || latestAssistantReply ? (
-                      <AiAssistantResponseShell
-                        content={latestAssistantReply}
-                        isLoading={isLoading}
-                      />
-                    ) : null}
-                    {latestAssistantProposals.length > 0 ? (
-                      <AiSessionProposalList
-                        proposals={latestAssistantProposals}
-                        tasks={tasks}
-                        messageId={latestAssistantMessage.id}
-                        getProposalStatus={getProposalStatus}
-                      />
-                    ) : null}
-                    {!isLoading && latestAssistantMessage ? (
-                      <AiSessionProposalFooter
-                        mode={pendingProposalCount > 0 ? 'acceptAll' : 'startNew'}
-                        onPress={handleFooterPress}
-                        loading={isConfirmingAll}
-                        disabled={isConfirmingAll}
-                      />
-                    ) : null}
+                    <Animated.View
+                      style={[sessionContentAnimatedStyle, styles.sessionContentStack]}
+                      pointerEvents={isSessionReturningToGreeting ? 'none' : 'auto'}
+                    >
+                      {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
+                      {isLoading || latestAssistantReply ? (
+                        <AiAssistantResponseShell
+                          content={latestAssistantReply}
+                          isLoading={isLoading}
+                        />
+                      ) : null}
+                      {latestAssistantProposals.length > 0 ? (
+                        <AiSessionProposalList
+                          proposals={latestAssistantProposals}
+                          tasks={tasks}
+                          messageId={latestAssistantMessage.id}
+                          getProposalStatus={getProposalStatus}
+                          getProposalPayload={getProposalPayload}
+                          getProposalError={getProposalError}
+                          onConfirmProposal={handleConfirmProposal}
+                          onDismissProposal={handleDismissProposal}
+                          onUndoProposal={handleUndoProposal}
+                          isConfirmingAll={isConfirmingAll}
+                        />
+                      ) : null}
+                      {!isLoading && latestAssistantMessage ? (
+                        <AiSessionProposalFooter
+                          mode={pendingProposalCount > 0 ? 'acceptAll' : 'startNew'}
+                          onPress={handleFooterPress}
+                          loading={isConfirmingAll}
+                          disabled={isConfirmingAll}
+                        />
+                      ) : null}
+                    </Animated.View>
                   </ScrollView>
                 ) : (
                   <View style={styles.inner}>
@@ -589,6 +680,7 @@ export default function AITabScreen() {
                 isComposerExpanded={isComposerExpanded}
                 sessionProgress={sessionProgress}
                 isSessionMode={isSessionMode && !isSessionReturningToGreeting}
+                isSessionTransitioning={isSessionTransitioning}
                 isSessionReturningToGreeting={isSessionReturningToGreeting}
                 onPickSuggestion={handlePickSuggestion}
               />
@@ -676,6 +768,9 @@ const createStyles = (
     },
     sessionScrollContent: {
       paddingHorizontal: CHAT_SESSION_ANCHOR_HORIZONTAL_INSET,
+    },
+    sessionContentStack: {
+      gap: CHAT_SESSION_BLOCK_SPACING,
     },
     composerAnchor: {
       position: 'absolute',

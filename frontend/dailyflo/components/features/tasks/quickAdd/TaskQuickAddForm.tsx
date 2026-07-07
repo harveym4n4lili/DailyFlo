@@ -55,6 +55,7 @@ import { validateAll } from '@/components/forms/TaskForm/TaskValidation';
 import type { TaskFormValues } from '@/components/forms/TaskForm/TaskValidation';
 import { Paddings } from '@/constants/Paddings';
 import { getTextStyle, getTypographyStyle } from '@/constants/Typography';
+import { QUICK_ADD_PILL_LABEL_TEXT_STYLE } from './QuickAddLabelOnlyPill';
 import type { CreateTaskInput, RoutineType, Subtask as TaskSubtask } from '@/types';
 import { mapAlertIdsToTaskReminders, getConfigurableAlertsCount } from '@/utils/taskAlertReminders';
 import { resolveRecurrenceAnchorDueDate } from '@/utils/recurrenceUtils';
@@ -979,7 +980,7 @@ const styles = StyleSheet.create({
     marginRight: Paddings.formDataPillIconGap,
   },
   pillText: {
-    ...getTextStyle('body-large'),
+    ...QUICK_ADD_PILL_LABEL_TEXT_STYLE,
   },
   fabPrimaryGlass: {
     justifyContent: 'center',
