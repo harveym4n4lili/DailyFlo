@@ -8,7 +8,7 @@
  * 4. dismissProposal → hide proposal without touching tasks
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import llmApiService, { mapLlmErrorToUserMessage } from '@/services/api/llm';
 import { useAppDispatch } from '@/store';
 import { createTask, deleteTask, updateTask } from '@/store/slices/tasks/tasksSlice';
@@ -59,6 +59,11 @@ function toCreateTaskInput(payload: CreateProposalPayload): CreateTaskInput {
   };
 }
 
+/** pending + failed proposals can still be applied from Accept All */
+function isProposalActionable(status: ProposalStatus): boolean {
+  return status === 'pending' || status === 'failed';
+}
+
 export function useAiAssistant() {
   const dispatch = useAppDispatch();
 
@@ -72,6 +77,11 @@ export function useAiAssistant() {
   // per-proposal UI status (pending → confirming → confirmed / failed / dismissed)
   const [proposalStatuses, setProposalStatuses] = useState<Record<string, ProposalStatus>>({});
   const [proposalErrors, setProposalErrors] = useState<Record<string, string>>({});
+  const [isConfirmingAll, setIsConfirmingAll] = useState(false);
+
+  // ref stays in sync so confirmAll can read fresh status mid-async loop
+  const proposalStatusesRef = useRef(proposalStatuses);
+  proposalStatusesRef.current = proposalStatuses;
 
   const getProposalPayload = useCallback(
     (messageId: string, proposal: TaskProposal): TaskProposalPayload => {
@@ -95,6 +105,19 @@ export function useAiAssistant() {
     [proposalErrors]
   );
 
+  const getPendingProposals = useCallback(
+    (messageId: string): TaskProposal[] => {
+      const message = messages.find((entry) => entry.id === messageId);
+      if (!message?.proposals?.length) return [];
+      return message.proposals.filter((proposal) =>
+        isProposalActionable(
+          proposalStatusesRef.current[proposalKey(messageId, proposal.id)] ?? 'pending',
+        ),
+      );
+    },
+    [messages],
+  );
+
   const updateProposalPayload = useCallback(
     (messageId: string, proposalId: string, payload: TaskProposalPayload) => {
       const key = proposalKey(messageId, proposalId);
@@ -105,25 +128,29 @@ export function useAiAssistant() {
 
   const dismissProposal = useCallback((messageId: string, proposalId: string) => {
     const key = proposalKey(messageId, proposalId);
-    setProposalStatuses((prev) => ({ ...prev, [key]: 'dismissed' }));
+    const next = { ...proposalStatusesRef.current, [key]: 'dismissed' as const };
+    proposalStatusesRef.current = next;
+    setProposalStatuses(next);
     setProposalErrors((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
+      const updated = { ...prev };
+      delete updated[key];
+      return updated;
     });
   }, []);
 
   const confirmProposal = useCallback(
     async (messageId: string, proposal: TaskProposal) => {
       const key = proposalKey(messageId, proposal.id);
-      const status = proposalStatuses[key] ?? 'pending';
+      const status = proposalStatusesRef.current[key] ?? 'pending';
       if (status === 'confirming' || status === 'confirmed' || status === 'dismissed') {
         return;
       }
 
       const payload = editedPayloads[key] ?? proposal.payload;
 
-      setProposalStatuses((prev) => ({ ...prev, [key]: 'confirming' }));
+      const nextConfirming = { ...proposalStatusesRef.current, [key]: 'confirming' as const };
+      proposalStatusesRef.current = nextConfirming;
+      setProposalStatuses(nextConfirming);
       setProposalErrors((prev) => {
         const next = { ...prev };
         delete next[key];
@@ -148,15 +175,45 @@ export function useAiAssistant() {
           await dispatch(deleteTask(deletePayload.taskId)).unwrap();
         }
 
-        setProposalStatuses((prev) => ({ ...prev, [key]: 'confirmed' }));
+        const nextConfirmed = { ...proposalStatusesRef.current, [key]: 'confirmed' as const };
+        proposalStatusesRef.current = nextConfirmed;
+        setProposalStatuses(nextConfirmed);
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : 'Could not apply this change. Try again.';
-        setProposalStatuses((prev) => ({ ...prev, [key]: 'failed' }));
+        const nextFailed = { ...proposalStatusesRef.current, [key]: 'failed' as const };
+        proposalStatusesRef.current = nextFailed;
+        setProposalStatuses(nextFailed);
         setProposalErrors((prev) => ({ ...prev, [key]: message }));
       }
     },
-    [dispatch, editedPayloads, proposalStatuses]
+    [dispatch, editedPayloads]
+  );
+
+  const confirmAllProposals = useCallback(
+    async (messageId: string) => {
+      if (isConfirmingAll) return;
+
+      setIsConfirmingAll(true);
+      try {
+        const message = messages.find((entry) => entry.id === messageId);
+        if (!message?.proposals?.length) return;
+
+        // apply each pending/failed proposal in order — ref keeps status fresh between awaits
+        while (true) {
+          const pending = message.proposals.filter((proposal) =>
+            isProposalActionable(
+              proposalStatusesRef.current[proposalKey(messageId, proposal.id)] ?? 'pending',
+            ),
+          );
+          if (pending.length === 0) break;
+          await confirmProposal(messageId, pending[0]);
+        }
+      } finally {
+        setIsConfirmingAll(false);
+      }
+    },
+    [confirmProposal, isConfirmingAll, messages],
   );
 
   const sendMessage = useCallback(
@@ -221,7 +278,9 @@ export function useAiAssistant() {
     setError(null);
     setEditedPayloads({});
     setProposalStatuses({});
+    proposalStatusesRef.current = {};
     setProposalErrors({});
+    setIsConfirmingAll(false);
   }, []);
 
   const hasMessages = messages.length > 0;
@@ -232,30 +291,35 @@ export function useAiAssistant() {
       isLoading,
       error,
       hasMessages,
+      isConfirmingAll,
       sendMessage,
       resetSession,
       getProposalPayload,
       updateProposalPayload,
       confirmProposal,
+      confirmAllProposals,
       dismissProposal,
       getProposalStatus,
       getProposalError,
+      getPendingProposals,
       clearError,
-      resetSession,
     }),
     [
       messages,
       isLoading,
       error,
       hasMessages,
+      isConfirmingAll,
       sendMessage,
       resetSession,
       getProposalPayload,
       updateProposalPayload,
       confirmProposal,
+      confirmAllProposals,
       dismissProposal,
       getProposalStatus,
       getProposalError,
+      getPendingProposals,
       clearError,
     ]
   );

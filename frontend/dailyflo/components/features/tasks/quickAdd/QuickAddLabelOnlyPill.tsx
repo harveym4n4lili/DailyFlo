@@ -20,7 +20,29 @@ export type QuickAddPillChromeProps = {
   variant?: 'outlined' | 'primarySecondaryBlend';
   blendSurfaceColor?: string;
   style?: import('react-native').ViewStyle;
+  /** stretch inner content to shell width — full-width footer pills */
+  stretchContent?: boolean;
+  /** outlined ring color override — e.g. brand 500 proposal type chip */
+  borderColor?: import('react-native').ColorValue;
+  /** outlined inner fill — e.g. background.primary() behind label */
+  innerBackgroundColor?: string;
+  /** `compact` — smaller radius + padding for inline badges */
+  size?: 'default' | 'compact' | 'badge';
 };
+
+const COMPACT_PILL_RADIUS = 12;
+const COMPACT_PILL_PADDING = {
+  paddingVertical: Paddings.touchTargetSmall,
+  paddingHorizontal: 8,
+} as const;
+
+/** proposal type chip on session cards — roomier than compact + icon + label row */
+const BADGE_PILL_RADIUS = 14;
+const BADGE_PILL_PADDING = {
+  paddingVertical: 6,
+  paddingHorizontal: 10,
+} as const;
+const BADGE_PILL_INNER_GAP = 6;
 
 /** non-pressable pill surface — same chrome as `QuickAddLabelOnlyPill` for custom inner content */
 export function QuickAddPillChrome({
@@ -28,34 +50,73 @@ export function QuickAddPillChrome({
   variant = 'outlined',
   blendSurfaceColor,
   style,
+  stretchContent = false,
+  borderColor,
+  innerBackgroundColor,
+  size = 'default',
 }: QuickAddPillChromeProps) {
   const themeColors = useThemeColors();
   const isBlend = variant === 'primarySecondaryBlend';
+  const isCompact = size === 'compact';
+  const isBadge = size === 'badge';
+  const shellRadius = isBadge
+    ? BADGE_PILL_RADIUS
+    : isCompact
+      ? COMPACT_PILL_RADIUS
+      : Paddings.formDataPillRadius;
   const surfaceColor = isBlend
     ? (blendSurfaceColor ?? themeColors.background.primarySecondaryBlend())
     : undefined;
-  const borderColor = themeColors.border.secondary();
+  const ringBorderColor = borderColor ?? themeColors.border.secondary();
+  // filled outlined pills — border + bg on shell so the inner layer does not paint over the ring
+  const useFilledOutline = !isBlend && innerBackgroundColor != null;
 
   return (
-    <View style={[pillStyles.shell, style]}>
-      {isBlend ? (
+    <View
+      style={[
+        pillStyles.shell,
+        { borderRadius: shellRadius },
+        useFilledOutline && {
+          borderWidth: QUICK_ADD_PILL_BORDER_WIDTH,
+          borderColor: ringBorderColor,
+          backgroundColor: innerBackgroundColor,
+        },
+        style,
+      ]}
+    >
+      {!useFilledOutline && isBlend ? (
         <View
           pointerEvents="none"
-          style={[pillStyles.ring, { backgroundColor: surfaceColor }]}
+          style={[pillStyles.ring, { borderRadius: shellRadius, backgroundColor: surfaceColor }]}
         />
-      ) : (
+      ) : null}
+      {!useFilledOutline && !isBlend ? (
         <View
           pointerEvents="none"
           style={[
             pillStyles.ring,
             {
+              borderRadius: shellRadius,
               borderWidth: QUICK_ADD_PILL_BORDER_WIDTH,
-              borderColor,
+              borderColor: ringBorderColor,
             },
           ]}
         />
-      )}
-      <View style={[pillStyles.inner, !isBlend && { backgroundColor: 'transparent' }]}>{children}</View>
+      ) : null}
+      <View
+        style={[
+          pillStyles.inner,
+          isBadge ? BADGE_PILL_PADDING : isCompact ? COMPACT_PILL_PADDING : undefined,
+          isBadge && pillStyles.innerBadge,
+          stretchContent && pillStyles.innerStretch,
+          !isBlend && !useFilledOutline && {
+            backgroundColor: innerBackgroundColor ?? 'transparent',
+          },
+          useFilledOutline && { backgroundColor: 'transparent' },
+        ]}
+      >
+        {children}
+      </View>
     </View>
   );
 }
@@ -78,6 +139,9 @@ export type QuickAddLabelOnlyPillProps = {
    * Android/web unchanged — solid surfaces only.
    */
   useLiquidGlassOnIos?: boolean;
+  /** stretch pill to parent width — session Accept All / Start new footer */
+  fullWidth?: boolean;
+  disabled?: boolean;
 };
 
 export function QuickAddLabelOnlyPill({
@@ -88,6 +152,8 @@ export function QuickAddLabelOnlyPill({
   blendSurfaceColor,
   blendLabelColor,
   useLiquidGlassOnIos = false,
+  fullWidth = false,
+  disabled = false,
 }: QuickAddLabelOnlyPillProps) {
   const themeColors = useThemeColors();
   const isBlend = variant === 'primarySecondaryBlend';
@@ -99,9 +165,21 @@ export function QuickAddLabelOnlyPill({
     <QuickAddPillChrome
       variant={variant}
       blendSurfaceColor={blendSurfaceColor}
-      style={useGlass ? pillStyles.glassChromeHost : undefined}
+      stretchContent={fullWidth}
+      style={[
+        useGlass ? pillStyles.glassChromeHost : undefined,
+        fullWidth ? pillStyles.fullWidthChrome : undefined,
+      ]}
     >
-      <Text style={[pillStyles.label, getTextStyle('body-large'), { color: textColor }]} numberOfLines={1}>
+      <Text
+        style={[
+          pillStyles.label,
+          fullWidth ? pillStyles.fullWidthLabel : undefined,
+          getTextStyle('body-large'),
+          { color: textColor },
+        ]}
+        numberOfLines={1}
+      >
         {label}
       </Text>
     </QuickAddPillChrome>
@@ -109,8 +187,14 @@ export function QuickAddLabelOnlyPill({
 
   return (
     <Pressable
-      style={[pillStyles.tapZone, useGlass && pillStyles.tapZoneGlass]}
+      style={[
+        pillStyles.tapZone,
+        fullWidth ? pillStyles.tapZoneFullWidth : undefined,
+        useGlass && pillStyles.tapZoneGlass,
+        disabled ? pillStyles.tapZoneDisabled : undefined,
+      ]}
       onPress={onPress}
+      disabled={disabled}
       hitSlop={{ top: Paddings.touchTarget, bottom: Paddings.touchTarget, left: Paddings.touchTarget, right: Paddings.touchTarget }}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
@@ -144,6 +228,21 @@ const pillStyles = StyleSheet.create({
   },
   tapZoneGlass: {
     overflow: 'visible',
+  },
+  tapZoneFullWidth: {
+    alignSelf: 'stretch',
+    width: '100%',
+  },
+  tapZoneDisabled: {
+    opacity: 0.65,
+  },
+  fullWidthChrome: {
+    alignSelf: 'stretch',
+    width: '100%',
+  },
+  fullWidthLabel: {
+    alignSelf: 'stretch',
+    textAlign: 'center',
   },
   glassBleedSlot: {
     margin: -Paddings.liquidGlassBleed,
@@ -180,6 +279,14 @@ const pillStyles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingVertical: Paddings.formDataPillVertical,
     paddingHorizontal: Paddings.formDataPillHorizontal,
+  },
+  innerStretch: {
+    alignSelf: 'stretch',
+    width: '100%',
+    justifyContent: 'center',
+  },
+  innerBadge: {
+    gap: BADGE_PILL_INNER_GAP,
   },
   label: {},
 });

@@ -37,6 +37,8 @@ interface TaskCardContentProps {
   titleRightShowLeaf?: boolean;
   /** fired with measured height of the first title line (from onTextLayout) so checkbox can center in that band */
   onFirstLineHeightChange?: (height: number) => void;
+  /** title-only strikethrough without treating the task as completed (e.g. delete proposals) */
+  titleStrikethrough?: boolean;
 }
 
 const TITLE_RIGHT_LEAF_SIZE = 14;
@@ -82,6 +84,7 @@ export default function TaskCardContent({
   titleRightLabel,
   titleRightShowLeaf = false,
   onFirstLineHeightChange,
+  titleStrikethrough = false,
 }: TaskCardContentProps) {
   const themeColors = useThemeColors();
   const typography = useTypography();
@@ -89,19 +92,20 @@ export default function TaskCardContent({
   // stores layout of each line from onTextLayout - each line gets its own strikethrough (max 2 lines)
   const [lines, setLines] = useState<TextLineLayout[]>([]);
 
-  // reanimated shared value: 0 = no strikethrough, 1 = full strikethrough (drives left-to-right animation per line)
-  const strikeProgress = useSharedValue(task.isCompleted ? 1 : 0);
+  const showTitleStrike = task.isCompleted || titleStrikethrough;
 
-  // when task completion changes, animate the strikethrough progress (reanimated runs on native thread for smooth 60fps)
-  // duration scales with text width so visual speed feels consistent; ease-in-out = accelerate then decelerate
+  // reanimated shared value: 0 = no strikethrough, 1 = full strikethrough (drives left-to-right animation per line)
+  const strikeProgress = useSharedValue(showTitleStrike ? 1 : 0);
+
+  // when task completion or delete-preview strike changes, animate strikethrough progress
   useEffect(() => {
-    if (task.isCompleted) {
+    if (showTitleStrike) {
       const duration = lines.length ? getStrikethroughDuration(lines) : STRIKETHROUGH_MIN_MS;
       strikeProgress.value = withTiming(1, { duration, easing: Easing.inOut(Easing.cubic) });
     } else {
       strikeProgress.value = withTiming(0, { duration: 250, easing: Easing.in(Easing.cubic) });
     }
-  }, [task.isCompleted]);
+  }, [showTitleStrike, lines, strikeProgress]);
 
   // onTextLayout provides x, y, width, height per line — strikethrough + parent checkbox column height (first line only)
   const handleTextLayout = (e: { nativeEvent: { lines: TextLineLayout[] } }) => {

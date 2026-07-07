@@ -1,6 +1,9 @@
 export { AiEmptyStateIntro } from './AiEmptyStateIntro';
 export { AiEmptyStateIntroBackground } from './AiEmptyStateIntroBackground';
 export { AiAssistantResponseShell } from './AiAssistantResponseShell';
+export { AiSessionProposalCard } from './AiSessionProposalCard';
+export { AiSessionProposalList } from './AiSessionProposalList';
+export { AiSessionProposalFooter } from './AiSessionProposalFooter';
 export { ChatContainer } from './ChatContainer';
 export { ChatComposerSuggestions } from './ChatComposerSuggestions';
 export { ChatSuggestionChip } from './ChatSuggestionChip';

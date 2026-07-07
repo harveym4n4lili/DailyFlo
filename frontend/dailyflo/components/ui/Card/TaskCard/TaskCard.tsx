@@ -91,6 +91,8 @@ export interface TaskCardProps {
 
   /** ios 18+: open task via Link + Apple zoom when true (fluid transition; needs Link.AppleZoomTarget on task screen) */
   useIosZoomTransition?: boolean;
+  /** title-only strikethrough without completion checkbox/metadata styling (e.g. delete proposals) */
+  titleStrikethrough?: boolean;
 }
 
 /**
@@ -138,7 +140,8 @@ function taskCardPropsAreEqual(prev: TaskCardProps, next: TaskCardProps) {
     prev.selectionMode === next.selectionMode &&
     prev.isSelected === next.isSelected &&
     prev.onSelect === next.onSelect &&
-    prev.useIosZoomTransition === next.useIosZoomTransition
+    prev.useIosZoomTransition === next.useIosZoomTransition &&
+    prev.titleStrikethrough === next.titleStrikethrough
   );
 }
 
@@ -171,6 +174,7 @@ const TaskCard = React.memo<TaskCardProps>(function TaskCard({
   isSelected = false,
   onSelect,
   useIosZoomTransition = false,
+  titleStrikethrough = false,
 }: TaskCardProps) {
   // COLOR PALETTE USAGE - Getting theme-aware colors
   const themeColors = useThemeColors();
@@ -235,6 +239,7 @@ const TaskCard = React.memo<TaskCardProps>(function TaskCard({
           titleRightLabel={titleRightLabel}
           titleRightShowLeaf={titleRightShowLeaf}
           onFirstLineHeightChange={handleTitleFirstLineHeight}
+          titleStrikethrough={titleStrikethrough}
         />
 
         {showListRecurrenceRow && (

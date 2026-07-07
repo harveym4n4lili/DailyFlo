@@ -7,6 +7,14 @@ import { PROGRESS_BOARD_GLASS_BORDER_WIDTH } from '@/components/features/gamific
 /** hairline ring on ChatContainer innerBorderRing */
 export const CHAT_COMPOSER_SHELL_BORDER_WIDTH = PROGRESS_BOARD_GLASS_BORDER_WIDTH;
 
+/** submitted user prompt shell — thicker brand ring (aligned with quick-add pill stroke weight) */
+export const CHAT_SUBMITTED_SHELL_BORDER_WIDTH = 1.25;
+
+/** soft marple halo around the submitted prompt shell */
+export const CHAT_SUBMITTED_SHELL_GLOW_SHADOW_RADIUS = 10;
+export const CHAT_SUBMITTED_SHELL_GLOW_SHADOW_OPACITY = 0.22;
+export const CHAT_SUBMITTED_SHELL_GLOW_ELEVATION = 4;
+
 /** suggestion pill dashed SVG stroke — 1px matches DashedSeparator + reads same weight as the solid composer ring */
 export const CHAT_COMPOSER_SHELL_DASHED_STROKE_WIDTH = 1;
 
@@ -92,7 +100,7 @@ export const CHAT_SUBMITTED_SHELL_CONTENT_HEIGHT =
 
 /** full submitted shell height incl. outer brand border */
 export const CHAT_SUBMITTED_SHELL_HEIGHT_ESTIMATE =
-  CHAT_SUBMITTED_SHELL_CONTENT_HEIGHT + CHAT_COMPOSER_SHELL_BORDER_WIDTH * 2;
+  CHAT_SUBMITTED_SHELL_CONTENT_HEIGHT + CHAT_SUBMITTED_SHELL_BORDER_WIDTH * 2;
 
 /** expanded text area — top inset + 3 lines + gap above utility row */
 export const CHAT_COMPOSER_EXPANDED_TEXT_HEIGHT_ESTIMATE =
@@ -107,7 +115,8 @@ export const CHAT_COMPOSER_COLLAPSED_HEIGHT_ESTIMATE = CHAT_COMPOSER_UTILITY_ROW
 export const CHAT_COMPOSER_HEADER_GAP = 8;
 
 /** gap between submitted prompt shell bottom and assistant response shell top */
-export const CHAT_SESSION_RESPONSE_GAP = CHAT_COMPOSER_HEADER_GAP;
+export const CHAT_SESSION_RESPONSE_GAP =
+  Paddings.groupedListIconTextSpacing + Paddings.touchTargetSmall;
 
 /** assistant response shell — tighter bottom-left corner vs the composer shell */
 export const CHAT_ASSISTANT_RESPONSE_SHELL_BOTTOM_LEFT_RADIUS = 4;

@@ -38,6 +38,8 @@ import {
   AiEmptyStateIntro,
   AiEmptyStateIntroBackground,
   AiAssistantResponseShell,
+  AiSessionProposalList,
+  AiSessionProposalFooter,
   pickRandomAiGreeting,
   pickRandomAiHint,
 } from '@/components/features/ai';
@@ -59,7 +61,7 @@ import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import { useThemeColors, useBrandColors } from '@/hooks/useColorPalette';
 import { useTypography } from '@/hooks/useTypography';
 import { useAiAssistant } from '@/hooks/useAiAssistant';
-import { useUI } from '@/store/hooks';
+import { useUI, useTasks } from '@/store/hooks';
 import { Paddings } from '@/constants/Paddings';
 import { buildTaskQuickAddRouteParams } from '@/utils/taskQuickAddRouteParams';
 
@@ -88,6 +90,7 @@ export default function AITabScreen() {
   const { getMarpleBrandColor } = useBrandColors();
   const typography = useTypography();
   const { modals, closeModal } = useUI();
+  const { tasks } = useTasks();
 
   const {
     messages,
@@ -96,6 +99,9 @@ export default function AITabScreen() {
     sendMessage,
     clearError,
     resetSession,
+    confirmAllProposals,
+    getProposalStatus,
+    isConfirmingAll,
   } = useAiAssistant();
 
   const [screenPhase, setScreenPhase] = useState<AiScreenPhase>('prompt');
@@ -159,10 +165,22 @@ export default function AITabScreen() {
   const isKeyboardOpen = keyboardHeight > 0;
   const isSessionVisible = isSessionMode || isSessionTransitioning;
 
-  const latestAssistantReply = useMemo(
-    () => [...messages].reverse().find((message) => message.role === 'assistant')?.content ?? '',
+  const latestAssistantMessage = useMemo(
+    () => [...messages].reverse().find((message) => message.role === 'assistant'),
     [messages],
   );
+
+  const latestAssistantReply = latestAssistantMessage?.content ?? '';
+  const latestAssistantProposals = latestAssistantMessage?.proposals ?? [];
+
+  // count proposals still waiting on user confirm — drives Accept All vs Start new footer
+  const pendingProposalCount = useMemo(() => {
+    if (!latestAssistantMessage?.proposals?.length) return 0;
+    return latestAssistantMessage.proposals.filter((proposal) => {
+      const status = getProposalStatus(latestAssistantMessage.id, proposal.id);
+      return status === 'pending' || status === 'failed';
+    }).length;
+  }, [latestAssistantMessage, getProposalStatus]);
 
   const fallbackResponsePaddingTop =
     sessionTargetTop + CHAT_SUBMITTED_SHELL_HEIGHT_ESTIMATE + CHAT_SESSION_RESPONSE_GAP;
@@ -326,6 +344,15 @@ export default function AITabScreen() {
     restingComposerBottom,
     sessionTargetTop,
   ]);
+
+  const handleFooterPress = useCallback(() => {
+    if (!latestAssistantMessage) return;
+    if (pendingProposalCount > 0) {
+      void confirmAllProposals(latestAssistantMessage.id);
+      return;
+    }
+    handleBackToPrompt();
+  }, [latestAssistantMessage, pendingProposalCount, confirmAllProposals, handleBackToPrompt]);
 
   const handleSend = useCallback(() => {
     const trimmed = prompt.trim();
@@ -510,6 +537,22 @@ export default function AITabScreen() {
                       <AiAssistantResponseShell
                         content={latestAssistantReply}
                         isLoading={isLoading}
+                      />
+                    ) : null}
+                    {latestAssistantProposals.length > 0 ? (
+                      <AiSessionProposalList
+                        proposals={latestAssistantProposals}
+                        tasks={tasks}
+                        messageId={latestAssistantMessage.id}
+                        getProposalStatus={getProposalStatus}
+                      />
+                    ) : null}
+                    {!isLoading && latestAssistantMessage ? (
+                      <AiSessionProposalFooter
+                        mode={pendingProposalCount > 0 ? 'acceptAll' : 'startNew'}
+                        onPress={handleFooterPress}
+                        loading={isConfirmingAll}
+                        disabled={isConfirmingAll}
                       />
                     ) : null}
                   </ScrollView>

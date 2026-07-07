@@ -42,6 +42,10 @@ import {
   CHAT_COMPOSER_TEXT_LINE_HEIGHT,
   CHAT_COMPOSER_UTILITY_ROW_HEIGHT_ESTIMATE,
   CHAT_SUBMITTED_SHELL_CONTENT_HEIGHT,
+  CHAT_SUBMITTED_SHELL_BORDER_WIDTH,
+  CHAT_SUBMITTED_SHELL_GLOW_SHADOW_RADIUS,
+  CHAT_SUBMITTED_SHELL_GLOW_SHADOW_OPACITY,
+  CHAT_SUBMITTED_SHELL_GLOW_ELEVATION,
   getChatComposerExpandedTextInputMaxHeight,
 } from './chatComposerUiTokens';
 import { getTextStyle } from '@/constants/Typography';
@@ -233,8 +237,39 @@ export function ChatContainer({
     borderWidth: interpolate(
       activeSessionProgress.value,
       [0, 1],
-      [0, CHAT_COMPOSER_SHELL_BORDER_WIDTH],
+      [0, CHAT_SUBMITTED_SHELL_BORDER_WIDTH],
     ),
+  }));
+
+  const brandGlowStyle = useAnimatedStyle(() => {
+    const progress = activeSessionProgress.value;
+    return {
+      shadowColor: brandBorderColor,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: interpolate(
+        progress,
+        [0, 1],
+        [0, CHAT_SUBMITTED_SHELL_GLOW_SHADOW_OPACITY],
+      ),
+      shadowRadius: interpolate(
+        progress,
+        [0, 1],
+        [0, CHAT_SUBMITTED_SHELL_GLOW_SHADOW_RADIUS],
+      ),
+      ...(Platform.OS === 'android'
+        ? {
+            elevation: interpolate(
+              progress,
+              [0, 1],
+              [0, CHAT_SUBMITTED_SHELL_GLOW_ELEVATION],
+            ),
+          }
+        : null),
+    };
+  });
+
+  const innerBorderFadeStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(activeSessionProgress.value, [0, 0.4], [1, 0]),
   }));
 
   // route touches to the multiline input while the keyboard is opening — before expansion kicks in
@@ -297,11 +332,12 @@ export function ChatContainer({
   const inner = (
     <View style={[styles.innerClip, innerCornerStyle]}>
       <View style={[styles.glassVeil, { backgroundColor: glassVeil }]} pointerEvents="none" />
-      <View
+      <Animated.View
         style={[
           styles.innerBorderRing,
           innerCornerStyle,
           { borderColor: shellBorderColor },
+          innerBorderFadeStyle,
         ]}
         pointerEvents="none"
       />
@@ -419,8 +455,10 @@ export function ChatContainer({
 
   return (
     <View style={styles.outerMargin}>
-      <Animated.View style={[styles.brandBorderShell, cornerStyle, brandBorderShellStyle]}>
-        <View style={styles.glassBleedSlot}>{shellBody}</View>
+      <Animated.View style={[styles.brandGlowHost, cornerStyle, brandGlowStyle]}>
+        <Animated.View style={[styles.brandBorderShell, cornerStyle, brandBorderShellStyle]}>
+          <View style={styles.glassBleedSlot}>{shellBody}</View>
+        </Animated.View>
       </Animated.View>
     </View>
   );
@@ -430,6 +468,10 @@ const styles = StyleSheet.create({
   outerMargin: {
     overflow: 'visible',
     zIndex: 0,
+  },
+  brandGlowHost: {
+    overflow: 'visible',
+    backgroundColor: 'transparent',
   },
   brandBorderShell: {
     overflow: 'hidden',
