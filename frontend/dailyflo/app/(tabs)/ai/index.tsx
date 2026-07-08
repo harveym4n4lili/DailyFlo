@@ -31,6 +31,7 @@ import { ScreenHeaderActions } from '@/components/ui';
 import { FloatingActionButton } from '@/components/ui/Button';
 import { MainBackButton } from '@/components/ui/Button';
 import { IosAiStackToolbar } from '@/components/navigation/IosAiStackToolbar';
+import { TAB_ROOT_TOP_SECTION_ROW_HEIGHT } from '@/components/navigation/TabRootTopSectionChrome';
 import { USE_CUSTOM_LIQUID_TAB_BAR, fabChromeZoneStyle } from '@/components/navigation/tabBarChrome';
 import {
   ChatContainer,
@@ -68,7 +69,6 @@ import { Paddings } from '@/constants/Paddings';
 import { buildTaskQuickAddRouteParams } from '@/utils/taskQuickAddRouteParams';
 
 const TAB_BAR_HEIGHT_FALLBACK = Platform.select({ ios: 49, android: 56, default: 49 });
-const TOP_SECTION_ROW_HEIGHT = 48;
 
 type AiScreenPhase = 'prompt' | 'session';
 
@@ -135,6 +135,8 @@ export default function AITabScreen() {
   >(null);
   // unmount reply/proposals after exit fade so they cannot flash when session tears down
   const [isSessionBodyVisible, setIsSessionBodyVisible] = useState(true);
+  // gates proposal card reveals — flips true after reply words finish fading in
+  const [replyWordsRevealComplete, setReplyWordsRevealComplete] = useState(false);
 
   const composerAnchorRef = useRef<View>(null);
   // 0 = greeting position, 1 = submitted shell at header
@@ -152,14 +154,14 @@ export default function AITabScreen() {
   const restingComposerBottom = bottomPaddingAboveTabBar;
   const composerGap = Paddings.tabBarInputGap;
 
-  const sessionTargetTop = insets.top + TOP_SECTION_ROW_HEIGHT + 8;
+  const sessionTargetTop = insets.top + TAB_ROOT_TOP_SECTION_ROW_HEIGHT + 0;
 
   const composerBottomInset = Math.max(
     keyboardHeight + Paddings.tabBarInputGap,
     restingComposerBottom,
   );
 
-  const aiHeaderBottomY = insets.top + TOP_SECTION_ROW_HEIGHT + CHAT_COMPOSER_HEADER_GAP;
+  const aiHeaderBottomY = insets.top + TAB_ROOT_TOP_SECTION_ROW_HEIGHT + CHAT_COMPOSER_HEADER_GAP;
 
   const maxExpandedTextSectionHeight = useMemo(
     () =>
@@ -187,6 +189,28 @@ export default function AITabScreen() {
 
   const latestAssistantReply = latestAssistantMessage?.content ?? '';
   const latestAssistantProposals = latestAssistantMessage?.proposals ?? [];
+
+  // reset proposal reveals whenever a new assistant message arrives
+  useEffect(() => {
+    setReplyWordsRevealComplete(false);
+  }, [latestAssistantMessage?.id]);
+
+  const handleReplyWordsRevealComplete = useCallback(() => {
+    setReplyWordsRevealComplete(true);
+  }, []);
+
+  // proposals-only responses skip the word reveal — start proposal stagger immediately
+  useEffect(() => {
+    if (isLoading || !latestAssistantMessage) return;
+    if (!latestAssistantReply.trim() && latestAssistantProposals.length > 0) {
+      setReplyWordsRevealComplete(true);
+    }
+  }, [
+    isLoading,
+    latestAssistantMessage,
+    latestAssistantReply,
+    latestAssistantProposals.length,
+  ]);
 
   // count proposals still waiting on user confirm — drives Accept All vs Start new footer
   const pendingProposalCount = useMemo(() => {
@@ -280,6 +304,7 @@ export default function AITabScreen() {
     setIsSessionReturningToGreeting(false);
     setFrozenSessionContentPaddingTop(null);
     setIsSessionBodyVisible(true);
+    setReplyWordsRevealComplete(false);
     setPrompt('');
     setSubmittedPrompt('');
     refreshIntroCopy();
@@ -436,6 +461,7 @@ export default function AITabScreen() {
     setScreenPhase('session');
     setIsSessionTransitioning(true);
     setIsSessionBodyVisible(true);
+    setReplyWordsRevealComplete(false);
     sessionContentOpacity.value = 1;
     clearError();
     void sendMessage(trimmed);
@@ -565,7 +591,7 @@ export default function AITabScreen() {
       />
       <View style={{ flex: 1 }}>
         <View
-          style={[styles.topSectionAnchor, { height: insets.top + TOP_SECTION_ROW_HEIGHT }]}
+          style={[styles.topSectionAnchor, { height: insets.top + TAB_ROOT_TOP_SECTION_ROW_HEIGHT }]}
           pointerEvents="box-none"
         >
           <View style={styles.topSectionRow} pointerEvents="box-none">
@@ -621,9 +647,10 @@ export default function AITabScreen() {
                         <AiAssistantResponseShell
                           content={latestAssistantReply}
                           isLoading={isLoading}
+                          onWordsRevealComplete={handleReplyWordsRevealComplete}
                         />
                       ) : null}
-                      {latestAssistantProposals.length > 0 ? (
+                      {latestAssistantMessage && latestAssistantProposals.length > 0 ? (
                         <AiSessionProposalList
                           proposals={latestAssistantProposals}
                           tasks={tasks}
@@ -635,6 +662,7 @@ export default function AITabScreen() {
                           onDismissProposal={handleDismissProposal}
                           onUndoProposal={handleUndoProposal}
                           isConfirmingAll={isConfirmingAll}
+                          revealProposals={replyWordsRevealComplete}
                         />
                       ) : null}
                       {!isLoading && latestAssistantMessage ? (
@@ -734,7 +762,7 @@ const createStyles = (
       top: insets.top,
       left: 0,
       right: 0,
-      height: TOP_SECTION_ROW_HEIGHT,
+      height: TAB_ROOT_TOP_SECTION_ROW_HEIGHT,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'flex-end',
@@ -760,7 +788,7 @@ const createStyles = (
     },
     inner: {
       flex: 1,
-      paddingTop: insets.top + TOP_SECTION_ROW_HEIGHT + CHAT_COMPOSER_HEADER_GAP,
+      paddingTop: insets.top + TAB_ROOT_TOP_SECTION_ROW_HEIGHT + CHAT_COMPOSER_HEADER_GAP,
       paddingHorizontal: Paddings.screen,
     },
     sessionScroll: {

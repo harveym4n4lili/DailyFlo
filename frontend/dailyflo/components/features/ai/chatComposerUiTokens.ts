@@ -131,6 +131,24 @@ export const PROPOSAL_UI_MODE_TRANSITION_MS = 220;
 /** session reply + proposals fade out on back-to-greeting — faster than composer slide */
 export const CHAT_SESSION_CONTENT_EXIT_FADE_MS = 160;
 
+/** assistant reply — each word fades in one after another when the api response lands */
+export const CHAT_ASSISTANT_REPLY_WORD_FADE_MS = 560;
+
+/** delay before the next word in the reply starts fading in */
+export const CHAT_ASSISTANT_REPLY_WORD_STAGGER_MS = 100;
+
+/** delay between each proposal card reveal — starts after reply words finish */
+export const CHAT_SESSION_PROPOSAL_REVEAL_STAGGER_MS = 240;
+
+/** duration of each proposal card fade-in */
+export const CHAT_SESSION_PROPOSAL_REVEAL_FADE_MS = 280;
+
+/** split assistant reply into word + trailing-space tokens for per-word opacity */
+export function splitAssistantReplyWords(text: string): string[] {
+  if (!text) return [];
+  return text.match(/\S+\s*/g) ?? [];
+}
+
 /** assistant response shell — tighter bottom-left corner vs the composer shell */
 export const CHAT_ASSISTANT_RESPONSE_SHELL_BOTTOM_LEFT_RADIUS = 4;
 

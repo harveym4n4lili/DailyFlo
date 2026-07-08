@@ -1,6 +1,6 @@
 /**
  * Assistant reply in session view — same liquid glass shell + grey hairline ring as ChatContainer.
- * Text fades in when the api response arrives.
+ * Reply words fade in one-by-one; parent is notified when the last word finishes.
  */
 
 import React, { useEffect, useMemo } from 'react';
@@ -11,16 +11,18 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  type TextStyle,
 } from 'react-native';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 import GlassView from 'expo-glass-effect/build/GlassView';
 import { useThemeColors } from '@/hooks/useColorPalette';
 import { getTextStyle } from '@/constants/Typography';
-import { AI_EMPTY_STATE_GREETING_FADE_MS } from './aiEmptyStateIntroTokens';
 import {
   CHAT_COMPOSER_SHELL_BORDER_WIDTH,
   CHAT_COMPOSER_SHELL_RADIUS,
@@ -28,9 +30,12 @@ import {
   CHAT_COMPOSER_MIN_TEXT_CONTENT_HEIGHT,
   CHAT_COMPOSER_TEXT_LINE_HEIGHT,
   CHAT_COMPOSER_LAYOUT_EASING,
-  getChatComposerShellBorderColor,
+  CHAT_ASSISTANT_REPLY_WORD_FADE_MS,
+  CHAT_ASSISTANT_REPLY_WORD_STAGGER_MS,
   CHAT_ASSISTANT_RESPONSE_SHELL_BOTTOM_LEFT_RADIUS,
   CHAT_SESSION_PROPOSAL_BADGE_HALF_HEIGHT_ESTIMATE,
+  getChatComposerShellBorderColor,
+  splitAssistantReplyWords,
 } from './chatComposerUiTokens';
 import {
   PROGRESS_BOARD_GLASS_TINT_OPACITY,
@@ -42,15 +47,70 @@ export interface AiAssistantResponseShellProps {
   content?: string;
   /** true while waiting for the llm api */
   isLoading?: boolean;
+  /** fires once every word has finished fading in — used to stagger proposal reveals */
+  onWordsRevealComplete?: () => void;
+}
+
+type AnimatedReplyWordProps = {
+  word: string;
+  wordIndex: number;
+  canReveal: boolean;
+  isLastWord: boolean;
+  onLastWordRevealComplete?: () => void;
+  style: TextStyle;
+};
+
+/** one word in the reply — waits its turn, then fades in */
+function AnimatedReplyWord({
+  word,
+  wordIndex,
+  canReveal,
+  isLastWord,
+  onLastWordRevealComplete,
+  style,
+}: AnimatedReplyWordProps) {
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (!canReveal) {
+      opacity.value = 0;
+      return;
+    }
+
+    opacity.value = withDelay(
+      wordIndex * CHAT_ASSISTANT_REPLY_WORD_STAGGER_MS,
+      withTiming(
+        1,
+        {
+          duration: CHAT_ASSISTANT_REPLY_WORD_FADE_MS,
+          easing: CHAT_COMPOSER_LAYOUT_EASING,
+        },
+        (finished) => {
+          if (finished && isLastWord && onLastWordRevealComplete) {
+            runOnJS(onLastWordRevealComplete)();
+          }
+        },
+      ),
+    );
+  }, [canReveal, wordIndex, isLastWord, opacity, onLastWordRevealComplete]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return <Animated.Text style={[style, animatedStyle]}>{word}</Animated.Text>;
 }
 
 export function AiAssistantResponseShell({
   content = '',
   isLoading = false,
+  onWordsRevealComplete,
 }: AiAssistantResponseShellProps) {
   const themeColors = useThemeColors();
   const shellBorderColor = getChatComposerShellBorderColor(themeColors);
-  const textOpacity = useSharedValue(0);
+
+  const replyWords = useMemo(() => splitAssistantReplyWords(content), [content]);
+  const canRevealWords = !isLoading && content.trim().length > 0;
 
   const shellRadius = CHAT_COMPOSER_SHELL_RADIUS;
   const borderInset = CHAT_COMPOSER_SHELL_BORDER_WIDTH;
@@ -83,21 +143,6 @@ export function AiAssistantResponseShell({
     themeColors.background.primary(),
     PROGRESS_BOARD_GLASS_TINT_OPACITY,
   );
-
-  useEffect(() => {
-    if (!content.trim() || isLoading) {
-      textOpacity.value = 0;
-      return;
-    }
-    textOpacity.value = withTiming(1, {
-      duration: AI_EMPTY_STATE_GREETING_FADE_MS,
-      easing: CHAT_COMPOSER_LAYOUT_EASING,
-    });
-  }, [content, isLoading, textOpacity]);
-
-  const animatedTextStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
-  }));
 
   const styles = useMemo(
     () =>
@@ -174,7 +219,19 @@ export function AiAssistantResponseShell({
           showsVerticalScrollIndicator
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.Text style={[styles.responseText, animatedTextStyle]}>{content}</Animated.Text>
+          <Text style={styles.responseText}>
+            {replyWords.map((word, index) => (
+              <AnimatedReplyWord
+                key={`${index}-${word}`}
+                word={word}
+                wordIndex={index}
+                canReveal={canRevealWords}
+                isLastWord={index === replyWords.length - 1}
+                onLastWordRevealComplete={onWordsRevealComplete}
+                style={styles.responseText}
+              />
+            ))}
+          </Text>
         </ScrollView>
       )}
     </View>
