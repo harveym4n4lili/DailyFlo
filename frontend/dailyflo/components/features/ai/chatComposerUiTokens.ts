@@ -181,6 +181,23 @@ export function getChatComposerMaxExpandedTextSectionHeight(opts: {
   return Math.max(56, textSection);
 }
 
+/**
+ * max text section height when editing the embedded session prompt in the scroll view.
+ * composer stays scroll-fixed — cap growth by viewport below the submitted shell top.
+ */
+export function getSessionEmbeddedComposerMaxTextHeight(opts: {
+  windowHeight: number;
+  composerTopY: number;
+  bottomInset: number;
+  contentGap?: number;
+}): number {
+  const gap = opts.contentGap ?? CHAT_SESSION_RESPONSE_GAP;
+  const availableShell =
+    opts.windowHeight - opts.composerTopY - opts.bottomInset - gap;
+  const textSection = availableShell - CHAT_COMPOSER_UTILITY_ROW_HEIGHT_ESTIMATE;
+  return Math.max(CHAT_COMPOSER_MIN_TEXT_CONTENT_HEIGHT, textSection);
+}
+
 /** input max height inside the expanded column — excludes column padding */
 export function getChatComposerExpandedTextInputMaxHeight(
   maxExpandedTextSectionHeight: number,

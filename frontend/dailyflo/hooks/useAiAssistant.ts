@@ -110,6 +110,33 @@ function cloneTaskSnapshot(task: Task): Task {
   };
 }
 
+/** strip proposal ui maps for one assistant message — used when replacing a turn on resend */
+function withoutProposalStateForMessage(
+  messageId: string,
+  editedPayloads: Record<string, TaskProposalPayload>,
+  proposalStatuses: Record<string, ProposalStatus>,
+  proposalErrors: Record<string, string>,
+  proposalUndoRecords: Record<string, ProposalUndoRecord>,
+) {
+  const prefix = `${messageId}:`;
+  const stripKeys = <T extends Record<string, unknown>>(map: T): T => {
+    const next = { ...map };
+    for (const key of Object.keys(next)) {
+      if (key.startsWith(prefix)) {
+        delete next[key];
+      }
+    }
+    return next;
+  };
+
+  return {
+    editedPayloads: stripKeys(editedPayloads),
+    proposalStatuses: stripKeys(proposalStatuses),
+    proposalErrors: stripKeys(proposalErrors),
+    proposalUndoRecords: stripKeys(proposalUndoRecords),
+  };
+}
+
 export function useAiAssistant() {
   const dispatch = useAppDispatch();
 
@@ -531,6 +558,66 @@ export function useAiAssistant() {
     [isLoading, messages]
   );
 
+  /** resend edited prompt — only the new user line goes to the api (saves tokens) */
+  const resendMessage = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed || isLoading) return;
+
+      setError(null);
+      setIsLoading(true);
+
+      // edited prompt is a fresh request — clear old proposal ui state from the previous reply
+      setEditedPayloads({});
+      setProposalStatuses({});
+      proposalStatusesRef.current = {};
+      setProposalErrors({});
+      setProposalUndoRecords({});
+      proposalUndoRecordsRef.current = {};
+      createInFlightRef.current = {};
+      setIsConfirmingAll(false);
+
+      const userMessage: AiChatMessage = {
+        id: newMessageId(),
+        role: 'user',
+        content: trimmed,
+      };
+
+      // local chat state mirrors what we send — one user line, then a new assistant reply
+      setMessages([userMessage]);
+
+      try {
+        const response = await llmApiService.assistantChat({
+          messages: [{ role: 'user', content: trimmed }],
+        });
+
+        const assistantMessage: AiChatMessage = {
+          id: newMessageId(),
+          role: 'assistant',
+          content: response.reply || 'Done.',
+          proposals: response.proposals ?? [],
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+
+        if (assistantMessage.proposals?.length) {
+          setEditedPayloads((prev) => {
+            const next = { ...prev };
+            for (const p of assistantMessage.proposals!) {
+              next[proposalKey(assistantMessage.id, p.id)] = p.payload;
+            }
+            return next;
+          });
+        }
+      } catch (err: unknown) {
+        setError(mapLlmErrorToUserMessage(err));
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [isLoading],
+  );
+
   const clearError = useCallback(() => setError(null), []);
 
   /** wipe chat + proposal state — used when leaving the ai tab or tapping back to prompt */
@@ -558,6 +645,7 @@ export function useAiAssistant() {
       hasMessages,
       isConfirmingAll,
       sendMessage,
+      resendMessage,
       resetSession,
       getProposalPayload,
       updateProposalPayload,
@@ -577,6 +665,7 @@ export function useAiAssistant() {
       hasMessages,
       isConfirmingAll,
       sendMessage,
+      resendMessage,
       resetSession,
       getProposalPayload,
       updateProposalPayload,

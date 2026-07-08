@@ -74,6 +74,14 @@ export interface ChatContainerProps {
   submittedText?: string;
   /** locks editing when session animation completes */
   isSessionMode?: boolean;
+  /** 0 = read-only submitted shell, 1 = expanded editable prompt in scroll */
+  sessionEditProgress?: SharedValue<number>;
+  /** true while the user is editing the submitted prompt in session view */
+  isSessionPromptEditing?: boolean;
+  /** tap-to-edit enabled after the full reveal sequence finishes */
+  canEditSubmittedPrompt?: boolean;
+  /** opens the multiline editor when the submitted shell is tapped */
+  onSubmittedPromptPress?: () => void;
 }
 
 export function ChatContainer({
@@ -88,6 +96,10 @@ export function ChatContainer({
   sessionProgress,
   submittedText = '',
   isSessionMode = false,
+  sessionEditProgress,
+  isSessionPromptEditing = false,
+  canEditSubmittedPrompt = false,
+  onSubmittedPromptPress,
 }: ChatContainerProps) {
   const themeColors = useThemeColors();
   const colors = useColorPalette();
@@ -95,9 +107,11 @@ export function ChatContainer({
   const trimmed = value.trim();
   const hasText = trimmed.length > 0;
 
-  // text section expands when typing + keyboard open — not during session slide morph
+  // greeting expand — or session edit expand (scroll-fixed, no keyboard follow)
+  const isSessionEditingExpanded = isSessionPromptEditing;
   const isTextExpanded =
-    value.length > 0 && isKeyboardVisible && !isSessionMode && !isSessionTransitioning;
+    isSessionEditingExpanded ||
+    (value.length > 0 && isKeyboardVisible && !isSessionMode && !isSessionTransitioning);
 
   const [pendingFocus, setPendingFocus] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
@@ -105,7 +119,15 @@ export function ChatContainer({
   const expandedTextHeightSv = useSharedValue(CHAT_COMPOSER_EXPANDED_TEXT_HEIGHT_ESTIMATE);
   const expandProgress = useSharedValue(0);
   const fallbackSessionProgress = useSharedValue(0);
+  const fallbackSessionEditProgress = useSharedValue(0);
   const activeSessionProgress = sessionProgress ?? fallbackSessionProgress;
+  const activeSessionEditProgress = sessionEditProgress ?? fallbackSessionEditProgress;
+
+  useEffect(() => {
+    if (isSessionPromptEditing) {
+      setPendingFocus(true);
+    }
+  }, [isSessionPromptEditing]);
 
   const shellBorderColor = getChatComposerShellBorderColor(themeColors);
   const brandBorderColor = useMemo(() => getMarpleBrandColor(500), [getMarpleBrandColor]);
@@ -114,6 +136,14 @@ export function ChatContainer({
     // back slide — shrink to minimized composer in sync with sessionProgress returning to 0
     if (isSessionReturningToGreeting) {
       expandProgress.value = withTiming(0, {
+        duration: CHAT_COMPOSER_LAYOUT_TRANSITION_MS,
+        easing: CHAT_COMPOSER_LAYOUT_EASING,
+      });
+      return;
+    }
+    // session edit — parent drives sessionEditProgress; keep expandProgress at 1 for height measure
+    if (isSessionPromptEditing) {
+      expandProgress.value = withTiming(1, {
         duration: CHAT_COMPOSER_LAYOUT_TRANSITION_MS,
         easing: CHAT_COMPOSER_LAYOUT_EASING,
       });
@@ -130,16 +160,17 @@ export function ChatContainer({
     isSessionMode,
     isSessionTransitioning,
     isSessionReturningToGreeting,
+    isSessionPromptEditing,
     expandProgress,
   ]);
 
   // keyboard / rotation can shrink the allowed text section — clamp animated height
   useEffect(() => {
-    if (!isTextExpanded || maxExpandedTextSectionHeight == null) return;
+    if ((!isTextExpanded && !isSessionPromptEditing) || maxExpandedTextSectionHeight == null) return;
     if (expandedTextHeightSv.value > maxExpandedTextSectionHeight) {
       expandedTextHeightSv.value = maxExpandedTextSectionHeight;
     }
-  }, [isTextExpanded, maxExpandedTextSectionHeight, expandedTextHeightSv]);
+  }, [isTextExpanded, isSessionPromptEditing, maxExpandedTextSectionHeight, expandedTextHeightSv]);
 
   const handleComposerFocus = useCallback(() => {
     setIsInputFocused(true);
@@ -165,7 +196,7 @@ export function ChatContainer({
 
   const handleExpandedTextLayout = useCallback(
     (event: LayoutChangeEvent) => {
-      if (!isTextExpanded) return;
+      if (!isTextExpanded && !isSessionPromptEditing) return;
       const naturalHeight = event.nativeEvent.layout.height;
       const cappedHeight =
         maxExpandedTextSectionHeight != null
@@ -173,7 +204,7 @@ export function ChatContainer({
           : naturalHeight;
       expandedTextHeightSv.value = cappedHeight;
     },
-    [isTextExpanded, expandedTextHeightSv, maxExpandedTextSectionHeight],
+    [isTextExpanded, isSessionPromptEditing, expandedTextHeightSv, maxExpandedTextSectionHeight],
   );
 
   const expandedTextInputMaxHeight =
@@ -183,11 +214,24 @@ export function ChatContainer({
 
   const animatedTextSectionStyle = useAnimatedStyle(() => {
     const session = activeSessionProgress.value;
+    const edit = activeSessionEditProgress.value;
     const composerTextHeight = interpolate(
       expandProgress.value,
       [0, 1],
       [CHAT_COMPOSER_COLLAPSED_TEXT_HEIGHT_ESTIMATE, expandedTextHeightSv.value],
     );
+
+    // session landed — blend submitted shell height ↔ expanded edit height
+    if (session >= 1) {
+      return {
+        height: interpolate(
+          edit,
+          [0, 1],
+          [CHAT_SUBMITTED_SHELL_CONTENT_HEIGHT, expandedTextHeightSv.value],
+        ),
+        overflow: 'hidden' as const,
+      };
+    }
 
     if (session > 0) {
       return {
@@ -206,27 +250,63 @@ export function ChatContainer({
     };
   });
 
-  const expandedTextLayerStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(activeSessionProgress.value, [0, 0.35], [expandProgress.value, 0]),
-  }));
+  const expandedTextLayerStyle = useAnimatedStyle(() => {
+    const session = activeSessionProgress.value;
+    const edit = activeSessionEditProgress.value;
+    if (session >= 1) {
+      return { opacity: edit };
+    }
+    return {
+      opacity: interpolate(session, [0, 0.35], [expandProgress.value, 0]),
+    };
+  });
 
-  const submittedTextLayerStyle = useAnimatedStyle(() => ({
-    opacity: activeSessionProgress.value,
-  }));
+  const submittedTextLayerStyle = useAnimatedStyle(() => {
+    const session = activeSessionProgress.value;
+    const edit = activeSessionEditProgress.value;
+    if (session >= 1) {
+      return { opacity: 1 - edit };
+    }
+    return { opacity: session };
+  });
 
-  const inlinePreviewStyle = useAnimatedStyle(() => ({
-    opacity: (1 - expandProgress.value) * (1 - activeSessionProgress.value),
-  }));
+  const inlinePreviewStyle = useAnimatedStyle(() => {
+    const session = activeSessionProgress.value;
+    const edit = activeSessionEditProgress.value;
+    if (session >= 1) {
+      return { opacity: 0 };
+    }
+    return {
+      opacity: (1 - expandProgress.value) * (1 - session),
+    };
+  });
 
-  const animatedUtilityRowStyle = useAnimatedStyle(() => ({
-    height: interpolate(
-      activeSessionProgress.value,
-      [0, 1],
-      [CHAT_COMPOSER_UTILITY_ROW_HEIGHT_ESTIMATE, 0],
-    ),
-    opacity: interpolate(activeSessionProgress.value, [0, 0.6], [1, 0]),
-    overflow: 'hidden' as const,
-  }));
+  const animatedUtilityRowStyle = useAnimatedStyle(() => {
+    const session = activeSessionProgress.value;
+    const edit = activeSessionEditProgress.value;
+
+    if (session >= 1) {
+      return {
+        height: interpolate(
+          edit,
+          [0, 1],
+          [0, CHAT_COMPOSER_UTILITY_ROW_HEIGHT_ESTIMATE],
+        ),
+        opacity: edit,
+        overflow: 'hidden' as const,
+      };
+    }
+
+    return {
+      height: interpolate(
+        session,
+        [0, 1],
+        [CHAT_COMPOSER_UTILITY_ROW_HEIGHT_ESTIMATE, 0],
+      ),
+      opacity: interpolate(session, [0, 0.6], [1, 0]),
+      overflow: 'hidden' as const,
+    };
+  });
 
   const brandBorderShellStyle = useAnimatedStyle(() => ({
     borderColor: interpolateColor(
@@ -272,12 +352,22 @@ export function ChatContainer({
     opacity: interpolate(activeSessionProgress.value, [0, 0.4], [1, 0]),
   }));
 
-  // route touches to the multiline input while the keyboard is opening — before expansion kicks in
+  // multiline input during greeting expand or session prompt edit
   const showMultilineInput =
-    !isSessionMode &&
-    !isSessionReturningToGreeting &&
-    !isSessionTransitioning &&
-    (isTextExpanded || pendingFocus || isInputFocused);
+    isSessionPromptEditing ||
+    (!isSessionMode &&
+      !isSessionReturningToGreeting &&
+      !isSessionTransitioning &&
+      (isTextExpanded || pendingFocus || isInputFocused));
+
+  const isUtilityRowInteractive =
+    isSessionPromptEditing ||
+    (!isSessionMode && !(isSessionTransitioning && !isSessionReturningToGreeting));
+
+  const isInputEditable =
+    !isLoading &&
+    (isSessionPromptEditing ||
+      (!isSessionMode && !(isSessionTransitioning && !isSessionReturningToGreeting)));
 
   const marpleFill = getChatSendButtonColors(colors).fill;
   const shellRadius = CHAT_COMPOSER_SHELL_RADIUS;
@@ -362,11 +452,7 @@ export function ChatContainer({
               value={value}
               onChangeText={onChangeText}
               placeholder="Message…"
-              editable={
-                !isLoading &&
-                !isSessionMode &&
-                !(isSessionTransitioning && !isSessionReturningToGreeting)
-              }
+              editable={isInputEditable}
               maxLength={8000}
               multiline
               autoFocus={pendingFocus}
@@ -382,43 +468,43 @@ export function ChatContainer({
           </View>
         </Animated.View>
 
-        {/* read-only submitted prompt — fades in during session morph */}
+        {/* read-only submitted prompt — tap to edit after reveal sequence */}
         <Animated.View
           style={[styles.submittedTextLayer, submittedTextLayerStyle]}
-          pointerEvents={isSessionMode ? 'auto' : 'none'}
+          pointerEvents={isSessionMode && !isSessionPromptEditing ? 'auto' : 'none'}
         >
-          <Text style={[styles.promptLabel, { color: themeColors.text.secondary() }]}>
-            Your prompt:
-          </Text>
-          <ScrollView
-            style={{ minHeight: CHAT_COMPOSER_MIN_TEXT_CONTENT_HEIGHT }}
-            contentContainerStyle={styles.submittedScrollContent}
-            showsVerticalScrollIndicator
-            keyboardShouldPersistTaps="handled"
+          <Pressable
+            onPress={onSubmittedPromptPress}
+            disabled={!canEditSubmittedPrompt || isLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Edit your prompt"
+            accessibilityHint="Tap to edit and resend your prompt"
           >
-            <Text style={[styles.promptText, { color: themeColors.text.secondary() }]}>
-              {submittedText}
+            <Text style={[styles.promptLabel, { color: themeColors.text.secondary() }]}>
+              Your prompt:
             </Text>
-          </ScrollView>
+            <ScrollView
+              style={{ minHeight: CHAT_COMPOSER_MIN_TEXT_CONTENT_HEIGHT }}
+              contentContainerStyle={styles.submittedScrollContent}
+              showsVerticalScrollIndicator
+              keyboardShouldPersistTaps="handled"
+            >
+              <Text style={[styles.promptText, { color: themeColors.text.secondary() }]}>
+                {submittedText}
+              </Text>
+            </ScrollView>
+          </Pressable>
         </Animated.View>
       </Animated.View>
 
       {/* fixed row — collapsed preview sits between attach and send; shrinks during session morph */}
       <Animated.View
         style={[styles.utilityRowWrap, animatedUtilityRowStyle]}
-        pointerEvents={
-          isSessionMode || (isSessionTransitioning && !isSessionReturningToGreeting)
-            ? 'none'
-            : 'box-none'
-        }
+        pointerEvents={isUtilityRowInteractive ? 'box-none' : 'none'}
       >
         <View style={styles.utilityRow}>
           <ChatAttachMenu
-            disabled={
-              isLoading ||
-              isSessionMode ||
-              (isSessionTransitioning && !isSessionReturningToGreeting)
-            }
+            disabled={isLoading || !isUtilityRowInteractive}
           />
           <Animated.View
             style={[styles.inlinePreviewSlot, inlinePreviewStyle]}
@@ -441,9 +527,7 @@ export function ChatContainer({
       style={[styles.glassShell, cornerStyle]}
       glassEffectStyle="regular"
       tintColor={glassTint as any}
-      isInteractive={
-        !isSessionMode && !(isSessionTransitioning && !isSessionReturningToGreeting)
-      }
+      isInteractive={isUtilityRowInteractive}
     >
       {inner}
     </GlassView>

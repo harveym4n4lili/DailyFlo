@@ -3,23 +3,13 @@
  * cards fade in one-by-one after the assistant reply words finish revealing.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withTiming,
-} from 'react-native-reanimated';
 import type { Task } from '@/types';
 import type { TaskProposal, TaskProposalPayload, ProposalStatus } from '@/types/api/llm';
-import {
-  CHAT_SESSION_RESPONSE_GAP,
-  CHAT_COMPOSER_LAYOUT_EASING,
-  CHAT_SESSION_PROPOSAL_REVEAL_FADE_MS,
-  CHAT_SESSION_PROPOSAL_REVEAL_STAGGER_MS,
-} from './chatComposerUiTokens';
+import { CHAT_SESSION_RESPONSE_GAP } from './chatComposerUiTokens';
 import { AiSessionProposalCard } from './AiSessionProposalCard';
+import { RevealSessionBlock } from './RevealSessionBlock';
 
 export interface AiSessionProposalListProps {
   proposals: readonly TaskProposal[];
@@ -39,42 +29,6 @@ export interface AiSessionProposalListProps {
   isConfirmingAll?: boolean;
   /** true after reply word fade completes — unlocks sequential proposal reveals */
   revealProposals?: boolean;
-}
-
-type RevealProposalSlotProps = {
-  revealIndex: number;
-  canReveal: boolean;
-  children: React.ReactNode;
-};
-
-/** wraps one proposal card — waits its turn, then fades in */
-function RevealProposalSlot({ revealIndex, canReveal, children }: RevealProposalSlotProps) {
-  const opacity = useSharedValue(0);
-
-  useEffect(() => {
-    if (!canReveal) {
-      opacity.value = 0;
-      return;
-    }
-
-    opacity.value = withDelay(
-      revealIndex * CHAT_SESSION_PROPOSAL_REVEAL_STAGGER_MS,
-      withTiming(1, {
-        duration: CHAT_SESSION_PROPOSAL_REVEAL_FADE_MS,
-        easing: CHAT_COMPOSER_LAYOUT_EASING,
-      }),
-    );
-  }, [canReveal, revealIndex, opacity]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
-  return (
-    <Animated.View style={animatedStyle} pointerEvents={canReveal ? 'auto' : 'none'}>
-      {children}
-    </Animated.View>
-  );
 }
 
 export function AiSessionProposalList({
@@ -146,11 +100,7 @@ export function AiSessionProposalList({
   return (
     <View style={styles.list}>
       {visibleProposals.map((proposal, index) => (
-        <RevealProposalSlot
-          key={proposal.id}
-          revealIndex={index}
-          canReveal={revealProposals}
-        >
+        <RevealSessionBlock key={proposal.id} revealIndex={index} canReveal={revealProposals}>
           <AiSessionProposalCard
             proposal={proposal}
             payload={getProposalPayload(messageId, proposal)}
@@ -164,7 +114,7 @@ export function AiSessionProposalList({
             onDiscard={() => handleDiscard(proposal.id)}
             onUndo={() => handleUndo(proposal)}
           />
-        </RevealProposalSlot>
+        </RevealSessionBlock>
       ))}
     </View>
   );

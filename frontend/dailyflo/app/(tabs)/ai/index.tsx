@@ -15,6 +15,7 @@ import {
   ScrollView,
   useWindowDimensions,
   type LayoutChangeEvent,
+  type ScrollView as ScrollViewType,
 } from 'react-native';
 import Animated, {
   interpolate,
@@ -44,10 +45,13 @@ import {
   pickRandomAiGreeting,
   pickRandomAiHint,
 } from '@/components/features/ai';
+import { RevealSessionBlock } from '@/components/features/ai/RevealSessionBlock';
 import { AI_EMPTY_STATE_GREETING_FADE_MS } from '@/components/features/ai/aiEmptyStateIntroTokens';
 import {
   getChatComposerMaxExpandedTextSectionHeight,
+  getSessionEmbeddedComposerMaxTextHeight,
   CHAT_COMPOSER_LAYOUT_EASING,
+  CHAT_COMPOSER_LAYOUT_TRANSITION_MS,
   CHAT_SESSION_TRANSITION_MS,
   CHAT_COMPOSER_ANCHOR_HORIZONTAL_INSET,
   CHAT_SESSION_ANCHOR_HORIZONTAL_INSET,
@@ -99,6 +103,7 @@ export default function AITabScreen() {
     isLoading,
     error,
     sendMessage,
+    resendMessage,
     clearError,
     resetSession,
     confirmProposal,
@@ -135,12 +140,27 @@ export default function AITabScreen() {
   >(null);
   // unmount reply/proposals after exit fade so they cannot flash when session tears down
   const [isSessionBodyVisible, setIsSessionBodyVisible] = useState(true);
-  // gates proposal card reveals — flips true after reply words finish fading in
+  // gates proposal + footer reveals — flips true after reply words finish fading in
   const [replyWordsRevealComplete, setReplyWordsRevealComplete] = useState(false);
+  // true after footer stagger fade finishes — unlocks tap-to-edit on submitted prompt
+  const [sessionRevealComplete, setSessionRevealComplete] = useState(false);
+  // true while user is editing the submitted prompt inside the scroll view
+  const [isSessionPromptEditing, setIsSessionPromptEditing] = useState(false);
+  // after slide + reveals, composer lives in the scroll view instead of absolute positioning
+  const [isComposerEmbeddedInScroll, setIsComposerEmbeddedInScroll] = useState(false);
+  // captured from the absolute composer at handoff — avoids jump vs fixed sessionTargetTop
+  const [embeddedComposerMarginTop, setEmbeddedComposerMarginTop] = useState(0);
+  // measured top Y from scroll-embedded composer — back slide starts after absolute remount
+  const [pendingBackSlideTop, setPendingBackSlideTop] = useState<number | null>(null);
 
   const composerAnchorRef = useRef<View>(null);
+  const embeddedComposerRef = useRef<View>(null);
+  const sessionScrollWrapRef = useRef<View>(null);
+  const sessionScrollRef = useRef<ScrollViewType>(null);
   // 0 = greeting position, 1 = submitted shell at header
   const sessionProgress = useSharedValue(0);
+  // 0 = read-only submitted shell, 1 = expanded editable prompt in scroll
+  const sessionEditProgress = useSharedValue(0);
   // fades reply + proposals quickly on back-to-greeting
   const sessionContentOpacity = useSharedValue(1);
   // translateY offset captured on send — negative moves the composer up toward the header
@@ -163,15 +183,27 @@ export default function AITabScreen() {
 
   const aiHeaderBottomY = insets.top + TAB_ROOT_TOP_SECTION_ROW_HEIGHT + CHAT_COMPOSER_HEADER_GAP;
 
-  const maxExpandedTextSectionHeight = useMemo(
-    () =>
-      getChatComposerMaxExpandedTextSectionHeight({
+  const maxExpandedTextSectionHeight = useMemo(() => {
+    if (isComposerEmbeddedInScroll) {
+      return getSessionEmbeddedComposerMaxTextHeight({
         windowHeight,
-        headerBottomY: aiHeaderBottomY,
-        composerBottomInset,
-      }),
-    [windowHeight, aiHeaderBottomY, composerBottomInset],
-  );
+        composerTopY: embeddedComposerMarginTop,
+        bottomInset: restingComposerBottom,
+      });
+    }
+    return getChatComposerMaxExpandedTextSectionHeight({
+      windowHeight,
+      headerBottomY: aiHeaderBottomY,
+      composerBottomInset,
+    });
+  }, [
+    isComposerEmbeddedInScroll,
+    embeddedComposerMarginTop,
+    windowHeight,
+    restingComposerBottom,
+    aiHeaderBottomY,
+    composerBottomInset,
+  ]);
 
   const styles = useMemo(
     () => createStyles(themeColors, typography, insets, getMarpleBrandColor(500)),
@@ -182,22 +214,50 @@ export default function AITabScreen() {
   const isKeyboardOpen = keyboardHeight > 0;
   const isSessionVisible = isSessionMode || isSessionTransitioning;
 
-  const latestAssistantMessage = useMemo(
-    () => [...messages].reverse().find((message) => message.role === 'assistant'),
-    [messages],
-  );
+  // only the current turn's assistant — trailing message after the latest user line
+  const latestAssistantMessage = useMemo(() => {
+    const last = messages[messages.length - 1];
+    return last?.role === 'assistant' ? last : undefined;
+  }, [messages]);
 
   const latestAssistantReply = latestAssistantMessage?.content ?? '';
   const latestAssistantProposals = latestAssistantMessage?.proposals ?? [];
 
-  // reset proposal reveals whenever a new assistant message arrives
+  // reset reveal + edit state whenever a new assistant message arrives
   useEffect(() => {
     setReplyWordsRevealComplete(false);
-  }, [latestAssistantMessage?.id]);
+    setSessionRevealComplete(false);
+    setIsSessionPromptEditing(false);
+    sessionEditProgress.value = 0;
+  }, [latestAssistantMessage?.id, sessionEditProgress]);
 
   const handleReplyWordsRevealComplete = useCallback(() => {
     setReplyWordsRevealComplete(true);
   }, []);
+
+  const handleSessionRevealComplete = useCallback(() => {
+    setSessionRevealComplete(true);
+  }, []);
+
+  const canEditSubmittedPrompt = useMemo(
+    () =>
+      isComposerEmbeddedInScroll &&
+      isSessionMode &&
+      !isSessionTransitioning &&
+      !isSessionReturningToGreeting &&
+      !isLoading &&
+      sessionRevealComplete &&
+      !isSessionPromptEditing,
+    [
+      isComposerEmbeddedInScroll,
+      isSessionMode,
+      isSessionTransitioning,
+      isSessionReturningToGreeting,
+      isLoading,
+      sessionRevealComplete,
+      isSessionPromptEditing,
+    ],
+  );
 
   // proposals-only responses skip the word reveal — start proposal stagger immediately
   useEffect(() => {
@@ -212,6 +272,50 @@ export default function AITabScreen() {
     latestAssistantProposals.length,
   ]);
 
+  // slide-up complete — measure absolute composer, then hand off to scroll
+  const embedComposerInScroll = useCallback(() => {
+    const scrollNode = sessionScrollWrapRef.current;
+    const anchorNode = composerAnchorRef.current;
+
+    const commitEmbed = (marginTop: number, composerBottom: number) => {
+      setEmbeddedComposerMarginTop(marginTop);
+      setSessionComposerBottom(composerBottom);
+      setIsComposerEmbeddedInScroll(true);
+      sessionScrollRef.current?.scrollTo({ y: 0, animated: false });
+    };
+
+    if (!scrollNode || !anchorNode) {
+      commitEmbed(sessionTargetTop, sessionTargetTop + CHAT_SUBMITTED_SHELL_HEIGHT_ESTIMATE);
+      return;
+    }
+
+    anchorNode.measureInWindow((_ax, composerY, _aw, composerHeight) => {
+      scrollNode.measureInWindow((_sx, scrollY) => {
+        const marginTop = Math.max(0, composerY - scrollY);
+        commitEmbed(marginTop, composerY + composerHeight);
+      });
+    });
+  }, [sessionTargetTop]);
+
+  useEffect(() => {
+    if (
+      !isSessionMode ||
+      isSessionTransitioning ||
+      isSessionReturningToGreeting ||
+      isComposerEmbeddedInScroll
+    ) {
+      return;
+    }
+
+    embedComposerInScroll();
+  }, [
+    isSessionMode,
+    isSessionTransitioning,
+    isSessionReturningToGreeting,
+    isComposerEmbeddedInScroll,
+    embedComposerInScroll,
+  ]);
+
   // count proposals still waiting on user confirm — drives Accept All vs Start new footer
   const pendingProposalCount = useMemo(() => {
     if (!latestAssistantMessage?.proposals?.length) return 0;
@@ -221,24 +325,34 @@ export default function AITabScreen() {
     }).length;
   }, [latestAssistantMessage, getProposalStatus]);
 
+  // footer fades in after the last visible proposal card in the stagger sequence
+  const visibleSessionProposalCount = useMemo(() => {
+    if (!latestAssistantMessage) return 0;
+    return latestAssistantProposals.filter(
+      (proposal) => getProposalStatus(latestAssistantMessage.id, proposal.id) !== 'dismissed',
+    ).length;
+  }, [latestAssistantMessage, latestAssistantProposals, getProposalStatus]);
+
   const fallbackResponsePaddingTop =
     sessionTargetTop + CHAT_SUBMITTED_SHELL_HEIGHT_ESTIMATE + CHAT_SESSION_RESPONSE_GAP;
   const sessionResponsePaddingTop =
     frozenSessionContentPaddingTop ??
-    (sessionComposerBottom > 0
-      ? sessionComposerBottom + CHAT_SESSION_RESPONSE_GAP
-      : fallbackResponsePaddingTop);
+    (isComposerEmbeddedInScroll
+      ? 0
+      : sessionComposerBottom > 0
+        ? sessionComposerBottom + CHAT_SESSION_RESPONSE_GAP
+        : fallbackResponsePaddingTop);
 
   const sessionContentAnimatedStyle = useAnimatedStyle(() => ({
     opacity: sessionContentOpacity.value,
   }));
 
   const measureSessionComposerBottom = useCallback(() => {
-    if (!isSessionVisible || isSessionReturningToGreeting) return;
+    if (!isSessionVisible || isSessionReturningToGreeting || isComposerEmbeddedInScroll) return;
     composerAnchorRef.current?.measureInWindow((_x, y, _width, height) => {
       setSessionComposerBottom(y + height);
     });
-  }, [isSessionVisible, isSessionReturningToGreeting]);
+  }, [isSessionVisible, isSessionReturningToGreeting, isComposerEmbeddedInScroll]);
 
   const handleComposerAnchorLayout = useCallback(
     (_event: LayoutChangeEvent) => {
@@ -259,6 +373,8 @@ export default function AITabScreen() {
 
   const keyboardHeightRef = useRef(keyboardHeight);
   keyboardHeightRef.current = keyboardHeight;
+  // tracks whether the keyboard opened during this edit pass — gates keyboard-close collapse
+  const wasKeyboardOpenDuringSessionEditRef = useRef(false);
 
   useEffect(() => {
     keyboardHeightSv.value = withTiming(keyboardHeight, {
@@ -286,6 +402,8 @@ export default function AITabScreen() {
     };
   }, [restingComposerBottom, composerGap]);
 
+  const showAbsoluteComposer = !isComposerEmbeddedInScroll && (isPromptPhase || isSessionVisible);
+
   const refreshIntroCopy = useCallback(() => {
     setGreeting(pickRandomAiGreeting());
     setHint(pickRandomAiHint());
@@ -305,13 +423,108 @@ export default function AITabScreen() {
     setFrozenSessionContentPaddingTop(null);
     setIsSessionBodyVisible(true);
     setReplyWordsRevealComplete(false);
+    setSessionRevealComplete(false);
+    setIsSessionPromptEditing(false);
+    sessionEditProgress.value = 0;
+    setIsComposerEmbeddedInScroll(false);
+    setEmbeddedComposerMarginTop(0);
+    setPendingBackSlideTop(null);
     setPrompt('');
     setSubmittedPrompt('');
     refreshIntroCopy();
     setEmptyIntroOnScreen(true);
     setIntroRunKey((key) => key + 1);
     clearError();
-  }, [resetSession, refreshIntroCopy, clearError]);
+  }, [resetSession, refreshIntroCopy, clearError, sessionEditProgress]);
+
+  const handleEnterSessionEdit = useCallback(() => {
+    if (!canEditSubmittedPrompt) return;
+    setPrompt(submittedPrompt);
+    setIsSessionPromptEditing(true);
+    sessionEditProgress.value = withTiming(1, {
+      duration: CHAT_COMPOSER_LAYOUT_TRANSITION_MS,
+      easing: CHAT_COMPOSER_LAYOUT_EASING,
+    });
+  }, [canEditSubmittedPrompt, submittedPrompt, sessionEditProgress]);
+
+  // collapse edit mode back to read-only 3-line shell and discard draft edits
+  const collapseSessionEdit = useCallback(() => {
+    if (!isSessionPromptEditing) return;
+    setIsSessionPromptEditing(false);
+    setPrompt('');
+    sessionEditProgress.value = withTiming(0, {
+      duration: CHAT_COMPOSER_LAYOUT_TRANSITION_MS,
+      easing: CHAT_COMPOSER_LAYOUT_EASING,
+    });
+  }, [isSessionPromptEditing, sessionEditProgress]);
+
+  // keyboard closed — collapse prompt back to minimized 3-line shell (no utility row)
+  useEffect(() => {
+    if (!isSessionPromptEditing) {
+      wasKeyboardOpenDuringSessionEditRef.current = false;
+      return;
+    }
+    if (keyboardHeight > 0) {
+      wasKeyboardOpenDuringSessionEditRef.current = true;
+      return;
+    }
+    if (!wasKeyboardOpenDuringSessionEditRef.current) return;
+
+    wasKeyboardOpenDuringSessionEditRef.current = false;
+    collapseSessionEdit();
+  }, [isSessionPromptEditing, keyboardHeight, collapseSessionEdit]);
+
+  const completeSessionResend = useCallback(
+    (trimmed: string) => {
+      setSubmittedPrompt(trimmed);
+      setPrompt('');
+      setIsSessionBodyVisible(true);
+      sessionContentOpacity.value = 1;
+      clearError();
+      void resendMessage(trimmed);
+    },
+    [resendMessage, sessionContentOpacity, clearError],
+  );
+
+  const handleSessionResend = useCallback(() => {
+    const trimmed = prompt.trim();
+    if (!trimmed || isLoading || !isSessionPromptEditing) return;
+
+    Keyboard.dismiss();
+    setIsSessionPromptEditing(false);
+    setReplyWordsRevealComplete(false);
+    setSessionRevealComplete(false);
+    clearError();
+
+    sessionContentOpacity.value = withTiming(
+      0,
+      {
+        duration: CHAT_SESSION_CONTENT_EXIT_FADE_MS,
+        easing: CHAT_COMPOSER_LAYOUT_EASING,
+      },
+    );
+
+    sessionEditProgress.value = withTiming(
+      0,
+      {
+        duration: CHAT_COMPOSER_LAYOUT_TRANSITION_MS,
+        easing: CHAT_COMPOSER_LAYOUT_EASING,
+      },
+      (finished) => {
+        if (finished) {
+          runOnJS(completeSessionResend)(trimmed);
+        }
+      },
+    );
+  }, [
+    prompt,
+    isLoading,
+    isSessionPromptEditing,
+    sessionContentOpacity,
+    sessionEditProgress,
+    completeSessionResend,
+    clearError,
+  ]);
 
   const startSessionSlide = useCallback(
     (measuredTop: number) => {
@@ -344,41 +557,8 @@ export default function AITabScreen() {
     ],
   );
 
-  const hideSessionBodyAfterExitFade = useCallback(() => {
-    setIsSessionBodyVisible(false);
-  }, []);
-
-  const handleBackToPrompt = useCallback(() => {
-    if (sessionProgress.value <= 0) {
-      finishBackToPrompt();
-      return;
-    }
-
-    Keyboard.dismiss();
-    setIsSessionMode(false);
-    setIsSessionReturningToGreeting(true);
-    setIsSessionTransitioning(true);
-
-    // lock scroll inset + fade session body — composer slides alone back to greeting
-    setFrozenSessionContentPaddingTop(
-      sessionComposerBottom > 0
-        ? sessionComposerBottom + CHAT_SESSION_RESPONSE_GAP
-        : fallbackResponsePaddingTop,
-    );
-    sessionContentOpacity.value = withTiming(
-      0,
-      {
-        duration: CHAT_SESSION_CONTENT_EXIT_FADE_MS,
-        easing: CHAT_COMPOSER_LAYOUT_EASING,
-      },
-      (finished) => {
-        if (finished) {
-          runOnJS(hideSessionBodyAfterExitFade)();
-        }
-      },
-    );
-
-    const startBackSlide = (currentTop: number) => {
+  const startBackSlide = useCallback(
+    (currentTop: number) => {
       const restingBaseTop =
         windowHeight - restingComposerBottom - CHAT_COMPOSER_COLLAPSED_HEIGHT_ESTIMATE;
       sessionAnchorBottom.value = restingComposerBottom;
@@ -396,28 +576,98 @@ export default function AITabScreen() {
           }
         },
       );
+    },
+    [
+      sessionAnchorBottom,
+      sessionSlideOffset,
+      sessionProgress,
+      finishBackToPrompt,
+      windowHeight,
+      restingComposerBottom,
+    ],
+  );
+
+  const hideSessionBodyAfterExitFade = useCallback(() => {
+    setIsSessionBodyVisible(false);
+  }, []);
+
+  const beginSessionExitFade = useCallback(() => {
+    sessionContentOpacity.value = withTiming(
+      0,
+      {
+        duration: CHAT_SESSION_CONTENT_EXIT_FADE_MS,
+        easing: CHAT_COMPOSER_LAYOUT_EASING,
+      },
+      (finished) => {
+        if (finished) {
+          runOnJS(hideSessionBodyAfterExitFade)();
+        }
+      },
+    );
+  }, [sessionContentOpacity, hideSessionBodyAfterExitFade]);
+
+  const handleBackToPrompt = useCallback(() => {
+    if (sessionProgress.value <= 0 && !isSessionMode) {
+      finishBackToPrompt();
+      return;
+    }
+
+    Keyboard.dismiss();
+
+    if (isSessionPromptEditing) {
+      collapseSessionEdit();
+    }
+
+    setIsSessionMode(false);
+    setIsSessionReturningToGreeting(true);
+    setIsSessionTransitioning(true);
+
+    const launchBackSlide = (composerTopY: number, frozenPaddingTop: number) => {
+      setFrozenSessionContentPaddingTop(frozenPaddingTop);
+      beginSessionExitFade();
+
+      if (isComposerEmbeddedInScroll) {
+        setIsComposerEmbeddedInScroll(false);
+        setPendingBackSlideTop(composerTopY);
+        return;
+      }
+
+      startBackSlide(composerTopY);
     };
 
-    if (composerAnchorRef.current) {
-      composerAnchorRef.current.measureInWindow((_x, y) => {
-        startBackSlide(y);
+    const measureTargetRef = isComposerEmbeddedInScroll
+      ? embeddedComposerRef.current
+      : composerAnchorRef.current;
+
+    if (measureTargetRef) {
+      measureTargetRef.measureInWindow((_x, y, _width, height) => {
+        launchBackSlide(y, y + height + CHAT_SESSION_RESPONSE_GAP);
       });
     } else {
-      startBackSlide(sessionTargetTop);
+      launchBackSlide(sessionTargetTop, fallbackResponsePaddingTop);
     }
   }, [
     sessionProgress,
-    sessionAnchorBottom,
-    sessionSlideOffset,
+    isSessionMode,
     finishBackToPrompt,
-    windowHeight,
-    restingComposerBottom,
+    isComposerEmbeddedInScroll,
+    beginSessionExitFade,
+    startBackSlide,
     sessionTargetTop,
-    sessionComposerBottom,
     fallbackResponsePaddingTop,
-    sessionContentOpacity,
-    hideSessionBodyAfterExitFade,
+    isSessionPromptEditing,
+    collapseSessionEdit,
   ]);
+
+  // scroll-embedded composer unmounts before absolute remount — run back slide on next frame
+  useEffect(() => {
+    if (pendingBackSlideTop == null || isComposerEmbeddedInScroll) return undefined;
+    const frameId = requestAnimationFrame(() => {
+      startBackSlide(pendingBackSlideTop);
+      setPendingBackSlideTop(null);
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [pendingBackSlideTop, isComposerEmbeddedInScroll, startBackSlide]);
 
   const handleConfirmProposal = useCallback(
     (proposal: (typeof latestAssistantProposals)[number]) => {
@@ -462,6 +712,12 @@ export default function AITabScreen() {
     setIsSessionTransitioning(true);
     setIsSessionBodyVisible(true);
     setReplyWordsRevealComplete(false);
+    setSessionRevealComplete(false);
+    setIsSessionPromptEditing(false);
+    sessionEditProgress.value = 0;
+    setIsComposerEmbeddedInScroll(false);
+    setEmbeddedComposerMarginTop(0);
+    setPendingBackSlideTop(null);
     sessionContentOpacity.value = 1;
     clearError();
     void sendMessage(trimmed);
@@ -490,7 +746,16 @@ export default function AITabScreen() {
     composerGap,
     restingComposerBottom,
     sessionContentOpacity,
+    sessionEditProgress,
   ]);
+
+  const handleComposerSend = useCallback(() => {
+    if (isSessionPromptEditing) {
+      handleSessionResend();
+      return;
+    }
+    handleSend();
+  }, [isSessionPromptEditing, handleSessionResend, handleSend]);
 
   const handlePickSuggestion = useCallback((description: string) => {
     setPrompt(description);
@@ -532,8 +797,21 @@ export default function AITabScreen() {
     setIntroRunKey(0);
     setFrozenSessionContentPaddingTop(null);
     setIsSessionBodyVisible(true);
+    setReplyWordsRevealComplete(false);
+    setSessionRevealComplete(false);
+    setIsSessionPromptEditing(false);
+    sessionEditProgress.value = 0;
+    setIsComposerEmbeddedInScroll(false);
+    setEmbeddedComposerMarginTop(0);
+    setPendingBackSlideTop(null);
     sessionContentOpacity.value = 1;
-  }, [sessionProgress, sessionSlideOffset, sessionAnchorBottom, sessionContentOpacity]);
+  }, [
+    sessionProgress,
+    sessionSlideOffset,
+    sessionAnchorBottom,
+    sessionContentOpacity,
+    sessionEditProgress,
+  ]);
 
   const { setTabFabRegistration } = useTabFabOverlay();
   useFocusEffect(
@@ -583,6 +861,39 @@ export default function AITabScreen() {
   const isComposerExpanded =
     prompt.length > 0 && isKeyboardOpen && !isSessionMode && !isSessionTransitioning;
 
+  const renderComposer = (includeSuggestions = true) => (
+    <>
+      {includeSuggestions ? (
+        <ChatComposerSuggestions
+          activePrompt={prompt}
+          isComposerExpanded={isComposerExpanded}
+          sessionProgress={sessionProgress}
+          isSessionMode={isSessionMode && !isSessionReturningToGreeting}
+          isSessionTransitioning={isSessionTransitioning}
+          isSessionReturningToGreeting={isSessionReturningToGreeting}
+          onPickSuggestion={handlePickSuggestion}
+        />
+      ) : null}
+      <ChatContainer
+        value={prompt}
+        onChangeText={setPrompt}
+        onSend={handleComposerSend}
+        isLoading={isLoading}
+        isKeyboardVisible={isKeyboardOpen}
+        isSessionTransitioning={isSessionTransitioning}
+        isSessionReturningToGreeting={isSessionReturningToGreeting}
+        maxExpandedTextSectionHeight={maxExpandedTextSectionHeight}
+        sessionProgress={sessionProgress}
+        sessionEditProgress={sessionEditProgress}
+        submittedText={submittedPrompt}
+        isSessionMode={isSessionMode}
+        isSessionPromptEditing={isSessionPromptEditing}
+        canEditSubmittedPrompt={canEditSubmittedPrompt}
+        onSubmittedPromptPress={handleEnterSessionEdit}
+      />
+    </>
+  );
+
   return (
     <>
       <IosAiStackToolbar
@@ -625,8 +936,10 @@ export default function AITabScreen() {
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
               <View style={styles.dismissTapArea}>
                 {isSessionVisible && isSessionBodyVisible ? (
-                  <ScrollView
-                    style={styles.sessionScroll}
+                  <View ref={sessionScrollWrapRef} style={styles.sessionScrollWrap}>
+                    <ScrollView
+                      ref={sessionScrollRef}
+                      style={styles.sessionScroll}
                     contentContainerStyle={[
                       styles.sessionScrollContent,
                       {
@@ -638,15 +951,31 @@ export default function AITabScreen() {
                     showsVerticalScrollIndicator={false}
                     pointerEvents={isSessionReturningToGreeting ? 'none' : 'auto'}
                   >
+                    {isComposerEmbeddedInScroll ? (
+                      <View
+                        ref={embeddedComposerRef}
+                        style={[
+                          styles.embeddedComposerSlot,
+                          { marginTop: embeddedComposerMarginTop },
+                        ]}
+                        onLayout={handleComposerAnchorLayout}
+                      >
+                        {renderComposer(false)}
+                      </View>
+                    ) : null}
                     <Animated.View
-                      style={[sessionContentAnimatedStyle, styles.sessionContentStack]}
+                      style={[
+                        sessionContentAnimatedStyle,
+                        styles.sessionContentStack,
+                        isComposerEmbeddedInScroll && styles.sessionContentBelowEmbeddedComposer,
+                      ]}
                       pointerEvents={isSessionReturningToGreeting ? 'none' : 'auto'}
                     >
                       {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
                       {isLoading || latestAssistantReply ? (
                         <AiAssistantResponseShell
                           content={latestAssistantReply}
-                          isLoading={isLoading}
+                          isLoading={isLoading || (screenPhase === 'session' && !latestAssistantReply)}
                           onWordsRevealComplete={handleReplyWordsRevealComplete}
                         />
                       ) : null}
@@ -666,15 +995,22 @@ export default function AITabScreen() {
                         />
                       ) : null}
                       {!isLoading && latestAssistantMessage ? (
-                        <AiSessionProposalFooter
-                          mode={pendingProposalCount > 0 ? 'acceptAll' : 'startNew'}
-                          onPress={handleFooterPress}
-                          loading={isConfirmingAll}
-                          disabled={isConfirmingAll}
-                        />
+                        <RevealSessionBlock
+                          revealIndex={visibleSessionProposalCount}
+                          canReveal={replyWordsRevealComplete}
+                          onRevealComplete={handleSessionRevealComplete}
+                        >
+                          <AiSessionProposalFooter
+                            mode={pendingProposalCount > 0 ? 'acceptAll' : 'startNew'}
+                            onPress={handleFooterPress}
+                            loading={isConfirmingAll}
+                            disabled={isConfirmingAll}
+                          />
+                        </RevealSessionBlock>
                       ) : null}
                     </Animated.View>
                   </ScrollView>
+                  </View>
                 ) : (
                   <View style={styles.inner}>
                     {emptyIntroOnScreen && greeting && hint ? (
@@ -697,35 +1033,16 @@ export default function AITabScreen() {
               </View>
             </TouchableWithoutFeedback>
 
-            <Animated.View
-              ref={composerAnchorRef}
-              style={[styles.composerAnchor, composerPositionStyle]}
-              onLayout={handleComposerAnchorLayout}
-              pointerEvents="box-none"
-            >
-              <ChatComposerSuggestions
-                activePrompt={prompt}
-                isComposerExpanded={isComposerExpanded}
-                sessionProgress={sessionProgress}
-                isSessionMode={isSessionMode && !isSessionReturningToGreeting}
-                isSessionTransitioning={isSessionTransitioning}
-                isSessionReturningToGreeting={isSessionReturningToGreeting}
-                onPickSuggestion={handlePickSuggestion}
-              />
-              <ChatContainer
-                value={prompt}
-                onChangeText={setPrompt}
-                onSend={handleSend}
-                isLoading={isLoading}
-                isKeyboardVisible={isKeyboardOpen}
-                isSessionTransitioning={isSessionTransitioning}
-                isSessionReturningToGreeting={isSessionReturningToGreeting}
-                maxExpandedTextSectionHeight={maxExpandedTextSectionHeight}
-                sessionProgress={sessionProgress}
-                submittedText={submittedPrompt}
-                isSessionMode={isSessionMode}
-              />
-            </Animated.View>
+            {showAbsoluteComposer ? (
+              <Animated.View
+                ref={composerAnchorRef}
+                style={[styles.composerAnchor, composerPositionStyle]}
+                onLayout={handleComposerAnchorLayout}
+                pointerEvents="box-none"
+              >
+                {renderComposer()}
+              </Animated.View>
+            ) : null}
           </View>
         </ScreenContainer>
         {!USE_CUSTOM_LIQUID_TAB_BAR ? (
@@ -791,6 +1108,9 @@ const createStyles = (
       paddingTop: insets.top + TAB_ROOT_TOP_SECTION_ROW_HEIGHT + CHAT_COMPOSER_HEADER_GAP,
       paddingHorizontal: Paddings.screen,
     },
+    sessionScrollWrap: {
+      flex: 1,
+    },
     sessionScroll: {
       flex: 1,
     },
@@ -799,6 +1119,12 @@ const createStyles = (
     },
     sessionContentStack: {
       gap: CHAT_SESSION_BLOCK_SPACING,
+    },
+    embeddedComposerSlot: {
+      overflow: 'visible',
+    },
+    sessionContentBelowEmbeddedComposer: {
+      marginTop: CHAT_SESSION_RESPONSE_GAP,
     },
     composerAnchor: {
       position: 'absolute',
