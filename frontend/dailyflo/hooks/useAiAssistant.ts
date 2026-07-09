@@ -63,8 +63,32 @@ function toCreateTaskInput(payload: CreateProposalPayload): CreateTaskInput {
     routineType: payload.routineType,
     listId: payload.listId ?? undefined,
     sortOrder: payload.sortOrder,
-    metadata: payload.metadata,
+    // backend validator turns alertIds into metadata.reminders — keep subtasks array for api shape
+    metadata: {
+      subtasks: [],
+      reminders: [],
+      ...payload.metadata,
+    },
     isCompleted: payload.isCompleted,
+  };
+}
+
+/** merge partial metadata from ai updates so we do not wipe subtasks on reminder-only patches */
+function mergeUpdateProposalUpdates(
+  existingTask: Task,
+  updates: UpdateProposalPayload['updates'],
+): UpdateProposalPayload['updates'] {
+  if (!updates?.metadata) {
+    return updates;
+  }
+  return {
+    ...updates,
+    metadata: {
+      ...existingTask.metadata,
+      ...updates.metadata,
+      subtasks: updates.metadata.subtasks ?? existingTask.metadata.subtasks ?? [],
+      reminders: updates.metadata.reminders ?? existingTask.metadata.reminders ?? [],
+    },
   };
 }
 
@@ -257,8 +281,9 @@ export function useAiAssistant() {
             taskId: updatePayload.taskId,
             previousTask: cloneTaskSnapshot(existingTask),
           };
+          const mergedUpdates = mergeUpdateProposalUpdates(existingTask, updatePayload.updates);
           // updateTask.pending applies changes immediately in redux
-          dispatch(updateTask({ id: updatePayload.taskId, updates: updatePayload.updates }));
+          dispatch(updateTask({ id: updatePayload.taskId, updates: mergedUpdates }));
         } else {
           const deletePayload = payload as DeleteProposalPayload;
           const existingTask = store
@@ -327,8 +352,14 @@ export function useAiAssistant() {
             await createPromise;
           } else if (proposal.type === 'update') {
             const updatePayload = payload as UpdateProposalPayload;
+            const existingTask = store
+              .getState()
+              .tasks.tasks.find((task) => task.id === updatePayload.taskId);
+            const mergedUpdates = existingTask
+              ? mergeUpdateProposalUpdates(existingTask, updatePayload.updates)
+              : updatePayload.updates;
             await dispatch(
-              updateTask({ id: updatePayload.taskId, updates: updatePayload.updates }),
+              updateTask({ id: updatePayload.taskId, updates: mergedUpdates }),
             ).unwrap();
           } else {
             const deletePayload = payload as DeleteProposalPayload;

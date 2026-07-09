@@ -83,6 +83,15 @@ export function buildDisplayTaskFromProposal(
       listId: updates.listId !== undefined ? updates.listId : base.listId,
       dueDate:
         updates.dueDate !== undefined ? normalizeDueDate(updates.dueDate) : base.dueDate,
+      metadata:
+        updates.metadata !== undefined
+          ? {
+              ...base.metadata,
+              ...updates.metadata,
+              subtasks: updates.metadata.subtasks ?? base.metadata.subtasks,
+              reminders: updates.metadata.reminders ?? base.metadata.reminders,
+            }
+          : base.metadata,
     };
   }
 

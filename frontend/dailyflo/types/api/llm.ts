@@ -16,7 +16,10 @@ export interface ChatMessageInput {
 }
 
 /** payload for a create proposal — same fields as CreateTaskInput */
-export type CreateProposalPayload = CreateTaskInput;
+export type CreateProposalPayload = CreateTaskInput & {
+  /** timed tasks only — maps to metadata.reminders after backend validation */
+  alertIds?: string[];
+};
 
 /** payload for an update proposal */
 export interface UpdateProposalPayload {
@@ -32,6 +35,9 @@ export interface UpdateProposalPayload {
     routineType: RoutineType;
     duration: number;
     isCompleted: boolean;
+    /** timed tasks only — replaces reminders on confirm (merged with existing metadata) */
+    alertIds?: string[];
+    metadata?: Partial<CreateTaskInput['metadata']>;
   }>;
 }
 

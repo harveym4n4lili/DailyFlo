@@ -12,6 +12,7 @@ from typing import Any
 
 from django.utils import timezone
 
+from apps.llm.services.reminder_utils import extract_alert_ids_from_metadata
 from apps.llm.services.schedule_context import build_schedule_context
 from apps.lists.models import List
 from apps.tasks.models import Task
@@ -42,6 +43,8 @@ def build_task_context(*, user) -> dict[str, Any]:
             'due_date',
             'time',
             'duration',
+            'routine_type',
+            'metadata',
             'is_completed',
             'list_id',
             'list__name',
@@ -59,6 +62,8 @@ def build_task_context(*, user) -> dict[str, Any]:
                 'dueDate': due_date.isoformat() if due_date else None,
                 'time': time_value.strftime('%H:%M') if time_value else None,
                 'duration': row['duration'] or 0,
+                'routineType': row['routine_type'] or 'once',
+                'alertIds': extract_alert_ids_from_metadata(row.get('metadata')),
                 'isCompleted': row['is_completed'],
                 'listId': str(row['list_id']) if row['list_id'] else None,
                 'listName': row['list__name'],

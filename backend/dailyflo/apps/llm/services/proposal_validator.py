@@ -10,6 +10,10 @@ import uuid
 from typing import Any
 
 from apps.llm.services.duration_utils import parse_duration_minutes
+from apps.llm.services.reminder_utils import (
+    normalise_alert_ids,
+    reminders_from_alert_ids,
+)
 from apps.lists.models import List
 from apps.tasks.models import Task
 
@@ -31,6 +35,32 @@ def _user_list_ids(user) -> set[str]:
         str(list_id)
         for list_id in List.objects.filter(user=user, soft_deleted=False).values_list('id', flat=True)
     }
+
+
+def _normalise_time_value(value: Any) -> str | None:
+    if value is None or value == '':
+        return None
+    text = str(value).strip()
+    if not text or text.lower() == 'none':
+        return None
+    return text[:5]
+
+
+def _apply_alert_ids_to_payload(
+    target: dict[str, Any],
+    *,
+    alert_ids_raw: Any,
+    duration: int,
+    has_scheduled_time: bool,
+) -> None:
+    normalised_ids = normalise_alert_ids(
+        alert_ids_raw,
+        duration=duration,
+        has_scheduled_time=has_scheduled_time,
+    )
+    if normalised_ids is None:
+        return
+    target['metadata'] = {'reminders': reminders_from_alert_ids(normalised_ids)}
 
 
 def _normalise_create_payload(payload: dict[str, Any], user) -> dict[str, Any] | None:
@@ -76,8 +106,9 @@ def _normalise_create_payload(payload: dict[str, Any], user) -> dict[str, Any] |
         normalised['description'] = str(payload['description'])[:5000]
     if payload.get('dueDate'):
         normalised['dueDate'] = str(payload['dueDate'])
-    if payload.get('time'):
-        normalised['time'] = str(payload['time'])[:5]
+    time_value = _normalise_time_value(payload.get('time')) if 'time' in payload else None
+    if time_value:
+        normalised['time'] = time_value
     if payload.get('duration') is not None:
         minutes = parse_duration_minutes(payload.get('duration'))
         if minutes is not None:
@@ -85,7 +116,49 @@ def _normalise_create_payload(payload: dict[str, Any], user) -> dict[str, Any] |
     if payload.get('icon'):
         normalised['icon'] = str(payload['icon'])[:50]
 
+    duration_minutes = normalised.get('duration', 0)
+    has_scheduled_time = bool(normalised.get('dueDate') and normalised.get('time'))
+    _apply_alert_ids_to_payload(
+        normalised,
+        alert_ids_raw=payload.get('alertIds'),
+        duration=duration_minutes,
+        has_scheduled_time=has_scheduled_time,
+    )
+
     return normalised
+
+
+def _task_schedule_snapshot(user, task_id: str) -> dict[str, Any] | None:
+    row = (
+        Task.objects.filter(user=user, id=task_id, soft_deleted=False)
+        .values('due_date', 'time', 'duration')
+        .first()
+    )
+    return row
+
+
+def _effective_schedule_for_update(
+    *,
+    task_row: dict[str, Any] | None,
+    cleaned: dict[str, Any],
+) -> tuple[bool, int]:
+    due_date = cleaned['dueDate'] if 'dueDate' in cleaned else task_row.get('due_date') if task_row else None
+    if 'time' in cleaned:
+        time_value = cleaned['time']
+    elif task_row and task_row.get('time'):
+        time_value = task_row['time'].strftime('%H:%M')
+    else:
+        time_value = None
+
+    if 'duration' in cleaned and cleaned['duration'] is not None:
+        duration = cleaned['duration']
+    elif task_row:
+        duration = task_row.get('duration') or 0
+    else:
+        duration = 0
+
+    has_scheduled_time = bool(due_date and time_value)
+    return has_scheduled_time, duration
 
 
 def _normalise_update_payload(payload: dict[str, Any], user, valid_task_ids: set[str]) -> dict[str, Any] | None:
@@ -105,7 +178,7 @@ def _normalise_update_payload(payload: dict[str, Any], user, valid_task_ids: set
     if 'dueDate' in updates:
         cleaned['dueDate'] = updates['dueDate']
     if 'time' in updates:
-        cleaned['time'] = str(updates['time'])[:5]
+        cleaned['time'] = _normalise_time_value(updates['time'])
     if 'listId' in updates:
         lid = updates['listId']
         if lid is None or lid == '':
@@ -129,6 +202,19 @@ def _normalise_update_payload(payload: dict[str, Any], user, valid_task_ids: set
             cleaned['duration'] = minutes
     if 'isCompleted' in updates:
         cleaned['isCompleted'] = bool(updates['isCompleted'])
+
+    if 'alertIds' in updates:
+        task_row = _task_schedule_snapshot(user, task_id)
+        has_scheduled_time, duration_minutes = _effective_schedule_for_update(
+            task_row=task_row,
+            cleaned=cleaned,
+        )
+        _apply_alert_ids_to_payload(
+            cleaned,
+            alert_ids_raw=updates.get('alertIds'),
+            duration=duration_minutes,
+            has_scheduled_time=has_scheduled_time,
+        )
 
     if not cleaned:
         return None
